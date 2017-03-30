@@ -1,0 +1,102 @@
+// Copyright 2017 Intel Corporation. 
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+{
+    "MacRules": [
+        {
+            "Rule": "Accept",
+            "Destination": "001122334455",
+            "Source": "011121314151",
+            "Protocol": "ipv4"
+        },
+        {
+            "Rule": "Reject",
+            "Destination": "001122334455",
+            "Source": "ANY",
+            "Protocol": "ipv4"
+        },
+        {
+            "Rule": "Reject",
+            "Destination": "ANY",
+            "Source": "011121314152",
+            "Protocol": "ANY"
+        },
+        {
+            "Rule": "Accept",
+            "Destination": "ANY",
+            "Source": "ANY",
+            "Protocol": "ipv4"
+        }
+    ],
+    "IPRules": [
+        {
+            "Rule": "Accept",
+            "Source": "127.0.0.1/31",
+            "Destination": "128.9.9.5/24",
+            "Protocol": "tcp"
+        },
+        {
+            "Rule": "Reject",
+            "Source": "127.0.0.1/24",
+            "Destination": "128.9.9.5/32",
+            "Protocol": "ANY"
+        },
+        {
+            "Rule": "Accept",
+            "Source": "ANY",
+            "Destination": "128.9.9.4/28",
+            "Protocol": "ANY"
+        },
+        {
+            "Rule": "Accept",
+            "Source": "ANY",
+            "Destination": "ANY",
+            "Protocol": "udp"
+        }
+    ],
+	"IPv6Rules": [
+        {
+            "Rule": "Accept",
+            "Source": "dead::beaf/16",
+            "Destination": "ANY",
+            "Protocol": "tcp"
+        },
+        {
+            "Rule": "Reject",
+            "Source": "dead::beaf/128",
+            "Destination": "ANY",
+            "Protocol": "ANY"
+        }
+    ],
+    "TCPRules": [
+        {
+            "Rule": "Accept",
+            "SourcePort": "1234",
+            "DestinationPort": "5678"
+        },
+        {
+            "Rule": "Reject",
+            "SourcePort": "ANY",
+            "DestinationPort": "5679"
+        },
+        {
+            "Rule": "Accept",
+            "SourcePort": "ANY",
+            "DestinationPort": "ANY"
+        }
+    ],
+    "UDPRules": [
+        {
+            "Rule": "Accept",
+            "SourcePort": "1235",
+            "DestinationPort": "ANY"
+        },
+        {
+            "Rule": "Reject",
+            "SourcePort": "1234",
+            "DestinationPort": "5679"
+        }
+    ]
+}
+

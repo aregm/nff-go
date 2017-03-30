@@ -1,0 +1,18 @@
+--- lib/librte_mbuf/rte_mbuf.h
++++ lib/librte_mbuf/rte_mbuf.h
+@@ -1218,7 +1218,14 @@
+ {
+ 	__rte_mbuf_sanity_check(m, 0);
+ 
+-	if (likely(rte_mbuf_refcnt_update(m, -1) == 0)) {
++	// Here is YANFF change in DPDK. Original condition was
++	// "rte_mbuf_refcnt_update(m, -1) == 0". However it reduced YANFF
++	// performance because it wrote to the field refcnt in mbuf structure.
++	// Changing this condition to reading is impossible if library uses
++	// indirect mbufs due to data races. YANFF doesn't use
++	// this functionality, so we can make this change. It is prohibited
++	// to use this DPDK as normal DPDK after applying this patch!
++	if (likely(rte_mbuf_refcnt_read(m) == 1)) {
+ 		/* if this is an indirect mbuf, it is detached. */
+ 		if (RTE_MBUF_INDIRECT(m))
+ 			rte_pktmbuf_detach(m);

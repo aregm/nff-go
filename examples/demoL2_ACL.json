@@ -1,0 +1,10 @@
+{
+    "L2Rules": [
+        {
+            "Rule": "Accept",
+            "Source": "ANY",
+            "Destination": "ANY",
+            "ID": "ANY"
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "L3Rules": [
+        {
+            "OutputNumber": "Accept",
+            "SrcAddr": "111.2.0.0/31",
+            "DstAddr": "ANY",
+            "ID": "ANY",
+            "SrcPort": "ANY",
+            "DstPort": "ANY"
+        },
+        {
+            "OutputNumber": "Reject",
+            "SrcAddr": "111.2.0.2/32",
+            "DstAddr": "ANY",
+            "ID": "ANY",
+            "SrcPort": "ANY",
+            "DstPort": "ANY"
+        },
+        {
+            "OutputNumber": "Accept",
+            "SrcAddr": "ANY",
+            "DstAddr": "ANY",
+            "ID": "ANY",
+            "SrcPort": "ANY",
+            "DstPort": "ANY"
+        }
+    ]
+}

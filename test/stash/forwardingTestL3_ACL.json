@@ -1,0 +1,44 @@
+{
+    "L3Rules": [
+        {
+            "SrcAddr": "111.2.0.0/31",
+            "DstAddr": "ANY",
+            "ID": "tcp",
+            "SrcPort": "ANY",
+            "DstPort": "ANY",
+            "OutputNumber": "2"
+       },
+        {
+            "SrcAddr": "111.2.0.2/32",
+            "DstAddr": "ANY",
+            "ID": "tcp",
+            "SrcPort": "ANY",
+            "DstPort": "ANY",
+            "OutputNumber": "Reject"
+        },
+        {
+            "SrcAddr": "111.2.0.4/32",
+            "DstAddr": "ANY",
+            "ID": "tcp",
+            "SrcPort": "10:19",
+            "DstPort": "ANY",
+            "OutputNumber": "2"
+        },
+        {
+            "SrcAddr": "111.2.0.4/32",
+            "DstAddr": "ANY",
+            "ID": "tcp",
+            "SrcPort": "20:29",
+            "DstPort": "ANY",
+            "OutputNumber": "3"
+        },
+        {
+            "SrcAddr": "ANY",
+            "DstAddr": "ANY",
+            "ID": "udp",
+            "SrcPort": "ANY",
+            "DstPort": "ANY",
+            "OutputNumber": "1"
+        }
+    ]
+}
