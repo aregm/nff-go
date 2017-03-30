@@ -50,7 +50,6 @@ Once you've finished making your changes push them to your fork and send the PR 
 
 We request you give quality assurance some consideration by:
 * Adding go unit tests for changes where it makes sense.
-* Enabling [Travis CI](https://travis-ci.org/YANFF) on your github fork of YANFF to get continuous integration feedback on your dev/test branches. We have thresholds on code coverage tracked by [coveralls](https://coveralls.io/github/intel-go/YANFF) which you will see reported once you submit your pull request.
 
 ## Issue tracking
 
