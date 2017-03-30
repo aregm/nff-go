@@ -5,9 +5,9 @@
 package main
 
 import (
-	"nfv/flow"
-	"nfv/packet"
-	"nfv/rules"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/rules"
 )
 
 var L3Rules *rules.L3Rules

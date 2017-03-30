@@ -7,8 +7,8 @@ package main
 import (
 	"encoding/hex"
 	"flag"
-	"nfv/flow"
-	"nfv/packet"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 )
 
 var firstFlow *flow.Flow

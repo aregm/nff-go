@@ -4,9 +4,9 @@
 
 package main
 
-import "nfv/flow"
-import "nfv/packet"
-import "nfv/rules"
+import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/yanff/packet"
+import "github.com/intel-go/yanff/rules"
 
 import "flag"
 import "time"

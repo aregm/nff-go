@@ -6,8 +6,8 @@ package packet_test
 
 import (
 	"encoding/hex"
-	"nfv/low"
-	. "nfv/packet"
+	"github.com/intel-go/yanff/low"
+	. "github.com/intel-go/yanff/packet"
 	"reflect"
 	"testing"
 )

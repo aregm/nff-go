@@ -7,8 +7,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"nfv/flow"
-	"nfv/packet"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 )
 
 func main() {

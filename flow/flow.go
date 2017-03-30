@@ -31,11 +31,11 @@ package flow
 
 import (
 	"flag"
-	"nfv/asm"
-	"nfv/common"
-	"nfv/low"
-	"nfv/packet"
-	"nfv/scheduler"
+	"github.com/intel-go/yanff/asm"
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/scheduler"
 	"strconv"
 	"time"
 )

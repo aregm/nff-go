@@ -6,8 +6,8 @@ package main
 
 import (
 	"crypto/md5"
-	"nfv/flow"
-	"nfv/packet"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 	"sync"
 	"sync/atomic"
 	"unsafe"
