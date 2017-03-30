@@ -5,7 +5,7 @@
 package test_test
 
 import (
-	"nfv/test"
+	"github.com/intel-go/yanff/test"
 
 	"os"
 	"strconv"

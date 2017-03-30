@@ -4,8 +4,8 @@
 
 package main
 
-import "nfv/flow"
-import "nfv/packet"
+import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/yanff/packet"
 
 import "flag"
 

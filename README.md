@@ -41,7 +41,7 @@ To use external DPDK apply patch from "test/dpdk/DPDK_17_02.patch" to DPDK. The 
 Use **make doc** to generate full documentation. Alternatively, you can run command **godoc -http=:6060** and browse URLs
 * http://localhost:6060/pkg/yanff/flow/
 * http://localhost:6060/pkg/yanff/rules/ and
-* http://localhost:6060/pkg/nfv/packet/
+* http://localhost:6060/pkg/yanff/packet/
 
 ### Tests
 In addition to building tests, **make** command on the top level also builds the testing framework and examples. YANFF distributed tests are packed inside of Docker container images.

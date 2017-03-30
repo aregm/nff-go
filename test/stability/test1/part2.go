@@ -7,10 +7,10 @@ package main
 import (
 	"fmt"
 
-	"nfv/flow"
-	"nfv/packet"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 
-	"nfv/test/stability/test1/common"
+	"github.com/intel-go/yanff/test/stability/test1/common"
 )
 
 // Main function for constructing packet processing graph.

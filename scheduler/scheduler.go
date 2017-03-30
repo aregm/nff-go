@@ -5,8 +5,8 @@
 package scheduler
 
 import (
-	"nfv/common"
-	"nfv/low"
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
 	"runtime"
 	"time"
 )

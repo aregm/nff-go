@@ -5,7 +5,7 @@
 package main
 
 import (
-	"nfv/flow"
+	"github.com/intel-go/yanff/flow"
 )
 
 // Main function for constructing packet processing graph.

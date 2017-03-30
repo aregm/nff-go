@@ -4,7 +4,7 @@
 
 package main
 
-import "nfv/test"
+import "github.com/intel-go/yanff/test"
 
 import (
 	"os"

@@ -43,7 +43,7 @@ package packet
 
 import (
 	"fmt"
-	"nfv/low"
+	"github.com/intel-go/yanff/low"
 	"unsafe"
 )
 

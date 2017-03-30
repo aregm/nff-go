@@ -11,6 +11,6 @@ all: $(SUBDIRS)
 .PHONY: doc
 doc: $(DOC_TARGETS)
 	mkdir doc
-	$(foreach package,$(DOC_TARGETS),godoc -analysis=type -analysis=pointer -html nfv/$(package) > doc/$(package).html;)
+	$(foreach package,$(DOC_TARGETS),godoc -analysis=type -analysis=pointer -html github.com/intel-go/yanff/$(package) > doc/$(package).html;)
 
 include $(PATH_TO_MK)/intermediate.mk
