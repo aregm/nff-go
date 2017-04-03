@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nfv-test-split
+IMAGENAME = yanff-test-split
 EXECUTABLES = test-split-part1 test-split-part2
 
 include $(PATH_TO_MK)/leaf.mk

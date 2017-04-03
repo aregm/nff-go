@@ -77,7 +77,7 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 		for iii := range appConfig {
 			appConfig[iii] = test.AppConfig{
 				HostName:  "hostname",
-				ImageName: "nfvtests",
+				ImageName: "yanff-tests",
 			}
 			if iii == 0 && testtype == test.TEST_TYPE_BENCHMARK {
 				appConfig[iii].Type = test.TESTAPP_PKTGEN

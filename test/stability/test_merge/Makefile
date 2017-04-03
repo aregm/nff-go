@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nfv-test-merge
+IMAGENAME = yanff-test-merge
 EXECUTABLES = test-merge-part1 test-merge-part2
 
 include $(PATH_TO_MK)/leaf.mk

@@ -19,16 +19,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfvtests",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-examples",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./demo"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN"
                 }
             ],
@@ -46,16 +46,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-examples",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-examples",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./demo"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN"
                 }
             ],

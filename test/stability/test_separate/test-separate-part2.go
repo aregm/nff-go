@@ -14,7 +14,7 @@ var L3Rules *rules.L3Rules
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Init nfv system
+	// Init YANFF system
 	flow.SystemInit(16)
 
 	// Get splitting rules from access control file.

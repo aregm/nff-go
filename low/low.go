@@ -8,7 +8,7 @@ package low
 #cgo CFLAGS: -g -std=gnu11 -m64 -pthread  -march=native -DRTE_MACHINE_CPUFLAG_SSE -DRTE_MACHINE_CPUFLAG_SSE2 -DRTE_MACHINE_CPUFLAG_SSE3 -DRTE_MACHINE_CPUFLAG_SSSE3 -DRTE_MACHINE_CPUFLAG_SSE4_1 -DRTE_MACHINE_CPUFLAG_SSE4_2 -DRTE_MACHINE_CPUFLAG_PCLMULQDQ -DRTE_MACHINE_CPUFLAG_AVX -DRTE_MACHINE_CPUFLAG_RDRAND -DRTE_MACHINE_CPUFLAG_FSGSBASE -DRTE_MACHINE_CPUFLAG_F16C -DRTE_MACHINE_CPUFLAG_AVX2 -DRTE_COMPILE_TIME_CPUFLAGS=RTE_CPUFLAG_SSE,RTE_CPUFLAG_SSE2,RTE_CPUFLAG_SSE3,RTE_CPUFLAG_SSSE3,RTE_CPUFLAG_SSE4_1,RTE_CPUFLAG_SSE4_2,RTE_CPUFLAG_PCLMULQDQ,RTE_CPUFLAG_AVX,RTE_CPUFLAG_RDRAND,RTE_CPUFLAG_FSGSBASE,RTE_CPUFLAG_F16C,RTE_CPUFLAG_AVX2 -include rte_config.h -O3
 #cgo LDFLAGS: -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wold-style-definition -Wpointer-arith -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral -Wformat-security -Wundef -Wwrite-strings -Wl,--no-as-needed -Wl,-export-dynamic -Wl,--whole-archive -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_hash -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_ip_frag -lrte_ethdev -lrte_mempool -lrte_ring -lrte_eal -lrte_cmdline -lrte_cfgfile -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_net -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -lrt -lm -ldl -Wl,--end-group -Wl,--no-whole-archive
 
-#include "nfv_queue.h"
+#include "yanff_queue.h"
 
 extern void eal_init(int argc, char **argv, uint32_t burstSize);
 extern void recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreId);
@@ -42,7 +42,7 @@ func DirectStop(pkts_for_free_number int, buf []uintptr) {
 	C.directStop(C.int(pkts_for_free_number), (**C.struct_rte_mbuf)(unsafe.Pointer(&(buf[0]))))
 }
 
-type Queue C.struct_nfv_queue
+type Queue C.struct_yanff_queue
 type Mbuf C.struct_rte_mbuf
 
 // TODO need to investigate more elegant way to return variables from C part
@@ -63,22 +63,22 @@ const (
 
 func CreateQueue(name string, count uint) *Queue {
 	var queue *Queue
-	queue = (*Queue)(unsafe.Pointer(C.nfv_queue_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+	queue = (*Queue)(unsafe.Pointer(C.yanff_queue_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 
 	return queue
 }
 
 func (self *Queue) EnqueueBurst(buffer []uintptr, count uint) uint {
-	return nfv_ring_mp_enqueue_burst(self.ring, buffer, count)
+	return yanff_ring_mp_enqueue_burst(self.ring, buffer, count)
 }
 
 func (self *Queue) DequeueBurst(buffer []uintptr, count uint) uint {
-	return nfv_ring_mc_dequeue_burst(self.ring, buffer, count)
+	return yanff_ring_mc_dequeue_burst(self.ring, buffer, count)
 }
 
 // Heavily based on DPDK ENQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func _ENQUEUE_PTRS(r *C.struct_nfv_ring, prod_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr /*const*/) {
+func _ENQUEUE_PTRS(r *C.struct_yanff_ring, prod_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr /*const*/) {
 	var size C.uint32_t = r.DPDK_ring.prod.size
 	var idx C.uint32_t = prod_head & mask
 	var i uint
@@ -118,7 +118,7 @@ func _ENQUEUE_PTRS(r *C.struct_nfv_ring, prod_head C.uint32_t, mask C.uint32_t, 
 
 // Heavily based on DPDK DEQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func _DEQUEUE_PTRS(r *C.struct_nfv_ring, cons_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr) {
+func _DEQUEUE_PTRS(r *C.struct_yanff_ring, cons_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr) {
 	var idx C.uint32_t = cons_head & mask
 	var size C.uint32_t = r.DPDK_ring.cons.size
 	var i uint
@@ -157,7 +157,7 @@ func _DEQUEUE_PTRS(r *C.struct_nfv_ring, cons_head C.uint32_t, mask C.uint32_t, 
 }
 
 // Heavily based on DPDK mp_do_enqueue
-func nfv_ring_mp_do_enqueue(r *C.struct_nfv_ring, obj_table []uintptr, n uint) uint {
+func yanff_ring_mp_do_enqueue(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
 	var prod_head, prod_next C.uint32_t
 	var cons_tail, free_entries C.uint32_t
 	var max uint = n //max should be const but can't
@@ -216,7 +216,7 @@ func nfv_ring_mp_do_enqueue(r *C.struct_nfv_ring, obj_table []uintptr, n uint) u
 }
 
 // Heavily based on DPDK mc_do_dequeue
-func nfv_ring_mc_do_dequeue(r *C.struct_nfv_ring, obj_table []uintptr, n uint) uint {
+func yanff_ring_mc_do_dequeue(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
 	var cons_head, prod_tail C.uint32_t
 	var cons_next, entries C.uint32_t
 	var max uint = n // max should be const but can't
@@ -275,13 +275,13 @@ func nfv_ring_mc_do_dequeue(r *C.struct_nfv_ring, obj_table []uintptr, n uint) u
 }
 
 // Heavilly based on DPDK mp_enqueue_burst
-func nfv_ring_mp_enqueue_burst(r *C.struct_nfv_ring, obj_table []uintptr, n uint) uint {
-	return nfv_ring_mp_do_enqueue(r, obj_table, n)
+func yanff_ring_mp_enqueue_burst(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
+	return yanff_ring_mp_do_enqueue(r, obj_table, n)
 }
 
 // Heavilly based on DPDK mc_dequeue_burst
-func nfv_ring_mc_dequeue_burst(r *C.struct_nfv_ring, obj_table []uintptr, n uint) uint {
-	return nfv_ring_mc_do_dequeue(r, obj_table, n)
+func yanff_ring_mc_dequeue_burst(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
+	return yanff_ring_mc_do_dequeue(r, obj_table, n)
 }
 
 func (self *Queue) GetQueueCount() uint32 {

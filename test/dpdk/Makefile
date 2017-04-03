@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-IMAGENAME = nfv-pktgen
+IMAGENAME = yanff-pktgen
 
 include $(PATH_TO_MK)/leaf.mk
 

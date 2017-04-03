@@ -19,16 +19,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -56,16 +56,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -93,16 +93,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -130,16 +130,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -167,16 +167,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -204,16 +204,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -241,16 +241,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -278,16 +278,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -315,16 +315,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -352,16 +352,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -389,16 +389,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -426,16 +426,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -463,16 +463,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -500,16 +500,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -537,16 +537,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -574,16 +574,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -611,16 +611,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -648,16 +648,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -685,16 +685,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -722,16 +722,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -759,16 +759,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -796,16 +796,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -833,16 +833,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -870,16 +870,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_light", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -907,16 +907,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -944,16 +944,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -981,16 +981,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1018,16 +1018,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1055,16 +1055,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1092,16 +1092,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1129,16 +1129,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1166,16 +1166,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=50"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1203,16 +1203,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1240,16 +1240,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1277,16 +1277,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1314,16 +1314,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1351,16 +1351,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1388,16 +1388,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1425,16 +1425,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1462,16 +1462,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=1000", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1499,16 +1499,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1536,16 +1536,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1573,16 +1573,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1610,16 +1610,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1647,16 +1647,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1684,16 +1684,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1721,16 +1721,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1758,16 +1758,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=500", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1795,16 +1795,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1832,16 +1832,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1869,16 +1869,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1906,16 +1906,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1943,16 +1943,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -1980,16 +1980,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2017,16 +2017,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2054,16 +2054,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_main", "-load=250", "-loadRW=0"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2091,16 +2091,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2128,16 +2128,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2165,16 +2165,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2202,16 +2202,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2239,16 +2239,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2276,16 +2276,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2313,16 +2313,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2350,16 +2350,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=250", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2387,16 +2387,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2424,16 +2424,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2461,16 +2461,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2498,16 +2498,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2535,16 +2535,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2572,16 +2572,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2609,16 +2609,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2646,16 +2646,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=2"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2683,16 +2683,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2720,16 +2720,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2757,16 +2757,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2794,16 +2794,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2831,16 +2831,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2868,16 +2868,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2905,16 +2905,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2942,16 +2942,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=50", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -2979,16 +2979,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3016,16 +3016,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3053,16 +3053,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3090,16 +3090,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3127,16 +3127,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3164,16 +3164,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3201,16 +3201,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3238,16 +3238,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=3"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3275,16 +3275,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3312,16 +3312,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3349,16 +3349,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3386,16 +3386,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3423,16 +3423,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3460,16 +3460,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3497,16 +3497,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3534,16 +3534,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=13"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3571,16 +3571,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3608,16 +3608,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3645,16 +3645,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3682,16 +3682,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3719,16 +3719,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3756,16 +3756,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3793,16 +3793,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3830,16 +3830,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=4"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3867,16 +3867,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3904,16 +3904,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3941,16 +3941,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -3978,16 +3978,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -4015,16 +4015,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -4052,16 +4052,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -4089,16 +4089,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
@@ -4126,16 +4126,16 @@
             "test-type": "TEST_TYPE_BENCHMARK",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-performance",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-pktgen",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
                     "app-type": "TESTAPP_PKTGEN",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
