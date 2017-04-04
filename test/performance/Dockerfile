@@ -10,3 +10,5 @@ WORKDIR /workdir
 COPY perf_light .
 COPY perf_main .
 COPY perf_seq .
+COPY latency-part1 .
+COPY latency-stub .
