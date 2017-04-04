@@ -55,6 +55,9 @@ To deploy Docker images to be used in distributed testing do **make deploy**. Th
 
 To delete generated images to the default Docker target use **make clean-images**.
 
+### Running tests
+After docker images are deployed on all test hosts, it is possible to run distributed network tests. Test framework is located in test/main directory and accepts a JSON file with test specification. There are predefined configs for performance and stability tests in the same directory. To run these tests it is necessary to change hostnames "hostname1" and "hostname2" to the hosts from YANFF_HOSTS list in these JSON files.
+
 ### Clean-up
 To clean all generated binaries use **make clean**.
 To delete all deployed images listed in YANFF_HOSTS use **make cleanall**.

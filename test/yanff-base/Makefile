@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-IMAGENAME = nfvbase
+IMAGENAME = yanff-base
 EXECUTABLES =
 
 include $(PATH_TO_MK)/leaf.mk

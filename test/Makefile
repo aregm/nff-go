@@ -1,5 +1,5 @@
 PATH_TO_MK = ../mk
-SUBDIRS = nfvbase dpdk main stability performance stash
+SUBDIRS = yanff-base dpdk main stability performance stash
 
 include $(PATH_TO_MK)/intermediate.mk
 

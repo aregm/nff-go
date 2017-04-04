@@ -51,7 +51,7 @@ var (
 )
 
 func main() {
-	// Init nfv system at 16 available cores
+	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
 	var m sync.Mutex

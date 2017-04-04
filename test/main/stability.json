@@ -19,16 +19,16 @@
             "test-type": "TEST_TYPE_SCENARIO",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-test1",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test1",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./part1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-test1",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test1",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./part2"
@@ -42,16 +42,16 @@
             "test-type": "TEST_TYPE_SCENARIO",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-test-merge",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-merge",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-merge-part1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-test-merge",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-merge",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-merge-part2"
@@ -65,16 +65,16 @@
             "test-type": "TEST_TYPE_SCENARIO",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-test-split",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-split",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-split-part1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-test-split",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-split",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-split-part2"
@@ -88,16 +88,16 @@
             "test-type": "TEST_TYPE_SCENARIO",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-test-separate",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-separate",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-separate-part1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-test-separate",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-separate",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-separate-part2"
@@ -111,16 +111,16 @@
             "test-type": "TEST_TYPE_SCENARIO",
             "test-apps": [
                 {
-                    "host-name": "nonpcmp2",
-                    "image-name": "nfv-test-partition",
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-partition",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-partition-part1"
                     ]
                 },
                 {
-                    "host-name": "nonpcmp3",
-                    "image-name": "nfv-test-partition",
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-partition",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./test-partition-part2"

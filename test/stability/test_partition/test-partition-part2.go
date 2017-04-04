@@ -10,7 +10,7 @@ import (
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Init nfv system
+	// Init YANFF system
 	flow.SystemInit(16)
 
 	// Receive packets from 0 port
