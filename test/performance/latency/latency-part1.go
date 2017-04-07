@@ -64,6 +64,8 @@ var (
 	latenciesStorage []time.Duration
 )
 
+var options = `{"cores": {"Value": 16, "Locked": false}}`
+
 func main() {
 	flag.IntVar(&LAT_NUMBER, "LAT_NUMBER", LAT_NUMBER, "number of packets, for which latency should be reported")
 	flag.IntVar(&BINS, "BINS", BINS, "number of bins")
@@ -82,8 +84,8 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	// Initialize YANFF library at requested number of cores
+	flow.SystemInit(options)
 	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
 
 	// Create packet flow

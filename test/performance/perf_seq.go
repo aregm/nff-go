@@ -12,14 +12,14 @@ import "flag"
 var load uint
 var mode uint
 var cores uint
+var options = `{"cores": {"Value": 35, "Locked": false}}`
 
 func main() {
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&mode, "mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
-	flag.UintVar(&cores, "cores", 35, "Number of cores to use by system")
 
 	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	flow.SystemInit(options)
 
 	var tempFlow *flow.Flow
 	var afterFlow *flow.Flow

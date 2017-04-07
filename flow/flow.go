@@ -30,7 +30,6 @@
 package flow
 
 import (
-	"flag"
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
@@ -201,11 +200,6 @@ func makeHandler(in *low.Queue, out *low.Queue,
 	return scheduler.NewClonableFlowFunction("handler", ffCount, handle, par, handleCheck, make(chan uint64, 50))
 }
 
-var burstSize uint
-var sizeMultiplier uint
-var schedTime uint
-var maxPacketsToClone uint32
-
 type port struct {
 	rxQueues       []bool
 	txQueues       []bool
@@ -224,25 +218,59 @@ const (
 	manualPort
 )
 
+var (
+	CPUCoresNumber     uint
+	schedulerOff       bool
+	schedulerOffRemove bool
+	stopDedicatedCore  bool
+	mbufNumber         uint
+	mbufCacheSize      uint
+	burstSize          uint
+	sizeMultiplier     uint
+	schedTime          uint
+	maxPacketsToClone  uint32
+)
+
 // Initializing of system. This function should be always called before graph construction.
-// CPUCoresNumber is a number of cores which will be available for scheduler to place flow functions and their clones.
 // Function can panic during execution.
-func SystemInit(CPUCoresNumber uint) {
-	schedulerOff := flag.Bool("no-scheduler", false, "Use this for switching scheduler off")
-	schedulerOffRemove := flag.Bool("no-remove-clones", false, "Use this for switching off removing clones in scheduler")
-	stopDedicatedCore := flag.Bool("stop-at-dedicated-core", false, "Use this for setting scheduler and stop functionality to different cores")
-	mbufNumber := flag.Uint("mempool-size", 8191, "Advanced option: number of mbufs in mempool per port")
-	mbufCacheSize := flag.Uint("mempool-cache", 250, "Advanced option: Size of local per-core cache in mempool (in mbufs)")
-	flag.UintVar(&sizeMultiplier, "ring-size", 256, "Advanced option: number of 'burst_size' groups in all rings. This should be power of 2")
-	flag.UintVar(&schedTime, "scale-time", 1500, "Time between scheduler actions in miliseconds")
-	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring")
+//
+// configOptions is a json-formatted string. It is used to assign new default values
+// to parameters. If Locked == true, then the user will not be able to change value
+// set by developer.
+//
+// Example of config string:
+//  var optsExample string =
+//  `{"mempool-size":     {"Value": 8191,  "Locked": true},
+//    "no-remove-clones": {"Value": false, "Locked": true},
+//    "ring-size":        {"Value": 512,   "Locked": true},
+//    "burst-size":       {"Value": 64,    "Locked": false}}`
+// In example string mempool-size and no-remove-clones default values are not changed,
+// but locked. Ring-size default value is modified (was 256) and locked.
+// Burst-size default value is modified (was 32) and not locked.
+// Available options with comments can be seen in common/common.go file.
+// By default, parameters which are absent in config string are not locked
+// and have values defined in common/common.go file.
+func SystemInit(configOptions string) {
+	common.DeclareFlags([]byte(configOptions))
 	argc, argv := low.ParseFlags()
+	CPUCoresNumber = common.OptsSettings.CPUCoresNumber.Value
+	schedulerOff = common.OptsSettings.SchedulerOff.Value
+	schedulerOffRemove = common.OptsSettings.SchedulerOffRemove.Value
+	stopDedicatedCore = common.OptsSettings.StopDedicatedCore.Value
+	mbufNumber = common.OptsSettings.MempoolSize.Value
+	mbufCacheSize = common.OptsSettings.MbufCacheSize.Value
+	burstSize = common.OptsSettings.BurstSize.Value
+	sizeMultiplier = common.OptsSettings.SizeMultiplier.Value
+	schedTime = common.OptsSettings.SchedTime.Value
+
+	common.LogOptions(common.OptsSettings)
+
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone = uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	low.InitDPDK(argc, argv, burstSize, *mbufNumber, *mbufCacheSize)
+	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize)
 	// Init Ports
 	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
@@ -253,7 +281,7 @@ func SystemInit(CPUCoresNumber uint) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing)
+	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 

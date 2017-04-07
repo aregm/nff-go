@@ -11,13 +11,13 @@ import "flag"
 
 var mode uint
 var cores uint
+var options = `{"cores": {"Value": 15, "Locked": false}}`
 
 func main() {
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
-	flag.UintVar(&cores, "cores", 15, "Number of cores to use by system")
 
 	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	flow.SystemInit(options)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(0)

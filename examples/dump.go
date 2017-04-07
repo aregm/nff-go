@@ -11,12 +11,13 @@ import (
 	"github.com/intel-go/yanff/packet"
 )
 
+var options = `{"cores": {"Value": 10, "Locked": false}}`
+
 func main() {
 	hexdumpOn := flag.Bool("hex", false, "enable dumping of packets in hex format")
-	flag.Parse()
 
-	// Initialize YANFF library at 10 available cores
-	flow.SystemInit(10)
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(options)
 
 	// Receive packets from zero port. One queue will be added automatically.
 	firstFlow := flow.SetReceiver(0)

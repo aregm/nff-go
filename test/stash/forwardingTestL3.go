@@ -27,13 +27,14 @@ import "flag"
 // Pktgen MBits: 13743/30462         28634/29442             13743/0              1955/0           58076/59905
 
 var L3Rules *rules.L3Rules
+var options = `{"cores": {"Value": 16, "Locked": false}}`
 
 func main() {
 	var mode string
 	flag.StringVar(&mode, "mode", "orig", "Format of rules file")
 
 	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	flow.SystemInit(options)
 
 	// Start regular updating forwarding rules
 	switch mode {

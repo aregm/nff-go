@@ -28,6 +28,7 @@ import (
 
 const (
 	TOTAL_PACKETS = 10000000
+	options       = `{"cores": {"Value": 16, "Locked": false}}`
 )
 
 var (
@@ -51,8 +52,8 @@ var (
 )
 
 func main() {
-	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(options)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
