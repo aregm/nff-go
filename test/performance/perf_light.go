@@ -11,13 +11,18 @@ import "flag"
 
 var mode uint
 var cores uint
+var nosched bool
 
 func main() {
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
 	flag.UintVar(&cores, "cores", 15, "Number of cores to use by system")
+	flag.BoolVar(&nosched, "no-scheduler", false, "Switch scheduler off")
 
-	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	settings := flow.CreateSettings()
+	settings.SchedulerOff = nosched
+
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(cores, settings)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(0)

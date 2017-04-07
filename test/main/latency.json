@@ -46,7 +46,7 @@
                     "image-name": "yanff-performance",
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
-                        "./latency-part1"
+                        "./latency-part1", "-PASSED_LIMIT=84"
                     ]
                 },
                 {

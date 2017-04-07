@@ -32,8 +32,10 @@ func main() {
 	var mode string
 	flag.StringVar(&mode, "mode", "orig", "Format of rules file")
 
+	settings := flow.CreateSettings()
+
 	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	flow.SystemInit(16, settings)
 
 	// Start regular updating forwarding rules
 	switch mode {

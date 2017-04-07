@@ -15,8 +15,10 @@ import (
 
 // Main function for constructing packet processing graph.
 func main() {
+	settings := flow.CreateSettings()
+
 	// Init YANFF system
-	flow.SystemInit(16)
+	flow.SystemInit(16, settings)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)

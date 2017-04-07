@@ -20,8 +20,10 @@ func main() {
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
 
+	settings := flow.CreateSettings()
+
 	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	flow.SystemInit(cores, settings)
 
 	// Start regular updating forwarding rules
 	L2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")

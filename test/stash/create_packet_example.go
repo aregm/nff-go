@@ -19,10 +19,13 @@ func main() {
 	// InitEmptyEtherIPv4TCPPacket() and set Ethernet destination address.
 	// If flag enabled, generates packets with PacketFromByte() from raw buffer.
 	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with PacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
-	flag.Parse()
 
-	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	// Create default settings and modify some default values.
+	settings := flow.CreateSettings()
+	settings.SchedTime = 1000
+
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(16, settings)
 
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {

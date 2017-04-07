@@ -61,8 +61,10 @@ var (
 )
 
 func main() {
-	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	settings := flow.CreateSettings()
+
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(16, settings)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)

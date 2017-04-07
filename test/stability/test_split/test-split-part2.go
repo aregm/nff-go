@@ -14,8 +14,10 @@ var L3Rules *rules.L3Rules
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Init YANFF system
-	flow.SystemInit(16)
+	settings := flow.CreateSettings()
+
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(16, settings)
 
 	// Get splitting rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG("test-split.conf")

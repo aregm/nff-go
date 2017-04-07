@@ -41,6 +41,8 @@ var (
 )
 
 var (
+	cores uint
+
 	// PACKET_SIZE - SERV_DATA_SIZE
 	payloadSize uint64 = 0
 
@@ -65,6 +67,7 @@ var (
 )
 
 func main() {
+	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
 	flag.IntVar(&LAT_NUMBER, "LAT_NUMBER", LAT_NUMBER, "number of packets, for which latency should be reported")
 	flag.IntVar(&BINS, "BINS", BINS, "number of bins")
 	flag.Uint64Var(&SKIP_NUMBER, "SKIP_NUMBER", SKIP_NUMBER, "test calculates latency only for 1 of SKIP_NUMBER packets")
@@ -82,8 +85,11 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	// Create default settings needed to initialize system.
+	settings := flow.CreateSettings()
+
+	// Initialize YANFF library at requested number of cores
+	flow.SystemInit(cores, settings)
 	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
 
 	// Create packet flow
