@@ -44,7 +44,7 @@ Use **make doc** to generate full documentation. Alternatively, you can run comm
 * http://localhost:6060/pkg/yanff/packet/
 
 ### Tests
-In addition to building tests, **make** command on the top level also builds the testing framework and examples. YANFF distributed tests are packed inside of Docker container images.
+In addition to building tests, **make** command on the top level also builds the testing framework and examples. YANFF distributed tests are packed inside of Docker container images. There are also unit non-distributed tests in some packages which may be run using **make testing** command.
 
 ### Docker images
 To create Docker images on the local default target (either default UNIX socket in /var/run/docker.sock or whatever is defined in DOCKER_HOST variable) use **make images**.
