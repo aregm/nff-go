@@ -18,7 +18,9 @@ YANFF test framework has dependencies from several Go packages. The testing fram
 1. Make sure you are using Go version 1.8 or higher.
 2. Download Docker sources: go get -v -d github.com/docker/docker/api
 3. Go to $GOPATH/src/github.com/docker/docker/vendor/github.com/docker and delete directory named "go-connections."
-4. Install go-connections dependency: go get -v github.com/Sirupsen/logrus
+4. Install go-connections dependencies:
+  * go get -v github.com/Sirupsen/logrus
+  * go get -v github.com/pkg/errors
 5. Install proxy support: go get -v golang.org/x/net/proxy
 6. Install go-connections from its mainstream repository: go get -v github.com/docker/go-connections
 7. Build docker from sources: go install github.com/docker/docker/api
