@@ -26,9 +26,9 @@ import "C"
 import (
 	"encoding/hex"
 	"flag"
-	"math"
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
+	"math"
 	"os"
 	"runtime"
 	"strings"
@@ -48,8 +48,51 @@ type Mbuf C.struct_rte_mbuf
 // TODO need to investigate more elegant way to return variables from C part
 var mainMempool *C.struct_rte_mempool
 
-func GetPacketDataStartPointer(m *Mbuf) uintptr {
-	return uintptr((*C.struct_rte_mbuf)(m).buf_addr) + uintptr((*C.struct_rte_mbuf)(m).data_off)
+func GetPacketDataStartPointer(mb *Mbuf) uintptr {
+	return uintptr(mb.buf_addr) + uintptr(mb.data_off)
+}
+
+// TODO 4 following functions support only not chained mbufs now
+// Heavily based on DPDK rte_pktmbuf_prepend
+func PrependMbuf(mb *Mbuf, length uint) bool {
+	if C.uint16_t(length) > mb.data_off {
+		return false
+	}
+	mb.data_off -= C.uint16_t(length)
+	mb.data_len += C.uint16_t(length)
+	mb.pkt_len += C.uint32_t(length)
+	return true
+}
+
+// Heavily based on DPDK rte_pktmbuf_append
+func AppendMbuf(mb *Mbuf, length uint) bool {
+	if C.uint16_t(length) > mb.buf_len-mb.data_off-mb.data_len {
+		return false
+	}
+	mb.data_len += C.uint16_t(length)
+	mb.pkt_len += C.uint32_t(length)
+	return true
+}
+
+// Heavily based on DPDK rte_pktmbuf_adj
+func AdjMbuf(m *Mbuf, length uint) bool {
+	if C.uint16_t(length) > m.data_len {
+		return false
+	}
+	m.data_off += C.uint16_t(length)
+	m.data_len -= C.uint16_t(length)
+	m.pkt_len -= C.uint32_t(length)
+	return true
+}
+
+// Heavily based on DPDK rte_pktmbuf_trim
+func TrimMbuf(m *Mbuf, length uint) bool {
+	if C.uint16_t(length) > m.data_len {
+		return false
+	}
+	m.data_len -= C.uint16_t(length)
+	m.pkt_len -= C.uint32_t(length)
+	return true
 }
 
 // These constants are used by packet package to parse protocol headers
@@ -387,14 +430,6 @@ func AllocateMbufs(mb []uintptr) {
 	}
 }
 
-func AppendMbuf(mb *Mbuf, size int) {
-	//TODO we use only single segment mbufs at this moment
-	addr := C.rte_pktmbuf_append((*C.struct_rte_mbuf)(mb), C.uint16_t(size))
-	if addr == nil {
-		common.LogError(common.Debug, "AppendMbuf cannot append %d bytes to mbuf", size)
-	}
-}
-
 func WriteDataToMbuf(mb *Mbuf, data []byte) {
 	d := unsafe.Pointer(GetPacketDataStartPointer(mb))
 	slice := (*[math.MaxInt32]byte)(d)[:len(data)] // copy requires slice
@@ -403,7 +438,11 @@ func WriteDataToMbuf(mb *Mbuf, data []byte) {
 }
 
 func GetRawPacketBytesMbuf(mb *Mbuf) []byte {
-	dataLen := uintptr((*Mbuf)(mb).data_len)
-	dataPtr := uintptr((*Mbuf)(mb).buf_addr) + uintptr((*Mbuf)(mb).data_off)
+	dataLen := uintptr(mb.data_len)
+	dataPtr := uintptr(mb.buf_addr) + uintptr(mb.data_off)
 	return (*[1 << 30]byte)(unsafe.Pointer(dataPtr))[:dataLen]
+}
+
+func GetDataLenMbuf(mb *Mbuf) uint {
+	return uint(mb.data_len)
 }

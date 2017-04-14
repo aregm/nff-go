@@ -5,6 +5,7 @@
 package packet_test
 
 import (
+	"bytes"
 	"encoding/hex"
 	"github.com/intel-go/yanff/low"
 	. "github.com/intel-go/yanff/packet"
@@ -630,4 +631,85 @@ func clearPacket(packet *Packet) {
 	packet.TCP = nil
 	packet.UDP = nil
 	packet.Data = nil
+}
+
+// Tested functions
+// EncapsulateHead
+// EncapsulateTail
+// DecapsulateHead
+// DecapsulateTail
+// PacketBytesChange
+func TestEncapsulationDecapsulationFunctions(t *testing.T) {
+	init := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	add := []byte{30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49}
+
+	pkt := new(Packet)
+	mb := make([]uintptr, 1)
+
+	for i := uint(0); i < 11; i++ {
+		for j := uint(1); j < 21; j++ {
+			low.AllocateMbufs(mb)
+			pkt.CreatePacket(mb[0])
+			PacketFromByte(pkt, init)
+
+			pkt.EncapsulateHead(i, j)
+			pkt.PacketBytesChange(i, add[0:j])
+			var temp []byte
+			reference := append(append(append(temp, init[0:i]...), add[0:j]...), init[i:10]...)
+			answer := pkt.GetRawPacketBytes()
+			if !bytes.Equal(reference, answer) || pkt.GetPacketLen() != 10+j {
+				t.Errorf("EncapsulateHead incorrect result i = %d, j = %d:\ngot:%d\nwant:%d\n", i, j, answer, reference)
+			}
+
+		}
+	}
+	for i := uint(0); i < 11; i++ {
+		for j := uint(1); j < 21; j++ {
+			low.AllocateMbufs(mb)
+			pkt.CreatePacket(mb[0])
+			PacketFromByte(pkt, init)
+
+			pkt.EncapsulateTail(i, j)
+			pkt.PacketBytesChange(i, add[0:j])
+			var temp []byte
+			reference := append(append(append(temp, init[0:i]...), add[0:j]...), init[i:10]...)
+			answer := pkt.GetRawPacketBytes()
+			if !bytes.Equal(reference, answer) || pkt.GetPacketLen() != 10+j {
+				t.Errorf("EncapsulateTail incorrect result i = %d, j = %d:\ngot:%d\nwant:%d\n", i, j, answer, reference)
+			}
+
+		}
+	}
+	for i := uint(0); i < 20; i++ {
+		for j := uint(1); j < 20-i+1; j++ {
+			low.AllocateMbufs(mb)
+			pkt.CreatePacket(mb[0])
+			PacketFromByte(pkt, add)
+
+			pkt.DecapsulateHead(i, j)
+			var temp []byte
+			reference := append(append(temp, add[0:i]...), add[i+j:20]...)
+			answer := pkt.GetRawPacketBytes()
+			if !bytes.Equal(reference, answer) || pkt.GetPacketLen() != 20-j {
+				t.Errorf("DecapsulateHead incorrect result i = %d, j = %d:\ngot:%d\nwant:%d\n", i, j, answer, reference)
+			}
+
+		}
+	}
+	for i := uint(0); i < 20; i++ {
+		for j := uint(1); j < 20-i+1; j++ {
+			low.AllocateMbufs(mb)
+			pkt.CreatePacket(mb[0])
+			PacketFromByte(pkt, add)
+
+			pkt.DecapsulateTail(i, j)
+			var temp []byte
+			reference := append(append(temp, add[0:i]...), add[i+j:20]...)
+			answer := pkt.GetRawPacketBytes()
+			if !bytes.Equal(reference, answer) || pkt.GetPacketLen() != 20-j {
+				t.Errorf("DecapsulateTail incorrect result i = %d, j = %d:\ngot:%d\nwant:%d\n", i, j, answer, reference)
+			}
+
+		}
+	}
 }

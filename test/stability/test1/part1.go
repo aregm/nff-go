@@ -82,7 +82,7 @@ func main() {
 }
 
 func generatePacket(emptyPacket *packet.Packet) {
-	packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, int(PACKET_SIZE))
+	packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE))
 
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xad, 0xbe, 0xaf, 0xff, 0xfe}
 
