@@ -61,5 +61,5 @@ func dumper(currentPacket *packet.Packet) {
 }
 
 func hexdumper(currentPacket *packet.Packet) {
-	fmt.Printf("Raw bytes=%x\n", packet.GetRawPacketBytes(currentPacket))
+	fmt.Printf("Raw bytes=%x\n", currentPacket.GetRawPacketBytes())
 }

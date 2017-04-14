@@ -38,9 +38,8 @@ func main() {
 
 func generatePacket(pkt *packet.Packet) {
 	// Total packet size will be 14+20+20+70+4(crc)=128 bytes
-	size := 70
-	packet.InitEmptyEtherIPv4TCPPacket(pkt, size)
-	pkt.Ether.DAddr = [6]uint8{0xde, 0xad, 0xbe, 0xaf, 0xff, 0xfe}
+	packet.InitEmptyEtherIPv4TCPPacket(pkt, 70)
+	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 }
 
 func generatePacketFromByte(emptyPacket *packet.Packet) {

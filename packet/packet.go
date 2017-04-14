@@ -554,7 +554,7 @@ func (packet *Packet) CreatePacket(IN uintptr) {
 // PacketFromByte function gets non-initialized packet and slice of bytes of any size.
 // Initializes input packet and fills it with these bytes.
 func PacketFromByte(packet *Packet, data []byte) {
-	low.AppendMbuf(packet.CMbuf, len(data))
+	low.AppendMbuf(packet.CMbuf, uint(len(data)))
 	low.WriteDataToMbuf(packet.CMbuf, data)
 	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 }
@@ -564,7 +564,7 @@ func PacketFromByte(packet *Packet, data []byte) {
 
 // InitEmptyEtherPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointer to Ethernet header.
-func InitEmptyEtherPacket(packet *Packet, plSize int) {
+func InitEmptyEtherPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
 	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
@@ -574,7 +574,7 @@ func InitEmptyEtherPacket(packet *Packet, plSize int) {
 
 // InitEmptyEtherIPv4Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv4 headers.
-func InitEmptyEtherIPv4Packet(packet *Packet, plSize int) {
+func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) {
 	// TODO After mandatory fields, IPv4 header optionally may have options of variable length
 	// Now pre-allocate space only for mandatory fields
 	bufSize := plSize + EtherLen + IPv4MinLen
@@ -596,7 +596,7 @@ func InitEmptyEtherIPv4Packet(packet *Packet, plSize int) {
 
 // InitEmptyEtherIPv6Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv6 headers.
-func InitEmptyEtherIPv6Packet(packet *Packet, plSize int) {
+func InitEmptyEtherIPv6Packet(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv6Len
 	low.AppendMbuf(packet.CMbuf, bufSize)
 	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
@@ -609,7 +609,7 @@ func InitEmptyEtherIPv6Packet(packet *Packet, plSize int) {
 // and init pointers to Ethernet, IPv4 and TCP headers. This function supposes that IPv4 and TCP
 // headers have minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize int) {
+func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) {
 	// Now user cannot set explicitly optional fields, so len of header is supposed to be equal to TCPMinLen
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv4MinLen + TCPMinLen
@@ -633,7 +633,7 @@ func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize int) {
 // and init pointers to Ethernet, IPv4 and UDP headers. This function supposes that IPv4
 // header has minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize int) {
+func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv4MinLen + UDPLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
 	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
@@ -654,7 +654,7 @@ func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize int) {
 // and init pointers to Ethernet, IPv6 and TCP headers. This function supposes that IPv6 and TCP
 // headers have minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize int) {
+func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv6Len + TCPMinLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
@@ -672,7 +672,7 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize int) {
 // and init pointers to Ethernet, IPv6 and UDP headers. This function supposes that IPv6
 // header has minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize int) {
+func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv6Len + UDPLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
 	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
@@ -686,11 +686,91 @@ func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize int) {
 	packet.UDP.DgramLen = uint16(UDPLen + plSize)
 }
 
-// Swapping bytes for protocol numbers in Little Endian and Big Endian
+// Swapping uint16 in Little Endian and Big Endian
 func SwapBytesUint16(x uint16) uint16 {
 	return x<<8 | x>>8
 }
 
-func GetRawPacketBytes(pkt *Packet) []byte {
-	return low.GetRawPacketBytesMbuf(pkt.CMbuf)
+// Swapping uint32 in Little Endian and Big Endian
+func SwapBytesUint32(x uint32) uint32 {
+	return ((x & 0x000000ff) << 24) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) >> 8) | ((x & 0xff000000) >> 24)
+}
+
+// GetRawPacketBytes returns all bytes from this packet. Not zero-copy.
+func (packet *Packet) GetRawPacketBytes() []byte {
+	return low.GetRawPacketBytesMbuf(packet.CMbuf)
+}
+
+// GetPacketLen returns length of this packet
+func (packet *Packet) GetPacketLen() uint {
+	return low.GetDataLenMbuf(packet.CMbuf)
+}
+
+// EncapsulateHead adds bytes to packet. start - number of beginning byte, length - number of
+// added bytes. This function should be used to add bytes to the first half
+// of packet. Return false if error.
+func (packet *Packet) EncapsulateHead(start uint, length uint) bool {
+	if low.PrependMbuf(packet.CMbuf, length) == false {
+		return false
+	}
+	packet.Unparsed -= uintptr(length)
+	for i := uint(0); i < start; i++ {
+		*(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i))) = *(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i+length)))
+	}
+	return true
+}
+
+// EncapsulateTail adds bytes to packet. start - number of beginning byte, length - number of
+// added bytes. This function should be used to add bytes to the second half
+// of packet. Return false if error.
+func (packet *Packet) EncapsulateTail(start uint, length uint) bool {
+	if low.AppendMbuf(packet.CMbuf, length) == false {
+		return false
+	}
+	packetLength := packet.GetPacketLen()
+	for i := packetLength - 1; int(i) >= int(start+length); i-- {
+		*(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i))) = *(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i-length)))
+	}
+	return true
+}
+
+// DecapsulateHead removes bytes from packet. start - number of beginning byte, length - number of
+// removed bytes. This function should be used to remove bytes from the first half
+// of packet. Return false if error.
+func (packet *Packet) DecapsulateHead(start uint, length uint) bool {
+	if low.AdjMbuf(packet.CMbuf, length) == false {
+		return false
+	}
+	for i := int(start - 1); i >= 0; i-- {
+		*(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i+int(length)))) = *(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i)))
+	}
+	packet.Unparsed += uintptr(length)
+	return true
+}
+
+// DecapsulateTail removes bytes from packet. start - number of beginning byte, length - number of
+// removed bytes. This function should be used to remove bytes from the second half
+// of packet. Return false if error.
+func (packet *Packet) DecapsulateTail(start uint, length uint) bool {
+	packetLength := packet.GetPacketLen() // This won't be changed by next operation
+	if low.TrimMbuf(packet.CMbuf, length) == false {
+		return false
+	}
+	for i := start; i < packetLength; i++ {
+		*(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i))) = *(*uint8)(unsafe.Pointer(packet.Unparsed + uintptr(i+length)))
+	}
+	return true
+}
+
+// PacketBytesChange changes packet bytes from start byte to given bytes.
+// Return false if error.
+func (packet *Packet) PacketBytesChange(start uint, bytes []byte) bool {
+	length := uint(len(bytes))
+	if start+length > packet.GetPacketLen() {
+		return false
+	}
+	for i := uint(0); i < length; i++ {
+		*(*byte)(unsafe.Pointer(packet.Unparsed + uintptr(start+i))) = bytes[i]
+	}
+	return true
 }

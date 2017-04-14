@@ -41,7 +41,7 @@ const (
 
 var (
 	// Payload is 16 byte md5 hash sum of headers
-	PAYLOAD_SIZE uint64 = 16
+	PAYLOAD_SIZE uint = 16
 
 	sentPacketsGroup1 uint64 = 0
 	sentPacketsGroup2 uint64 = 0
@@ -144,7 +144,7 @@ func main() {
 
 // Generate packets of 1 group
 func generatePacketGroup1(pkt *packet.Packet) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, int(PAYLOAD_SIZE))
+	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
@@ -161,7 +161,7 @@ func generatePacketGroup1(pkt *packet.Packet) {
 
 // Generate packets of 2 group
 func generatePacketGroup2(pkt *packet.Packet) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, int(PAYLOAD_SIZE))
+	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
@@ -178,7 +178,7 @@ func generatePacketGroup2(pkt *packet.Packet) {
 
 // Generate packets of 3 group
 func generatePacketGroup3(pkt *packet.Packet) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, int(PAYLOAD_SIZE))
+	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
