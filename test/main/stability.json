@@ -127,6 +127,29 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "handle2",
+            "test-time": 60000000000,
+            "test-type": "TEST_TYPE_SCENARIO",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-handle2",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./test-handle2-part1"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-handle2",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./test-handle2-part2"
+                    ]
+                }
+            ]
         }
     ]
 }

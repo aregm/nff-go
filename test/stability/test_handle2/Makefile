@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-PATH_TO_MK = ../../mk
-SUBDIRS = test1 test_merge test_split test_separate test_partition test_handle2
+PATH_TO_MK = ../../../mk
+IMAGENAME = yanff-test-handle2
+EXECUTABLES = test-handle2-part1 test-handle2-part2
 
-include $(PATH_TO_MK)/intermediate.mk
+include $(PATH_TO_MK)/leaf.mk

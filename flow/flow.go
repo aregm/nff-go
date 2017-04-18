@@ -59,7 +59,7 @@ type GenerateFunction func(*packet.Packet)
 // Function type for user defined function which handles packets.
 // Function receives a packet from flow. User should parse it
 // and make necessary changes. It is prohibit to free packet in this
-// function. Use "Stop" functionality for this.
+// function.
 type HandleFunction func(*packet.Packet)
 
 // Function type for user defined function which separates packets
@@ -157,14 +157,14 @@ type separateParameters struct {
 }
 
 func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
-	separateFunction SeparateFunction) *scheduler.FlowFunction {
+	separateFunction SeparateFunction, name string) *scheduler.FlowFunction {
 	par := new(separateParameters)
 	par.in = in
 	par.outTrue = outTrue
 	par.outFalse = outFalse
 	par.separateFunction = separateFunction
 	ffCount++
-	return scheduler.NewClonableFlowFunction("separator", ffCount, separate, par, separateCheck, make(chan uint64, 50))
+	return scheduler.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50))
 }
 
 type splitParameters struct {
@@ -382,7 +382,7 @@ func SetSeparator(IN *Flow, separateFunction SeparateFunction) (OUT *Flow) {
 	ringTrue := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-	separate := makeSeparator(IN.current, ringTrue, ringFalse, separateFunction)
+	separate := makeSeparator(IN.current, ringTrue, ringFalse, separateFunction, "separator")
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
 	OUT.current = ringFalse
@@ -423,14 +423,23 @@ func SetStopper(IN *Flow) {
 }
 
 // Add handle function to flow graph.
-// Gets flow and user defined handle function.
-// Each packet from input flow will be handle inside user defined function and sent further
-// in the same flow.
+// Gets flow and user defined handle function. Function can receive either HandleFunction
+// or SeparateFunction. If input argument is HandleFunction then each packet from
+// input flow will be handle inside user defined function and sent further in the same flow.
+// If input argument is SeparateFunction user defined function can return boolean value.
+// If user function returns false after handling a packet it is dropped automatically.
 // Function can panic during execution.
-func SetHandler(IN *Flow, handleFunction HandleFunction) {
+func SetHandler(IN *Flow, handleFunction interface{}) {
 	checkFlow(IN)
 	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	handle := makeHandler(IN.current, ring, handleFunction)
+	var handle *scheduler.FlowFunction
+	if f, t := handleFunction.(func(*packet.Packet)); t {
+		handle = makeHandler(IN.current, ring, HandleFunction(f))
+	} else if f, t := handleFunction.(func(*packet.Packet) bool); t {
+		handle = makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), "handler")
+	} else {
+		common.LogError(common.Initialization, "Function argument of SetHandle function is not HandleFunction or SeparateFunction")
+	}
 	schedState.Clonable = append(schedState.Clonable, handle)
 	IN.current = ring
 }
@@ -542,6 +551,10 @@ func merge(from *low.Queue, to *low.Queue) {
 			}
 			if schedState.UnClonable[i].Parameters.(*partitionParameters).outSecond == from {
 				schedState.UnClonable[i].Parameters.(*partitionParameters).outSecond = to
+			}
+		case *generateParameters:
+			if schedState.UnClonable[i].Parameters.(*generateParameters).out == from {
+				schedState.UnClonable[i].Parameters.(*generateParameters).out = to
 			}
 		}
 	}
