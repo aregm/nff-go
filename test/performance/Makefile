@@ -4,6 +4,6 @@
 
 PATH_TO_MK = ../../mk
 IMAGENAME = yanff-performance
-EXECUTABLES = perf_light perf_main perf_seq
+EXECUTABLES = perf_light perf_main perf_seq latency/latency-part1 latency/latency-stub
 
 include $(PATH_TO_MK)/leaf.mk
