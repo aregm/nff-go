@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/md5"
+	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"sync"
@@ -46,9 +47,7 @@ var (
 	sentPacketsGroup2 uint64 = 0
 	sentPacketsGroup3 uint64 = 0
 
-	recvOnPort0 uint64 = 0
-
-	recvPackets   uint64 = 0
+	recv          uint64 = 0
 	brokenPackets uint64 = 0
 
 	DSTPORT_1 uint16 = 111
@@ -56,10 +55,16 @@ var (
 	DSTPORT_3 uint16 = 333
 
 	testDoneEvent *sync.Cond = nil
+
+	outport uint
+	inport uint
 )
 
 func main() {
-	// Init YANFF system at 16 available cores
+	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
+
+	// Init YANFF system at 16 available cores.
 	flow.SystemInit(16)
 
 	var m sync.Mutex
@@ -72,11 +77,11 @@ func main() {
 
 	outputFlow := flow.SetMerger(flow1, flow2, flow3)
 
-	flow.SetSender(outputFlow, 0)
+	flow.SetSender(outputFlow, uint8(outport))
 
 	// Create receiving flows and set a checking function for it
-	inputFlow1 := flow.SetReceiver(0)
-	flow.SetHandler(inputFlow1, checkPacketsOn0Port, nil)
+	inputFlow1 := flow.SetReceiver(uint8(outport))
+	flow.SetHandler(inputFlow1, checkInputFlow, nil)
 	flow.SetStopper(inputFlow1)
 
 	// Start pipeline
@@ -93,7 +98,7 @@ func main() {
 	sent3 := sentPacketsGroup3
 	sent := sent1 + sent2 + sent3
 
-	received := atomic.LoadUint64(&recvOnPort0)
+	received := atomic.LoadUint64(&recv)
 
 	var p int
 	if sent != 0 {
@@ -179,10 +184,7 @@ func generatePacketGroup3(pkt *packet.Packet, context flow.UserContext) {
 	}
 }
 
-// Count and check packets received on 0 port
-func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
-	recvCount := atomic.AddUint64(&recvPackets, 1)
-
+func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseL4Data()
 	if offset < 0 {
 		println("ParseL4Data returned negative value", offset)
@@ -201,10 +203,10 @@ func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
 			atomic.AddUint64(&brokenPackets, 1)
 			return
 		}
-		atomic.AddUint64(&recvOnPort0, 1)
+		atomic.AddUint64(&recv, 1)
 	}
 	// TODO 80% of requested number of packets.
-	if recvCount >= TOTAL_PACKETS/32*8 {
+	if recv >= TOTAL_PACKETS/32*8 {
 		testDoneEvent.Signal()
 	}
 }

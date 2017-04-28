@@ -5,6 +5,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -30,6 +31,9 @@ var (
 	receivedPackets uint64     = 0
 	testDoneEvent   *sync.Cond = nil
 	passed          int32      = 1
+
+	outport uint
+	inport uint
 )
 
 // This part of test generates packets on port 0 and receives them on
@@ -41,6 +45,9 @@ var (
 // calculates sent/received ratio and prints it when a predefined
 // number of packets is received.
 func main() {
+	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.UintVar(&inport, "inport", 1, "port for receiver")
+
 	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
@@ -50,10 +57,10 @@ func main() {
 	// Create packets with speed at least 1000 packets/s
 	firstFlow := flow.SetGenerator(generatePacket, 1000, nil)
 	// Send all generated packets to the output
-	flow.SetSender(firstFlow, 0)
+	flow.SetSender(firstFlow, uint8(outport))
 
 	// Create receiving flow and set a checking function for it
-	secondFlow := flow.SetReceiver(1)
+	secondFlow := flow.SetReceiver(uint8(inport))
 	flow.SetHandler(secondFlow, checkPackets, nil)
 	flow.SetStopper(secondFlow)
 

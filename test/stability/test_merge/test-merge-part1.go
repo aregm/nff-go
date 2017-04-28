@@ -51,28 +51,34 @@ var (
 	IPV4ADDR_2 uint32 = 0x05090980 // 128.9.9.5
 
 	testDoneEvent *sync.Cond = nil
+
+	outport1 uint
+	outport2 uint
+	inport  uint
 )
 
 func main() {
 	flag.Uint64Var(&PASSED_LIMIT, "PASSED_LIMIT", PASSED_LIMIT, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&SPEED, "SPEED", SPEED, "speed of 1 and 2 generators, Pkts/s")
+	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
+	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
 
-	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Create first packet flow
 	firstFlow := flow.SetGenerator(generatePacketGroup1, SPEED, nil)
-	flow.SetSender(firstFlow, 0)
+	flow.SetSender(firstFlow, uint8(outport1))
 
 	// Create second packet flow
 	secondFlow := flow.SetGenerator(generatePacketGroup2, SPEED, nil)
-	flow.SetSender(secondFlow, 1)
+	flow.SetSender(secondFlow, uint8(outport2))
 
 	// Create receiving flow and set a checking function for it
-	inputFlow := flow.SetReceiver(0)
+	inputFlow := flow.SetReceiver(uint8(inport))
+
 	flow.SetHandler(inputFlow, checkPackets, nil)
 	flow.SetStopper(inputFlow)
 
