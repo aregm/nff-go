@@ -83,16 +83,18 @@ func NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction, par int
 }
 
 type Scheduler struct {
-	Clonable   []*FlowFunction
-	UnClonable []*FlowFunction
-	freeCores  []bool
-	off        bool
-	offRemove  bool
-	StopRing   *low.Queue
-	usedCores  uint8
+	Clonable          []*FlowFunction
+	UnClonable        []*FlowFunction
+	freeCores         []bool
+	off               bool
+	offRemove         bool
+	stopDedicatedCore bool
+	StopRing          *low.Queue
+	usedCores         uint8
 }
 
-func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool, stopRing *low.Queue) Scheduler {
+func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
+	stopDedicatedCore bool, stopRing *low.Queue) Scheduler {
 	// Init scheduler
 	scheduler := new(Scheduler)
 	scheduler.freeCores = make([]bool, coresNumber, coresNumber)
@@ -103,6 +105,7 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool, 
 	scheduler.offRemove = schedulerOff || schedulerOffRemove
 	scheduler.StopRing = stopRing
 	scheduler.usedCores = 0
+	scheduler.stopDedicatedCore = stopDedicatedCore
 
 	return *scheduler
 }
@@ -111,8 +114,12 @@ func (scheduler *Scheduler) SystemStart() {
 	core := scheduler.getCore(true)
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
 	low.SetAffinity(uint8(core))
-	core = scheduler.getCore(true)
-	common.LogDebug(common.Initialization, "Start STOP at", core, "core")
+	if scheduler.stopDedicatedCore {
+		core = scheduler.getCore(true)
+		common.LogDebug(common.Initialization, "Start STOP at", core, "core")
+	} else {
+		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
+	}
 	go func() {
 		low.SetAffinity(uint8(core))
 		low.Stop(scheduler.StopRing)

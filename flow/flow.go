@@ -230,6 +230,7 @@ const (
 func SystemInit(CPUCoresNumber uint) {
 	schedulerOff := flag.Bool("no-scheduler", false, "Use this for switching scheduler off")
 	schedulerOffRemove := flag.Bool("no-remove-clones", false, "Use this for switching off removing clones in scheduler")
+	stopDedicatedCore := flag.Bool("stop-at-dedicated-core", false, "Use this for setting scheduler and stop functionality to different cores")
 	mbufNumber := flag.Uint("mempool-size", 8191, "Advanced option: number of mbufs in mempool per port")
 	mbufCacheSize := flag.Uint("mempool-cache", 250, "Advanced option: Size of local per-core cache in mempool (in mbufs)")
 	flag.UintVar(&sizeMultiplier, "ring-size", 256, "Advanced option: number of 'burst_size' groups in all rings. This should be power of 2")
@@ -252,7 +253,7 @@ func SystemInit(CPUCoresNumber uint) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, StopRing)
+	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 
