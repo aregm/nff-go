@@ -18,7 +18,7 @@
 // Handle - for handling packets inside graph
 // Separate, Split, Count, Merge for combining flows inside graph
 // All this functions can be added to the graph be "Set" functions like
-// SetReceive, SetSplitter, etc.
+// SetReceiver, SetSplitter, etc.
 
 // Flow functions Generate, Handle, Separate and Split use user defined functions
 // for processing. These functions are received each packet from flow (or new

@@ -106,6 +106,7 @@ const (
 
 func CreateQueue(name string, count uint) *Queue {
 	var queue *Queue
+	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
 	queue = (*Queue)(unsafe.Pointer(C.yanff_queue_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 
 	return queue
