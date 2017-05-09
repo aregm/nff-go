@@ -31,14 +31,10 @@ YANFF test framework has dependencies from several Go packages. The testing fram
 ## Building YANFF
 ### Main library
 To build YANFF run **make** from top directory. To build YANFF applications it is necessary to set four environment variables. Makefiles which build examples and tests do this automatically in mk/include.mk file. If necessary, these variables have to be set by hands:
-* *RTE_SDK=$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02*
-_DPDK version may change in the future_
-* *RTE_TARGET=x86_64-native-linuxapp-gcc*
-_Currently building only with GCC is supported_
-* *CGO_CFLAGS = -I$RTE_SDK/$RTE_TARGET/include*
-_Allow Go compiler find DPDK headers_
-* *CGO_LDFLAGS = -L$RTE_SDK/$RTE_TARGET/lib*
-_Allow Go linked find DPDK libraries_
+* **RTE_SDK=$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02** _- DPDK version may change in the future_
+* **RTE_TARGET=x86_64-native-linuxapp-gcc** _- Currently building only with GCC is supported_
+* **CGO_CFLAGS=-I$RTE_SDK/$RTE_TARGET/include** _- Allow Go compiler find DPDK headers_
+* **CGO_LDFLAGS=-L$RTE_SDK/$RTE_TARGET/lib** _- Allow Go linked find DPDK libraries_
 
 ### Running YANFF applications
 It is necessary to register network cards to work with DPDK, load necessary kernel modules and bind cards to them. After DPDK is built with **make**, refer to [this page](http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html "Binding network cards to DPDK driver") to configure network cards to work with DPDK driver. For Intel network cards there are also [useful instructions for getting best performance](http://dpdk.org/doc/guides/linux_gsg/nic_perf_intel_platform.html "Intel NICs performance advices").
