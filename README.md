@@ -6,7 +6,7 @@ YANFF is an Open Source BSD licensed project. The most recent patches and enhanc
 
 ## Getting YANFF
 To get YANFF you can use go get -v -d github.com/intel-go/yanff
-This command will show an error that build cannot be done, but build is done differently because it is necessary to build and link with DPDK.
+This command will show an error that build cannot be done, but build is done differently because it is necessary to build and link with DPDK. **If you just checkout source tree from github, it will not build unless placed into correct subdirectory of $GOPATH.**
 
 ## Build and run requirements
 ### Library requirements
@@ -30,10 +30,20 @@ YANFF test framework has dependencies from several Go packages. The testing fram
 
 ## Building YANFF
 ### Main library
-To build YANFF run **make** from top directory.
+To build YANFF run **make** from top directory. To build YANFF applications it is necessary to set four environment variables. Makefiles which build examples and tests do this automatically in mk/include.mk file. If necessary, these variables have to be set by hands:
+* RTE_SDK=$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02
+_DPDK version may change in the future_
+* RTE_TARGET=x86_64-native-linuxapp-gcc
+_Currently building only with GCC is supported_
+* CGO_CFLAGS = -I$RTE_SDK/$RTE_TARGET/include
+_Allow Go compiler find DPDK headers_
+* CGO_LDFLAGS = -L$RTE_SDK/$RTE_TARGET/lib
+_Allow Go linked find DPDK libraries_
 
 ### Running YANFF applications
 It is necessary to register network cards to work with DPDK, load necessary kernel modules and bind cards to them. After DPDK is built with **make**, refer to [this page](http://dpdk.org/doc/guides/linux_gsg/build_dpdk.html "Binding network cards to DPDK driver") to configure network cards to work with DPDK driver. For Intel network cards there are also [useful instructions for getting best performance](http://dpdk.org/doc/guides/linux_gsg/nic_perf_intel_platform.html "Intel NICs performance advices").
+
+The kernel module which is required for DPDK usermode drivers is built, but not installed into kernel directory. It can be loaded using fill path to the module file with a command **insmod $GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko**.
 
 #### External DPDK usage
 
