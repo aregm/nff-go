@@ -31,13 +31,13 @@ YANFF test framework has dependencies from several Go packages. The testing fram
 ## Building YANFF
 ### Main library
 To build YANFF run **make** from top directory. To build YANFF applications it is necessary to set four environment variables. Makefiles which build examples and tests do this automatically in mk/include.mk file. If necessary, these variables have to be set by hands:
-* RTE_SDK=$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02
+* *RTE_SDK=$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02*
 _DPDK version may change in the future_
-* RTE_TARGET=x86_64-native-linuxapp-gcc
+* *RTE_TARGET=x86_64-native-linuxapp-gcc*
 _Currently building only with GCC is supported_
-* CGO_CFLAGS = -I$RTE_SDK/$RTE_TARGET/include
+* *CGO_CFLAGS = -I$RTE_SDK/$RTE_TARGET/include*
 _Allow Go compiler find DPDK headers_
-* CGO_LDFLAGS = -L$RTE_SDK/$RTE_TARGET/lib
+* *CGO_LDFLAGS = -L$RTE_SDK/$RTE_TARGET/lib*
 _Allow Go linked find DPDK libraries_
 
 ### Running YANFF applications
