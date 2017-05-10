@@ -13,10 +13,12 @@ import (
 	"github.com/intel-go/yanff/test/stability/test1/common"
 )
 
+var options = `{"cores": {"Value": 16, "Locked": false}}`
+
 // Main function for constructing packet processing graph.
 func main() {
 	// Init YANFF system
-	flow.SystemInit(16)
+	flow.SystemInit(options)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)

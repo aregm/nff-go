@@ -20,6 +20,7 @@ const (
 	// With average speed of 1 million packets/s the test runs for
 	// about 10 seconds
 	TOTAL_PACKETS = 100000000
+	options       = `{"cores": {"Value": 16, "Locked": false}}`
 )
 
 var (
@@ -42,7 +43,7 @@ var (
 // number of packets is received.
 func main() {
 	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	flow.SystemInit(options)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)

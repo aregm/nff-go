@@ -30,6 +30,7 @@ import (
 
 const (
 	TOTAL_PACKETS = 100000000
+	options       = `{"cores": {"Value": 16, "Locked": false}}`
 
 	// Proportion of each packet group among all received packets
 	// from ports 1,2,3 should be nearly 33%.
@@ -62,8 +63,8 @@ var (
 )
 
 func main() {
-	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(options)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)

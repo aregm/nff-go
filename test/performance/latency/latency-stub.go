@@ -8,10 +8,12 @@ import (
 	"github.com/intel-go/yanff/flow"
 )
 
+var options = `{"cores": {"Value": 16, "Locked": false}}`
+
 // Main function for constructing packet processing graph.
 func main() {
-	// Initialize YANFF library at 16 available cores.
-	flow.SystemInit(16)
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(options)
 
 	// Receive packets from 0 port and send to 1 port.
 	flow1 := flow.SetReceiver(0)

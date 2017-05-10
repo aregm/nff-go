@@ -14,15 +14,24 @@ import (
 var firstFlow *flow.Flow
 var buffer []byte
 
+// New default values can be specified here.
+var optsJsonExample string = `{ "cores": {"Value": 16, "Locked": false},
+                                "no-scheduler": {"Value": true, "Locked": true},
+                                "mempool-size": {"Value": 8191, "Locked": true},
+                                "no-remove-clones": {"Value": false, "Locked": true},
+                                "ring-size": {"Value": 512, "Locked": true},
+                                "scale-time": {"Value": 1000, "Locked": false},
+                                "burst-size": {"Value": 32, "Locked": false},
+                                "mempool-cache": {"Value": 250, "Locked": false}}`
+
 func main() {
 	// By default this example generates 128-byte empty packets with
 	// InitEmptyEtherIPv4TCPPacket() and set Ethernet destination address.
 	// If flag enabled, generates packets with PacketFromByte() from raw buffer.
 	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with PacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
-	flag.Parse()
 
-	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(optsJsonExample)
 
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {

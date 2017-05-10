@@ -29,6 +29,7 @@ import (
 
 const (
 	TOTAL_PACKETS = 100000000
+	options       = `{"cores": {"Value": 16, "Locked": false}}`
 
 	// Test expects to receive 33% of packets on 0 port and 66% on 1 port
 	// Test is PASSSED, if p1 is in [LOW1;HIGH1] and p2 in [LOW2;HIGH2]
@@ -61,8 +62,8 @@ var (
 )
 
 func main() {
-	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(options)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)

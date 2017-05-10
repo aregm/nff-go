@@ -5,20 +5,18 @@
 package main
 
 import (
-	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/rules"
 )
 
 var L3Rules *rules.L3Rules
+var options = `{"cores": {"Value": 16, "Locked": false}}`
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Initialize YANFF library at requested number of cores
-	var cores uint
-	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
-	flow.SystemInit(cores)
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(options)
 
 	// Get splitting rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")

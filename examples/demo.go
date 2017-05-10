@@ -14,14 +14,13 @@ import "time"
 var L2Rules *rules.L2Rules
 var L3Rules *rules.L3Rules
 var load uint
-var cores uint
+var options = `{"cores": {"Value": 16, "Locked": false}}`
 
 func main() {
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
-	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
 
 	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	flow.SystemInit(options)
 
 	// Start regular updating forwarding rules
 	L2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
