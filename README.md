@@ -27,6 +27,7 @@ YANFF test framework has dependencies from several Go packages. The testing fram
 8. Install stringer code generator: go get -v golang.org/x/tools/cmd/stringer
 9. Set your PATH to point to bin directory under your GOPATH, e.g. export PATH="$PATH:$GOPATH"/bin
 10. You should be able to build test framework now with "make main" in test sub-directory.
+  * If you would like to build main.go without using Makefiles you should run "go generate" from "test" directory first.
 
 ## Building YANFF
 ### Main library
