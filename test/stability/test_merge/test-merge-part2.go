@@ -10,8 +10,10 @@ import (
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Init YANFF system
-	flow.SystemInit(16)
+	settings := flow.CreateSettings()
+
+	// Init YANFF system at requested number of cores.
+	flow.SystemInit(16, settings)
 
 	// Receive packets from 0 and 1 ports
 	inputFlow1 := flow.SetReceiver(0)

@@ -12,13 +12,16 @@ import (
 )
 
 var L3Rules *rules.L3Rules
+var cores uint
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Initialize YANFF library at requested number of cores
-	var cores uint
 	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
-	flow.SystemInit(cores)
+
+	settings := flow.CreateSettings()
+
+	// Initialize YANFF library at requested number of cores.
+	flow.SystemInit(cores, settings)
 
 	// Get splitting rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")

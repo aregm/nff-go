@@ -41,8 +41,10 @@ var (
 // calculates sent/received ratio and prints it when a predefined
 // number of packets is received.
 func main() {
+	settings := flow.CreateSettings()
+
 	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	flow.SystemInit(16, settings)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
