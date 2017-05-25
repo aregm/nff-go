@@ -30,6 +30,8 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_FSGSBASE		\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
 	-include rte_config.h
+# DEBUG flags
+# export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -include rte_config.h
 
 HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
 ifdef HAVE_AVX2
@@ -46,8 +48,6 @@ endif
 endif
 
 export CGO_CFLAGS = $(CFLAGS)
-# DEBUG flags
-# export CGO_CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include
 
 export CGO_LDFLAGS =				\
 	-L$(RTE_SDK)/$(RTE_TARGET)/lib		\
