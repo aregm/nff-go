@@ -89,7 +89,7 @@ func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunct
 	par.queue = queue
 	par.out = out
 	ffCount++
-	return scheduler.NewUnclonableFlowFunction("receiver", ffCount, receive, par)
+	return schedState.NewUnclonableFlowFunction("receiver", ffCount, receive, par)
 }
 
 type generateParameters struct {
@@ -103,7 +103,7 @@ func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *schedu
 	par.out = out
 	par.generateFunction = generateFunction
 	ffCount++
-	return scheduler.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
+	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
 
 func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction, targetSpeed uint64) *scheduler.FlowFunction {
@@ -112,7 +112,7 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction, target
 	par.generateFunction = generateFunction
 	par.targetSpeed = targetSpeed
 	ffCount++
-	return scheduler.NewClonableFlowFunction("fast generator", ffCount, generatePerf, par, generateCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction("fast generator", ffCount, generatePerf, par, generateCheck, make(chan uint64, 50))
 }
 
 type sendParameters struct {
@@ -127,7 +127,7 @@ func makeSender(port uint8, queue uint16, in *low.Queue) *scheduler.FlowFunction
 	par.queue = queue
 	par.in = in
 	ffCount++
-	return scheduler.NewUnclonableFlowFunction("sender", ffCount, send, par)
+	return schedState.NewUnclonableFlowFunction("sender", ffCount, send, par)
 }
 
 type partitionParameters struct {
@@ -146,7 +146,7 @@ func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N
 	par.N = N
 	par.M = M
 	ffCount++
-	return scheduler.NewUnclonableFlowFunction("partitioner", ffCount, partition, par)
+	return schedState.NewUnclonableFlowFunction("partitioner", ffCount, partition, par)
 }
 
 type separateParameters struct {
@@ -164,7 +164,7 @@ func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
 	par.outFalse = outFalse
 	par.separateFunction = separateFunction
 	ffCount++
-	return scheduler.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50))
 }
 
 type splitParameters struct {
@@ -182,7 +182,7 @@ func makeSplitter(in *low.Queue, outs []*low.Queue,
 	par.splitFunction = splitFunction
 	par.flowNumber = flowNumber
 	ffCount++
-	return scheduler.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50))
 }
 
 type handleParameters struct {
@@ -198,7 +198,7 @@ func makeHandler(in *low.Queue, out *low.Queue,
 	par.out = out
 	par.handleFunction = handleFunction
 	ffCount++
-	return scheduler.NewClonableFlowFunction("handler", ffCount, handle, par, handleCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction("handler", ffCount, handle, par, handleCheck, make(chan uint64, 50))
 }
 
 var burstSize uint
@@ -236,6 +236,7 @@ func SystemInit(CPUCoresNumber uint) {
 	flag.UintVar(&sizeMultiplier, "ring-size", 256, "Advanced option: number of 'burst_size' groups in all rings. This should be power of 2")
 	flag.UintVar(&schedTime, "scale-time", 1500, "Time between scheduler actions in miliseconds")
 	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring")
+	checkTime := flag.Uint("check-behaviour-time", 10000, "Time in miliseconds for scheduler to check changing of flow function behaviour")
 	argc, argv := low.ParseFlags()
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone = uint32(sizeMultiplier * burstSize / 5 * 4)
@@ -253,7 +254,7 @@ func SystemInit(CPUCoresNumber uint) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing)
+	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing, *checkTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 

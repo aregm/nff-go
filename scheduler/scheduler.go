@@ -18,9 +18,9 @@ import (
 // expect this.
 var ScaleTime uint
 
-// TODO: 0.98 is a delta of speeds. This delta should be
+// TODO: 1 is a delta of speeds. This delta should be
 // verified or should be tunable from outside.
-const speedDelta = 0.98
+const speedDelta = 1
 
 // Clones of flow functions. They are determined
 // by their core and their stopper channel
@@ -54,7 +54,7 @@ type FlowFunction struct {
 	report chan uint64
 	// Current saved speed when making a clone.
 	// It will be compared with immediate current speed to stop a clone.
-	previousSpeed float64
+	previousSpeed []float64
 	// Name of flow function
 	name string
 	// Identifier which could be used together with flow function name
@@ -62,7 +62,8 @@ type FlowFunction struct {
 	identifier int
 }
 
-func NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction, par interface{}) *FlowFunction {
+func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction,
+	par interface{}) *FlowFunction {
 	ff := new(FlowFunction)
 	ff.name = name
 	ff.identifier = id
@@ -71,7 +72,8 @@ func NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction, pa
 	return ff
 }
 
-func NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction, par interface{}, check conditionFlowFunction, report chan uint64) *FlowFunction {
+func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction,
+	par interface{}, check conditionFlowFunction, report chan uint64) *FlowFunction {
 	ff := new(FlowFunction)
 	ff.name = name
 	ff.identifier = id
@@ -79,6 +81,7 @@ func NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction, par int
 	ff.Parameters = par
 	ff.checkPrintFunction = check
 	ff.report = report
+	ff.previousSpeed = make([]float64, len(scheduler.freeCores), len(scheduler.freeCores))
 	return ff
 }
 
@@ -91,10 +94,11 @@ type Scheduler struct {
 	stopDedicatedCore bool
 	StopRing          *low.Queue
 	usedCores         uint8
+	checkTime         uint
 }
 
 func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
-	stopDedicatedCore bool, stopRing *low.Queue) Scheduler {
+	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint) Scheduler {
 	// Init scheduler
 	scheduler := new(Scheduler)
 	scheduler.freeCores = make([]bool, coresNumber, coresNumber)
@@ -106,6 +110,7 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 	scheduler.StopRing = stopRing
 	scheduler.usedCores = 0
 	scheduler.stopDedicatedCore = stopDedicatedCore
+	scheduler.checkTime = checkTime
 
 	return *scheduler
 }
@@ -147,13 +152,29 @@ func (scheduler *Scheduler) SystemStart() {
 }
 
 func (scheduler *Scheduler) Schedule(schedTime uint) {
+	tick := time.Tick(time.Duration(scheduler.checkTime) * time.Millisecond)
+	checkRequired := false
 	for {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
+		// Report current state of system
 		common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.freeCores))-scheduler.usedCores, "cores are left available.")
+		select {
+		case <-tick:
+			checkRequired = true
+		default:
+		}
+		// Procced with each clonable flow function
 		for i := range scheduler.Clonable {
 			ff := scheduler.Clonable[i]
-			currentSpeed := <-ff.report
-			for k := 0; k < ff.cloneNumber; k++ {
+
+			// Gather and sum current speeds from all clones of current flow function
+			// Flow function itself and all clones put their speeds in one channel
+			currentSpeed := uint64(0)
+			t := len(ff.report) - ff.cloneNumber - 1
+			for k := 0; k < t; k++ {
+				<-ff.report
+			}
+			for k := 0; k < ff.cloneNumber+1; k++ {
 				currentSpeed += <-ff.report
 			}
 			// We should multiply by 1000 because schedTime is in milliseconds
@@ -164,8 +185,36 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// TODO This Mbits measurement should be used only for 84 packet size for debug purposes
 			speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
 			common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedMbits, "Mbits/S,", speedPKTS, "PKT/S")
-			if (ff.checkPrintFunction(ff.Parameters, speedPKTS) == true) && (scheduler.off == false) {
-				ff.previousSpeed = float64(currentSpeed)
+
+			// After we gather current speed we can add or remove clones.
+
+			// Firstly we check removing clones. We can remove one clone if:
+			// 1. flow function has clones
+			// 2. scheduler removing is switched on
+			// 3. current speed of flow function is lower, than saved speed with less number of clones
+			if (ff.cloneNumber != 0) && (scheduler.offRemove == false) && (float64(currentSpeed) < speedDelta*ff.previousSpeed[ff.cloneNumber-1]) {
+				// Save current speed as speed of flow function with this number of clones before removing
+				ff.previousSpeed[ff.cloneNumber] = float64(currentSpeed)
+				common.LogDebug(common.Debug, "Stop a clone of", ff.name, ff.identifier, "at", ff.clone[ff.cloneNumber-1].core, "core")
+				ff.clone[ff.cloneNumber-1].channel <- -1
+				scheduler.setCore(ff.clone[ff.cloneNumber-1].core)
+				ff.clone = ff.clone[:len(ff.clone)-1]
+				ff.cloneNumber--
+				for j := 0; j < ff.cloneNumber; j++ {
+					ff.clone[j].channel <- ff.cloneNumber
+				}
+				// After removing a clone we don't want to try to add clone immidiately
+				continue
+			}
+
+			// Secondly we check adding clones. We can add one clone if:
+			// 1. check function signals that we need to clone
+			// 2. scheduler is switched on
+			// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
+			if (ff.checkPrintFunction(ff.Parameters, speedPKTS) == true) && (scheduler.off == false) &&
+				(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*float64(currentSpeed)) {
+				// Save current speed as speed of flow function with this number of clones before adding
+				ff.previousSpeed[ff.cloneNumber] = float64(currentSpeed)
 				go func() {
 					core := scheduler.getCore(false)
 					if core != -1 {
@@ -188,20 +237,22 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 						common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
 					}
 				}()
+				continue
 			}
-			if (scheduler.offRemove == false) && (float64(currentSpeed) < speedDelta*ff.previousSpeed) {
-				if ff.cloneNumber != 0 {
-					common.LogDebug(common.Debug, "Stop a clone of", ff.name, ff.identifier, "at", ff.clone[ff.cloneNumber-1].core, "core")
-					ff.clone[ff.cloneNumber-1].channel <- -1
-					scheduler.setCore(ff.clone[ff.cloneNumber-1].core)
-					ff.clone = ff.clone[:len(ff.clone)-1]
-					ff.cloneNumber--
-					for j := 0; j < ff.cloneNumber; j++ {
-						ff.clone[j].channel <- ff.cloneNumber
-					}
-				}
+
+			// Scheduler can't add new clones if saved flow function speed with more
+			// clones is slower than current. However this speed can be changed due to
+			// external reasons. So flow function should check and update this speed
+			// regular time.
+			if checkRequired == true {
+				// Regular flow function speed check after each checkTime milliseconds,
+				// it is done by erasing previously measured speed data. After this scheduler can
+				// add new clone. If performance decreases with added clone, it will be stopped
+				// with setting speed data.
+				ff.previousSpeed[ff.cloneNumber+1] = 0
 			}
 		}
+		checkRequired = false
 		runtime.Gosched()
 	}
 }
