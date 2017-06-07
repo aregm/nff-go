@@ -18,7 +18,8 @@ func main() {
 	inputFlow2 := flow.SetReceiver(1)
 
 	outputFlow := flow.SetMerger(inputFlow1, inputFlow2)
-	flow.SetSender(outputFlow, 2)
+
+	flow.SetSender(outputFlow, 0)
 
 	// Begin to process packets.
 	flow.SystemStart()

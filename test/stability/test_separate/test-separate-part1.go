@@ -41,15 +41,14 @@ const (
 
 var (
 	// Payload is 16 byte md5 hash sum of headers
-	PAYLOAD_SIZE uint = 16
-
-	sentPacketsGroup1 uint64 = 0
-	sentPacketsGroup2 uint64 = 0
-	sentPacketsGroup3 uint64 = 0
+	PAYLOAD_SIZE uint   = 16
+	SPEED        uint64 = 1000
+	PASSED_LIMIT uint64 = 85
 
 	recvOnPort0 uint64 = 0
 	recvOnPort1 uint64 = 0
 
+	count         uint64 = 0
 	recvPackets   uint64 = 0
 	brokenPackets uint64 = 0
 
@@ -67,13 +66,8 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Create first packet flow
-	flow1 := flow.SetGenerator(generatePacketGroup1, 100, nil)
-	flow2 := flow.SetGenerator(generatePacketGroup2, 100, nil)
-	flow3 := flow.SetGenerator(generatePacketGroup3, 100, nil)
-
-	outputFlow := flow.SetMerger(flow1, flow2, flow3)
-
+	// Create packet flow
+	outputFlow := flow.SetGenerator(generatePacket, SPEED, nil)
 	flow.SetSender(outputFlow, 0)
 
 	// Create receiving flows and set a checking function for it
@@ -95,10 +89,7 @@ func main() {
 	testDoneEvent.L.Unlock()
 
 	// Compose statistics
-	sent1 := atomic.LoadUint64(&sentPacketsGroup1)
-	sent2 := atomic.LoadUint64(&sentPacketsGroup2)
-	sent3 := atomic.LoadUint64(&sentPacketsGroup3)
-	sent := sent1 + sent2 + sent3
+	sent := atomic.LoadUint64(&count)
 
 	recv0 := atomic.LoadUint64(&recvOnPort0)
 	recv1 := atomic.LoadUint64(&recvOnPort1)
@@ -125,7 +116,7 @@ func main() {
 	println("Broken = ", broken, "packets")
 
 	// Test is PASSSED, if p1 is ~33% and p2 is ~66%
-	if p1 <= HIGH1 && p2 <= HIGH2 && p1 >= LOW1 && p2 >= LOW2 {
+	if p1 <= HIGH1 && p2 <= HIGH2 && p1 >= LOW1 && p2 >= LOW2 && received*100/sent > PASSED_LIMIT {
 		println("TEST PASSED")
 	} else {
 		println("TEST FAILED")
@@ -133,55 +124,24 @@ func main() {
 
 }
 
-// Generate packets of 1 group
-func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
+func generatePacket(pkt *packet.Packet, context flow.UserContext) {
+	atomic.AddUint64(&count, 1)
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
-
-	// Extract headers of packet
-	headerSize := uintptr(pkt.Data) - pkt.Unparsed
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
-	ptr := (*PacketData)(pkt.Data)
-	ptr.HdrsMD5 = md5.Sum(hdrs)
-
-	atomic.AddUint64(&sentPacketsGroup1, 1)
-}
-
-// Generate packets of 2 group
-func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
-	if pkt == nil {
-		panic("Failed to create new packet")
+	// Generate packets of 3 groups
+	if count%3 == 0 {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
+	} else if count%3 == 1 {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
+	} else {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_3)
 	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
-
-	// Extract headers of packet
 	headerSize := uintptr(pkt.Data) - pkt.Unparsed
 	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
 	ptr := (*PacketData)(pkt.Data)
 	ptr.HdrsMD5 = md5.Sum(hdrs)
-
-	atomic.AddUint64(&sentPacketsGroup2, 1)
-}
-
-// Generate packets of 3 group
-func generatePacketGroup3(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
-	if pkt == nil {
-		panic("Failed to create new packet")
-	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_3)
-
-	// Extract headers of packet
-	headerSize := uintptr(pkt.Data) - pkt.Unparsed
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
-	ptr := (*PacketData)(pkt.Data)
-	ptr.HdrsMD5 = md5.Sum(hdrs)
-
-	atomic.AddUint64(&sentPacketsGroup3, 1)
 }
 
 // Count and check packets received on 0 port

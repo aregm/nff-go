@@ -34,10 +34,13 @@ var (
 	BINS         int    = 10
 	SKIP_NUMBER  uint64 = 100000
 	SPEED        uint64 = 1000000
-	PASSED_LIMIT uint64 = 90
+	PASSED_LIMIT uint64 = 80
 
 	PACKET_SIZE    uint64 = 128
 	SERV_DATA_SIZE uint64 = 46 // Ether + IPv4 + UDP + 4
+
+	DSTPORT_1 uint16 = 111
+	DSTPORT_2 uint16 = 222
 )
 
 var (
@@ -62,6 +65,8 @@ var (
 	stop chan string
 	// Latency values are stored here for next processing
 	latenciesStorage []time.Duration
+
+	count uint64 = 0
 )
 
 func main() {
@@ -83,15 +88,20 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	flow.SystemInit(30)
 	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
 
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generatePackets, SPEED, nil)
+	outputFlow2 := flow.SetPartitioner(outputFlow, 350, 350)
+
 	flow.SetSender(outputFlow, 0)
+	flow.SetSender(outputFlow2, 0)
 
 	// Create receiving flow and set a checking function for it
-	inputFlow := flow.SetReceiver(1)
+	inputFlow1 := flow.SetReceiver(1)
+	inputFlow2 := flow.SetReceiver(1)
+	inputFlow := flow.SetMerger(inputFlow1, inputFlow2)
 
 	// Calculate latency only for 1 of SKIP_NUMBER packets.
 	latFlow := flow.SetPartitioner(inputFlow, SKIP_NUMBER, 1)
@@ -139,10 +149,18 @@ func main() {
 }
 
 func generatePackets(pkt *packet.Packet, context flow.UserContext) {
+	atomic.AddUint64(&count, 1)
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, uint(payloadSize))
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
+	// We need different packets to gain from RSS
+	if count%2 == 0 {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
+	} else {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
+	}
+
 	ptr := (*PacketData)(pkt.Data)
 	ptr.SendTime = time.Now()
 	atomic.AddUint64(&sentPackets, 1)

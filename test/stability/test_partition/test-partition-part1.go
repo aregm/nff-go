@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/md5"
+	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"sync"
@@ -38,7 +39,9 @@ const (
 
 var (
 	// Payload is 16 byte md5 hash sum of headers
-	PAYLOAD_SIZE uint = 16
+	PAYLOAD_SIZE uint   = 16
+	SPEED        uint64 = 1000
+	PASSED_LIMIT uint64 = 85
 
 	sent          uint64     = 0
 	recvPackets   uint64     = 0
@@ -49,6 +52,9 @@ var (
 )
 
 func main() {
+	flag.Uint64Var(&PASSED_LIMIT, "PASSED_LIMIT", PASSED_LIMIT, "received/sent minimum ratio to pass test")
+	flag.Uint64Var(&SPEED, "SPEED", SPEED, "speed of generator, Pkts/s")
+
 	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
@@ -56,7 +62,7 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create output packet flow
-	outputFlow := flow.SetGenerator(generatePacket, 1000, nil)
+	outputFlow := flow.SetGenerator(generatePacket, SPEED, nil)
 	flow.SetSender(outputFlow, 0)
 
 	// Create receiving flows and set a checking function for it
@@ -99,7 +105,7 @@ func main() {
 
 	println("Broken = ", broken, "packets")
 
-	if p1 <= HIGH1 && p2 <= HIGH2 && p1 >= LOW1 && p2 >= LOW2 {
+	if p1 <= HIGH1 && p2 <= HIGH2 && p1 >= LOW1 && p2 >= LOW2 && received*100/sent > PASSED_LIMIT {
 		println("TEST PASSED")
 	} else {
 		println("TEST FAILED")

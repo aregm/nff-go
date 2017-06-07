@@ -21,19 +21,20 @@ func main() {
 	L3Rules = rules.GetL3RulesFromORIG("test-split.conf")
 
 	// Receive packets from 0 port
-	inputFlow := flow.SetReceiver(0)
+	inputFlow1 := flow.SetReceiver(0)
+	inputFlow2 := flow.SetReceiver(0)
+	inputFlow := flow.SetMerger(inputFlow1, inputFlow2)
 
 	// Split packet flow based on ACL.
-	flowsNumber := 4
+	flowsNumber := 3
 	outputFlows := flow.SetSplitter(inputFlow, L3Splitter, uint(flowsNumber), nil)
 
 	// "0" flow is used for dropping packets without sending them.
 	flow.SetStopper(outputFlows[0])
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
-	flow.SetSender(outputFlows[1], 1)
-	flow.SetSender(outputFlows[2], 2)
-	flow.SetSender(outputFlows[3], 3)
+	flow.SetSender(outputFlows[1], 0)
+	flow.SetSender(outputFlows[2], 1)
 
 	// Begin to process packets.
 	flow.SystemStart()
