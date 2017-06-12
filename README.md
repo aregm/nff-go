@@ -4,9 +4,10 @@
 YANFF is a set of libraries for creating and deploying cloud-native Network Functions (NFs). It is designed to simplify the creation of network functions with no performance sacrifice due to Data Plane Development Kit (DPDK) usage. But it is not DPDK wrapper library; it is an experimental and novel approach for creating network functions. YANFF is an Open Source BSD licensed project that runs mostly in Linux user land. The most recent patches and enhancements provided by the community are available in the master branch.
 
 ## Getting YANFF
-To get YANFF you can use go get -v -d github.com/intel-go/yanff
+To get YANFF you can use **go get -v -d github.com/intel-go/yanff**
 This command will show an error that build cannot be done, but build is done differently because it is necessary to build and link with DPDK. 
-**Note** If you just checkout the source tree from github, YANFF does not build unless placed into the correct subdirectory of $GOPATH.
+
+**_Note_** If you just checkout the source tree from github, YANFF does not build unless placed into the correct subdirectory of $GOPATH.
 
 ## Build and run requirements
 ### Library requirements
