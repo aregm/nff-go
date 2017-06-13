@@ -26,23 +26,23 @@ func main() {
 
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {
-		firstFlow = flow.SetGenerator(generatePacket, 1000)
+		firstFlow = flow.SetGenerator(generatePacket, 1000, nil)
 	} else {
 		buffer, _ = hex.DecodeString("00112233445501112131415108004500002ebffd00000406747a7f0000018009090504d2162e123456781234569050102000ffe60000")
-		firstFlow = flow.SetGenerator(generatePacketFromByte, 1000)
+		firstFlow = flow.SetGenerator(generatePacketFromByte, 1000, nil)
 	}
 	// Send all generated packets to the output
 	flow.SetSender(firstFlow, 1)
 	flow.SystemStart()
 }
 
-func generatePacket(pkt *packet.Packet) {
+func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	// Total packet size will be 14+20+20+70+4(crc)=128 bytes
 	packet.InitEmptyEtherIPv4TCPPacket(pkt, 70)
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 }
 
-func generatePacketFromByte(emptyPacket *packet.Packet) {
+func generatePacketFromByte(emptyPacket *packet.Packet, context flow.UserContext) {
 	// Total packet size is 64 bytes
 	packet.PacketFromByte(emptyPacket, buffer)
 }

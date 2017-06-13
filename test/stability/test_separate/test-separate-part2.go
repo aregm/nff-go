@@ -25,7 +25,7 @@ func main() {
 	flow1 := flow.SetReceiver(0)
 
 	// Seperate packet flow based on ACL.
-	flow2 := flow.SetSeparator(flow1, L3Separator) // ~66% of packets should go to flow2, ~33% left in flow1
+	flow2 := flow.SetSeparator(flow1, L3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	flow.SetSender(flow1, 0)
@@ -35,7 +35,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Separator(pkt *packet.Packet) bool {
+func L3Separator(pkt *packet.Packet, context flow.UserContext) bool {
 	pkt.ParseEtherIPv4UDP()
 	return rules.L3_ACL_permit(pkt, L3Rules)
 }

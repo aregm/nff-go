@@ -48,13 +48,13 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create packets with speed at least 1000 packets/s
-	firstFlow := flow.SetGenerator(generatePacket, 1000)
+	firstFlow := flow.SetGenerator(generatePacket, 1000, nil)
 	// Send all generated packets to the output
 	flow.SetSender(firstFlow, 0)
 
 	// Create receiving flow and set a checking function for it
 	secondFlow := flow.SetReceiver(1)
-	flow.SetHandler(secondFlow, checkPackets)
+	flow.SetHandler(secondFlow, checkPackets, nil)
 	flow.SetStopper(secondFlow)
 
 	// Start pipeline
@@ -81,7 +81,7 @@ func main() {
 	}
 }
 
-func generatePacket(emptyPacket *packet.Packet) {
+func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE))
 
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xad, 0xbe, 0xaf, 0xff, 0xfe}
@@ -95,7 +95,7 @@ func generatePacket(emptyPacket *packet.Packet) {
 	atomic.AddUint64(&sentPackets, 1)
 }
 
-func checkPackets(pkt *packet.Packet) {
+func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	newValue := atomic.AddUint64(&receivedPackets, 1)
 
 	offset := pkt.ParseL4Data()

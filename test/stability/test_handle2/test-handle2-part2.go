@@ -25,7 +25,7 @@ func main() {
 	flow1 := flow.SetReceiver(0)
 
 	// Handle packet flow
-	flow.SetHandler(flow1, L3Handler) // ~33% of packets should left in flow1
+	flow.SetHandler(flow1, L3Handler, nil) // ~33% of packets should left in flow1
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	flow.SetSender(flow1, 0)
@@ -34,7 +34,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Handler(pkt *packet.Packet) bool {
+func L3Handler(pkt *packet.Packet, context flow.UserContext) bool {
 	pkt.ParseEtherIPv4UDP()
 	return rules.L3_ACL_permit(pkt, L3Rules)
 }

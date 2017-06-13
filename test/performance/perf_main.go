@@ -28,7 +28,7 @@ func main() {
 	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
 
 	// Handle second flow via some heavy function
-	flow.SetHandler(firstFlow, heavyFunc)
+	flow.SetHandler(firstFlow, heavyFunc, nil)
 
 	// Split for two senders and send
 	secondFlow := flow.SetPartitioner(firstFlow, 150, 150)
@@ -38,7 +38,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func heavyFunc(currentPacket *packet.Packet) {
+func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 	currentPacket.ParseEtherIPv4()
 	T := currentPacket.IPv4.DstAddr
 	for j := uint32(0); j < uint32(load); j++ {

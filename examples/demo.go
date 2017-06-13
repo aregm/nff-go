@@ -32,10 +32,10 @@ func main() {
 	firstFlow := flow.SetReceiver(0)
 
 	// Separate packets for additional flow due to some rules
-	secondFlow := flow.SetSeparator(firstFlow, L3Separator)
+	secondFlow := flow.SetSeparator(firstFlow, L3Separator, nil)
 
 	// Handle second flow via some heavy function
-	flow.SetHandler(firstFlow, heavyFunc)
+	flow.SetHandler(firstFlow, heavyFunc, nil)
 
 	// Send both flows each one to one port. Queues will be added automatically.
 	flow.SetSender(firstFlow, 1)
@@ -44,7 +44,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Separator(currentPacket *packet.Packet) bool {
+func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	currentPacket.ParseEtherIPv4()
 	localL2Rules := L2Rules
 	localL3Rules := L3Rules
@@ -52,7 +52,7 @@ func L3Separator(currentPacket *packet.Packet) bool {
 		rules.L3_ACL_permit(currentPacket, localL3Rules)
 }
 
-func heavyFunc(currentPacket *packet.Packet) {
+func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 	for i := uint(0); i < load; i++ {
 	}
 }

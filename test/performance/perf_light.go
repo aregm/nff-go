@@ -27,11 +27,11 @@ func main() {
 
 	// Handle second flow via some heavy function
 	if mode == 0 {
-		flow.SetHandler(firstFlow, heavyFunc0)
+		flow.SetHandler(firstFlow, heavyFunc0, nil)
 	} else if mode == 1 {
-		flow.SetHandler(firstFlow, heavyFunc1)
+		flow.SetHandler(firstFlow, heavyFunc1, nil)
 	} else {
-		flow.SetHandler(firstFlow, heavyFunc2)
+		flow.SetHandler(firstFlow, heavyFunc2, nil)
 	}
 
 	// Split for two senders and send
@@ -42,14 +42,14 @@ func main() {
 	flow.SystemStart()
 }
 
-func heavyFunc0(currentPacket *packet.Packet) {
+func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {
 }
 
-func heavyFunc1(currentPacket *packet.Packet) {
+func heavyFunc1(currentPacket *packet.Packet, context flow.UserContext) {
 	currentPacket.ParseEtherIPv4()
 }
 
-func heavyFunc2(currentPacket *packet.Packet) {
+func heavyFunc2(currentPacket *packet.Packet, context flow.UserContext) {
 	currentPacket.ParseEtherIPv4()
 	T := (currentPacket.IPv4.DstAddr)
 	currentPacket.IPv4.SrcAddr = 263 + (T)

@@ -68,9 +68,9 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create first packet flow
-	flow1 := flow.SetGenerator(generatePacketGroup1, 100)
-	flow2 := flow.SetGenerator(generatePacketGroup2, 100)
-	flow3 := flow.SetGenerator(generatePacketGroup3, 100)
+	flow1 := flow.SetGenerator(generatePacketGroup1, 100, nil)
+	flow2 := flow.SetGenerator(generatePacketGroup2, 100, nil)
+	flow3 := flow.SetGenerator(generatePacketGroup3, 100, nil)
 
 	outputFlow := flow.SetMerger(flow1, flow2, flow3)
 
@@ -78,10 +78,10 @@ func main() {
 
 	// Create receiving flows and set a checking function for it
 	inputFlow1 := flow.SetReceiver(0)
-	flow.SetHandler(inputFlow1, checkPacketsOn0Port)
+	flow.SetHandler(inputFlow1, checkPacketsOn0Port, nil)
 
 	inputFlow2 := flow.SetReceiver(1)
-	flow.SetHandler(inputFlow2, checkPacketsOn1Port)
+	flow.SetHandler(inputFlow2, checkPacketsOn1Port, nil)
 
 	flow.SetStopper(inputFlow1)
 	flow.SetStopper(inputFlow2)
@@ -134,7 +134,7 @@ func main() {
 }
 
 // Generate packets of 1 group
-func generatePacketGroup1(pkt *packet.Packet) {
+func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -151,7 +151,7 @@ func generatePacketGroup1(pkt *packet.Packet) {
 }
 
 // Generate packets of 2 group
-func generatePacketGroup2(pkt *packet.Packet) {
+func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -168,7 +168,7 @@ func generatePacketGroup2(pkt *packet.Packet) {
 }
 
 // Generate packets of 3 group
-func generatePacketGroup3(pkt *packet.Packet) {
+func generatePacketGroup3(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -185,7 +185,7 @@ func generatePacketGroup3(pkt *packet.Packet) {
 }
 
 // Count and check packets received on 0 port
-func checkPacketsOn0Port(pkt *packet.Packet) {
+func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()
@@ -214,7 +214,7 @@ func checkPacketsOn0Port(pkt *packet.Packet) {
 }
 
 // Count and check packets received on 1 port
-func checkPacketsOn1Port(pkt *packet.Packet) {
+func checkPacketsOn1Port(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()
