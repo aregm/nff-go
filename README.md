@@ -73,6 +73,6 @@ To clean all generated binaries use **make clean**.
 To delete all deployed images listed in YANFF_HOSTS use **make cleanall**.
 
 ## Contribution
-If you would like to contribute to YANFF, check our Contributing guide. We also recommend taking a look at the 'janitorial' bugs in our list of open issues as these bugs can be solved without an extensive knowledge of YANFF. We would love to help you start contributing!
+If you would like to contribute to YANFF, check our [Contributing guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also recommend taking a look at the 'janitorial' bugs in our list of open issues as these bugs can be solved without an extensive knowledge of YANFF. We would love to help you start contributing!
 
 The YANFF development team can be reached via our mailing list and on IRC in channel #YANFF on Freenode.
