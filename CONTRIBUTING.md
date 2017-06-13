@@ -53,7 +53,7 @@ We request you give quality assurance some consideration by:
 
 ## Issue tracking
 
-If you have a problem, please let us know. Write e-mail to [maintainers](areg.melik-adamyan@intel.com)
+If you have a problem, please let us know. Write e-mail to [maintainers](mailto:areg.melik-adamyan@intel.com)
 
 If a bug is not already documented, by all means please [open an
 issue in github](https://github.com/intel-go/YANFF/issues/new) so we all get visibility
