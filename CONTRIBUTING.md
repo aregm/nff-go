@@ -53,10 +53,7 @@ We request you give quality assurance some consideration by:
 
 ## Issue tracking
 
-If you have a problem, please let us know.  IRC is a perfectly fine place
-to quickly informally bring something up, if you get a response.  The
-[mailing list](https://lists.clearlinux.org/mailman/listinfo/YANFF-devel)
-is a more durable communication channel.
+If you have a problem, please let us know. Write e-mail to [maintainers](areg.melik-adamyan@intel.com)
 
 If a bug is not already documented, by all means please [open an
 issue in github](https://github.com/intel-go/YANFF/issues/new) so we all get visibility
