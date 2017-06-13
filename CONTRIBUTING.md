@@ -12,7 +12,7 @@ and [names](https://golang.org/doc/effective_go.html#names).
 
 ## Certificate of Origin
 
-In order to get a clear contribution chain of trust we use the [signed-off-by language] (https://01.org/community/signed-process)
+In order to get a clear contribution chain of trust we use the [signed-off-by language](https://01.org/community/signed-process)
 used by the Linux kernel project.
 
 ## Patch format
@@ -34,17 +34,17 @@ Signed-off-by: <contributor@foo.com>
 
 We accept github pull requests.
 
-If you want to work on github.com/intel-go/YANFF and your fork on the same workstation you will need to use multiple GOPATHs.  Assuming this is the case
+If you want to work on github.com/intel-go/yanff and your fork on the same workstation you will need to use multiple GOPATHs.  Assuming this is the case
 
 1. Open a terminal
 2. mkdir -p ~/go-fork/src/github.com/intel-go (replacing go-fork with your preferred location)
 3. export GOPATH=~/go-fork
 4. cd $GOPATH/src/github.com/intel-go/yanff
-5. git clone https://github.com/GITHUB-USERNAME/YANFF.git (replace GITHUB-USERNAME with your username)
-6. cd YANFF
+5. git clone https://github.com/GITHUB-USERNAME/yanff.git (replace GITHUB-USERNAME with your username)
+6. cd yanff
 7. go install ./...
 
-Once you've finished making your changes push them to your fork and send the PR via the github UI.  If you don't need to maintain the github.com/intel-go/YANFF repo and your fork on the same workstation you can skip steps 2 and 3.
+Once you've finished making your changes push them to your fork and send the PR via the github UI.  If you don't need to maintain the github.com/intel-go/yanff repo and your fork on the same workstation you can skip steps 2 and 3.
 
 ## Quality Controls
 
