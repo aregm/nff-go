@@ -51,7 +51,7 @@ func main() {
 	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
 
 	// Split packet flow based on ACL
-	Flows := flow.SetSplitter(firstFlow, L3Splitter, 4)
+	Flows := flow.SetSplitter(firstFlow, L3Splitter, 4, nil)
 
 	// Send each flow to corresponding port
 	flow.SetSender(Flows[0], 0) // It is test. So we don't stop "0" packets, we count them as others.
@@ -62,7 +62,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Splitter(currentPacket *packet.Packet) uint {
+func L3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	currentPacket.ParseL4()
 	return rules.L3_ACL_port(currentPacket, L3Rules)
 }

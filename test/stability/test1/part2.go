@@ -20,14 +20,14 @@ func main() {
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)
-	flow.SetHandler(inputFlow, fixPacket)
+	flow.SetHandler(inputFlow, fixPacket, nil)
 	flow.SetSender(inputFlow, 1)
 
 	// Begin to process packets.
 	flow.SystemStart()
 }
 
-func fixPacket(pkt *packet.Packet) {
+func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseL4Data()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)

@@ -58,16 +58,16 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create first packet flow
-	firstFlow := flow.SetGenerator(generatePacketGroup1, 100)
+	firstFlow := flow.SetGenerator(generatePacketGroup1, 100, nil)
 	flow.SetSender(firstFlow, 0)
 
 	// Create second packet flow
-	secondFlow := flow.SetGenerator(generatePacketGroup2, 100)
+	secondFlow := flow.SetGenerator(generatePacketGroup2, 100, nil)
 	flow.SetSender(secondFlow, 1)
 
 	// Create receiving flow and set a checking function for it
 	inputFlow := flow.SetReceiver(2)
-	flow.SetHandler(inputFlow, checkPackets)
+	flow.SetHandler(inputFlow, checkPackets, nil)
 	flow.SetStopper(inputFlow)
 
 	// Start pipeline
@@ -109,7 +109,7 @@ func main() {
 	}
 }
 
-func generatePacketGroup1(pkt *packet.Packet) {
+func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -125,7 +125,7 @@ func generatePacketGroup1(pkt *packet.Packet) {
 	atomic.AddUint64(&sentPacketsGroup1, 1)
 }
 
-func generatePacketGroup2(pkt *packet.Packet) {
+func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -142,7 +142,7 @@ func generatePacketGroup2(pkt *packet.Packet) {
 }
 
 // Count and check packets in received flow
-func checkPackets(pkt *packet.Packet) {
+func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()

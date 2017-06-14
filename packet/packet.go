@@ -57,6 +57,7 @@ const (
 
 // Supported L4 types
 const (
+	IPNumber  = 0x04
 	TCPNumber = 0x06
 	UDPNumber = 0x11
 )
@@ -549,6 +550,14 @@ func (packet *Packet) CreatePacket(IN uintptr) {
 	packet.Data = nil
 	packet.Unparsed = low.GetPacketDataStartPointer(mbuf)
 	packet.CMbuf = mbuf
+}
+
+// Create vector of packets by calling CreatePacket function
+// TODO This should be unexported method. However now it is exported to be used in package flow.
+func CreatePackets(packet []*Packet, IN []uintptr, n uint) {
+	for i := uint(0); i < n; i++ {
+		packet[i].CreatePacket(IN[i])
+	}
 }
 
 // PacketFromByte function gets non-initialized packet and slice of bytes of any size.

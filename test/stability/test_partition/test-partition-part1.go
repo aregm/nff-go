@@ -56,15 +56,15 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create output packet flow
-	outputFlow := flow.SetGenerator(generatePacket, 1000)
+	outputFlow := flow.SetGenerator(generatePacket, 1000, nil)
 	flow.SetSender(outputFlow, 0)
 
 	// Create receiving flows and set a checking function for it
 	inputFlow0 := flow.SetReceiver(0)
-	flow.SetHandler(inputFlow0, checkPacketsOn0Port)
+	flow.SetHandler(inputFlow0, checkPacketsOn0Port, nil)
 
 	inputFlow1 := flow.SetReceiver(1)
-	flow.SetHandler(inputFlow1, checkPacketsOn1Port)
+	flow.SetHandler(inputFlow1, checkPacketsOn1Port, nil)
 
 	flow.SetStopper(inputFlow0)
 	flow.SetStopper(inputFlow1)
@@ -108,7 +108,7 @@ func main() {
 }
 
 // Generate packets
-func generatePacket(pkt *packet.Packet) {
+func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -124,7 +124,7 @@ func generatePacket(pkt *packet.Packet) {
 }
 
 // Count and check packets received on 0 port
-func checkPacketsOn0Port(pkt *packet.Packet) {
+func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()
@@ -154,7 +154,7 @@ func checkPacketsOn0Port(pkt *packet.Packet) {
 }
 
 // Count and check packets received on 1 port
-func checkPacketsOn1Port(pkt *packet.Packet) {
+func checkPacketsOn1Port(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()

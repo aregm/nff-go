@@ -34,22 +34,22 @@ func main() {
 	}
 
 	// Handle second flow via some heavy function
-	flow.SetHandler(firstFlow, heavyFunc)
-	flow.SetHandler(firstFlow, heavyFunc)
+	flow.SetHandler(firstFlow, heavyFunc, nil)
+	flow.SetHandler(firstFlow, heavyFunc, nil)
 	if mode%10 > 2 {
-		flow.SetHandler(firstFlow, heavyFunc)
+		flow.SetHandler(firstFlow, heavyFunc, nil)
 	}
 	if mode%10 > 3 {
-		flow.SetHandler(firstFlow, heavyFunc)
+		flow.SetHandler(firstFlow, heavyFunc, nil)
 	}
 	if mode > 10 {
-		flow.SetHandler(tempFlow, heavyFunc)
-		flow.SetHandler(tempFlow, heavyFunc)
+		flow.SetHandler(tempFlow, heavyFunc, nil)
+		flow.SetHandler(tempFlow, heavyFunc, nil)
 		if mode%10 > 2 {
-			flow.SetHandler(tempFlow, heavyFunc)
+			flow.SetHandler(tempFlow, heavyFunc, nil)
 		}
 		if mode%10 > 3 {
-			flow.SetHandler(tempFlow, heavyFunc)
+			flow.SetHandler(tempFlow, heavyFunc, nil)
 		}
 		afterFlow = flow.SetMerger(firstFlow, tempFlow)
 	} else {
@@ -64,7 +64,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func heavyFunc(currentPacket *packet.Packet) {
+func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 	currentPacket.ParseEtherIPv4()
 	T := (currentPacket.IPv4.DstAddr)
 	for j := uint(0); j < load; j++ {

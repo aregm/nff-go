@@ -87,7 +87,7 @@ func main() {
 	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
 
 	// Create packet flow
-	outputFlow := flow.SetGenerator(generatePackets, SPEED)
+	outputFlow := flow.SetGenerator(generatePackets, SPEED, nil)
 	flow.SetSender(outputFlow, 0)
 
 	// Create receiving flow and set a checking function for it
@@ -96,8 +96,8 @@ func main() {
 	// Calculate latency only for 1 of SKIP_NUMBER packets.
 	latFlow := flow.SetPartitioner(inputFlow, SKIP_NUMBER, 1)
 
-	flow.SetHandler(latFlow, checkPackets)
-	flow.SetHandler(inputFlow, countPackets)
+	flow.SetHandler(latFlow, checkPackets, nil)
+	flow.SetHandler(inputFlow, countPackets, nil)
 
 	flow.SetStopper(inputFlow)
 	flow.SetStopper(latFlow)
@@ -138,7 +138,7 @@ func main() {
 	}
 }
 
-func generatePackets(pkt *packet.Packet) {
+func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyEtherIPv4UDPPacket(pkt, uint(payloadSize))
 	if pkt == nil {
 		panic("Failed to create new packet")
@@ -166,7 +166,7 @@ func latenciesLogger(ch <-chan time.Duration, stop <-chan string) {
 }
 
 // Count and check packets in received flow
-func checkPackets(pkt *packet.Packet) {
+func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	checkCount := atomic.AddUint64(&checkedPackets, 1)
 
 	offset := pkt.ParseL4Data()
@@ -185,7 +185,7 @@ func checkPackets(pkt *packet.Packet) {
 	}
 }
 
-func countPackets(pkt *packet.Packet) {
+func countPackets(pkt *packet.Packet, context flow.UserContext) {
 	atomic.AddUint64(&packetCounter, 1)
 }
 

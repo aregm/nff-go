@@ -29,9 +29,13 @@ type clonePair struct {
 	channel chan int
 }
 
+type UserContext interface {
+	Copy() interface{}
+}
+
 // Function types which are used inside flow functions
 type uncloneFlowFunction func(interface{}, uint8)
-type cloneFlowFunction func(interface{}, chan int, chan uint64)
+type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
 type conditionFlowFunction func(interface{}, uint64) bool
 
 type FlowFunction struct {
@@ -60,6 +64,7 @@ type FlowFunction struct {
 	// Identifier which could be used together with flow function name
 	// to uniquely identify this flow function
 	identifier int
+	context    UserContext
 }
 
 func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction,
@@ -73,7 +78,7 @@ func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn 
 }
 
 func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction,
-	par interface{}, check conditionFlowFunction, report chan uint64) *FlowFunction {
+	par interface{}, check conditionFlowFunction, report chan uint64, context UserContext) *FlowFunction {
 	ff := new(FlowFunction)
 	ff.name = name
 	ff.identifier = id
@@ -82,6 +87,7 @@ func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn clo
 	ff.checkPrintFunction = check
 	ff.report = report
 	ff.previousSpeed = make([]float64, len(scheduler.freeCores), len(scheduler.freeCores))
+	ff.context = context
 	return ff
 }
 
@@ -144,7 +150,11 @@ func (scheduler *Scheduler) SystemStart() {
 		go func() {
 			low.SetAffinity(uint8(core))
 			ff.cloneNumber = 0
-			ff.cloneFunction(ff.Parameters, nil, ff.report)
+			if ff.context != nil {
+				ff.cloneFunction(ff.Parameters, nil, ff.report, (ff.context.Copy()).(UserContext))
+			} else {
+				ff.cloneFunction(ff.Parameters, nil, ff.report, nil)
+			}
 		}()
 	}
 	// We need this to get a chance to all started goroutines to log their warnings.
@@ -232,7 +242,11 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 							// if the last clone will have zero pause as well as original (not cloned) function.
 							ff.clone[j].channel <- ff.cloneNumber
 						}
-						ff.cloneFunction(ff.Parameters, quit, ff.report)
+						if ff.context != nil {
+							ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
+						} else {
+							ff.cloneFunction(ff.Parameters, quit, ff.report, nil)
+						}
 					} else {
 						common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
 					}

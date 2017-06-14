@@ -26,9 +26,9 @@ func main() {
 
 	// Dump separated packet. By default function dumper() is used.
 	if *hexdumpOn {
-		flow.SetHandler(secondFlow, hexdumper)
+		flow.SetHandler(secondFlow, hexdumper, nil)
 	} else {
-		flow.SetHandler(secondFlow, dumper)
+		flow.SetHandler(secondFlow, dumper, nil)
 	}
 
 	// Merge packet to original flow
@@ -40,7 +40,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func dumper(currentPacket *packet.Packet) {
+func dumper(currentPacket *packet.Packet, context flow.UserContext) {
 	currentPacket.ParseL4()
 	fmt.Printf("%v", currentPacket.Ether)
 	if currentPacket.IPv4 != nil {
@@ -60,6 +60,6 @@ func dumper(currentPacket *packet.Packet) {
 	fmt.Println("----------------------------------------------------------")
 }
 
-func hexdumper(currentPacket *packet.Packet) {
+func hexdumper(currentPacket *packet.Packet, context flow.UserContext) {
 	fmt.Printf("Raw bytes=%x\n", currentPacket.GetRawPacketBytes())
 }

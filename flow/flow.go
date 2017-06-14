@@ -45,6 +45,8 @@ var ringName = 1
 var ffCount = 0
 var createdPorts []port
 
+type UserContext scheduler.UserContext
+
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
 type Flow struct {
@@ -54,19 +56,22 @@ type Flow struct {
 // Function type for user defined function which generates packets.
 // Function receives preallocated packet where user should add
 // its size and content.
-type GenerateFunction func(*packet.Packet)
+type GenerateFunction func(*packet.Packet, UserContext)
+type VectorGenerateFunction func([]*packet.Packet, uint, UserContext)
 
 // Function type for user defined function which handles packets.
 // Function receives a packet from flow. User should parse it
 // and make necessary changes. It is prohibit to free packet in this
 // function.
-type HandleFunction func(*packet.Packet)
+type HandleFunction func(*packet.Packet, UserContext)
+type VectorHandleFunction func([]*packet.Packet, uint, UserContext)
 
 // Function type for user defined function which separates packets
 // based on some rule for two flows. Functions receives a packet from flow.
 // User should parse it and decide whether this packet should remains in
 // this flow - return true, or should be sent to new added flow - return false.
-type SeparateFunction func(*packet.Packet) bool
+type SeparateFunction func(*packet.Packet, UserContext) bool
+type VectorSeparateFunction func([]*packet.Packet, []bool, uint, UserContext)
 
 // Function type for user defined function which splits packets
 // based in some rule for multiple flows. Function receives a packet from
@@ -75,7 +80,7 @@ type SeparateFunction func(*packet.Packet) bool
 // which was put to SetSplitter function. Also it is assumed that "0"
 // output flow is used for dropping packets - "Stop" function should be
 // set after "Split" function in it.
-type SplitFunction func(*packet.Packet) uint
+type SplitFunction func(*packet.Packet, UserContext) uint
 
 type receiveParameters struct {
 	out   *low.Queue
@@ -93,9 +98,10 @@ func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunct
 }
 
 type generateParameters struct {
-	out              *low.Queue
-	targetSpeed      uint64
-	generateFunction GenerateFunction
+	out                    *low.Queue
+	targetSpeed            uint64
+	generateFunction       GenerateFunction
+	vectorGenerateFunction VectorGenerateFunction
 }
 
 func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *scheduler.FlowFunction {
@@ -106,13 +112,15 @@ func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *schedu
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
 
-func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction, targetSpeed uint64) *scheduler.FlowFunction {
+func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
+	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
 	var par *generateParameters = new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
+	par.vectorGenerateFunction = vectorGenerateFunction
 	par.targetSpeed = targetSpeed
 	ffCount++
-	return schedState.NewClonableFlowFunction("fast generator", ffCount, generatePerf, par, generateCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction("fast generator", ffCount, generatePerf, par, generateCheck, make(chan uint64, 50), context)
 }
 
 type sendParameters struct {
@@ -150,21 +158,24 @@ func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N
 }
 
 type separateParameters struct {
-	in               *low.Queue
-	outTrue          *low.Queue
-	outFalse         *low.Queue
-	separateFunction SeparateFunction
+	in                     *low.Queue
+	outTrue                *low.Queue
+	outFalse               *low.Queue
+	separateFunction       SeparateFunction
+	vectorSeparateFunction VectorSeparateFunction
 }
 
 func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
-	separateFunction SeparateFunction, name string) *scheduler.FlowFunction {
+	separateFunction SeparateFunction, vectorSeparateFunction VectorSeparateFunction,
+	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(separateParameters)
 	par.in = in
 	par.outTrue = outTrue
 	par.outFalse = outFalse
 	par.separateFunction = separateFunction
+	par.vectorSeparateFunction = vectorSeparateFunction
 	ffCount++
-	return schedState.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50), context)
 }
 
 type splitParameters struct {
@@ -175,30 +186,33 @@ type splitParameters struct {
 }
 
 func makeSplitter(in *low.Queue, outs []*low.Queue,
-	splitFunction SplitFunction, flowNumber uint) *scheduler.FlowFunction {
+	splitFunction SplitFunction, flowNumber uint, context UserContext) *scheduler.FlowFunction {
 	par := new(splitParameters)
 	par.in = in
 	par.outs = outs
 	par.splitFunction = splitFunction
 	par.flowNumber = flowNumber
 	ffCount++
-	return schedState.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50), context)
 }
 
 type handleParameters struct {
-	in             *low.Queue
-	out            *low.Queue
-	handleFunction HandleFunction
+	in                   *low.Queue
+	out                  *low.Queue
+	handleFunction       HandleFunction
+	vectorHandleFunction VectorHandleFunction
 }
 
 func makeHandler(in *low.Queue, out *low.Queue,
-	handleFunction HandleFunction) *scheduler.FlowFunction {
+	handleFunction HandleFunction, vectorHandleFunction VectorHandleFunction,
+	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(handleParameters)
 	par.in = in
 	par.out = out
 	par.handleFunction = handleFunction
+	par.vectorHandleFunction = vectorHandleFunction
 	ffCount++
-	return schedState.NewClonableFlowFunction("handler", ffCount, handle, par, handleCheck, make(chan uint64, 50))
+	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
 }
 
 var burstSize uint
@@ -313,14 +327,25 @@ func SetReceiver(port uint8) (OUT *Flow) {
 // input user packets. If targetSpeed is more than zero clonable function is added which
 // tries to achieve this speed by cloning.
 // Function can panic during execution.
-func SetGenerator(generateFunction GenerateFunction, targetSpeed uint64) (OUT *Flow) {
+func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow) {
 	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
-		gen := makeGeneratorPerf(ring, generateFunction, targetSpeed)
-		schedState.Clonable = append(schedState.Clonable, gen)
+		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
+			generate = makeGeneratorPerf(ring, GenerateFunction(f), nil, targetSpeed, context)
+		} else if f, t := generateFunction.(func([]*packet.Packet, uint, UserContext)); t {
+			generate = makeGeneratorPerf(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
+		} else {
+			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
+		}
+		schedState.Clonable = append(schedState.Clonable, generate)
 	} else {
-		gen := makeGeneratorOne(ring, generateFunction)
-		schedState.UnClonable = append(schedState.UnClonable, gen)
+		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
+			generate = makeGeneratorOne(ring, GenerateFunction(f))
+		} else {
+			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
+		}
+		schedState.UnClonable = append(schedState.UnClonable, generate)
 	}
 	OUT = new(Flow)
 	OUT.current = ring
@@ -378,13 +403,20 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
 // Function can panic during execution.
-func SetSeparator(IN *Flow, separateFunction SeparateFunction) (OUT *Flow) {
+func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow) {
 	checkFlow(IN)
 	OUT = new(Flow)
 	ringTrue := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-	separate := makeSeparator(IN.current, ringTrue, ringFalse, separateFunction, "separator")
+	var separate *scheduler.FlowFunction
+	if f, t := separateFunction.(func(*packet.Packet, UserContext) bool); t {
+		separate = makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
+	} else if f, t := separateFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
+		separate = makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
+	} else {
+		common.LogError(common.Initialization, "Function argument of SetSeparator function doesn't match any applicable prototype")
+	}
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
 	OUT.current = ringFalse
@@ -397,7 +429,7 @@ func SetSeparator(IN *Flow, separateFunction SeparateFunction) (OUT *Flow) {
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
 // Function can panic during execution.
-func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint) (OutArray [](*Flow)) {
+func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow)) {
 	checkFlow(IN)
 	OutArray = make([](*Flow), flowNumber, flowNumber)
 	rings := make([](*low.Queue), flowNumber, flowNumber)
@@ -407,7 +439,7 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint) (OutArr
 		rings[i] = low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 		OutArray[i].current = rings[i]
 	}
-	split := makeSplitter(IN.current, rings, splitFunction, flowNumber)
+	split := makeSplitter(IN.current, rings, splitFunction, flowNumber, context)
 	schedState.Clonable = append(schedState.Clonable, split)
 	IN.current = nil
 	openFlowsNumber--
@@ -431,16 +463,20 @@ func SetStopper(IN *Flow) {
 // If input argument is SeparateFunction user defined function can return boolean value.
 // If user function returns false after handling a packet it is dropped automatically.
 // Function can panic during execution.
-func SetHandler(IN *Flow, handleFunction interface{}) {
+func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
 	checkFlow(IN)
 	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
 	var handle *scheduler.FlowFunction
-	if f, t := handleFunction.(func(*packet.Packet)); t {
-		handle = makeHandler(IN.current, ring, HandleFunction(f))
-	} else if f, t := handleFunction.(func(*packet.Packet) bool); t {
-		handle = makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), "handler")
+	if f, t := handleFunction.(func(*packet.Packet, UserContext)); t {
+		handle = makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
+	} else if f, t := handleFunction.(func([]*packet.Packet, uint, UserContext)); t {
+		handle = makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
+	} else if f, t := handleFunction.(func(*packet.Packet, UserContext) bool); t {
+		handle = makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
+	} else if f, t := handleFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
+		handle = makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
 	} else {
-		common.LogError(common.Initialization, "Function argument of SetHandle function is not HandleFunction or SeparateFunction")
+		common.LogError(common.Initialization, "Function argument of SetHandler function doesn't match any applicable prototype")
 	}
 	schedState.Clonable = append(schedState.Clonable, handle)
 	IN.current = ring
@@ -478,10 +514,11 @@ func generateCheck(parameters interface{}, speedPKTS uint64) bool {
 }
 
 func generateOne(parameters interface{}, core uint8) {
-	var gp *generateParameters = parameters.(*generateParameters)
-	var OUT *low.Queue = gp.out
-	var generateFunction GenerateFunction = gp.generateFunction
-	var buf []uintptr = make([]uintptr, 1)
+	gp := parameters.(*generateParameters)
+	OUT := gp.out
+	generateFunction := gp.generateFunction
+
+	buf := make([]uintptr, 1)
 	tempPacket := new(packet.Packet)
 
 	low.SetAffinity(core)
@@ -489,17 +526,24 @@ func generateOne(parameters interface{}, core uint8) {
 	for {
 		low.AllocateMbufs(buf)
 		tempPacket.CreatePacket(buf[0])
-		generateFunction(tempPacket)
+		generateFunction(tempPacket, nil)
 		safeEnqueue(OUT, buf, 1)
 	}
 }
 
-func generatePerf(parameters interface{}, stopper chan int, report chan uint64) {
-	var gp *generateParameters = parameters.(*generateParameters)
-	var OUT *low.Queue = gp.out
-	var generateFunction GenerateFunction = gp.generateFunction
-	var bufs []uintptr = make([]uintptr, burstSize)
+func generatePerf(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+	gp := parameters.(*generateParameters)
+	OUT := gp.out
+	generateFunction := gp.generateFunction
+	vectorGenerateFunction := gp.vectorGenerateFunction
+	vector := (vectorGenerateFunction != nil)
+
+	bufs := make([]uintptr, burstSize)
 	tempPacket := new(packet.Packet)
+	tempPackets := make([]*packet.Packet, burstSize)
+	for i := uint(0); i < burstSize; i++ {
+		tempPackets[i] = new(packet.Packet)
+	}
 	var currentSpeed uint64 = 0
 	var tick <-chan time.Time = time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -519,9 +563,14 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64) 
 			currentSpeed = 0
 		default:
 			low.AllocateMbufs(bufs)
-			for i := range bufs {
-				tempPacket.CreatePacket(bufs[i])
-				generateFunction(tempPacket)
+			if vector == false {
+				for i := range bufs {
+					tempPacket.CreatePacket(bufs[i])
+					generateFunction(tempPacket, context)
+				}
+			} else {
+				packet.CreatePackets(tempPackets, bufs, burstSize)
+				vectorGenerateFunction(tempPackets, burstSize, context)
 			}
 			safeEnqueue(OUT, bufs, burstSize)
 			currentSpeed = currentSpeed + uint64(burstSize)
@@ -597,18 +646,25 @@ func separateCheck(parameters interface{}, speedPKTS uint64) bool {
 	return false
 }
 
-func separate(parameters interface{}, stopper chan int, report chan uint64) {
+func separate(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	OUTTrue := sp.outTrue
 	OUTFalse := sp.outFalse
 	separateFunction := sp.separateFunction
+	vectorSeparateFunction := sp.vectorSeparateFunction
+	vector := (vectorSeparateFunction != nil)
 
 	bufsIn := make([]uintptr, burstSize)
 	bufsTrue := make([]uintptr, burstSize)
 	bufsFalse := make([]uintptr, burstSize)
+	ttt := make([]bool, burstSize)
 	var countOfPackets uint
 	tempPacket := new(packet.Packet)
+	tempPackets := make([]*packet.Packet, burstSize)
+	for i := uint(0); i < burstSize; i++ {
+		tempPackets[i] = new(packet.Packet)
+	}
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -635,23 +691,37 @@ func separate(parameters interface{}, stopper chan int, report chan uint64) {
 				continue
 			}
 			countOfPackets = 0
-			asm.Prefetcht0(bufsIn[0])
-			for i := uint(0); i < n-1; i++ {
-				asm.Prefetcht0(bufsIn[i+1])
-				tempPacket.CreatePacket(bufsIn[i])
-				if separateFunction(tempPacket) == false {
-					bufsFalse[countOfPackets] = bufsIn[i]
+			if vector == false {
+				asm.Prefetcht0(bufsIn[0])
+				for i := uint(0); i < n-1; i++ {
+					asm.Prefetcht0(bufsIn[i+1])
+					tempPacket.CreatePacket(bufsIn[i])
+					if separateFunction(tempPacket, context) == false {
+						bufsFalse[countOfPackets] = bufsIn[i]
+						countOfPackets++
+					} else {
+						bufsTrue[uint(i)-countOfPackets] = bufsIn[i]
+					}
+				}
+				tempPacket.CreatePacket(bufsIn[n-1])
+				if separateFunction(tempPacket, context) == false {
+					bufsFalse[countOfPackets] = bufsIn[n-1]
 					countOfPackets++
 				} else {
-					bufsTrue[uint(i)-countOfPackets] = bufsIn[i]
+					bufsTrue[uint(n-1)-countOfPackets] = bufsIn[n-1]
 				}
-			}
-			tempPacket.CreatePacket(bufsIn[n-1])
-			if separateFunction(tempPacket) == false {
-				bufsFalse[countOfPackets] = bufsIn[n-1]
-				countOfPackets++
 			} else {
-				bufsTrue[uint(n-1)-countOfPackets] = bufsIn[n-1]
+				// TODO add prefetch for vector functions
+				packet.CreatePackets(tempPackets, bufsIn, n)
+				vectorSeparateFunction(tempPackets, ttt, n, context)
+				for i := uint(0); i < n; i++ {
+					if ttt[i] == false {
+						bufsFalse[countOfPackets] = bufsIn[i]
+						countOfPackets++
+					} else {
+						bufsTrue[uint(i)-countOfPackets] = bufsIn[i]
+					}
+				}
 			}
 			if countOfPackets != 0 {
 				safeEnqueue(OUTFalse, bufsFalse, countOfPackets)
@@ -724,7 +794,7 @@ func splitCheck(parameters interface{}, speedPKTS uint64) bool {
 	return false
 }
 
-func split(parameters interface{}, stopper chan int, report chan uint64) {
+func split(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	OUT := sp.outs
@@ -768,12 +838,12 @@ func split(parameters interface{}, stopper chan int, report chan uint64) {
 			for i := uint(0); i < n-1; i++ {
 				asm.Prefetcht0(InputMbufs[i+1])
 				tempPacket.CreatePacket(InputMbufs[i])
-				index := splitFunction(tempPacket)
+				index := splitFunction(tempPacket, context)
 				OutputMbufs[index][countOfPackets[index]] = InputMbufs[i]
 				countOfPackets[index]++
 			}
 			tempPacket.CreatePacket(InputMbufs[n-1])
-			index := splitFunction(tempPacket)
+			index := splitFunction(tempPacket, context)
 			OutputMbufs[index][countOfPackets[index]] = InputMbufs[n-1]
 			countOfPackets[index]++
 
@@ -799,14 +869,20 @@ func handleCheck(parameters interface{}, speedPKTS uint64) bool {
 	return false
 }
 
-func handle(parameters interface{}, stopper chan int, report chan uint64) {
+func handle(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	OUT := sp.out
 	handleFunction := sp.handleFunction
+	vectorHandleFunction := sp.vectorHandleFunction
+	vector := (vectorHandleFunction != nil)
 
 	bufs := make([]uintptr, burstSize)
 	tempPacket := new(packet.Packet)
+	tempPackets := make([]*packet.Packet, burstSize)
+	for i := uint(0); i < burstSize; i++ {
+		tempPackets[i] = new(packet.Packet)
+	}
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -832,14 +908,20 @@ func handle(parameters interface{}, stopper chan int, report chan uint64) {
 				}
 				continue
 			}
-			asm.Prefetcht0(bufs[0])
-			for i := uint(0); i < n-1; i++ {
-				asm.Prefetcht0(bufs[i+1])
-				tempPacket.CreatePacket(bufs[i])
-				handleFunction(tempPacket)
+			if vector == false {
+				asm.Prefetcht0(bufs[0])
+				for i := uint(0); i < n-1; i++ {
+					asm.Prefetcht0(bufs[i+1])
+					tempPacket.CreatePacket(bufs[i])
+					handleFunction(tempPacket, context)
+				}
+				tempPacket.CreatePacket(bufs[n-1])
+				handleFunction(tempPacket, context)
+			} else {
+				// TODO add prefetch for vector functions
+				packet.CreatePackets(tempPackets, bufs, n)
+				vectorHandleFunction(tempPackets, n, context)
 			}
-			tempPacket.CreatePacket(bufs[n-1])
-			handleFunction(tempPacket)
 			safeEnqueue(OUT, bufs, uint(n))
 			currentSpeed += uint64(n)
 		}

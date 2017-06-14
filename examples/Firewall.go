@@ -27,7 +27,7 @@ func main() {
 	inputFlow := flow.SetReceiver(0)
 
 	// Separate packet flow based on ACL.
-	rejectFlow := flow.SetSeparator(inputFlow, L3Separator)
+	rejectFlow := flow.SetSeparator(inputFlow, L3Separator, nil)
 
 	// Drop rejected packets.
 	flow.SetStopper(rejectFlow)
@@ -40,7 +40,7 @@ func main() {
 }
 
 // User defined function for separating packets
-func L3Separator(currentPacket *packet.Packet) bool {
+func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
 	currentPacket.ParseL4()
 

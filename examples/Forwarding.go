@@ -28,7 +28,7 @@ func main() {
 
 	// Split packet flow based on ACL.
 	flowsNumber := 5
-	outputFlows := flow.SetSplitter(inputFlow, L3Splitter, uint(flowsNumber))
+	outputFlows := flow.SetSplitter(inputFlow, L3Splitter, uint(flowsNumber), nil)
 
 	// "0" flow is used for dropping packets without sending them.
 	flow.SetStopper(outputFlows[0])
@@ -43,7 +43,7 @@ func main() {
 }
 
 // User defined function for splitting packets
-func L3Splitter(currentPacket *packet.Packet) uint {
+func L3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
 	currentPacket.ParseL4()
 
