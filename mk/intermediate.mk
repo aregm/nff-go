@@ -8,6 +8,6 @@ TARGETS = all clean images clean-images deploy cleanall
 .PHONY: $(TARGETS)
 
 $(TARGETS):
-	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir $@; \
+	for dir in $(SUBDIRS); do				\
+		if ! $(MAKE) -C $$dir $@; then break; fi;	\
 	done

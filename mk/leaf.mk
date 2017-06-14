@@ -12,10 +12,12 @@ include $(PATH_TO_MK)/include.mk
 $(EXECUTABLES) : % : %.go
 	go build $<
 
-all: $(EXECUTABLES)
+all: check-pktgen $(EXECUTABLES)
 
-clean:
+clean-default:
 	-rm $(EXECUTABLES)
+
+clean: clean-default
 
 # Local docker targets
 .PHONY: images clean-images
@@ -34,8 +36,8 @@ clean-images: .check-defined-IMAGENAME clean
 deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
 	docker save $(IMAGENAME) > $(TMPNAME)
-	for host in $(YANFF_HOSTS); do \
-		docker -H tcp://$$host:$(DOCKER_PORT) load < $(TMPNAME); \
+	for host in $(YANFF_HOSTS); do								\
+		if ! docker -H tcp://$$host:$(DOCKER_PORT) load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)
 
@@ -43,3 +45,7 @@ cleanall: .check-deploy-env clean-images
 	-for host in $(YANFF_HOSTS); do \
 		docker -H tcp://$$host:$(DOCKER_PORT) rmi -f $(IMAGENAME); \
 	done
+
+testing:
+	echo This target is not defined for this subdirectory
+	exit 1

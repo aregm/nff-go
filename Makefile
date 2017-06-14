@@ -3,16 +3,16 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = mk
-SUBDIRS = test examples
+SUBDIRS = dpdk test examples
 DOC_TARGETS = flow rules packet
 TESTING_TARGETS = packet rules
 
 all: $(SUBDIRS)
 
 .PHONY: testing
-testing: $(TESTING_TARGETS)
-	for dir in $(TESTING_TARGETS); do \
-		$(MAKE) -C $$dir $@; \
+testing: $(TESTING_TARGETS)					\
+	for dir in $(TESTING_TARGETS); do			\
+		if ! $(MAKE) -C $$dir $@; then break; fi;	\
 	done
 
 .PHONY: doc
