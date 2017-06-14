@@ -239,9 +239,10 @@ const (
 )
 
 // Initializing of system. This function should be always called before graph construction.
-// CPUCoresNumber is a number of cores which will be available for scheduler to place flow functions and their clones.
+// defaultCPUCoresNumber is a default number of cores which will be available for scheduler
+// to place flow functions and their clones. This number can be always changed by cores-number option.
 // Function can panic during execution.
-func SystemInit(CPUCoresNumber uint) {
+func SystemInit(defaultCPUCoresNumber uint) {
 	schedulerOff := flag.Bool("no-scheduler", false, "Use this for switching scheduler off")
 	schedulerOffRemove := flag.Bool("no-remove-clones", false, "Use this for switching off removing clones in scheduler")
 	stopDedicatedCore := flag.Bool("stop-at-dedicated-core", false, "Use this for setting scheduler and stop functionality to different cores")
@@ -251,6 +252,7 @@ func SystemInit(CPUCoresNumber uint) {
 	flag.UintVar(&schedTime, "scale-time", 1500, "Time between scheduler actions in miliseconds")
 	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring")
 	checkTime := flag.Uint("check-behaviour-time", 10000, "Time in miliseconds for scheduler to check changing of flow function behaviour")
+	CPUCoresNumber := flag.Uint("cores-number", defaultCPUCoresNumber, "Number of cores to use by system")
 	argc, argv := low.ParseFlags()
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone = uint32(sizeMultiplier * burstSize / 5 * 4)
@@ -268,7 +270,7 @@ func SystemInit(CPUCoresNumber uint) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing, *checkTime)
+	schedState = scheduler.NewScheduler(*CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing, *checkTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 

@@ -285,7 +285,7 @@ func (scheduler *Scheduler) getCore(startStage bool) int {
 		}
 	}
 	if startStage == true {
-		common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stop) plus two additional cores.")
+		common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
 	}
 	return -1
 }
