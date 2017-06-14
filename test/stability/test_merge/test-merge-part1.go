@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/md5"
+	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"sync"
@@ -15,7 +16,7 @@ import (
 
 // test-merge-part1:
 // This part of test generates packets on ports 0 and 1, receives packets
-// on 2 port. Packets generated on 0 port has IPv4 source addr IPV4ADDR_1,
+// on 0 port. Packets generated on 0 port has IPv4 source addr IPV4ADDR_1,
 // and those generated on 1 port has ipv4 source addr IPV4ADDR_2. For each packet
 // sender calculates md5 hash sum from all headers and write it to packet.Data.
 // When packet is received, hash is recomputed and checked if it is equal to value
@@ -24,15 +25,17 @@ import (
 //
 // test-merge-part2:
 // This part of test receives packets on 0 and 1 ports, merges flows
-// and send result flow to 2 port.
+// and send result flow to 0 port.
 
 const (
-	TOTAL_PACKETS = 10000000
+	TOTAL_PACKETS = 100000000
 )
 
 var (
 	// Payload is 16 byte md5 hash sum of headers
-	PAYLOAD_SIZE uint = 16
+	PAYLOAD_SIZE uint   = 16
+	SPEED        uint64 = 1000
+	PASSED_LIMIT uint64 = 85
 
 	sentPacketsGroup1 uint64 = 0
 	sentPacketsGroup2 uint64 = 0
@@ -51,6 +54,9 @@ var (
 )
 
 func main() {
+	flag.Uint64Var(&PASSED_LIMIT, "PASSED_LIMIT", PASSED_LIMIT, "received/sent minimum ratio to pass test")
+	flag.Uint64Var(&SPEED, "SPEED", SPEED, "speed of 1 and 2 generators, Pkts/s")
+
 	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
@@ -58,15 +64,15 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create first packet flow
-	firstFlow := flow.SetGenerator(generatePacketGroup1, 100, nil)
+	firstFlow := flow.SetGenerator(generatePacketGroup1, SPEED, nil)
 	flow.SetSender(firstFlow, 0)
 
 	// Create second packet flow
-	secondFlow := flow.SetGenerator(generatePacketGroup2, 100, nil)
+	secondFlow := flow.SetGenerator(generatePacketGroup2, SPEED, nil)
 	flow.SetSender(secondFlow, 1)
 
 	// Create receiving flow and set a checking function for it
-	inputFlow := flow.SetReceiver(2)
+	inputFlow := flow.SetReceiver(0)
 	flow.SetHandler(inputFlow, checkPackets, nil)
 	flow.SetStopper(inputFlow)
 
@@ -102,7 +108,8 @@ func main() {
 	println("Broken = ", broken, "packets")
 
 	// Test is passed, if p1 and p2 do not differ too much: |p1-p2| < 4%
-	if p1-p2 < 4 || p2-p1 < 4 {
+	// and enough packets received back
+	if (p1-p2 < 4 || p2-p1 < 4) && received*100/sent > PASSED_LIMIT {
 		println("TEST PASSED")
 	} else {
 		println("TEST FAILED")

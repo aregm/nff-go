@@ -14,26 +14,25 @@ import (
 	"unsafe"
 )
 
-// test-separate-part1: sends packets to 0 port, receives from 0 and 1 ports.
+// test-handle2-part1: sends packets to 0 port, receives from 0 and 1 ports.
 // This part of test generates three packet flows (1st, 2nd and 3rd), merges them into one flow
 // and send it to 0 port. Packets in original 1st, 2nd and 3rd flows has UDP destination addresses
 // DSTPORT_1, DSTPORT_2, DSTPORT_3 respectively. For each packet sender calculates md5 hash sum
 // from all headers, write it to packet.Data and check it on packet receive.
-// This part of test receive packets on 0 and 1 ports. Expects to get ~33% of packets on 0 port
-// (accepted) and ~66% on 1 port (rejected)
+// This part of test receive packets on 0 port, expects to receive ~33% of packets.
 // Test also calculates number of broken packets and prints it when a predefined number
 // of packets is received.
 //
-// test-separate-part2:
+// test-handle2-part2:
 // This part of test receives packets on 0 port, separate input flow according to rules
-// in test-separate-l3rules.conf into 2 flows. Accepted flow sent to 0 port, rejected - to 1 port.
+// in test-separate-l3rules.conf into 2 flows. Accepted flow sent to 0 port, rejected flow is stopped.
 
 const (
-	TOTAL_PACKETS = 10000000
+	TOTAL_PACKETS = 100000000
 
-	// Test expects to receive 33% of packets on 0 port and 66% on 1 port
-	// Test is PASSSED, if p1 is in [LOW1;HIGH1] and p2 in [LOW2;HIGH2]
-	eps   = 9
+	// Test expects to receive 33% of packets on 0 port.
+	// Test is PASSSED, if p1 is in [LOW1;HIGH1]
+	eps   = 5
 	HIGH1 = 33 + eps
 	LOW1  = 33 - eps
 )
