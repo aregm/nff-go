@@ -9,7 +9,7 @@ include $(PATH_TO_MK)/leaf.mk
 
 # Main DPDK variables
 CPUS=`nproc`
-DEST_DPDK_DIR=$(RTE_TARGET)-install
+DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export WORKDIR=/workdir
 
 # Pktgen variables
@@ -34,7 +34,7 @@ $(PKTGEN_DIR):
 	curl http://dpdk.org/browse/apps/pktgen-dpdk/snapshot/pktgen-v$(PKTGEN_VERSION).tar.xz | tar xJ
 
 $(PKTGEN_DIR)/app/app/$(RTE_TARGET)/pktgen: build-dpdk $(PKTGEN_DIR)
-	make -j $(CPUS) -C $(PKTGEN_DIR)
+	make -C $(PKTGEN_DIR)
 
 pktgen: $(PKTGEN_DIR)/app/app/$(RTE_TARGET)/pktgen
 	cp $(PKTGEN_DIR)/app/app/$(RTE_TARGET)/pktgen .
