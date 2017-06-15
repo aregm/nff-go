@@ -10,14 +10,12 @@ import "github.com/intel-go/yanff/packet"
 import "flag"
 
 var mode uint
-var cores uint
 
 func main() {
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
-	flag.UintVar(&cores, "cores", 15, "Number of cores to use by system")
 
-	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	// Initialize YANFF library at 15 cores by default
+	flow.SystemInit(15)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(0)

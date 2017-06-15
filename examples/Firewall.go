@@ -5,7 +5,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/rules"
@@ -15,10 +14,8 @@ var L3Rules *rules.L3Rules
 
 // Main function for constructing packet processing graph.
 func main() {
-	// Initialize YANFF library at requested number of cores
-	var cores uint
-	flag.UintVar(&cores, "cores", 8, "Number of cores to use by system")
-	flow.SystemInit(cores)
+	// Initialize YANFF library at 8 cores by default
+	flow.SystemInit(8)
 
 	// Get filtering rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")

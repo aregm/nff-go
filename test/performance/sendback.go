@@ -9,17 +9,15 @@ import "github.com/intel-go/yanff/flow"
 import "flag"
 
 var inport, outport uint
-var cores uint
 
 // This is a test for pure send/receive performance measurements. No
 // other functions used here.
 func main() {
 	flag.UintVar(&inport, "inport", 0, "Input port number")
 	flag.UintVar(&outport, "outport", 0, "Output port number")
-	flag.UintVar(&cores, "cores", 16, "Number of cores to use by system")
 
-	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	// Initialize YANFF library at 16 cores by default
+	flow.SystemInit(16)
 
 	// Receive packets from input port. One queue will be added automatically.
 	f := flow.SetReceiver(uint8(inport))

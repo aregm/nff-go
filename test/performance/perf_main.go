@@ -11,15 +11,13 @@ import "flag"
 
 var load uint
 var loadRW uint
-var cores uint
 
 func main() {
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&loadRW, "loadRW", 50, "Use this for regulating 'load read/write intensity', number of iterations")
-	flag.UintVar(&cores, "cores", 35, "Number of cores to use by system")
 
-	// Initialize YANFF library at requested number of cores
-	flow.SystemInit(cores)
+	// Initialize YANFF library at 35 cores by default
+	flow.SystemInit(35)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(0)
