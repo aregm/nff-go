@@ -5,9 +5,9 @@
 include $(PATH_TO_MK)/include.mk
 
 TARGETS = all clean images clean-images deploy cleanall
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) $(SUBDIRS)
 
-$(TARGETS):
-	for dir in $(SUBDIRS); do				\
-		if ! $(MAKE) -C $$dir $@; then break; fi;	\
-	done
+$(TARGETS): $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@ $(MAKECMDGOALS)

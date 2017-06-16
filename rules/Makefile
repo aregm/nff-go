@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
+PATH_TO_MK = ../mk
+include $(PATH_TO_MK)/include.mk
+
 .PHONY: testing
-testing:
+testing: check-pktgen
 	go test

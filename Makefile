@@ -9,11 +9,14 @@ TESTING_TARGETS = packet rules
 
 all: $(SUBDIRS)
 
-.PHONY: testing
-testing: $(TESTING_TARGETS)					\
-	for dir in $(TESTING_TARGETS); do			\
-		if ! $(MAKE) -C $$dir $@; then break; fi;	\
-	done
+test: dpdk
+
+examples: dpdk
+
+.PHONY: testing $(TESTING_TARGETS)
+testing: $(TESTING_TARGETS)
+$(TESTING_TARGETS):
+	$(MAKE) -C $@ testing
 
 .PHONY: doc
 doc: $(DOC_TARGETS)
