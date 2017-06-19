@@ -219,7 +219,6 @@ var pkts = [8]Packet{
 		TCP:      &TCPHeader[0],
 		UDP:      nil,
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[1],
@@ -228,7 +227,6 @@ var pkts = [8]Packet{
 		TCP:      &TCPHeader[1],
 		UDP:      nil,
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[2],
@@ -237,7 +235,6 @@ var pkts = [8]Packet{
 		TCP:      nil,
 		UDP:      &UDPHeader[0],
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[3],
@@ -246,7 +243,6 @@ var pkts = [8]Packet{
 		TCP:      &TCPHeader[2],
 		UDP:      nil,
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[4],
@@ -255,7 +251,6 @@ var pkts = [8]Packet{
 		TCP:      &TCPHeader[3],
 		UDP:      nil,
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[5],
@@ -264,7 +259,6 @@ var pkts = [8]Packet{
 		TCP:      nil,
 		UDP:      &UDPHeader[1],
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[6],
@@ -273,7 +267,6 @@ var pkts = [8]Packet{
 		TCP:      &TCPHeader[3],
 		UDP:      nil,
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 	{
 		Ether:    &MacHeader[7],
@@ -282,7 +275,6 @@ var pkts = [8]Packet{
 		TCP:      nil,
 		UDP:      &UDPHeader[1],
 		Unparsed: 0,
-		CMbuf:    nil,
 	},
 }
 
@@ -301,10 +293,9 @@ var lines = []string{
 func TestParseL4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
-		pkt := new(Packet)
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb)
-		pkt.CreatePacket(mb[0])
+		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 		if pkt == nil {
 			t.Fatal("Unable to construct mbuf")
@@ -334,10 +325,9 @@ func TestParseL4(t *testing.T) {
 func TestParseEther(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
-		pkt := new(Packet)
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb)
-		pkt.CreatePacket(mb[0])
+		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
 		pkt.ParseEther()
@@ -352,10 +342,9 @@ func TestParseEther(t *testing.T) {
 func TestParseEtherIPv4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
-		pkt := new(Packet)
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb)
-		pkt.CreatePacket(mb[0])
+		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
 		pkt.ParseEtherIPv4()
@@ -375,10 +364,9 @@ func TestParseEtherIPv4(t *testing.T) {
 func TestParseEtherIPv4_(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
-		pkt := new(Packet)
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb)
-		pkt.CreatePacket(mb[0])
+		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
 		if i == 2 || i == 5 || i == 7 {
@@ -420,15 +408,13 @@ func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
 	gt_payload := uint64(12345)
 	buffer := "001122334455011121314151080045000030bffd00000406eebb7f0000018009090504d2162e123456781234569050102000621c00003930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
-	parsedPkt := new(Packet)
 	low.AllocateMbufs(mb)
-	parsedPkt.CreatePacket(mb[0])
+	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseEtherIPv4TCP()
 
@@ -490,10 +476,9 @@ func TestParseIPv4UDPDataFunctions(t *testing.T) {
 	gt_payload := uint64(12345)
 	buffer := "001122334455011121314151080045000024bffd00000411eebc7f0000018009090504d2162e0010a38e393000000000000000000000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
 	pkt.ParseEtherIPv4UDPData()
@@ -532,15 +517,13 @@ func TestParseIPv6TCPDataFunctions(t *testing.T) {
 	gt_payload := uint64(12345)
 	buffer := "00112233445501112131415186dd60000000001c0600dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e123456781234569050102000102300003930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
-	parsedPkt := new(Packet)
 	low.AllocateMbufs(mb)
-	parsedPkt.CreatePacket(mb[0])
+	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseEtherIPv6TCP()
 
@@ -594,10 +577,9 @@ func TestParseIPv6UDPDataFunctions(t *testing.T) {
 	gt_payload := uint64(12345)
 	buffer := "00112233445501112131415186dd6000000000101100dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e001051953930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
 	pkt.ParseEtherIPv6UDPData()
@@ -643,13 +625,12 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	init := []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
 	add := []byte{30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49}
 
-	pkt := new(Packet)
 	mb := make([]uintptr, 1)
 
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
 			low.AllocateMbufs(mb)
-			pkt.CreatePacket(mb[0])
+			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, init)
 
 			pkt.EncapsulateHead(i, j)
@@ -666,7 +647,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
 			low.AllocateMbufs(mb)
-			pkt.CreatePacket(mb[0])
+			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, init)
 
 			pkt.EncapsulateTail(i, j)
@@ -683,7 +664,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
 			low.AllocateMbufs(mb)
-			pkt.CreatePacket(mb[0])
+			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, add)
 
 			pkt.DecapsulateHead(i, j)
@@ -699,7 +680,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
 			low.AllocateMbufs(mb)
-			pkt.CreatePacket(mb[0])
+			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, add)
 
 			pkt.DecapsulateTail(i, j)

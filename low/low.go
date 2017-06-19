@@ -5,7 +5,7 @@
 package low
 
 /*
-#cgo CFLAGS: -g -std=gnu11 -m64 -pthread  -march=native -DRTE_MACHINE_CPUFLAG_SSE -DRTE_MACHINE_CPUFLAG_SSE2 -DRTE_MACHINE_CPUFLAG_SSE3 -DRTE_MACHINE_CPUFLAG_SSSE3 -DRTE_MACHINE_CPUFLAG_SSE4_1 -DRTE_MACHINE_CPUFLAG_SSE4_2 -DRTE_MACHINE_CPUFLAG_PCLMULQDQ -DRTE_MACHINE_CPUFLAG_AVX -DRTE_MACHINE_CPUFLAG_RDRAND -DRTE_MACHINE_CPUFLAG_FSGSBASE -DRTE_MACHINE_CPUFLAG_F16C -DRTE_MACHINE_CPUFLAG_AVX2 -DRTE_COMPILE_TIME_CPUFLAGS=RTE_CPUFLAG_SSE,RTE_CPUFLAG_SSE2,RTE_CPUFLAG_SSE3,RTE_CPUFLAG_SSSE3,RTE_CPUFLAG_SSE4_1,RTE_CPUFLAG_SSE4_2,RTE_CPUFLAG_PCLMULQDQ,RTE_CPUFLAG_AVX,RTE_CPUFLAG_RDRAND,RTE_CPUFLAG_FSGSBASE,RTE_CPUFLAG_F16C,RTE_CPUFLAG_AVX2 -include rte_config.h -O3
+#cgo CFLAGS: -std=gnu11 -m64 -pthread  -march=native -DRTE_MACHINE_CPUFLAG_SSE -DRTE_MACHINE_CPUFLAG_SSE2 -DRTE_MACHINE_CPUFLAG_SSE3 -DRTE_MACHINE_CPUFLAG_SSSE3 -DRTE_MACHINE_CPUFLAG_SSE4_1 -DRTE_MACHINE_CPUFLAG_SSE4_2 -DRTE_MACHINE_CPUFLAG_PCLMULQDQ -DRTE_MACHINE_CPUFLAG_AVX -DRTE_MACHINE_CPUFLAG_RDRAND -DRTE_MACHINE_CPUFLAG_FSGSBASE -DRTE_MACHINE_CPUFLAG_F16C -DRTE_MACHINE_CPUFLAG_AVX2 -DRTE_COMPILE_TIME_CPUFLAGS=RTE_CPUFLAG_SSE,RTE_CPUFLAG_SSE2,RTE_CPUFLAG_SSE3,RTE_CPUFLAG_SSSE3,RTE_CPUFLAG_SSE4_1,RTE_CPUFLAG_SSE4_2,RTE_CPUFLAG_PCLMULQDQ,RTE_CPUFLAG_AVX,RTE_CPUFLAG_RDRAND,RTE_CPUFLAG_FSGSBASE,RTE_CPUFLAG_F16C,RTE_CPUFLAG_AVX2 -include rte_config.h -O3
 #cgo LDFLAGS: -W -Wall -Werror -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wold-style-definition -Wpointer-arith -Wcast-align -Wnested-externs -Wcast-qual -Wformat-nonliteral -Wformat-security -Wundef -Wwrite-strings -Wl,--no-as-needed -Wl,-export-dynamic -Wl,--whole-archive -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_hash -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_ip_frag -lrte_ethdev -lrte_mempool -lrte_ring -lrte_eal -lrte_cmdline -lrte_cfgfile -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_net -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -lrt -lm -ldl -Wl,--end-group -Wl,--no-whole-archive
 
 #include "yanff_queue.h"
@@ -20,6 +20,7 @@ extern struct rte_mempool * createMempool(int portsNumber, uint32_t num_mbuf, ui
 extern int directStop(int pkts_for_free_number, struct rte_mbuf ** buf);
 extern char ** makeArgv(int n);
 extern void handleArgv(char **, char* s, int i);
+extern int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
 */
 import "C"
 
@@ -52,10 +53,25 @@ func GetPacketDataStartPointer(mb *Mbuf) uintptr {
 	return uintptr(mb.buf_addr) + uintptr(mb.data_off)
 }
 
+var packetStructSize int
+
+func SetPacketStructSize(t int) {
+	if t > C.RTE_PKTMBUF_HEADROOM {
+		common.LogError(common.Initialization, "Packet structure can't be placed inside mbuf.",
+			"Increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
+	}
+	minPacketHeadroom := 64
+	if C.RTE_PKTMBUF_HEADROOM-t < minPacketHeadroom {
+		common.LogWarning(common.Initialization, "Packet will have only", C.RTE_PKTMBUF_HEADROOM-t,
+			"bytes for prepend something, increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
+	}
+	packetStructSize = t
+}
+
 // TODO 4 following functions support only not chained mbufs now
 // Heavily based on DPDK rte_pktmbuf_prepend
 func PrependMbuf(mb *Mbuf, length uint) bool {
-	if C.uint16_t(length) > mb.data_off {
+	if C.uint16_t(length) > mb.data_off-C.uint16_t(packetStructSize) {
 		return false
 	}
 	mb.data_off -= C.uint16_t(length)
@@ -425,7 +441,7 @@ func SetAffinity(coreId uint8) {
 }
 
 func AllocateMbufs(mb []uintptr) {
-	err := C.rte_pktmbuf_alloc_bulk(mainMempool, (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
+	err := C.allocateMbufs(mainMempool, (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
 	if err != 0 {
 		common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf")
 	}

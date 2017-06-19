@@ -519,15 +519,14 @@ func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
+	low.SetAffinity(core)
 
 	buf := make([]uintptr, 1)
-	tempPacket := new(packet.Packet)
-
-	low.SetAffinity(core)
+	var tempPacket *packet.Packet
 
 	for {
 		low.AllocateMbufs(buf)
-		tempPacket.CreatePacket(buf[0])
+		tempPacket = packet.ExtractPacket(buf[0])
 		generateFunction(tempPacket, nil)
 		safeEnqueue(OUT, buf, 1)
 	}
@@ -541,11 +540,8 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	vector := (vectorGenerateFunction != nil)
 
 	bufs := make([]uintptr, burstSize)
-	tempPacket := new(packet.Packet)
+	var tempPacket *packet.Packet
 	tempPackets := make([]*packet.Packet, burstSize)
-	for i := uint(0); i < burstSize; i++ {
-		tempPackets[i] = new(packet.Packet)
-	}
 	var currentSpeed uint64 = 0
 	var tick <-chan time.Time = time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -567,11 +563,12 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			low.AllocateMbufs(bufs)
 			if vector == false {
 				for i := range bufs {
-					tempPacket.CreatePacket(bufs[i])
+					// TODO Maybe we need to prefetcht here?
+					tempPacket = packet.ExtractPacket(bufs[i])
 					generateFunction(tempPacket, context)
 				}
 			} else {
-				packet.CreatePackets(tempPackets, bufs, burstSize)
+				packet.ExtractPackets(tempPackets, bufs, burstSize)
 				vectorGenerateFunction(tempPackets, burstSize, context)
 			}
 			safeEnqueue(OUT, bufs, burstSize)
@@ -662,11 +659,9 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 	bufsFalse := make([]uintptr, burstSize)
 	ttt := make([]bool, burstSize)
 	var countOfPackets uint
-	tempPacket := new(packet.Packet)
+	var tempPacket *packet.Packet
+	var tempPacketAddr uintptr
 	tempPackets := make([]*packet.Packet, burstSize)
-	for i := uint(0); i < burstSize; i++ {
-		tempPackets[i] = new(packet.Packet)
-	}
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -694,10 +689,11 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 			}
 			countOfPackets = 0
 			if vector == false {
-				asm.Prefetcht0(bufsIn[0])
+				tempPacketAddr = packet.ExtractPacketAddr(bufsIn[0])
 				for i := uint(0); i < n-1; i++ {
-					asm.Prefetcht0(bufsIn[i+1])
-					tempPacket.CreatePacket(bufsIn[i])
+					tempPacket = packet.ToPacket(tempPacketAddr)
+					tempPacketAddr = packet.ExtractPacketAddr(bufsIn[i+1])
+					asm.Prefetcht0(tempPacketAddr)
 					if separateFunction(tempPacket, context) == false {
 						bufsFalse[countOfPackets] = bufsIn[i]
 						countOfPackets++
@@ -705,8 +701,7 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 						bufsTrue[uint(i)-countOfPackets] = bufsIn[i]
 					}
 				}
-				tempPacket.CreatePacket(bufsIn[n-1])
-				if separateFunction(tempPacket, context) == false {
+				if separateFunction(packet.ToPacket(tempPacketAddr), context) == false {
 					bufsFalse[countOfPackets] = bufsIn[n-1]
 					countOfPackets++
 				} else {
@@ -714,7 +709,7 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 				}
 			} else {
 				// TODO add prefetch for vector functions
-				packet.CreatePackets(tempPackets, bufsIn, n)
+				packet.ExtractPackets(tempPackets, bufsIn, n)
 				vectorSeparateFunction(tempPackets, ttt, n, context)
 				for i := uint(0); i < n; i++ {
 					if ttt[i] == false {
@@ -810,7 +805,8 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 		OutputMbufs[index] = make([]uintptr, burstSize)
 		countOfPackets[index] = 0
 	}
-	tempPacket := new(packet.Packet)
+	var tempPacket *packet.Packet
+	var tempPacketAddr uintptr
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -836,16 +832,16 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 				}
 				continue
 			}
-			asm.Prefetcht0(InputMbufs[0])
+			tempPacketAddr = packet.ExtractPacketAddr(InputMbufs[0])
 			for i := uint(0); i < n-1; i++ {
-				asm.Prefetcht0(InputMbufs[i+1])
-				tempPacket.CreatePacket(InputMbufs[i])
+				tempPacket = packet.ToPacket(tempPacketAddr)
+				tempPacketAddr = packet.ExtractPacketAddr(InputMbufs[i+1])
+				asm.Prefetcht0(tempPacketAddr)
 				index := splitFunction(tempPacket, context)
 				OutputMbufs[index][countOfPackets[index]] = InputMbufs[i]
 				countOfPackets[index]++
 			}
-			tempPacket.CreatePacket(InputMbufs[n-1])
-			index := splitFunction(tempPacket, context)
+			index := splitFunction(packet.ToPacket(tempPacketAddr), context)
 			OutputMbufs[index][countOfPackets[index]] = InputMbufs[n-1]
 			countOfPackets[index]++
 
@@ -880,11 +876,9 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	vector := (vectorHandleFunction != nil)
 
 	bufs := make([]uintptr, burstSize)
-	tempPacket := new(packet.Packet)
+	var tempPacket *packet.Packet
+	var tempPacketAddr uintptr
 	tempPackets := make([]*packet.Packet, burstSize)
-	for i := uint(0); i < burstSize; i++ {
-		tempPackets[i] = new(packet.Packet)
-	}
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int = 0
@@ -911,17 +905,17 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 				continue
 			}
 			if vector == false {
-				asm.Prefetcht0(bufs[0])
+				tempPacketAddr = packet.ExtractPacketAddr(bufs[0])
 				for i := uint(0); i < n-1; i++ {
-					asm.Prefetcht0(bufs[i+1])
-					tempPacket.CreatePacket(bufs[i])
+					tempPacket = packet.ToPacket(tempPacketAddr)
+					tempPacketAddr = packet.ExtractPacketAddr(bufs[i+1])
+					asm.Prefetcht0(tempPacketAddr)
 					handleFunction(tempPacket, context)
 				}
-				tempPacket.CreatePacket(bufs[n-1])
-				handleFunction(tempPacket, context)
+				handleFunction(packet.ToPacket(tempPacketAddr), context)
 			} else {
 				// TODO add prefetch for vector functions
-				packet.CreatePackets(tempPackets, bufs, n)
+				packet.ExtractPackets(tempPackets, bufs, n)
 				vectorHandleFunction(tempPackets, n, context)
 			}
 			safeEnqueue(OUT, bufs, uint(n))

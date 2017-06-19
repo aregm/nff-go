@@ -17,11 +17,36 @@
 
 // #define DEBUG
 // #define VERBOSE
+#define AVX
 
-struct rte_mempool * mp;
+#ifdef AVX
+#define mbufClear(buf) \
+	_mm256_storeu_ps((float*)(buf + mbufStructSize), zero256);
+#else
+#define mbufClear(buf) \
+	_mm_storeu_ps((float*)(buf + mbufStructSize), zero128); \
+	_mm_storeu_ps((float*)(buf + mbufStructSize + 16), zero128);
+#endif
+
+#define mbufInit(buf) \
+	mbufClear(buf) \
+	_mm_storeu_ps((float*)(buf + mbufStructSize + 32), zero128); \
+	*(char**)((char*)(buf) + mbufStructSize + 48) = (char*)(buf) + defaultStart; \
+	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf);
+
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
 long stop_freed = 0;
+
+int mbufStructSize;
+int headroomSize;
+int defaultStart;
+
+__m128 zero128 = {0, 0, 0, 0};
+#ifdef AVX
+__m256 zero256 = {0, 0, 0, 0, 0, 0, 0, 0};
+#endif
+
 // This is multiplier for conversion from PKT/s to Mbits/s for 64 (84 in total length) packets
 const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
@@ -99,7 +124,8 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
-	uint16_t buf;
+	uint16_t i;
+
 	// Run until the application is quit. Recv can't be stopped now.
 	for (;;) {
 		// Get RX packets from port
@@ -108,14 +134,19 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 		if (unlikely(rx_pkts_number == 0))
 			continue;
 
+		for (i = 0; i < rx_pkts_number; i++) {
+			// TODO refetcht here
+			mbufInit(bufs[i]);
+		}
+
 		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number);
 		// Free any packets which can't be pushed to the ring. The ring is probably full.
 		if (unlikely(pushed_pkts_number < rx_pkts_number)) {
 #ifdef VERBOSE
 			fprintf(stderr, "WARNING: Receive pushes to queue only: %d packets from %d\n", pushed_pkts_number, rx_pkts_number);
 #endif
-			for (buf = pushed_pkts_number; buf < rx_pkts_number; buf++) {
-				rte_pktmbuf_free(bufs[buf]);
+			for (i = pushed_pkts_number; i < rx_pkts_number; i++) {
+				rte_pktmbuf_free(bufs[i]);
 			}
 		}
 #ifdef DEBUG
@@ -221,6 +252,10 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	free(argv[argc-1]);
 	free(argv);
 	BURST_SIZE = burstSize;
+	mbufStructSize = sizeof(struct rte_mbuf);
+	headroomSize = RTE_PKTMBUF_HEADROOM;
+	defaultStart = mbufStructSize + headroomSize;
+
 #ifdef DEBUG
 	signal(SIGALRM, statistics);
 	alarm(1);
@@ -238,4 +273,13 @@ struct rte_mempool * createMempool(int portsNumber, uint32_t num_mbufs, uint32_t
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
 	return mbuf_pool;
+}
+
+int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
+	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
+
+	for (int i = 0; i < count; i++) {
+		mbufInit(bufs[i]);
+	}
+	return ret;
 }

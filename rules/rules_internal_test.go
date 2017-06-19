@@ -56,10 +56,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"github.com/intel-go/yanff/low"
 	"github.com/intel-go/yanff/packet"
+	"io/ioutil"
+	"log"
 	"os"
 	"reflect"
 	"testing"
@@ -444,10 +444,9 @@ func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	// TCP packet Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 	pkt.ParseL4()
 
@@ -507,10 +506,9 @@ func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
@@ -572,10 +570,9 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
@@ -688,10 +685,9 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000140600dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e123456781234569050102000495b0000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
@@ -826,10 +822,9 @@ func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000081100dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e00088ad5"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
@@ -952,10 +947,9 @@ func TestInternal_l2_ACL(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
-	pkt := new(packet.Packet)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb)
-	pkt.CreatePacket(mb[0])
+	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()

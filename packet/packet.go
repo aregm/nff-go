@@ -47,6 +47,16 @@ import (
 	"unsafe"
 )
 
+var mbufStructSize uintptr
+
+func init() {
+	var t1 low.Mbuf
+	mbufStructSize = unsafe.Sizeof(t1)
+	var t2 Packet
+	packetStructSize := unsafe.Sizeof(t2)
+	low.SetPacketStructSize(int(packetStructSize))
+}
+
 // TODO Add function to write user data after headers and set "data" field
 
 // Supported EtherType for L2
@@ -538,25 +548,25 @@ func (packet *Packet) ParseL4Data() int {
 	return -1
 }
 
-// CreatePacket takes pointer to Mbuf struct.
-// TODO This should be unexported method. However now it is exported to be used in package flow.
-func (packet *Packet) CreatePacket(IN uintptr) {
-	mbuf := (*low.Mbuf)(unsafe.Pointer(IN))
-	packet.Ether = nil
-	packet.IPv4 = nil
-	packet.IPv6 = nil
-	packet.TCP = nil
-	packet.UDP = nil
-	packet.Data = nil
-	packet.Unparsed = low.GetPacketDataStartPointer(mbuf)
-	packet.CMbuf = mbuf
+// ExtractPacket, ExtractPacketAddr, ToPacket extract packet structure from mbuf
+// TODO These should be unexported method. However now it is exported to be used in package flow.
+func ExtractPacketAddr(IN uintptr) uintptr {
+	return IN + mbufStructSize
 }
 
-// Create vector of packets by calling CreatePacket function
+func ToPacket(IN uintptr) *Packet {
+	return (*Packet)(unsafe.Pointer(IN))
+}
+
+func ExtractPacket(IN uintptr) *Packet {
+	return ToPacket(ExtractPacketAddr(IN))
+}
+
+// Create vector of packets by calling ExtractPacket function
 // TODO This should be unexported method. However now it is exported to be used in package flow.
-func CreatePackets(packet []*Packet, IN []uintptr, n uint) {
+func ExtractPackets(packet []*Packet, IN []uintptr, n uint) {
 	for i := uint(0); i < n; i++ {
-		packet[i].CreatePacket(IN[i])
+		packet[i] = ExtractPacket(IN[i])
 	}
 }
 
@@ -565,7 +575,6 @@ func CreatePackets(packet []*Packet, IN []uintptr, n uint) {
 func PacketFromByte(packet *Packet, data []byte) {
 	low.AppendMbuf(packet.CMbuf, uint(len(data)))
 	low.WriteDataToMbuf(packet.CMbuf, data)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 }
 
 // All following functions set Data pointer because it is assumed that user
@@ -576,7 +585,6 @@ func PacketFromByte(packet *Packet, data []byte) {
 func InitEmptyEtherPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
 	packet.ParseEtherData()
 }
@@ -589,9 +597,7 @@ func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv4MinLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
 
-	// Create empty packet, set pointer to mbuf and to known headers
-	// Filling headers is left for user
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
+	// Set pointers to required headers. Filling headers is left for user
 	packet.ParseEtherIPv4()
 
 	// After packet is parsed, we can write to packet struct known protocol types
@@ -608,7 +614,6 @@ func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) {
 func InitEmptyEtherIPv6Packet(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv6Len
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
 	packet.ParseEtherIPv6Data()
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
@@ -623,9 +628,8 @@ func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) {
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv4MinLen + TCPMinLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	// Create empty packet, set pointer to mbuf and required headers. Filling headers is left for user
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
+	// Set pointer to required headers. Filling headers is left for user
 	packet.ParseEtherIPv4()
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
@@ -645,7 +649,6 @@ func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) {
 func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv4MinLen + UDPLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
 	packet.ParseEtherIPv4()
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
@@ -667,7 +670,6 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv6Len + TCPMinLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
 	packet.ParseEtherIPv6()
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len))
@@ -684,7 +686,6 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
 func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) {
 	bufSize := plSize + EtherLen + IPv6Len + UDPLen
 	low.AppendMbuf(packet.CMbuf, bufSize)
-	packet.CreatePacket(uintptr(unsafe.Pointer(packet.CMbuf)))
 
 	packet.ParseEtherIPv6()
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len))
