@@ -17,9 +17,8 @@
 
 // #define DEBUG
 // #define VERBOSE
-#define AVX
 
-#ifdef AVX
+#ifdef RTE_MACHINE_CPUFLAG_AVX
 #define mbufClear(buf) \
 	_mm256_storeu_ps((float*)(buf + mbufStructSize), zero256);
 #else
@@ -43,7 +42,7 @@ int headroomSize;
 int defaultStart;
 
 __m128 zero128 = {0, 0, 0, 0};
-#ifdef AVX
+#ifdef RTE_MACHINE_CPUFLAG_AVX
 __m256 zero256 = {0, 0, 0, 0, 0, 0, 0, 0};
 #endif
 
