@@ -1,6 +1,7 @@
 perf_light
 perf_main
 perf_seq
+ipsec
 latency-part1
 latency-stub
 sendback
