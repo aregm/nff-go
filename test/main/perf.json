@@ -236,80 +236,6 @@
             }
         },
         {
-            "name": "perf_light_empty_off_1518",
-            "test-time": 32000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=0", "--no-scheduler"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 15000000000,
-                "measure-for": 15000000000
-            }
-        },
-        {
-            "name": "perf_light_empty_on_1518",
-            "test-time": 67000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=0"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 40000000000,
-                "measure-for": 25000000000
-            }
-        },
-        {
             "name": "perf_light_parsing_off_64",
             "test-time": 32000000000,
             "test-type": "TEST_TYPE_BENCHMARK",
@@ -532,80 +458,6 @@
             }
         },
         {
-            "name": "perf_light_parsing_off_1518",
-            "test-time": 32000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=1", "--no-scheduler"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 15000000000,
-                "measure-for": 15000000000
-            }
-        },
-        {
-            "name": "perf_light_parsing_on_1518",
-            "test-time": 67000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=1"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 40000000000,
-                "measure-for": 25000000000
-            }
-        },
-        {
             "name": "perf_light_parsing_reading_writing_off_64",
             "test-time": 32000000000,
             "test-type": "TEST_TYPE_BENCHMARK",
@@ -819,80 +671,6 @@
                     "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
                     "pktgen.range.pkt_size(\"0\", \"min\", 256);",
                     "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 40000000000,
-                "measure-for": 25000000000
-            }
-        },
-        {
-            "name": "perf_light_parsing_reading_writing_off_1518",
-            "test-time": 32000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=2", "--no-scheduler"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
-                "measure-after": 15000000000,
-                "measure-for": 15000000000
-            }
-        },
-        {
-            "name": "perf_light_parsing_reading_writing_on_1518",
-            "test-time": 67000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
-            "test-apps": [
-                {
-                    "host-name": "hostname1",
-                    "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
-                    "exec-cmd": [
-                        "./perf_light", "-mode=2"
-                    ]
-                },
-                {
-                    "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
-                    "app-type": "TESTAPP_PKTGEN",
-                    "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
-                    ]
-                }
-            ],
-            "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
                     "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
@@ -4131,6 +3909,302 @@
                     "app-type": "TESTAPP_GO",
                     "exec-cmd": [
                         "./perf_seq", "-load=25", "-mode=14"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 40000000000,
+                "measure-for": 25000000000
+            }
+        },
+        {
+            "name": "ipsec_off_64",
+            "test-time": 32000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec", "--no-scheduler"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 15000000000,
+                "measure-for": 15000000000
+            }
+        },
+        {
+            "name": "ipsec_on_64",
+            "test-time": 97000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 60000000000,
+                "measure-for": 35000000000
+            }
+        },
+        {
+            "name": "ipsec_off_128",
+            "test-time": 32000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec", "--no-scheduler"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 15000000000,
+                "measure-for": 15000000000
+            }
+        },
+        {
+            "name": "ipsec_on_128",
+            "test-time": 97000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 60000000000,
+                "measure-for": 35000000000
+            }
+        },
+        {
+            "name": "ipsec_off_256",
+            "test-time": 32000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec", "--no-scheduler"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 15000000000,
+                "measure-for": 15000000000
+            }
+        },
+        {
+            "name": "ipsec_on_256",
+            "test-time": 67000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 40000000000,
+                "measure-for": 25000000000
+            }
+        },
+        {
+            "name": "ipsec_off_1518",
+            "test-time": 32000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec", "--no-scheduler"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-pktgen",
+                    "app-type": "TESTAPP_PKTGEN",
+                    "exec-cmd": [
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                    ]
+                }
+            ],
+            "benchmarking-settings": {
+                "pktgen-startup-commands": [
+                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.set_range(\"0\", \"on\");",
+                    "pktgen.start(0);"
+                ],
+                "measure-after": 15000000000,
+                "measure-for": 15000000000
+            }
+        },
+        {
+            "name": "ipsec_on_1518",
+            "test-time": 67000000000,
+            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-performance",
+                    "app-type": "TESTAPP_GO",
+                    "exec-cmd": [
+                        "./ipsec"
                     ]
                 },
                 {
