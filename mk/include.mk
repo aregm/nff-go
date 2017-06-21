@@ -31,20 +31,18 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
 	-include rte_config.h
 
+HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
+ifdef HAVE_AVX2
+$(info Checking for AVX support... AVX and AVX2)
+CFLAGS += -DRTE_MACHINE_CPUFLAG_AVX -DRTE_MACHINE_CPUFLAG_AVX2
+else
 HAVE_AVX := $(shell grep avx /proc/cpuinfo)
 ifdef HAVE_AVX
-$(info Checking for AVX support... yes)
+$(info Checking for AVX support... AVX)
 CFLAGS += -DRTE_MACHINE_CPUFLAG_AVX
 else
 $(info Checking for AVX support... no)
 endif
-
-HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
-ifdef HAVE_AVX2
-$(info Checking for AVX2 support... yes)
-CFLAGS += -DRTE_MACHINE_CPUFLAG_AVX2
-else
-$(info Checking for AVX2 support... no)
 endif
 
 export CGO_CFLAGS = $(CFLAGS)
@@ -118,11 +116,11 @@ export CGO_LDFLAGS =				\
 # Universal check whether a variable is set
 .PHONY: .check-defined-%
 .check-defined-%:
-	if [ -z '${${*}}' ]; then echo "Variable $* is undefined" && exit 1; fi
+	@if [ -z '${${*}}' ]; then echo "!!! Variable $* is undefined" && exit 1; fi
 
 check-pktgen:
-	if [ ! -f $(PROJECT_ROOT)/dpdk/pktgen ]; then						\
-		echo "It is necessary to build DPDK before building any parts of YANFF." &&	\
-		echo "Please run make at the project root or in dpdk subdirectory" &&		\
+	@if [ ! -f $(PROJECT_ROOT)/dpdk/pktgen ]; then						\
+		echo "!!! It is necessary to build DPDK before building any parts of YANFF." &&	\
+		echo "!!! Please run make at the project root or in dpdk subdirectory" &&	\
 		exit 1;										\
 	fi
