@@ -250,7 +250,7 @@ func SystemInit(defaultCPUCoresNumber uint) {
 	mbufCacheSize := flag.Uint("mempool-cache", 250, "Advanced option: Size of local per-core cache in mempool (in mbufs)")
 	flag.UintVar(&sizeMultiplier, "ring-size", 256, "Advanced option: number of 'burst_size' groups in all rings. This should be power of 2")
 	flag.UintVar(&schedTime, "scale-time", 1500, "Time between scheduler actions in miliseconds")
-	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring")
+	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring. Default value is tested for performance and not recommended to change")
 	checkTime := flag.Uint("check-behaviour-time", 10000, "Time in miliseconds for scheduler to check changing of flow function behaviour")
 	CPUCoresNumber := flag.Uint("cores-number", defaultCPUCoresNumber, "Number of cores to use by system")
 	argc, argv := low.ParseFlags()
@@ -286,6 +286,12 @@ func SystemStart() {
 			low.CreatePort(createdPorts[i].port, createdPorts[i].rxQueuesNumber, createdPorts[i].txQueuesNumber)
 		}
 	}
+	// Timeout is needed for ports to start up. This way is used in pktgen.
+	// Pktgen also has checks for link status for all ports, but we compensate it
+	// by additional time.
+	// Timeout prevents loss of starting packets in generated flow.
+	time.Sleep(time.Second * 2)
+
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	schedState.SystemStart()
 	common.LogTitle(common.Initialization, "------------***--------- YANFF-GO Started --------***------------")
