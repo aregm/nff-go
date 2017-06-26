@@ -41,6 +41,9 @@ var (
 
 	DSTPORT_1 uint16 = 111
 	DSTPORT_2 uint16 = 222
+
+	outport uint
+	inport uint
 )
 
 var (
@@ -77,6 +80,9 @@ func main() {
 	flag.Uint64Var(&PASSED_LIMIT, "PASSED_LIMIT", PASSED_LIMIT, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&PACKET_SIZE, "PACKET_SIZE", PACKET_SIZE, "size of packet")
 
+	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.UintVar(&inport, "inport", 1, "port for receiver")
+
 	latencies = make(chan time.Duration)
 	stop = make(chan string)
 	latenciesStorage = make([]time.Duration, 2*LAT_NUMBER)
@@ -94,13 +100,12 @@ func main() {
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generatePackets, SPEED, nil)
 	outputFlow2 := flow.SetPartitioner(outputFlow, 350, 350)
-
-	flow.SetSender(outputFlow, 0)
-	flow.SetSender(outputFlow2, 0)
+	flow.SetSender(outputFlow, uint8(outport))
+	flow.SetSender(outputFlow2, uint8(outport))
 
 	// Create receiving flow and set a checking function for it
-	inputFlow1 := flow.SetReceiver(1)
-	inputFlow2 := flow.SetReceiver(1)
+	inputFlow1 := flow.SetReceiver(uint8(inport))
+	inputFlow2 := flow.SetReceiver(uint8(inport))
 	inputFlow := flow.SetMerger(inputFlow1, inputFlow2)
 
 	// Calculate latency only for 1 of SKIP_NUMBER packets.

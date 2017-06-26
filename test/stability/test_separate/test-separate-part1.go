@@ -6,6 +6,7 @@ package main
 
 import (
 	"crypto/md5"
+	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"sync"
@@ -45,8 +46,8 @@ var (
 	SPEED        uint64 = 1000
 	PASSED_LIMIT uint64 = 85
 
-	recvOnPort0 uint64 = 0
-	recvOnPort1 uint64 = 0
+	recvCount1 uint64 = 0
+	recvCount2 uint64 = 0
 
 	count         uint64 = 0
 	recvPackets   uint64 = 0
@@ -57,9 +58,17 @@ var (
 	DSTPORT_3 uint16 = 333
 
 	testDoneEvent *sync.Cond = nil
+
+	outport  uint
+	inport1 uint
+	inport2 uint
 )
 
 func main() {
+	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
+	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
+
 	// Init YANFF system at 16 available cores
 	flow.SystemInit(16)
 
@@ -68,14 +77,14 @@ func main() {
 
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generatePacket, SPEED, nil)
-	flow.SetSender(outputFlow, 0)
+	flow.SetSender(outputFlow, uint8(outport))
 
 	// Create receiving flows and set a checking function for it
-	inputFlow1 := flow.SetReceiver(0)
-	flow.SetHandler(inputFlow1, checkPacketsOn0Port, nil)
+	inputFlow1 := flow.SetReceiver(uint8(inport1))
+	flow.SetHandler(inputFlow1, checkInputFlow1, nil)
 
-	inputFlow2 := flow.SetReceiver(1)
-	flow.SetHandler(inputFlow2, checkPacketsOn1Port, nil)
+	inputFlow2 := flow.SetReceiver(uint8(inport2))
+	flow.SetHandler(inputFlow2, checkInputFlow2, nil)
 
 	flow.SetStopper(inputFlow1)
 	flow.SetStopper(inputFlow2)
@@ -91,15 +100,15 @@ func main() {
 	// Compose statistics
 	sent := atomic.LoadUint64(&count)
 
-	recv0 := atomic.LoadUint64(&recvOnPort0)
-	recv1 := atomic.LoadUint64(&recvOnPort1)
-	received := recv0 + recv1
+	recv1 := atomic.LoadUint64(&recvCount1)
+	recv2 := atomic.LoadUint64(&recvCount2)
+	received := recv1 + recv2
 
 	var p1 int
 	var p2 int
 	if received != 0 {
-		p1 = int(recv0 * 100 / received)
-		p2 = int(recv1 * 100 / received)
+		p1 = int(recv1 * 100 / received)
+		p2 = int(recv2 * 100 / received)
 	}
 	broken := atomic.LoadUint64(&brokenPackets)
 
@@ -107,11 +116,11 @@ func main() {
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 
-	println("On port 0 received=", recv0, "pkts")
-	println("On port 1 received=", recv1, "pkts")
+	println("On port", inport1, "received=", recv1, "pkts")
+	println("On port", inport2, "received=", recv2, "pkts")
 
-	println("Proportion of packets received on 0 port ", p1, "%")
-	println("Proportion of packets received on 1 port ", p2, "%")
+	println("Proportion of packets received on", inport1, "port =", p1, "%")
+	println("Proportion of packets received on", inport2, "port =", p2, "%")
 
 	println("Broken = ", broken, "packets")
 
@@ -144,8 +153,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ptr.HdrsMD5 = md5.Sum(hdrs)
 }
 
-// Count and check packets received on 0 port
-func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
+func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()
@@ -166,15 +174,14 @@ func checkPacketsOn0Port(pkt *packet.Packet, context flow.UserContext) {
 			atomic.AddUint64(&brokenPackets, 1)
 			return
 		}
-		atomic.AddUint64(&recvOnPort0, 1)
+		atomic.AddUint64(&recvCount1, 1)
 	}
 	if recvCount >= TOTAL_PACKETS {
 		testDoneEvent.Signal()
 	}
 }
 
-// Count and check packets received on 1 port
-func checkPacketsOn1Port(pkt *packet.Packet, context flow.UserContext) {
+func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
 	offset := pkt.ParseL4Data()
@@ -195,7 +202,7 @@ func checkPacketsOn1Port(pkt *packet.Packet, context flow.UserContext) {
 			atomic.AddUint64(&brokenPackets, 1)
 			return
 		}
-		atomic.AddUint64(&recvOnPort1, 1)
+		atomic.AddUint64(&recvCount2, 1)
 	}
 	if recvCount >= TOTAL_PACKETS {
 		testDoneEvent.Signal()

@@ -5,15 +5,23 @@
 package main
 
 import (
+	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/rules"
 )
 
-var L3Rules *rules.L3Rules
+var (
+	L3Rules   *rules.L3Rules
+	outport uint
+	inport uint
+)
 
 // Main function for constructing packet processing graph.
 func main() {
+	flag.UintVar(&outport, "outport", 1, "port for sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
+
 	// Initialize YANFF library at 8 cores by default
 	flow.SystemInit(8)
 
@@ -21,7 +29,7 @@ func main() {
 	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow := flow.SetReceiver(0)
+	inputFlow := flow.SetReceiver(uint8(inport))
 
 	// Separate packet flow based on ACL.
 	rejectFlow := flow.SetSeparator(inputFlow, L3Separator, nil)
@@ -30,7 +38,7 @@ func main() {
 	flow.SetStopper(rejectFlow)
 
 	// Send accepted packets to first port. Send queue will be added automatically.
-	flow.SetSender(inputFlow, 1)
+	flow.SetSender(inputFlow, uint8(outport))
 
 	// Begin to process packets.
 	flow.SystemStart()

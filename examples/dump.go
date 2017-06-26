@@ -11,15 +11,21 @@ import (
 	"github.com/intel-go/yanff/packet"
 )
 
+var (
+	outport uint
+	inport uint
+)
+
 func main() {
 	hexdumpOn := flag.Bool("hex", false, "enable dumping of packets in hex format")
-	flag.Parse()
+	flag.UintVar(&outport, "outport", 1, "port for sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
 
 	// Initialize YANFF library at 10 available cores
 	flow.SystemInit(10)
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow := flow.SetReceiver(0)
+	firstFlow := flow.SetReceiver(uint8(inport))
 
 	// Separate each 50000000th packet for dumping
 	secondFlow := flow.SetPartitioner(firstFlow, 50000000, 1)
@@ -35,7 +41,7 @@ func main() {
 	output := flow.SetMerger(firstFlow, secondFlow)
 
 	// Send packets to control speed. One queue will be added automatically.
-	flow.SetSender(output, 1)
+	flow.SetSender(output, uint8(outport))
 
 	flow.SystemStart()
 }

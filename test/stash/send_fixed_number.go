@@ -14,6 +14,7 @@ import (
 
 var TOTAL_PACKETS int64
 var PACKET_SIZE uint
+var outport uint
 var count int64 = 0
 
 // Total packet size is 14+20+20+payload_size+4(crc)
@@ -23,9 +24,10 @@ var hdrs_size uint = 14 + 20 + 20 + 4
 func main() {
 	flag.Int64Var(&TOTAL_PACKETS, "TOTAL_PACKETS", 1234, "Number of packets to send")
 	flag.UintVar(&PACKET_SIZE, "PACKET_SIZE", 128, "Size of generated packet")
+	flag.UintVar(&outport, "outport", 0, "port for sender")
 	payload_size = PACKET_SIZE - hdrs_size
 
-	// Initialize YANFF library at 16 available cores
+	// Initialize YANFF library at 16 cores by default
 	flow.SystemInit(16)
 
 	// With generateOne all packets are sent.
@@ -35,8 +37,8 @@ func main() {
 	f2 := flow.SetPartitioner(f1, 350, 350)
 
 	// Send all generated packets to the output
-	flow.SetSender(f1, 0)
-	flow.SetSender(f2, 0)
+	flow.SetSender(f1, uint8(outport))
+	flow.SetSender(f2, uint8(outport))
 
 	flow.SystemStart()
 }
