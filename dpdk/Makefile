@@ -6,8 +6,8 @@ PATH_TO_MK = ../mk
 IMAGENAME = yanff-pktgen
 
 # Pktgen variables
-PKTGEN_VERSION=3.1.0
-PKTGEN_DIR=pktgen-v$(PKTGEN_VERSION)
+PKTGEN_VERSION=3.1.2
+PKTGEN_DIR=pktgen-$(PKTGEN_VERSION)
 
 include $(PATH_TO_MK)/leaf.mk
 
@@ -27,8 +27,8 @@ $(DPDK_DIR)/$(DPDK_INSTALL_DIR): $(DPDK_DIR)
 	$(MAKE) -C $(DPDK_DIR) install T=$(RTE_TARGET) DESTDIR=$(DPDK_INSTALL_DIR)
 
 $(PKTGEN_DIR):
-	curl http://dpdk.org/browse/apps/pktgen-dpdk/snapshot/pktgen-v$(PKTGEN_VERSION).tar.xz | tar xJ
-	cd $(PKTGEN_DIR) && patch -p1 < ../pktgen_3.1.0.patch
+	curl http://dpdk.org/browse/apps/pktgen-dpdk/snapshot/pktgen-$(PKTGEN_VERSION).tar.xz | tar xJ
+	cd $(PKTGEN_DIR) && patch -p1 < ../pktgen_3.1.2.patch
 
 $(PKTGEN_DIR)/app/app/$(RTE_TARGET)/pktgen: $(DPDK_DIR)/$(DPDK_INSTALL_DIR) $(PKTGEN_DIR)
 	$(MAKE) -j1 -C $(PKTGEN_DIR)
