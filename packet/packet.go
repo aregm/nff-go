@@ -617,6 +617,7 @@ func InitEmptyEtherIPv6Packet(packet *Packet, plSize uint) {
 
 	packet.ParseEtherIPv6Data()
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
+	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(plSize))
 }
 
 // InitEmptyEtherIPv4TCPPacket initializes input packet with preallocated plSize of bytes for payload
@@ -677,6 +678,7 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
 
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.IPv6.Proto = TCPNumber
+	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
 }
 
 // InitEmptyEtherIPv6UDPPacket initializes input packet with preallocated plSize of bytes for payload
@@ -693,6 +695,7 @@ func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) {
 
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.IPv6.Proto = UDPNumber
+	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
 	packet.UDP.DgramLen = uint16(UDPLen + plSize)
 }
 
