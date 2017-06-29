@@ -3,11 +3,13 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = mk
-SUBDIRS = dpdk test examples
+SUBDIRS = yanff-base dpdk test examples
 DOC_TARGETS = flow rules packet
 TESTING_TARGETS = packet rules
 
 all: $(SUBDIRS)
+
+dpdk: yanff-base
 
 test: dpdk
 
