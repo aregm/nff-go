@@ -8,7 +8,6 @@
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_ring.h>
-#include <signal.h>
 #include <unistd.h>
 
 // These constants are get from DPDK and checked for performance
@@ -221,14 +220,17 @@ void handleArgv(char ** argv, char * s, int i) {
 	argv[i] = s;
 }
 
-void statistics(int sig) {
-	float N = 4;
+void statistics(float N) {
+#ifdef DEBUG
 	//TODO This is only for 64 byte packets! 84 size is hardcoded.
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
+	// Yes, there can be race conditions here. However in practise they are rare and it is more
+	// important to report real speed in 90% times than to slow it by adding atomic stores to
+	// receive and send functions. This is debug mode.
 	receive_received = 0;
 	receive_pushed = 0;
 	send_required = 0;
@@ -236,8 +238,7 @@ void statistics(int sig) {
 	stop_freed = 0;
 
 	//TODO after we decide how many mempools to use we need reports for each mempool capacity here
-
-	alarm(N);
+#endif
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
@@ -254,11 +255,6 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	mbufStructSize = sizeof(struct rte_mbuf);
 	headroomSize = RTE_PKTMBUF_HEADROOM;
 	defaultStart = mbufStructSize + headroomSize;
-
-#ifdef DEBUG
-	signal(SIGALRM, statistics);
-	alarm(1);
-#endif
 }
 
 struct rte_mempool * createMempool(int portsNumber, uint32_t num_mbufs, uint32_t mbuf_cache_size) {

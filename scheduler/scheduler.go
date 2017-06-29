@@ -168,6 +168,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
 		// Report current state of system
 		common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.freeCores))-scheduler.usedCores, "cores are left available.")
+		low.Statistics(float32(schedTime) / 1000)
 		select {
 		case <-tick:
 			checkRequired = true
