@@ -18,6 +18,7 @@ extern int directStop(int pkts_for_free_number, struct rte_mbuf ** buf);
 extern char ** makeArgv(int n);
 extern void handleArgv(char **, char* s, int i);
 extern int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
+extern void statistics(float N);
 */
 import "C"
 
@@ -459,4 +460,8 @@ func GetRawPacketBytesMbuf(mb *Mbuf) []byte {
 
 func GetDataLenMbuf(mb *Mbuf) uint {
 	return uint(mb.data_len)
+}
+
+func Statistics(N float32) {
+	C.statistics(C.float(N))
 }
