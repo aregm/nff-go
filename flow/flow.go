@@ -696,6 +696,8 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 			countOfPackets = 0
 			if vector == false {
 				tempPacketAddr = packet.ExtractPacketAddr(bufsIn[0])
+				// TODO here and in following flow functions: Now prefetch by zero address is
+				// slowing down the application. However we should use it in the future instead of code duplication.
 				for i := uint(0); i < n-1; i++ {
 					tempPacket = packet.ToPacket(tempPacketAddr)
 					tempPacketAddr = packet.ExtractPacketAddr(bufsIn[i+1])

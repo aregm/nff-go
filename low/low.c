@@ -4,6 +4,8 @@
 
 #define _GNU_SOURCE
 
+// Do not use signals in this C code without much need.
+// They can and probably will crash go runtime in complex errors.
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>

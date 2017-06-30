@@ -431,6 +431,8 @@ func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16)
 }
 
 func SetAffinity(coreId uint8) {
+	// go tool trace shows that each proc executes different goroutine. However it is expected behavior
+	// (golang issue #20853) and each goroutine is locked to one OS thread.
 	runtime.LockOSThread()
 
 	var cpuset C.cpu_set_t
