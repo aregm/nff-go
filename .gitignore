@@ -1,5 +1,9 @@
+# emacs
+*~
+
 examples/demo
 examples/Firewall
 examples/Forwarding
 examples/dump
+test/stash/send_fixed_number
 doc
