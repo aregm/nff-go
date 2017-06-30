@@ -6,11 +6,15 @@ package packet_test
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
-	"github.com/intel-go/yanff/low"
-	. "github.com/intel-go/yanff/packet"
+	"net"
 	"reflect"
 	"testing"
+	"unsafe"
+
+	"github.com/intel-go/yanff/low"
+	. "github.com/intel-go/yanff/packet"
 )
 
 func init() {
@@ -693,4 +697,183 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 
 		}
 	}
+}
+
+// These strings were created with gopacket library.
+// gtLineIPv4 and gtLineIPv6 are cut after IP header, they are not complete packets.
+var (
+	testPlSize uint = 20
+
+	gtLineEther = "0011223344550111213141510000"
+
+	gtLineIPv4    = "00000000000000000000000008004500002800000000000000007f00000180090905"
+	gtLineIPv4TCP = "0000000000000000000000000800450000280000000000060000000000000000000004d2162e00000000000000005000000000000000"
+	gtLineIPv4UDP = "00000000000000000000000008004500001c0000000000110000000000000000000004d2162e00080000"
+
+	gtLineIPv6    = "00000000000000000000000086dd6000000000140000dead000000000000000000000000beaf00000000000000000000000000000000"
+	gtLineIPv6TCP = "00000000000000000000000086dd6000000000140600000000000000000000000000000000000000000000000000000000000000000004d2162e00000000000000005000000000000000"
+	gtLineIPv6UDP = "00000000000000000000000086dd6000000000081100000000000000000000000000000000000000000000000000000000000000000004d2162e00080000"
+)
+
+func TestInitEmptyEtherPacket(t *testing.T) {
+	// Create empty packet, set Ether header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherPacket(pkt, 0)
+	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+	pkt.Ether.SAddr = [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineEther)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:EtherLen]
+	// DEEP equal for whole packet buffer
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv4Packet(t *testing.T) {
+	// Create empty packet, set IPv4 header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv4Packet(pkt, testPlSize)
+	dst := net.ParseIP("128.9.9.5").To4()
+	src := net.ParseIP("127.0.0.1").To4()
+	pkt.IPv4.DstAddr = binary.LittleEndian.Uint32([]byte(dst))
+	pkt.IPv4.SrcAddr = binary.LittleEndian.Uint32([]byte(src))
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv4)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv4MinLen
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv6Packet(t *testing.T) {
+	// Create empty packet, set IPv6 header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv6Packet(pkt, testPlSize)
+	pkt.IPv6.SrcAddr = [16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xaf}
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv6)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv6Len
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv4TCPPacket(t *testing.T) {
+	// Create empty packet, set TCP header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv4TCPPacket(pkt, 0)
+	pkt.TCP.DstPort = SwapBytesUint16(5678)
+	pkt.TCP.SrcPort = SwapBytesUint16(1234)
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv4TCP)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv4MinLen + TCPMinLen
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv4UDPPacket(t *testing.T) {
+	// Create empty packet, set UDP header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv4UDPPacket(pkt, 0)
+	pkt.UDP.DstPort = SwapBytesUint16(5678)
+	pkt.UDP.SrcPort = SwapBytesUint16(1234)
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv4UDP)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv4MinLen + UDPLen
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv6TCPPacket(t *testing.T) {
+	// Create empty packet, set TCP header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv6TCPPacket(pkt, 0)
+	pkt.TCP.DstPort = SwapBytesUint16(5678)
+	pkt.TCP.SrcPort = SwapBytesUint16(1234)
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv6TCP)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv6Len + TCPMinLen
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+}
+
+func TestInitEmptyEtherIPv6UDPPacket(t *testing.T) {
+	// Create empty packet, set UDP header fields
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb)
+	pkt := ExtractPacket(mb[0])
+	InitEmptyEtherIPv6UDPPacket(pkt, 0)
+	pkt.UDP.DstPort = SwapBytesUint16(5678)
+	pkt.UDP.SrcPort = SwapBytesUint16(1234)
+
+	// Create ground truth packet
+	gtBuf, _ := hex.DecodeString(gtLineIPv6UDP)
+	gtMb := make([]uintptr, 1)
+	low.AllocateMbufs(gtMb)
+	gtPkt := ExtractPacket(gtMb[0])
+	PacketFromByte(gtPkt, gtBuf)
+
+	size := EtherLen + IPv6Len + UDPLen
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	if !reflect.DeepEqual(buf, gtBuf) {
+		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
+	}
+
 }
