@@ -22,7 +22,10 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {

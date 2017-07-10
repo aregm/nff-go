@@ -16,6 +16,7 @@ var (
 	inport2 uint
 	outport1 uint
 	outport2 uint
+	noscheduler bool
 )
 
 func main() {
@@ -24,9 +25,15 @@ func main() {
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
+	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	flag.Parse()
 
 	// Initialize YANFF library at 15 cores by default
-	flow.SystemInit(15)
+	config := flow.Config {
+		CPUCoresNumber: 15,
+		DisableScheduler: noscheduler,
+	}
+	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(uint8(inport1))

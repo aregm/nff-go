@@ -21,9 +21,13 @@ var (
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.Parse()
 
 	// Initialize YANFF library at 8 cores by default
-	flow.SystemInit(8)
+	config := flow.Config {
+		CPUCoresNumber: 8,
+	}
+	flow.SystemInit(&config)
 
 	// Get filtering rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")

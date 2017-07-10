@@ -24,13 +24,11 @@ import "C"
 
 import (
 	"encoding/hex"
-	"flag"
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
 	"math"
 	"os"
 	"runtime"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -366,40 +364,10 @@ func Stop(IN *Queue) {
 	C.stop(IN.ring.DPDK_ring)
 }
 
-func ParseFlags() (C.int, **C.char) {
-	var DPDKFlag string
-	var DPDKArgs []string
-	var DPDKHelp bool
-	var logType uint
-	flag.StringVar(&DPDKFlag, "dpdk-args", "", "These arguments will be transparently passed to DPDK")
-	flag.BoolVar(&DPDKHelp, "dpdk-help", false, "Use this for displaying DPDK help message")
-	flag.UintVar(&logType, "log-type", 2, "type of logging: 0 - no output, 1 - at init stage, 2 - always, 3 - verbose. Need to switch C part manually")
-
-	flag.Parse()
-	switch logType {
-	// Also you should switch debug and verbose in low.c manually!
-	case 0:
-		common.SetLogType(common.No)
-	case 1:
-		common.SetLogType(common.No | common.Initialization)
-	case 2:
-		common.SetLogType(common.No | common.Initialization | common.Debug)
-	case 3:
-		common.SetLogType(common.No | common.Initialization | common.Debug | common.Verbose)
-	default:
-		common.SetLogType(common.No | common.Initialization | common.Debug)
-	}
-
-	DPDKArgs = append(DPDKArgs, os.Args[0]+" --dpdk-args")
-	DPDKArgs = append(DPDKArgs, "--log-level="+common.GetDPDKLogLevel())
-	for _, i := range strings.Split(DPDKFlag, ",") {
-		if i != "" {
-			DPDKArgs = append(DPDKArgs, i)
-		}
-	}
-	if DPDKHelp == true {
-		DPDKArgs = append(DPDKArgs, "-h")
-	}
+func InitDPDKArguments(args []string) (C.int, **C.char) {
+	DPDKArgs := append([]string{}, os.Args[0])
+	DPDKArgs = append(DPDKArgs, "--log-level=" + common.GetDPDKLogLevel())
+	DPDKArgs = append(DPDKArgs, args...)
 
 	argv := C.makeArgv(C.int(len(DPDKArgs)))
 	for i, arg := range DPDKArgs {

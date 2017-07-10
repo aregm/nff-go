@@ -30,12 +30,12 @@
 package flow
 
 import (
-	"flag"
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/scheduler"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -238,28 +238,101 @@ const (
 	manualPort
 )
 
+type Config struct {
+	// Number of threads, each bound to a separate CPU core. Default
+	// value is GOMAXPROCS.
+	CPUCoresNumber      uint
+	// If true, scheduler is disabled entirely. Default value is false.
+	DisableScheduler    bool
+	// If true, scheduler does not stop any previously cloned flow
+	// function threads. Default value is false.
+	PersistentClones    bool
+	// If true, Stop routine gets a dedicated CPU core instead of
+	// running together with scheduler. Default value is false.
+	StopOnDedicatedCore bool
+	// Specifies number of mbufs in mempool per port. Default value is
+	// 8191.
+	MbufNumber          uint
+	// Specifies number of mbufs in per-CPU core cache in
+	// mempool. Default value is 250.
+	MbufCacheSize       uint
+	// Number of BurstSize groups in all rings. This should be power
+	// of 2. Default value is 256.
+	RingSize            uint
+	// Time between scheduler actions in miliseconds. Default value is
+	// 1500.
+	ScaleTime           uint
+	// Number of mbufs per one enqueue / dequeue from ring. Default
+	// value is tested for performance and not recommended to
+	// change. Default value is 32.
+	BurstSize           uint
+	// Time in miliseconds for scheduler to check changing of flow
+	// function behaviour. Default value is 10000.
+	CheckTime           uint
+	// Specifies logging type. Default value is common.No |
+	// common.Initialization | common.Debug.
+	LogType             common.LogType
+	// Command line arguments to pass to DPDK initialization.
+	DPDKArgs            []string
+}
+
 // Initializing of system. This function should be always called before graph construction.
 // defaultCPUCoresNumber is a default number of cores which will be available for scheduler
 // to place flow functions and their clones. This number can be always changed by cores-number option.
 // Function can panic during execution.
-func SystemInit(defaultCPUCoresNumber uint) {
-	schedulerOff := flag.Bool("no-scheduler", false, "Use this for switching scheduler off")
-	schedulerOffRemove := flag.Bool("no-remove-clones", false, "Use this for switching off removing clones in scheduler")
-	stopDedicatedCore := flag.Bool("stop-at-dedicated-core", false, "Use this for setting scheduler and stop functionality to different cores")
-	mbufNumber := flag.Uint("mempool-size", 8191, "Advanced option: number of mbufs in mempool per port")
-	mbufCacheSize := flag.Uint("mempool-cache", 250, "Advanced option: Size of local per-core cache in mempool (in mbufs)")
-	flag.UintVar(&sizeMultiplier, "ring-size", 256, "Advanced option: number of 'burst_size' groups in all rings. This should be power of 2")
-	flag.UintVar(&schedTime, "scale-time", 1500, "Time between scheduler actions in miliseconds")
-	flag.UintVar(&burstSize, "burst-size", 32, "Advanced option: number of mbufs per one enqueue / dequeue from ring. Default value is tested for performance and not recommended to change")
-	checkTime := flag.Uint("check-behaviour-time", 10000, "Time in miliseconds for scheduler to check changing of flow function behaviour")
-	CPUCoresNumber := flag.Uint("cores-number", defaultCPUCoresNumber, "Number of cores to use by system")
-	argc, argv := low.ParseFlags()
+func SystemInit(args *Config) {
+	CPUCoresNumber := uint(runtime.GOMAXPROCS(0))
+	if args.CPUCoresNumber != 0 {
+		CPUCoresNumber = args.CPUCoresNumber
+	}
+
+	schedulerOff := args.DisableScheduler
+	schedulerOffRemove := args.PersistentClones
+	stopDedicatedCore := args.StopOnDedicatedCore
+
+	mbufNumber := uint(8191)
+	if args.MbufNumber != 0 {
+		mbufNumber = args.MbufNumber
+	}
+
+	mbufCacheSize := uint(250)
+	if args.MbufCacheSize != 0 {
+		mbufCacheSize = args.MbufCacheSize
+	}
+
+	sizeMultiplier = 256
+	if args.RingSize != 0 {
+		sizeMultiplier = args.RingSize
+	}
+
+	schedTime = 1500
+	if args.ScaleTime != 0 {
+		schedTime = args.ScaleTime
+	}
+
+	burstSize = 32
+	if args.BurstSize != 0 {
+		burstSize = args.BurstSize
+	}
+
+	checkTime := uint(10000)
+	if args.CheckTime != 0 {
+		checkTime = args.CheckTime
+	}
+
+	logType := common.No | common.Initialization | common.Debug
+	if args.LogType != 0 {
+		logType = args.LogType
+	}
+	common.SetLogType(logType)
+
+	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone = uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	low.InitDPDK(argc, argv, burstSize, *mbufNumber, *mbufCacheSize)
+	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize)
 	// Init Ports
 	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
@@ -270,7 +343,7 @@ func SystemInit(defaultCPUCoresNumber uint) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(*CPUCoresNumber, *schedulerOff, *schedulerOffRemove, *stopDedicatedCore, StopRing, *checkTime)
+	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 

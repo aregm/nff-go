@@ -12,15 +12,20 @@ import (
 var (
 	outport uint
 	inport uint
+	cores uint
 )
 
 // Main function for constructing packet processing graph.
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.UintVar(&cores, "cores", 16, "Specifies number of CPU cores to be used by YANFF library")
 
 	// Initialize YANFF library at requested number of cores.
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: cores,
+	}
+	flow.SystemInit(&config)
 
 	// Receive packets from 0 port and send to 1 port.
 	flow1 := flow.SetReceiver(uint8(inport))

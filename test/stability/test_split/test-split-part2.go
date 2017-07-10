@@ -26,9 +26,13 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
+	flag.Parse()
 
 	// Init YANFF system at requested number of cores.
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// Get splitting rules from access control file.
 	L3Rules = rules.GetL3RulesFromORIG(*filename)

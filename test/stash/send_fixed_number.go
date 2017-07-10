@@ -25,10 +25,15 @@ func main() {
 	flag.Int64Var(&TOTAL_PACKETS, "TOTAL_PACKETS", 1234, "Number of packets to send")
 	flag.UintVar(&PACKET_SIZE, "PACKET_SIZE", 128, "Size of generated packet")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.Parse()
+
 	payload_size = PACKET_SIZE - hdrs_size
 
 	// Initialize YANFF library at 16 cores by default
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// With generateOne all packets are sent.
 	f1 := flow.SetGenerator(generatePacket, 0, nil)
