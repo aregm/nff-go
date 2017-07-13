@@ -93,8 +93,11 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(30)
+	// Initialize YANFF library at 30 available cores
+	config := flow.Config {
+		CPUCoresNumber: 30,
+	}
+	flow.SystemInit(&config)
 	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
 
 	// Create packet flow

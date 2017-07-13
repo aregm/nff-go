@@ -20,9 +20,13 @@ func main() {
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.Parse()
 
 	// Init YANFF system at requested number of cores.
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// Receive packets from 0 and 1 ports
 	inputFlow1 := flow.SetReceiver(uint8(inport1))

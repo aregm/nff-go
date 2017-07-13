@@ -20,9 +20,13 @@ func main() {
 	hexdumpOn := flag.Bool("hex", false, "enable dumping of packets in hex format")
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.Parse()
 
 	// Initialize YANFF library at 10 available cores
-	flow.SystemInit(10)
+	config := flow.Config {
+		CPUCoresNumber: 10,
+	}
+	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue will be added automatically.
 	firstFlow := flow.SetReceiver(uint8(inport))

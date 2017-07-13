@@ -27,9 +27,13 @@ func main() {
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
+	flag.Parse()
 
 	// Initialize YANFF library at 35 cores by default
-	flow.SystemInit(35)
+	config := flow.Config {
+		CPUCoresNumber: 35,
+	}
+	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow0 := flow.SetReceiver(uint8(inport1))

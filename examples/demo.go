@@ -26,9 +26,13 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 2, "port for 2nd sender")
+	flag.Parse()
 
 	// Initialize YANFF library at 16 cores by default
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// Start regular updating forwarding rules
 	L2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")

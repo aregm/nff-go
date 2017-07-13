@@ -31,9 +31,13 @@ var L3Rules *rules.L3Rules
 func main() {
 	var mode string
 	flag.StringVar(&mode, "mode", "orig", "Format of rules file")
+	flag.Parse()
 
 	// Initialize YANFF library at 16 available cores
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	// Start regular updating forwarding rules
 	switch mode {

@@ -13,9 +13,18 @@ import "crypto/cipher"
 import "crypto/hmac"
 import "crypto/sha1"
 import "hash"
+import "flag"
 
 func main() {
-	flow.SystemInit(32)
+	var noscheduler bool
+	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	flag.Parse()
+
+	config := flow.Config {
+		CPUCoresNumber: 32,
+		DisableScheduler: noscheduler,
+	}
+	flow.SystemInit(&config)
 
 	input := flow.SetReceiver(0)
 	flow.SetHandler(input, encapsulation, *(new(Context)))

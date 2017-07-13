@@ -61,9 +61,13 @@ func main() {
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
+	flag.Parse()
 
 	// Init YANFF system at 16 available cores
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)

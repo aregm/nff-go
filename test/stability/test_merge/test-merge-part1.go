@@ -63,8 +63,12 @@ func main() {
 	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.Parse()
 
-	flow.SystemInit(16)
+	config := flow.Config {
+		CPUCoresNumber: 16,
+	}
+	flow.SystemInit(&config)
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
