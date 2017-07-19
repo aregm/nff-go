@@ -1,6 +1,7 @@
 // Only IPv4, Only tunnel, Only ESP, Only AES-128-CBC
 package main
 
+import "github.com/intel-go/yanff/common"
 import "github.com/intel-go/yanff/flow"
 import "github.com/intel-go/yanff/packet"
 
@@ -58,8 +59,8 @@ const MODE_1230 = 1230
 const espHeadLen = 24
 const authLen = 12
 const espTailLen = authLen + 2
-const etherLen = packet.EtherLen
-const outerIPLen = packet.IPv4MinLen
+const etherLen = common.EtherLen
+const outerIPLen = common.IPv4MinLen
 
 type ESPHeader struct {
 	SPI uint32
@@ -146,7 +147,7 @@ func encapsulationSPI123(currentPacket *packet.Packet, context0 flow.UserContext
 
 	currentESPTail := (*ESPTail)(unsafe.Pointer(currentPacket.Unparsed + uintptr(new_length) - espTailLen))
 	currentESPTail.paddingLen = paddingLength
-	currentESPTail.nextIP = packet.IPNumber
+	currentESPTail.nextIP = common.IPNumber
 
 	// Encryption
 	EncryptionPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.Unparsed))[etherLen+outerIPLen+espHeadLen : new_length-authLen]

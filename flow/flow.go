@@ -581,6 +581,11 @@ func SetMerger(InArray ...*Flow) (OUT *Flow) {
 	return OUT
 }
 
+// Returns default MAC address of an Ethernet port.
+func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
+	return low.GetPortMACAddress(port)
+}
+
 func receive(parameters interface{}, coreId uint8) {
 	srp := parameters.(*receiveParameters)
 	low.Receive(srp.port, srp.queue, srp.out, coreId)

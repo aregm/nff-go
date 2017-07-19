@@ -45,6 +45,17 @@ type Mbuf C.struct_rte_mbuf
 // TODO need to investigate more elegant way to return variables from C part
 var mainMempool *C.struct_rte_mempool
 
+func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
+	var mac [common.EtherAddrLen]uint8
+	var cmac C.struct_ether_addr
+
+	C.rte_eth_macaddr_get(C.uint8_t(port), &cmac)
+	for i := range mac {
+		mac[i] = uint8(cmac.addr_bytes[i])
+	}
+	return mac
+}
+
 func GetPacketDataStartPointer(mb *Mbuf) uintptr {
 	return uintptr(mb.buf_addr) + uintptr(mb.data_off)
 }
