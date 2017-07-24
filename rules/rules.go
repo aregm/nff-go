@@ -164,10 +164,10 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) {
 			jp.eth[i].ID = 0
 			jp.eth[i].IDMask = 0
 		case "ipv4", "Ipv4", "IPv4", "IPV4", "0x0800":
-			jp.eth[i].ID = packet.IPV4Number
+			jp.eth[i].ID = common.IPV4Number
 			jp.eth[i].IDMask = 0xffff
 		case "ipv6", "Ipv6", "IPv6", "IPV6", "0x86dd":
-			jp.eth[i].ID = packet.IPV6Number
+			jp.eth[i].ID = common.IPV6Number
 			jp.eth[i].IDMask = 0xffff
 		default:
 			common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].ID)
@@ -194,10 +194,10 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) {
 			l4temp.ID = 0
 			l4temp.IDMask = 0
 		case "tcp", "TCP", "Tcp", "0x06", "6":
-			l4temp.ID = packet.TCPNumber
+			l4temp.ID = common.TCPNumber
 			l4temp.IDMask = 0xff
 		case "udp", "UDP", "Udp", "0x11", "17":
-			l4temp.ID = packet.UDPNumber
+			l4temp.ID = common.UDPNumber
 			l4temp.IDMask = 0xff
 		default:
 			common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].ID)

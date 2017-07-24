@@ -43,6 +43,7 @@ package packet
 
 import (
 	"fmt"
+	. "github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
 	"unsafe"
 )
@@ -58,46 +59,6 @@ func init() {
 }
 
 // TODO Add function to write user data after headers and set "data" field
-
-// Supported EtherType for L2
-const (
-	IPV4Number = 0x0800
-	IPV6Number = 0x86dd
-)
-
-// Supported L4 types
-const (
-	IPNumber  = 0x04
-	TCPNumber = 0x06
-	UDPNumber = 0x11
-)
-
-// Length of addresses.
-const (
-	EtherAddrLen = 6
-	IPv6AddrLen  = 16
-)
-
-// These constants keep length of supported headers in bytes.
-//
-// IPv6Len - minimum length of IPv6 header in bytes. It can be higher and it
-// is not determined inside packet. Only default minimum size is used.
-//
-// IPv4MinLen and TCPMinLen are used only in packet generation functions.
-//
-// In parsing we take actual length of TCP header from DataOff field and length of
-// IPv4 take from Ihl field.
-const (
-	EtherLen   = 14
-	IPv4MinLen = 20
-	IPv6Len    = 40
-	TCPMinLen  = 20
-	UDPLen     = 8
-)
-
-// EtherIPv6Len is used in packet parsing only when we sure that
-// the next protocol is TCP or UDP.
-const EtherIPv6Len = EtherLen + IPv6Len
 
 // These structures must be consistent with these C duplications
 // L2 header from DPDK: lib/librte_ether/rte_ehter.h
