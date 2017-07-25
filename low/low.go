@@ -13,7 +13,7 @@ extern void send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreId
 extern void stop(struct rte_ring *);
 extern void initCPUSet(uint8_t coreId, cpu_set_t* cpuset);
 extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr *addr);
-extern struct rte_mempool * createMempool(int portsNumber, uint32_t num_mbuf, uint32_t mbuf_cache_size);
+extern struct rte_mempool * createMempool(uint32_t num_mbuf, uint32_t mbuf_cache_size);
 extern int directStop(int pkts_for_free_number, struct rte_mbuf ** buf);
 extern char ** makeArgv(int n);
 extern void handleArgv(char **, char* s, int i);
@@ -41,9 +41,11 @@ func DirectStop(pkts_for_free_number int, buf []uintptr) {
 
 type Queue C.struct_yanff_queue
 type Mbuf C.struct_rte_mbuf
+type Mempool C.struct_rte_mempool
 
-// TODO need to investigate more elegant way to return variables from C part
-var mainMempool *C.struct_rte_mempool
+var mbufNumberT uint
+var mbufCacheSizeT uint
+var usedMempools []*C.struct_rte_mempool
 
 func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
 	var mac [common.EtherAddrLen]uint8
@@ -377,7 +379,7 @@ func Stop(IN *Queue) {
 
 func InitDPDKArguments(args []string) (C.int, **C.char) {
 	DPDKArgs := append([]string{}, os.Args[0])
-	DPDKArgs = append(DPDKArgs, "--log-level=" + common.GetDPDKLogLevel())
+	DPDKArgs = append(DPDKArgs, "--log-level="+common.GetDPDKLogLevel())
 	DPDKArgs = append(DPDKArgs, args...)
 
 	argv := C.makeArgv(C.int(len(DPDKArgs)))
@@ -391,8 +393,8 @@ func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCa
 	// Initialize the Environment Abstraction Layer (EAL) in DPDK.
 	C.eal_init(argc, argv, C.uint32_t(burstSize))
 
-	// Created unique Mempool. All packets (mbufs) will be stored there.
-	mainMempool = C.createMempool(C.int(GetPortsNumber()), C.uint32_t(mbufNumber), C.uint32_t(mbufCacheSize))
+	mbufNumberT = mbufNumber
+	mbufCacheSizeT = mbufCacheSize
 }
 
 func GetPortsNumber() int {
@@ -401,12 +403,26 @@ func GetPortsNumber() int {
 
 func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16) {
 	addr := make([]byte, C.ETHER_ADDR_LEN)
+	var mempool *C.struct_rte_mempool
+	if receiveQueuesNumber != 0 {
+		mempool = C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
+		usedMempools = append(usedMempools, mempool)
+	} else {
+		mempool = nil
+	}
 	if C.port_init(C.uint8_t(port), C.uint16_t(receiveQueuesNumber), C.uint16_t(sendQueuesNumber),
-		mainMempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0])))) != 0 {
+		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0])))) != 0 {
 		common.LogError(common.Initialization, "Cannot init port ", port, "!")
 	}
 	t := hex.Dump(addr)
 	common.LogDebug(common.Initialization, "Port", port, "MAC address:", t[10:27])
+}
+
+func CreateMempool() *Mempool {
+	var mempool *C.struct_rte_mempool
+	mempool = C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
+	usedMempools = append(usedMempools, mempool)
+	return (*Mempool)(mempool)
 }
 
 func SetAffinity(coreId uint8) {
@@ -419,8 +435,8 @@ func SetAffinity(coreId uint8) {
 	syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
 }
 
-func AllocateMbufs(mb []uintptr) {
-	err := C.allocateMbufs(mainMempool, (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
+func AllocateMbufs(mb []uintptr, mempool *Mempool) {
+	err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
 	if err != 0 {
 		common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf")
 	}

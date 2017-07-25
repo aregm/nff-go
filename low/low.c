@@ -259,11 +259,11 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	defaultStart = mbufStructSize + headroomSize;
 }
 
-struct rte_mempool * createMempool(int portsNumber, uint32_t num_mbufs, uint32_t mbuf_cache_size) {
+struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
 
 	/* Creates a new mempool in memory to hold the mbufs. */
-	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs * portsNumber,
+	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs,
 		mbuf_cache_size, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
 
 	if (mbuf_pool == NULL)

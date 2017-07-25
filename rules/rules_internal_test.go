@@ -65,10 +65,13 @@ import (
 	"testing"
 )
 
+var mempool *low.Mempool
+
 func init() {
 	argc, argv := low.ParseFlags()
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
 	low.InitDPDK(argc, argv, 32, 8191, 250)
+	mempool = low.CreateMempool()
 }
 
 // Function to test L2 rules parser
@@ -445,7 +448,7 @@ func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 	pkt.ParseL4()
@@ -507,7 +510,7 @@ func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
@@ -571,7 +574,7 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
@@ -686,7 +689,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000140600dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e123456781234569050102000495b0000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
@@ -823,7 +826,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000081100dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e00088ad5"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
@@ -948,7 +951,7 @@ func TestInternal_l2_ACL(t *testing.T) {
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
 	packet.PacketFromByte(pkt, decoded)
 
