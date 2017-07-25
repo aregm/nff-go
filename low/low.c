@@ -17,7 +17,6 @@
 #define TX_RING_SIZE 512
 
 // #define DEBUG
-// #define VERBOSE
 
 #ifdef RTE_MACHINE_CPUFLAG_AVX
 #define mbufClear(buf) \
@@ -143,9 +142,6 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number);
 		// Free any packets which can't be pushed to the ring. The ring is probably full.
 		if (unlikely(pushed_pkts_number < rx_pkts_number)) {
-#ifdef VERBOSE
-			fprintf(stderr, "WARNING: Receive pushes to queue only: %d packets from %d\n", pushed_pkts_number, rx_pkts_number);
-#endif
 			for (i = pushed_pkts_number; i < rx_pkts_number; i++) {
 				rte_pktmbuf_free(bufs[i]);
 			}
@@ -173,9 +169,6 @@ void send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId
 		const uint16_t tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
 		// Free any unsent packets.
 		if (unlikely(tx_pkts_number < pkts_for_tx_number)) {
-#ifdef VERBOSE
-			fprintf(stderr, "WARNING: Send sends only: %d packets from %d\n", tx_pkts_number, pkts_for_tx_number);
-#endif
 			for (buf = tx_pkts_number; buf < pkts_for_tx_number; buf++) {
 				rte_pktmbuf_free(bufs[buf]);
 			}
@@ -228,8 +221,14 @@ void statistics(float N) {
 	//TODO This is only for 64 byte packets! 84 size is hardcoded.
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
+	if (receive_pushed < receive_received) {
+		fprintf(stderr, "DROP: Receive dropped %d packets\n", receive_received - receive_pushed);
+	}
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
+	if (send_sent < send_required) {
+		fprintf(stderr, "DROP: Send dropped %d packets\n", send_required - send_sent);
+        }
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more
 	// important to report real speed in 90% times than to slow it by adding atomic stores to
