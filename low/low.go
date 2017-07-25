@@ -19,6 +19,7 @@ extern char ** makeArgv(int n);
 extern void handleArgv(char **, char* s, int i);
 extern int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
 extern void statistics(float N);
+extern int getMempoolSpace(struct rte_mempool * m);
 */
 import "C"
 
@@ -461,4 +462,10 @@ func GetDataLenMbuf(mb *Mbuf) uint {
 
 func Statistics(N float32) {
 	C.statistics(C.float(N))
+}
+
+func ReportMempoolsState() {
+	for i, m := range usedMempools {
+		common.LogDebug(common.Debug, "mempool N", i, "used", C.getMempoolSpace(m), "from", mbufNumberT)
+	}
 }

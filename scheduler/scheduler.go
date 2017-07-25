@@ -36,7 +36,7 @@ type UserContext interface {
 // Function types which are used inside flow functions
 type uncloneFlowFunction func(interface{}, uint8)
 type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
-type conditionFlowFunction func(interface{}, uint64) bool
+type conditionFlowFunction func(interface{}, uint64, bool) bool
 
 type FlowFunction struct {
 	// All parameters which gets these flow function
@@ -101,10 +101,11 @@ type Scheduler struct {
 	StopRing          *low.Queue
 	usedCores         uint8
 	checkTime         uint
+	debugTime         uint
 }
 
 func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
-	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint) Scheduler {
+	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint, debugTime uint) Scheduler {
 	// Init scheduler
 	scheduler := new(Scheduler)
 	scheduler.freeCores = make([]bool, coresNumber, coresNumber)
@@ -117,6 +118,7 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 	scheduler.usedCores = 0
 	scheduler.stopDedicatedCore = stopDedicatedCore
 	scheduler.checkTime = checkTime
+	scheduler.debugTime = debugTime
 
 	return *scheduler
 }
@@ -163,15 +165,22 @@ func (scheduler *Scheduler) SystemStart() {
 
 func (scheduler *Scheduler) Schedule(schedTime uint) {
 	tick := time.Tick(time.Duration(scheduler.checkTime) * time.Millisecond)
+	debugTick := time.Tick(time.Duration(scheduler.debugTime) * time.Millisecond)
 	checkRequired := false
 	for {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
-		// Report current state of system
-		common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.freeCores))-scheduler.usedCores, "cores are left available.")
-		low.Statistics(float32(schedTime) / 1000)
 		select {
 		case <-tick:
 			checkRequired = true
+		case <-debugTick:
+			// Report current state of system
+			common.LogDebug(common.Debug, "---------------")
+			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.freeCores))-scheduler.usedCores, "cores are left available.")
+			low.Statistics(float32(scheduler.debugTime) / 1000)
+			for i := range scheduler.Clonable {
+				scheduler.Clonable[i].checkPrintFunction(scheduler.Clonable[i].Parameters, 0, true)
+			}
+			low.ReportMempoolsState()
 		default:
 		}
 		// Procced with each clonable flow function
@@ -206,7 +215,6 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			if (ff.cloneNumber != 0) && (scheduler.offRemove == false) && (float64(currentSpeed) < speedDelta*ff.previousSpeed[ff.cloneNumber-1]) {
 				// Save current speed as speed of flow function with this number of clones before removing
 				ff.previousSpeed[ff.cloneNumber] = float64(currentSpeed)
-				common.LogDebug(common.Debug, "Stop a clone of", ff.name, ff.identifier, "at", ff.clone[ff.cloneNumber-1].core, "core")
 				ff.clone[ff.cloneNumber-1].channel <- -1
 				scheduler.setCore(ff.clone[ff.cloneNumber-1].core)
 				ff.clone = ff.clone[:len(ff.clone)-1]
@@ -222,14 +230,13 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// 1. check function signals that we need to clone
 			// 2. scheduler is switched on
 			// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
-			if (ff.checkPrintFunction(ff.Parameters, speedPKTS) == true) && (scheduler.off == false) &&
+			if (ff.checkPrintFunction(ff.Parameters, speedPKTS, false) == true) && (scheduler.off == false) &&
 				(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*float64(currentSpeed)) {
 				// Save current speed as speed of flow function with this number of clones before adding
 				ff.previousSpeed[ff.cloneNumber] = float64(currentSpeed)
 				go func() {
 					core := scheduler.getCore(false)
 					if core != -1 {
-						common.LogDebug(common.Debug, "Start new clone for", ff.name, ff.identifier, "at", core, "core")
 						low.SetAffinity(uint8(core))
 						quit := make(chan int)
 						cp := new(clonePair)

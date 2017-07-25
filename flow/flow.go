@@ -272,6 +272,9 @@ type Config struct {
 	// Time in miliseconds for scheduler to check changing of flow
 	// function behaviour. Default value is 10000.
 	CheckTime uint
+	// Time in miliseconds for scheduler to display statistics.
+	// Default value is 1000.
+	DebugTime uint
 	// Specifies logging type. Default value is common.No |
 	// common.Initialization | common.Debug.
 	LogType common.LogType
@@ -323,6 +326,11 @@ func SystemInit(args *Config) {
 		checkTime = args.CheckTime
 	}
 
+	debugTime := uint(1000)
+	if args.DebugTime != 0 {
+		debugTime = args.DebugTime
+	}
+
 	logType := common.No | common.Initialization | common.Debug
 	if args.LogType != 0 {
 		logType = args.LogType
@@ -346,7 +354,7 @@ func SystemInit(args *Config) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime)
+	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 }
 
@@ -594,7 +602,7 @@ func receive(parameters interface{}, coreId uint8) {
 	low.Receive(srp.port, srp.queue, srp.out, coreId)
 }
 
-func generateCheck(parameters interface{}, speedPKTS uint64) bool {
+func generateCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
 	gp := parameters.(*generateParameters)
 	if speedPKTS < gp.targetSpeed {
 		return true
@@ -724,10 +732,12 @@ func merge(from *low.Queue, to *low.Queue) {
 	}
 }
 
-func separateCheck(parameters interface{}, speedPKTS uint64) bool {
+func separateCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
-	common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetQueueCount())
+	if debug == true {
+		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetQueueCount())
+	}
 	if IN.GetQueueCount() > maxPacketsToClone {
 		return true
 	}
@@ -872,10 +882,12 @@ func partition(parameters interface{}, core uint8) {
 	}
 }
 
-func splitCheck(parameters interface{}, speedPKTS uint64) bool {
+func splitCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
-	common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetQueueCount())
+	if debug == true {
+		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetQueueCount())
+	}
 	if IN.GetQueueCount() > maxPacketsToClone {
 		return true
 	}
@@ -948,10 +960,12 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func handleCheck(parameters interface{}, speedPKTS uint64) bool {
+func handleCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
-	common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetQueueCount())
+	if debug == true {
+		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetQueueCount())
+	}
 	if IN.GetQueueCount() > maxPacketsToClone {
 		return true
 	}
