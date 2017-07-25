@@ -154,6 +154,14 @@ func (hdr *UDPHdr) String() string {
 	return r0 + r1 + r2
 }
 
+type ICMPHdr struct {
+	Type       uint8  // ICMP message type
+	Code       uint8  // ICMP message code
+	Cksum      uint16 // ICMP checksum
+	Identifier uint16 // ICMP message identifier in some messages
+	SeqNum     uint16 // ICMP message sequence number in some messages
+}
+
 // Packet is a set of pointers in YANFF library. Each pointer points to one of five headers:
 // Mac, IPv4, IPv6, TCP and UDP plus raw pointer.
 //
@@ -169,6 +177,7 @@ type Packet struct {
 	IPv6     *IPv6Hdr       // Pointer to L3 header in mbuf (must be nil before parsing)
 	TCP      *TCPHdr        // Pointer to L4 header in mbuf (must be nil before parsing)
 	UDP      *UDPHdr        // Pointer to L4 header in mbuf (must be nil before parsing)
+	ICMP     *ICMPHdr       // Pointer to L4 header in mbuf (must be nil before parsing)
 	Data     unsafe.Pointer // Pointer to the packet payload data (invalid before parsing)
 	Unparsed uintptr        // Pointer whole packet data in mbuf (must be non-nil because it is the only public whole element)
 
@@ -483,6 +492,10 @@ func (packet *Packet) ParseL4() int {
 		packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + uintptr(L)))
 		return L + UDPLen
 	}
+	if L4Type == ICMPNumber {
+		packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + uintptr(L)))
+		return L + ICMPLen
+	}
 	return -1
 }
 
@@ -503,6 +516,12 @@ func (packet *Packet) ParseL4Data() int {
 	if L4Type == UDPNumber {
 		packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + uintptr(L)))
 		dataOffset := L + UDPLen
+		packet.Data = unsafe.Pointer(packet.Unparsed + uintptr(dataOffset))
+		return dataOffset
+	}
+	if L4Type == ICMPNumber {
+		packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + uintptr(L)))
+		dataOffset := L + ICMPLen
 		packet.Data = unsafe.Pointer(packet.Unparsed + uintptr(dataOffset))
 		return dataOffset
 	}
@@ -623,6 +642,25 @@ func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) {
 	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
 	packet.UDP.DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+}
+
+// InitEmptyEtherIPv4ICMPPacket initializes input packet with preallocated plSize of bytes for payload
+// and init pointers to Ethernet, IPv4 and ICMP headers. This function supposes that IPv4
+// header has minimum length. In fact length can be higher due to optional fields.
+// Now setting optional fields explicitly is not supported.
+func InitEmptyEtherIPv4ICMPPacket(packet *Packet, plSize uint) {
+	bufSize := plSize + EtherLen + IPv4MinLen + ICMPLen
+	low.AppendMbuf(packet.CMbuf, bufSize)
+
+	packet.ParseEtherIPv4()
+	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
+	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
+	packet.Data = unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen + ICMPLen)
+
+	// Next fields not required by pktgen to accept packet. But set anyway
+	packet.IPv4.NextProtoID = ICMPNumber
+	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
 }
 
 // InitEmptyEtherIPv6TCPPacket initializes input packet with preallocated plSize of bytes for payload

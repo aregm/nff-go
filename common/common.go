@@ -26,6 +26,7 @@ const (
 
 // Supported L4 types
 const (
+	ICMPNumber = 0x01
 	IPNumber  = 0x04
 	TCPNumber = 0x06
 	UDPNumber = 0x11
@@ -44,6 +45,7 @@ const (
 	EtherLen   = 14
 	IPv4MinLen = 20
 	IPv6Len    = 40
+	ICMPLen    = 8
 	TCPMinLen  = 20
 	UDPLen     = 8
 )
