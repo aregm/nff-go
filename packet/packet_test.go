@@ -18,10 +18,13 @@ import (
 	. "github.com/intel-go/yanff/packet"
 )
 
+var mempool *low.Mempool
+
 func init() {
 	argc, argv := low.InitDPDKArguments([]string{})
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
 	low.InitDPDK(argc, argv, 32, 8191, 250)
+	mempool = low.CreateMempool()
 }
 
 var MacHeader = [8]EtherHdr{
@@ -299,7 +302,7 @@ func TestParseL4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb)
+		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 		if pkt == nil {
@@ -331,7 +334,7 @@ func TestParseEther(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb)
+		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
@@ -348,7 +351,7 @@ func TestParseEtherIPv4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb)
+		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
@@ -370,7 +373,7 @@ func TestParseEtherIPv4_(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb)
+		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
@@ -414,11 +417,11 @@ func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
 	buffer := "001122334455011121314151080045000030bffd00000406eebb7f0000018009090504d2162e123456781234569050102000621c00003930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseEtherIPv4TCP()
@@ -482,7 +485,7 @@ func TestParseIPv4UDPDataFunctions(t *testing.T) {
 	buffer := "001122334455011121314151080045000024bffd00000411eebc7f0000018009090504d2162e0010a38e393000000000000000000000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
@@ -523,11 +526,11 @@ func TestParseIPv6TCPDataFunctions(t *testing.T) {
 	buffer := "00112233445501112131415186dd60000000001c0600dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e123456781234569050102000102300003930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseEtherIPv6TCP()
@@ -583,7 +586,7 @@ func TestParseIPv6UDPDataFunctions(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000101100dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e001051953930000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
@@ -634,7 +637,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
-			low.AllocateMbufs(mb)
+			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, init)
 
@@ -651,7 +654,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
-			low.AllocateMbufs(mb)
+			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, init)
 
@@ -668,7 +671,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
-			low.AllocateMbufs(mb)
+			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, add)
 
@@ -684,7 +687,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
-			low.AllocateMbufs(mb)
+			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
 			PacketFromByte(pkt, add)
 
@@ -719,7 +722,7 @@ var (
 func TestInitEmptyEtherPacket(t *testing.T) {
 	// Create empty packet, set Ether header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherPacket(pkt, 0)
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
@@ -742,7 +745,7 @@ func TestInitEmptyEtherPacket(t *testing.T) {
 func TestInitEmptyEtherIPv4Packet(t *testing.T) {
 	// Create empty packet, set IPv4 header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv4Packet(pkt, testPlSize)
 	dst := net.ParseIP("128.9.9.5").To4()
@@ -767,7 +770,7 @@ func TestInitEmptyEtherIPv4Packet(t *testing.T) {
 func TestInitEmptyEtherIPv6Packet(t *testing.T) {
 	// Create empty packet, set IPv6 header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv6Packet(pkt, testPlSize)
 	pkt.IPv6.SrcAddr = [16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xaf}
@@ -789,7 +792,7 @@ func TestInitEmptyEtherIPv6Packet(t *testing.T) {
 func TestInitEmptyEtherIPv4TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv4TCPPacket(pkt, 0)
 	pkt.TCP.DstPort = SwapBytesUint16(5678)
@@ -812,7 +815,7 @@ func TestInitEmptyEtherIPv4TCPPacket(t *testing.T) {
 func TestInitEmptyEtherIPv4UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv4UDPPacket(pkt, 0)
 	pkt.UDP.DstPort = SwapBytesUint16(5678)
@@ -835,7 +838,7 @@ func TestInitEmptyEtherIPv4UDPPacket(t *testing.T) {
 func TestInitEmptyEtherIPv6TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv6TCPPacket(pkt, 0)
 	pkt.TCP.DstPort = SwapBytesUint16(5678)
@@ -858,7 +861,7 @@ func TestInitEmptyEtherIPv6TCPPacket(t *testing.T) {
 func TestInitEmptyEtherIPv6UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb)
+	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyEtherIPv6UDPPacket(pkt, 0)
 	pkt.UDP.DstPort = SwapBytesUint16(5678)

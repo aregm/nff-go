@@ -102,12 +102,14 @@ type generateParameters struct {
 	targetSpeed            uint64
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
+	mempool                *low.Mempool
 }
 
 func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *scheduler.FlowFunction {
 	var par *generateParameters = new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
+	par.mempool = low.CreateMempool()
 	ffCount++
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
@@ -117,6 +119,7 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 	var par *generateParameters = new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
+	par.mempool = low.CreateMempool()
 	par.vectorGenerateFunction = vectorGenerateFunction
 	par.targetSpeed = targetSpeed
 	ffCount++
@@ -241,39 +244,39 @@ const (
 type Config struct {
 	// Number of threads, each bound to a separate CPU core. Default
 	// value is GOMAXPROCS.
-	CPUCoresNumber      uint
+	CPUCoresNumber uint
 	// If true, scheduler is disabled entirely. Default value is false.
-	DisableScheduler    bool
+	DisableScheduler bool
 	// If true, scheduler does not stop any previously cloned flow
 	// function threads. Default value is false.
-	PersistentClones    bool
+	PersistentClones bool
 	// If true, Stop routine gets a dedicated CPU core instead of
 	// running together with scheduler. Default value is false.
 	StopOnDedicatedCore bool
 	// Specifies number of mbufs in mempool per port. Default value is
 	// 8191.
-	MbufNumber          uint
+	MbufNumber uint
 	// Specifies number of mbufs in per-CPU core cache in
 	// mempool. Default value is 250.
-	MbufCacheSize       uint
+	MbufCacheSize uint
 	// Number of BurstSize groups in all rings. This should be power
 	// of 2. Default value is 256.
-	RingSize            uint
+	RingSize uint
 	// Time between scheduler actions in miliseconds. Default value is
 	// 1500.
-	ScaleTime           uint
+	ScaleTime uint
 	// Number of mbufs per one enqueue / dequeue from ring. Default
 	// value is tested for performance and not recommended to
 	// change. Default value is 32.
-	BurstSize           uint
+	BurstSize uint
 	// Time in miliseconds for scheduler to check changing of flow
 	// function behaviour. Default value is 10000.
-	CheckTime           uint
+	CheckTime uint
 	// Specifies logging type. Default value is common.No |
 	// common.Initialization | common.Debug.
-	LogType             common.LogType
+	LogType common.LogType
 	// Command line arguments to pass to DPDK initialization.
-	DPDKArgs            []string
+	DPDKArgs []string
 }
 
 // Initializing of system. This function should be always called before graph construction.
@@ -603,13 +606,14 @@ func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
+	mempool := gp.mempool
 	low.SetAffinity(core)
 
 	buf := make([]uintptr, 1)
 	var tempPacket *packet.Packet
 
 	for {
-		low.AllocateMbufs(buf)
+		low.AllocateMbufs(buf, mempool)
 		tempPacket = packet.ExtractPacket(buf[0])
 		generateFunction(tempPacket, nil)
 		safeEnqueue(OUT, buf, 1)
@@ -621,6 +625,7 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	OUT := gp.out
 	generateFunction := gp.generateFunction
 	vectorGenerateFunction := gp.vectorGenerateFunction
+	mempool := gp.mempool
 	vector := (vectorGenerateFunction != nil)
 
 	bufs := make([]uintptr, burstSize)
@@ -644,7 +649,7 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			report <- currentSpeed
 			currentSpeed = 0
 		default:
-			low.AllocateMbufs(bufs)
+			low.AllocateMbufs(bufs, mempool)
 			if vector == false {
 				for i := range bufs {
 					// TODO Maybe we need to prefetcht here?
