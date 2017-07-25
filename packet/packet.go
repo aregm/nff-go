@@ -162,6 +162,16 @@ type ICMPHdr struct {
 	SeqNum     uint16 // ICMP message sequence number in some messages
 }
 
+func (hdr *ICMPHdr) String() string {
+	r0 := "        L4 protocol: ICMP\n"
+	r1 := fmt.Sprintf("        ICMP Type: %d\n", hdr.Type)
+	r2 := fmt.Sprintf("        ICMP Code: %d\n", hdr.Code)
+	r3 := fmt.Sprintf("        ICMP Cksum: %d\n", SwapBytesUint16(hdr.Cksum))
+	r4 := fmt.Sprintf("        ICMP Identifier: %d\n", SwapBytesUint16(hdr.Identifier))
+	r5 := fmt.Sprintf("        ICMP SeqNum: %d\n", SwapBytesUint16(hdr.SeqNum))
+	return r0 + r1 + r2 + r3 + r4 + r5
+}
+
 // Packet is a set of pointers in YANFF library. Each pointer points to one of five headers:
 // Mac, IPv4, IPv6, TCP and UDP plus raw pointer.
 //
@@ -255,6 +265,23 @@ func (packet *Packet) ParseEtherIPv4UDPData() {
 	packet.IPv4 = (*IPv4Hdr)(unsafe.Pointer(packet.Unparsed + EtherLen))
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + uintptr((packet.IPv4.VersionIhl&0x0f)<<2)))
 	dataOffset := EtherLen + uintptr((packet.IPv4.VersionIhl&0x0f)<<2) + UDPLen
+	packet.Data = unsafe.Pointer(packet.Unparsed + uintptr(dataOffset))
+}
+
+// ParseEtherIPv4ICMP set pointer to Ethernet, IPv4, ICMP headers in packet.
+func (packet *Packet) ParseEtherIPv4ICMP() {
+	packet.Ether = (*EtherHdr)(unsafe.Pointer(packet.Unparsed))
+	packet.IPv4 = (*IPv4Hdr)(unsafe.Pointer(packet.Unparsed + EtherLen))
+	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + uintptr((packet.IPv4.VersionIhl&0x0f)<<2)))
+}
+
+// ParseEtherIPv4ICMPData set pointer to Ethernet, IPv4, ICMP headers and Data in packet.
+// Data is considered to be everything after these headers.
+func (packet *Packet) ParseEtherIPv4ICMPData() {
+	packet.Ether = (*EtherHdr)(unsafe.Pointer(packet.Unparsed))
+	packet.IPv4 = (*IPv4Hdr)(unsafe.Pointer(packet.Unparsed + EtherLen))
+	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + uintptr((packet.IPv4.VersionIhl&0x0f)<<2)))
+	dataOffset := EtherLen + uintptr((packet.IPv4.VersionIhl&0x0f)<<2) + ICMPLen
 	packet.Data = unsafe.Pointer(packet.Unparsed + uintptr(dataOffset))
 }
 

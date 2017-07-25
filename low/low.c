@@ -31,8 +31,9 @@
 #define mbufInit(buf) \
 	mbufClear(buf) \
 	_mm_storeu_ps((float*)(buf + mbufStructSize + 32), zero128); \
-	*(char**)((char*)(buf) + mbufStructSize + 48) = (char*)(buf) + defaultStart; \
-	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf);
+	*(char**)((char*)(buf) + mbufStructSize + 48) = 0; \
+	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf) + defaultStart; \
+	*(char**)((char*)(buf) + mbufStructSize + 64) = (char*)(buf);
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
