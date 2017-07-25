@@ -13,12 +13,13 @@ import (
 	"testing"
 	"unsafe"
 
+	. "github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
 	. "github.com/intel-go/yanff/packet"
 )
 
 func init() {
-	argc, argv := low.ParseFlags()
+	argc, argv := low.InitDPDKArguments([]string{})
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
 	low.InitDPDK(argc, argv, 32, 8191, 250)
 }
