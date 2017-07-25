@@ -66,7 +66,7 @@ import (
 )
 
 func init() {
-	argc, argv := low.ParseFlags()
+	argc, argv := low.InitDPDKArguments([]string{})
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
 	low.InitDPDK(argc, argv, 32, 8191, 250)
 }
