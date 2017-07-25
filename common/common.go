@@ -87,6 +87,13 @@ func LogDebug(logType LogType, v ...interface{}) {
 	}
 }
 
+func LogDrop(logType LogType, v ...interface{}) {
+	if logType&currentLogType != 0 {
+		t := fmt.Sprintln(v...)
+		log.Print("DROP: ", t)
+	}
+}
+
 func LogTitle(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		log.Print(v...)
