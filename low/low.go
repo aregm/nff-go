@@ -466,6 +466,10 @@ func Statistics(N float32) {
 
 func ReportMempoolsState() {
 	for i, m := range usedMempools {
-		common.LogDebug(common.Debug, "mempool N", i, "used", C.getMempoolSpace(m), "from", mbufNumberT)
+		use := C.getMempoolSpace(m)
+		common.LogDebug(common.Debug, "Mempool N", i, "used", use, "from", mbufNumberT)
+		if float32(mbufNumberT-uint(use))/float32(mbufNumberT)*100 < 10 {
+			common.LogDrop(common.Debug, "Mempool N", i, "has less than 10% free space. This can lead to dropping packets while receive.")
+		}
 	}
 }
