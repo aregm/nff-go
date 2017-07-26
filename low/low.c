@@ -238,8 +238,6 @@ void statistics(float N) {
 	send_required = 0;
 	send_sent = 0;
 	stop_freed = 0;
-
-	//TODO after we decide how many mempools to use we need reports for each mempool capacity here
 #endif
 }
 
@@ -279,4 +277,8 @@ int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned 
 		mbufInit(bufs[i]);
 	}
 	return ret;
+}
+
+int getMempoolSpace(struct rte_mempool * m) {
+	return rte_mempool_in_use_count(m);
 }
