@@ -102,6 +102,7 @@ type Scheduler struct {
 	usedCores         uint8
 	checkTime         uint
 	debugTime         uint
+	Dropped           uint
 }
 
 func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
@@ -119,6 +120,7 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 	scheduler.stopDedicatedCore = stopDedicatedCore
 	scheduler.checkTime = checkTime
 	scheduler.debugTime = debugTime
+	scheduler.Dropped = 0
 
 	return *scheduler
 }
@@ -179,6 +181,12 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			low.Statistics(float32(scheduler.debugTime) / 1000)
 			for i := range scheduler.Clonable {
 				scheduler.Clonable[i].checkPrintFunction(scheduler.Clonable[i].Parameters, 0, true)
+			}
+			if scheduler.Dropped != 0 {
+				common.LogDrop(common.Debug, "Flow functions together dropped", scheduler.Dropped, "packets")
+				// It is race condition here, however it is just statistics.
+				// It can be not accurate, but on the other hand doesn't influence performance
+				scheduler.Dropped = 0
 			}
 			low.ReportMempoolsState()
 		default:

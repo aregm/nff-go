@@ -1035,7 +1035,7 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 func safeEnqueue(place *low.Queue, data []uintptr, number uint) {
 	done := place.EnqueueBurst(data, number)
 	if done < number {
-		common.LogDrop(common.Debug, number-uint(done), "packets are released after flow function")
+		schedState.Dropped += number - uint(done)
 		done2 := schedState.StopRing.EnqueueBurst(data[done:number], number-uint(done))
 		// If stop ring is crowded a function will call C stop directly without
 		// moving forward. It prevents constant crowd stop and increases
