@@ -166,7 +166,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	mutex.Lock()
 	value := table[pri2pubKey]
 	if value == EMPTY_ENTRY {
-		allocateNewEgressConnection(protocol, pri2pubKey, Natconfig.PublicPort.Address)
+		allocateNewEgressConnection(protocol, pri2pubKey, Natconfig.PublicPort.Subnet.Addr)
 	} else {
 		portmap[protocol][value.port].lastused = time.Now()
 	}
