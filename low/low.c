@@ -41,6 +41,7 @@ long stop_freed = 0;
 int mbufStructSize;
 int headroomSize;
 int defaultStart;
+char mempoolName[9] = "mempool1\0";
 
 __m128 zero128 = {0, 0, 0, 0};
 #ifdef RTE_MACHINE_CPUFLAG_AVX
@@ -261,8 +262,10 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	struct rte_mempool *mbuf_pool;
 
 	/* Creates a new mempool in memory to hold the mbufs. */
-	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", num_mbufs,
+	mbuf_pool = rte_pktmbuf_pool_create(mempoolName, num_mbufs,
 		mbuf_cache_size, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+
+	mempoolName[7]++;
 
 	if (mbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
