@@ -41,6 +41,7 @@ func allocateNewEgressConnection(privEntry *Tuple, publicAddr uint32) {
 	portmap[pubEntry.port].lastused = time.Now()
 }
 
+// Ingress translation
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	l3offset := pkt.ParseL2()
 	var l4offset int
@@ -65,9 +66,10 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
 		pub2priKey.port = pkt.UDP.DstPort
+	} else if pkt.IPv4.NextProtoID == common.ICMPNumber {
+		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pub2priKey.port = pkt.ICMP.Identifier
 	} else {
-		// Only TCP and UDP are supported
-		// TODO: add ICMP here
 		return false
 	}
 
@@ -99,13 +101,16 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	if pkt.IPv4.NextProtoID == common.TCPNumber {
 		pkt.TCP.DstPort = value.port
-	} else {
+	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
 		pkt.UDP.DstPort = value.port
+	} else {
+		// Only address is not modified in ICMP packets
 	}
 
 	return true
 }
 
+// Egress translation
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	l3offset := pkt.ParseL2()
 	var l4offset int
@@ -131,9 +136,10 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
 		pri2pubKey.port = pkt.UDP.SrcPort
+	} else if pkt.IPv4.NextProtoID == common.ICMPNumber {
+		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pri2pubKey.port = pkt.ICMP.Identifier
 	} else {
-		// Only TCP and UDP are supported
-		// TODO: add ICMP here
 		return false
 	}
 
@@ -154,8 +160,10 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	if pkt.IPv4.NextProtoID == common.TCPNumber {
 		pkt.TCP.SrcPort = value.port
-	} else {
+	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
 		pkt.UDP.SrcPort = value.port
+	} else {
+		// Only address is not modified in ICMP packets
 	}
 
 	return true
