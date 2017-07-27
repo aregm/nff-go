@@ -36,7 +36,7 @@ func init() {
 	portmap[common.ICMPNumber] = make([]PortMapEntry, maxport)
 	portmap[common.TCPNumber] = make([]PortMapEntry, maxport)
 	portmap[common.UDPNumber] = make([]PortMapEntry, maxport)
-	lastport = 0
+	lastport = PORT_START
 }
 
 func deleteOldConnection(protocol uint8, port int) {
@@ -62,7 +62,7 @@ func deleteOldConnection(protocol uint8, port int) {
 func allocNewPort(protocol uint8) int {
 	pm := portmap[protocol]
 	for {
-		for p := lastport; p < maxport; p++ {
+		for p := lastport; p < PORT_END; p++ {
 			if pm[p].lastused.Add(CONNECTION_TIMEOUT).Before(time.Now()) {
 				lastport = p
 				deleteOldConnection(protocol, p)
@@ -70,7 +70,7 @@ func allocNewPort(protocol uint8) int {
 			}
 		}
 
-		for p := 0; p < lastport; p++ {
+		for p := PORT_START; p < lastport; p++ {
 			if pm[p].lastused.Add(CONNECTION_TIMEOUT).Before(time.Now()) {
 				lastport = p
 				deleteOldConnection(protocol, p)

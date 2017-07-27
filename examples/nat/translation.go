@@ -5,6 +5,7 @@
 package nat
 
 import (
+	"fmt"
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -18,9 +19,28 @@ type Tuple struct {
 	port    uint16
 }
 
+func (t *Tuple) String() string {
+	return fmt.Sprintf("addr = %d.%d.%d.%d:%d",
+		t.addr & 0xff,
+		(t.addr >> 8) & 0xff,
+		(t.addr >> 16) & 0xff,
+		(t.addr >> 24) & 0xff,
+		t.port)
+}
+
 type TupleKey struct {
 	Tuple
 	protocol uint8
+}
+
+func (tk *TupleKey) String() string {
+	return fmt.Sprintf("addr = %d.%d.%d.%d:%d, protocol = %d",
+		tk.addr & 0xff,
+		(tk.addr >> 8) & 0xff,
+		(tk.addr >> 16) & 0xff,
+		(tk.addr >> 24) & 0xff,
+		tk.port,
+		tk.protocol)
 }
 
 var (
@@ -31,6 +51,10 @@ var (
 	mutex                 sync.Mutex
 
 	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
+
+	debug bool = false
+	loggedDrop bool = false
+	loggedAdd bool = false
 )
 
 func init() {
@@ -44,6 +68,11 @@ func allocateNewEgressConnection(protocol uint8, privEntry TupleKey, publicAddr 
 			port: uint16(allocNewPort(protocol)),
 		},
 		protocol: privEntry.protocol,
+	}
+
+	if debug && !loggedAdd {
+		println("Adding new connection:", privEntry.String(), "->", pubEntry.String())
+		loggedAdd = true
 	}
 
 	table[privEntry] = pubEntry.Tuple
@@ -76,10 +105,10 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Parse packet destination port
 	if protocol == common.TCPNumber {
 		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pub2priKey.Tuple.port = pkt.TCP.DstPort
+		pub2priKey.Tuple.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
 	} else if protocol == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pub2priKey.Tuple.port = pkt.UDP.DstPort
+		pub2priKey.Tuple.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
 	} else if protocol == common.ICMPNumber {
 		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
 		pub2priKey.Tuple.port = pkt.ICMP.Identifier
@@ -95,6 +124,11 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if value == EMPTY_ENTRY {
+		if debug && !loggedDrop {
+			println("Drop public2private packet because key",
+				pub2priKey.String(), "was not found")
+			loggedDrop = true
+		}
 		mutex.Unlock()
 		return false
 	} else {
@@ -115,9 +149,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pkt.IPv4.DstAddr = value.addr
 
 	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.DstPort = value.port
+		pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
 	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.DstPort = value.port
+		pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
 	} else {
 		// Only address is not modified in ICMP packets
 	}
@@ -151,10 +185,10 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Parse packet source port
 	if protocol == common.TCPNumber {
 		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pri2pubKey.Tuple.port = pkt.TCP.SrcPort
+		pri2pubKey.Tuple.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
 	} else if protocol == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pri2pubKey.Tuple.port = pkt.UDP.SrcPort
+		pri2pubKey.Tuple.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
 	} else if protocol == common.ICMPNumber {
 		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
 		pri2pubKey.Tuple.port = pkt.ICMP.Identifier
@@ -178,9 +212,9 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pkt.IPv4.SrcAddr = value.addr
 
 	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.SrcPort = value.port
+		pkt.TCP.SrcPort = packet.SwapBytesUint16(value.port)
 	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.SrcPort = value.port
+		pkt.UDP.SrcPort = packet.SwapBytesUint16(value.port)
 	} else {
 		// Only address is not modified in ICMP packets
 	}

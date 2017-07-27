@@ -35,8 +35,9 @@ func convertIPv4(in []byte) (uint32, error) {
 		return 0, errors.New("Only IPv4 addresses are supported now")
 	}
 
-	addr := (uint32(in[0]) << 24) | (uint32(in[1]) << 16) |
-		(uint32(in[2]) << 8) | uint32(in[3])
+	// Swap bytes right here
+	addr := (uint32(in[3]) << 24) | (uint32(in[2]) << 16) |
+		(uint32(in[1]) << 8) | uint32(in[0])
 
 	return addr, nil
 }
