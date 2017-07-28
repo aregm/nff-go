@@ -48,7 +48,7 @@ var (
 	Natconfig             *Config
 	// Main lookup table which contains entries
 	table                 map[TupleKey]Tuple
-	mutex                 sync.Mutex
+	mutex                 sync.RWMutex
 
 	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
 
@@ -117,8 +117,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do lookup
-	mutex.Lock()
+	mutex.RLock()
 	value := table[pub2priKey]
+	mutex.RUnlock()
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
@@ -129,7 +130,6 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 				pub2priKey.String(), "was not found")
 			loggedDrop = true
 		}
-		mutex.Unlock()
 		return false
 	} else {
 		// Check whether connection is too old
@@ -138,10 +138,11 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		} else {
 			// There was no transfer on this port for too long
 			// time. We don't allow it any more
+			mutex.Lock()
 			deleteOldConnection(protocol, int(pub2priKey.port))
+			mutex.Unlock()
 		}
 	}
-	mutex.Unlock()
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
@@ -197,14 +198,16 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do lookup
-	mutex.Lock()
+	mutex.RLock()
 	value := table[pri2pubKey]
+	mutex.RUnlock()
 	if value == EMPTY_ENTRY {
+		mutex.Lock()
 		allocateNewEgressConnection(protocol, pri2pubKey, Natconfig.PublicPort.Subnet.Addr)
+		mutex.Unlock()
 	} else {
 		portmap[protocol][value.port].lastused = time.Now()
 	}
-	mutex.Unlock()
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PublicPort.DstMACAddress
