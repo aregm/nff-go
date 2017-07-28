@@ -43,7 +43,7 @@ var (
 	DSTPORT_2 uint16 = 222
 
 	outport uint
-	inport uint
+	inport  uint
 )
 
 var (
@@ -94,7 +94,7 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Initialize YANFF library at 30 available cores
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 30,
 	}
 	flow.SystemInit(&config)
@@ -158,10 +158,15 @@ func main() {
 
 func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 	atomic.AddUint64(&count, 1)
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, uint(payloadSize))
 	if pkt == nil {
+		fmt.Println("TEST FAILED")
 		panic("Failed to create new packet")
 	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, uint(payloadSize)) == false {
+		fmt.Println("TEST FAILED")
+		panic("Failed to init empty packet")
+	}
+
 	// We need different packets to gain from RSS
 	if count%2 == 0 {
 		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)

@@ -30,7 +30,7 @@ func main() {
 	payload_size = PACKET_SIZE - hdrs_size
 
 	// Initialize YANFF library at 16 cores by default
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -50,8 +50,9 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	sent := atomic.LoadInt64(&count)
-
-	packet.InitEmptyEtherIPv4TCPPacket(pkt, payload_size)
+	if packet.InitEmptyEtherIPv4TCPPacket(pkt, payload_size) == false {
+		panic("Failed to init empty packet")
+	}
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	if sent >= TOTAL_PACKETS {
 		println("Sent ", sent, "number of packets")

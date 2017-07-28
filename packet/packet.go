@@ -579,9 +579,13 @@ func ExtractPackets(packet []*Packet, IN []uintptr, n uint) {
 
 // PacketFromByte function gets non-initialized packet and slice of bytes of any size.
 // Initializes input packet and fills it with these bytes.
-func PacketFromByte(packet *Packet, data []byte) {
-	low.AppendMbuf(packet.CMbuf, uint(len(data)))
+func PacketFromByte(packet *Packet, data []byte) bool {
+	if low.AppendMbuf(packet.CMbuf, uint(len(data))) == false {
+		LogWarning(Debug, "PacketFromByte: Cannot append mbuf")
+		return false
+	}
 	low.WriteDataToMbuf(packet.CMbuf, data)
+	return true
 }
 
 // All following functions set Data pointer because it is assumed that user
@@ -589,21 +593,26 @@ func PacketFromByte(packet *Packet, data []byte) {
 
 // InitEmptyEtherPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointer to Ethernet header.
-func InitEmptyEtherPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherPacket(packet *Packet, plSize uint) bool {
 	bufSize := plSize + EtherLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherPacket: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherData()
+	return true
 }
 
 // InitEmptyEtherIPv4Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv4 headers.
-func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) bool {
 	// TODO After mandatory fields, IPv4 header optionally may have options of variable length
 	// Now pre-allocate space only for mandatory fields
 	bufSize := plSize + EtherLen + IPv4MinLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv4Packet: Cannot append mbuf")
+		return false
+	}
 	// Set pointers to required headers. Filling headers is left for user
 	packet.ParseEtherIPv4()
 
@@ -614,30 +623,36 @@ func InitEmptyEtherIPv4Packet(packet *Packet, plSize uint) {
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
+	return true
 }
 
 // InitEmptyEtherIPv6Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv6 headers.
-func InitEmptyEtherIPv6Packet(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv6Packet(packet *Packet, plSize uint) bool {
 	bufSize := plSize + EtherLen + IPv6Len
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv6Packet: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherIPv6Data()
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(plSize))
 	packet.IPv6.VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	return true
 }
 
 // InitEmptyEtherIPv4TCPPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet, IPv4 and TCP headers. This function supposes that IPv4 and TCP
 // headers have minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) bool {
 	// Now user cannot set explicitly optional fields, so len of header is supposed to be equal to TCPMinLen
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv4MinLen + TCPMinLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherPacket: Cannot append mbuf")
+		return false
+	}
 	// Set pointer to required headers. Filling headers is left for user
 	packet.ParseEtherIPv4()
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
@@ -649,16 +664,19 @@ func InitEmptyEtherIPv4TCPPacket(packet *Packet, plSize uint) {
 	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
 	packet.TCP.DataOff = packet.TCP.DataOff | 0x50
+	return true
 }
 
 // InitEmptyEtherIPv4UDPPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet, IPv4 and UDP headers. This function supposes that IPv4
 // header has minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) bool {
 	bufSize := plSize + EtherLen + IPv4MinLen + UDPLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv4UDPPacket: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherIPv4()
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
@@ -669,16 +687,19 @@ func InitEmptyEtherIPv4UDPPacket(packet *Packet, plSize uint) {
 	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
 	packet.UDP.DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	return true
 }
 
 // InitEmptyEtherIPv4ICMPPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet, IPv4 and ICMP headers. This function supposes that IPv4
 // header has minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv4ICMPPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 	bufSize := plSize + EtherLen + IPv4MinLen + ICMPLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv4ICMPPacket: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherIPv4()
 	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen))
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
@@ -688,17 +709,20 @@ func InitEmptyEtherIPv4ICMPPacket(packet *Packet, plSize uint) {
 	packet.IPv4.NextProtoID = ICMPNumber
 	packet.IPv4.VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.IPv4.TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	return true
 }
 
 // InitEmptyEtherIPv6TCPPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet, IPv6 and TCP headers. This function supposes that IPv6 and TCP
 // headers have minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	// TODO support variable header length (ask header length from user)
 	bufSize := plSize + EtherLen + IPv6Len + TCPMinLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv6TCPPacket: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherIPv6()
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len))
 	packet.Data = unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen + TCPMinLen)
@@ -708,16 +732,19 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) {
 	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
 	packet.IPv6.VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 	packet.TCP.DataOff = packet.TCP.DataOff | 0x50
+	return true
 }
 
 // InitEmptyEtherIPv6UDPPacket initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet, IPv6 and UDP headers. This function supposes that IPv6
 // header has minimum length. In fact length can be higher due to optional fields.
 // Now setting optional fields explicitly is not supported.
-func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) {
+func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	bufSize := plSize + EtherLen + IPv6Len + UDPLen
-	low.AppendMbuf(packet.CMbuf, bufSize)
-
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyEtherIPv6UDPPacket: Cannot append mbuf")
+		return false
+	}
 	packet.ParseEtherIPv6()
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len))
 	packet.Data = unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len + UDPLen)
@@ -727,6 +754,7 @@ func InitEmptyEtherIPv6UDPPacket(packet *Packet, plSize uint) {
 	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
 	packet.IPv6.VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 	packet.UDP.DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	return true
 }
 
 // Swapping uint16 in Little Endian and Big Endian
