@@ -28,27 +28,12 @@ func (t *Tuple) String() string {
 		t.port)
 }
 
-type TupleKey struct {
-	Tuple
-	protocol uint8
-}
-
-func (tk *TupleKey) String() string {
-	return fmt.Sprintf("addr = %d.%d.%d.%d:%d, protocol = %d",
-		tk.addr & 0xff,
-		(tk.addr >> 8) & 0xff,
-		(tk.addr >> 16) & 0xff,
-		(tk.addr >> 24) & 0xff,
-		tk.port,
-		tk.protocol)
-}
-
 var (
 	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
 	Natconfig             *Config
 	// Main lookup table which contains entries
-	table                 map[TupleKey]Tuple
-	mutex                 sync.RWMutex
+	table                 []map[Tuple]Tuple
+	mutex                 []sync.RWMutex
 
 	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
 
@@ -58,16 +43,20 @@ var (
 )
 
 func init() {
-	table = make(map[TupleKey]Tuple)
+	table = make([]map[Tuple]Tuple, common.UDPNumber + 1)
+	table[common.ICMPNumber] = make(map[Tuple]Tuple)
+	table[common.TCPNumber] = make(map[Tuple]Tuple)
+	table[common.UDPNumber] = make(map[Tuple]Tuple)
+
+	mutex = make([]sync.RWMutex, common.UDPNumber + 1)
 }
 
-func allocateNewEgressConnection(protocol uint8, privEntry TupleKey, publicAddr uint32) {
-	pubEntry := TupleKey{
-		Tuple: Tuple{
-			addr: publicAddr,
-			port: uint16(allocNewPort(protocol)),
-		},
-		protocol: privEntry.protocol,
+func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) {
+	t := table[protocol]
+
+	pubEntry := Tuple{
+		addr: publicAddr,
+		port: uint16(allocNewPort(protocol)),
 	}
 
 	if debug && !loggedAdd {
@@ -75,9 +64,9 @@ func allocateNewEgressConnection(protocol uint8, privEntry TupleKey, publicAddr 
 		loggedAdd = true
 	}
 
-	table[privEntry] = pubEntry.Tuple
-	table[pubEntry] = privEntry.Tuple
-	portmap[privEntry.protocol][pubEntry.port].lastused = time.Now()
+	t[privEntry] = pubEntry
+	t[pubEntry] = privEntry
+	portmap[protocol][pubEntry.port].lastused = time.Now()
 }
 
 // Ingress translation
@@ -96,30 +85,27 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Create a lookup key
 	protocol := pkt.IPv4.NextProtoID
-	pub2priKey := TupleKey{
-		Tuple: Tuple{
-			addr: pkt.IPv4.DstAddr,
-		},
-		protocol: protocol,
+	pub2priKey := Tuple{
+		addr: pkt.IPv4.DstAddr,
 	}
 	// Parse packet destination port
 	if protocol == common.TCPNumber {
 		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pub2priKey.Tuple.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
+		pub2priKey.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
 	} else if protocol == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pub2priKey.Tuple.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
+		pub2priKey.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
 	} else if protocol == common.ICMPNumber {
 		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pub2priKey.Tuple.port = pkt.ICMP.Identifier
+		pub2priKey.port = pkt.ICMP.Identifier
 	} else {
 		return false
 	}
 
 	// Do lookup
-	mutex.RLock()
-	value := table[pub2priKey]
-	mutex.RUnlock()
+	mutex[protocol].RLock()
+	value := table[protocol][pub2priKey]
+	mutex[protocol].RUnlock()
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
@@ -138,9 +124,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		} else {
 			// There was no transfer on this port for too long
 			// time. We don't allow it any more
-			mutex.Lock()
+			mutex[protocol].Lock()
 			deleteOldConnection(protocol, int(pub2priKey.port))
-			mutex.Unlock()
+			mutex[protocol].Unlock()
 		}
 	}
 
@@ -176,35 +162,32 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Create a lookup key
 	protocol := pkt.IPv4.NextProtoID
-	pri2pubKey := TupleKey{
-		Tuple: Tuple{
-			addr: pkt.IPv4.SrcAddr,
-		},
-		protocol: protocol,
+	pri2pubKey := Tuple{
+		addr: pkt.IPv4.SrcAddr,
 	}
 
 	// Parse packet source port
 	if protocol == common.TCPNumber {
 		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pri2pubKey.Tuple.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
+		pri2pubKey.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
 	} else if protocol == common.UDPNumber {
 		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pri2pubKey.Tuple.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
+		pri2pubKey.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
 	} else if protocol == common.ICMPNumber {
 		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
-		pri2pubKey.Tuple.port = pkt.ICMP.Identifier
+		pri2pubKey.port = pkt.ICMP.Identifier
 	} else {
 		return false
 	}
 
 	// Do lookup
-	mutex.RLock()
-	value := table[pri2pubKey]
-	mutex.RUnlock()
+	mutex[protocol].RLock()
+	value := table[protocol][pri2pubKey]
+	mutex[protocol].RUnlock()
 	if value == EMPTY_ENTRY {
-		mutex.Lock()
+		mutex[protocol].Lock()
 		allocateNewEgressConnection(protocol, pri2pubKey, Natconfig.PublicPort.Subnet.Addr)
-		mutex.Unlock()
+		mutex[protocol].Unlock()
 	} else {
 		portmap[protocol][value.port].lastused = time.Now()
 	}

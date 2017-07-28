@@ -40,21 +40,16 @@ func init() {
 }
 
 func deleteOldConnection(protocol uint8, port int) {
-	pub2priKey := TupleKey{
-		Tuple: Tuple{
-			addr: portmap[protocol][port].addr,
-			port: uint16(port),
-		},
-		protocol: protocol,
-	}
+	t := table[protocol]
 
-	pri2pubKey := TupleKey{
-		Tuple: table[pub2priKey],
-		protocol: protocol,
+	pub2priKey := Tuple{
+		addr: portmap[protocol][port].addr,
+		port: uint16(port),
 	}
+	pri2pubKey := t[pub2priKey]
 
-	table[pri2pubKey] = EMPTY_ENTRY
-	table[pub2priKey] = EMPTY_ENTRY
+	t[pri2pubKey] = EMPTY_ENTRY
+	t[pub2priKey] = EMPTY_ENTRY
 }
 
 // This function currently is not thread safe and should be executed
