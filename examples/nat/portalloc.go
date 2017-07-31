@@ -31,7 +31,7 @@ var (
 )
 
 func init() {
-	maxport = NUM_PORTS * NUM_PUB_ADDRS
+	maxport = PORT_END
 	portmap = make([][]PortMapEntry, common.UDPNumber + 1)
 	portmap[common.ICMPNumber] = make([]PortMapEntry, maxport)
 	portmap[common.TCPNumber] = make([]PortMapEntry, maxport)
@@ -48,8 +48,10 @@ func deleteOldConnection(protocol uint8, port int) {
 	}
 	pri2pubKey := t[pub2priKey]
 
-	t[pri2pubKey] = EMPTY_ENTRY
-	t[pub2priKey] = EMPTY_ENTRY
+	if pri2pubKey != EMPTY_ENTRY {
+		delete(t, pri2pubKey)
+		delete(t, pub2priKey)
+	}
 }
 
 // This function currently is not thread safe and should be executed

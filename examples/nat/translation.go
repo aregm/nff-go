@@ -51,7 +51,7 @@ func init() {
 	mutex = make([]sync.RWMutex, common.UDPNumber + 1)
 }
 
-func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) {
+func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) Tuple {
 	t := table[protocol]
 
 	pubEntry := Tuple{
@@ -67,6 +67,8 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 	t[privEntry] = pubEntry
 	t[pubEntry] = privEntry
 	portmap[protocol][pubEntry.port].lastused = time.Now()
+
+	return pubEntry
 }
 
 // Ingress translation
@@ -127,6 +129,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 			mutex[protocol].Lock()
 			deleteOldConnection(protocol, int(pub2priKey.port))
 			mutex[protocol].Unlock()
+			return false
 		}
 	}
 
@@ -186,7 +189,8 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	mutex[protocol].RUnlock()
 	if value == EMPTY_ENTRY {
 		mutex[protocol].Lock()
-		allocateNewEgressConnection(protocol, pri2pubKey, Natconfig.PublicPort.Subnet.Addr)
+		value = allocateNewEgressConnection(protocol, pri2pubKey,
+			Natconfig.PublicPort.Subnet.Addr)
 		mutex[protocol].Unlock()
 	} else {
 		portmap[protocol][value.port].lastused = time.Now()
