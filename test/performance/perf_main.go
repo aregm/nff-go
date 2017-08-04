@@ -13,10 +13,11 @@ var (
 	load   uint
 	loadRW uint
 
-	inport1 uint
-	inport2 uint
-	outport1 uint
-	outport2 uint
+	inport1     uint
+	inport2     uint
+	outport1    uint
+	outport2    uint
+	noscheduler bool
 )
 
 func main() {
@@ -27,11 +28,13 @@ func main() {
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
+	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
 	flag.Parse()
 
 	// Initialize YANFF library at 35 cores by default
-	config := flow.Config {
-		CPUCoresNumber: 35,
+	config := flow.Config{
+		CPUCoresNumber:   35,
+		DisableScheduler: noscheduler,
 	}
 	flow.SystemInit(&config)
 
