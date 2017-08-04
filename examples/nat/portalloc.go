@@ -46,11 +46,22 @@ func deleteOldConnection(protocol uint8, port int) {
 		addr: portmap[protocol][port].addr,
 		port: uint16(port),
 	}
-	pri2pubKey := t[pub2priKey]
+	pri2pubKey, found := t.Load(pub2priKey)
 
-	if pri2pubKey != EMPTY_ENTRY {
-		delete(t, pri2pubKey)
-		delete(t, pub2priKey)
+	if found {
+		if debug && loggedDelete < 100 {
+			pri2pubVal := pri2pubKey.(Tuple)
+			println("Deleting connection:", pri2pubVal.String(), "->", pub2priKey.String())
+			loggedDelete++
+		}
+
+		t.Delete(pri2pubKey)
+		t.Delete(pub2priKey)
+	} else {
+		if debug && loggedDelete < 100 {
+			println("Failing to delete connection:", pub2priKey.String())
+			loggedDelete++
+		}
 	}
 }
 
@@ -74,5 +85,6 @@ func allocNewPort(protocol uint8) int {
 				return p
 			}
 		}
+		println("WARNING! All ports are allocated! Trying again")
 	}
 }

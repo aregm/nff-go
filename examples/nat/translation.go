@@ -32,42 +32,43 @@ var (
 	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
 	Natconfig             *Config
 	// Main lookup table which contains entries
-	table                 []map[Tuple]Tuple
-	mutex                 []sync.RWMutex
+	table                 []sync.Map
+	mutex                 sync.Mutex
 
 	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
 
 	debug bool = false
-	loggedDrop bool = false
-	loggedAdd bool = false
+	loggedDrop int = 0
+	loggedAdd int = 0
+	loggedDelete int = 0
+	loggedPri2PubLookup int = 0
 )
 
 func init() {
-	table = make([]map[Tuple]Tuple, common.UDPNumber + 1)
-	table[common.ICMPNumber] = make(map[Tuple]Tuple)
-	table[common.TCPNumber] = make(map[Tuple]Tuple)
-	table[common.UDPNumber] = make(map[Tuple]Tuple)
-
-	mutex = make([]sync.RWMutex, common.UDPNumber + 1)
+	table = make([]sync.Map, common.UDPNumber + 1)
 }
 
 func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) Tuple {
-	t := table[protocol]
+	mutex.Lock()
+	t := &table[protocol]
 
 	pubEntry := Tuple{
 		addr: publicAddr,
 		port: uint16(allocNewPort(protocol)),
 	}
 
-	if debug && !loggedAdd {
-		println("Adding new connection:", privEntry.String(), "->", pubEntry.String())
-		loggedAdd = true
+	portmap[protocol][pubEntry.port].lastused = time.Now()
+	portmap[protocol][pubEntry.port].addr = publicAddr
+
+	t.Store(privEntry, pubEntry)
+	t.Store(pubEntry, privEntry)
+
+	if debug && loggedAdd < 100 {
+		println("Added new connection:", privEntry.String(), "->", pubEntry.String(), "table", &table[protocol])
+		loggedAdd++
 	}
 
-	t[privEntry] = pubEntry
-	t[pubEntry] = privEntry
-	portmap[protocol][pubEntry.port].lastused = time.Now()
-
+	mutex.Unlock()
 	return pubEntry
 }
 
@@ -105,48 +106,47 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do lookup
-	mutex[protocol].RLock()
-	value := table[protocol][pub2priKey]
-	mutex[protocol].RUnlock()
+	v, found := table[protocol].Load(pub2priKey)
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
-	if value == EMPTY_ENTRY {
-		if debug && !loggedDrop {
+	if !found {
+		if debug && loggedDrop < 100 {
 			println("Drop public2private packet because key",
 				pub2priKey.String(), "was not found")
-			loggedDrop = true
+			loggedDrop++
 		}
 		return false
 	} else {
+		value := v.(Tuple)
 		// Check whether connection is too old
 		if portmap[protocol][pub2priKey.port].lastused.Add(CONNECTION_TIMEOUT).After(time.Now()) {
 			portmap[protocol][pub2priKey.port].lastused = time.Now()
 		} else {
 			// There was no transfer on this port for too long
 			// time. We don't allow it any more
-			mutex[protocol].Lock()
+			mutex.Lock()
 			deleteOldConnection(protocol, int(pub2priKey.port))
-			mutex[protocol].Unlock()
+			mutex.Unlock()
 			return false
 		}
+
+		// Do packet translation
+		pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
+		pkt.Ether.SAddr = PrivateMAC
+		pkt.IPv4.DstAddr = value.addr
+
+		if pkt.IPv4.NextProtoID == common.TCPNumber {
+			pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
+		} else if pkt.IPv4.NextProtoID == common.UDPNumber {
+			pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
+		} else {
+			// Only address is not modified in ICMP packets
+		}
+
+		return true
 	}
-
-	// Do packet translation
-	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
-	pkt.Ether.SAddr = PrivateMAC
-	pkt.IPv4.DstAddr = value.addr
-
-	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
-	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
-	} else {
-		// Only address is not modified in ICMP packets
-	}
-
-	return true
 }
 
 // Egress translation
@@ -184,15 +184,17 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do lookup
-	mutex[protocol].RLock()
-	value := table[protocol][pri2pubKey]
-	mutex[protocol].RUnlock()
-	if value == EMPTY_ENTRY {
-		mutex[protocol].Lock()
+	var value Tuple
+	v, found := table[protocol].Load(pri2pubKey)
+	if debug && loggedPri2PubLookup < 100 {
+		println("Lookup", pri2pubKey.String(), "found =", found, "table =", &table[protocol])
+		loggedPri2PubLookup++
+	}
+	if !found {
 		value = allocateNewEgressConnection(protocol, pri2pubKey,
 			Natconfig.PublicPort.Subnet.Addr)
-		mutex[protocol].Unlock()
 	} else {
+		value = v.(Tuple)
 		portmap[protocol][value.port].lastused = time.Now()
 	}
 
