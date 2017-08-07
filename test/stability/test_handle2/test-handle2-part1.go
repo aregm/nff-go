@@ -57,7 +57,7 @@ var (
 	testDoneEvent *sync.Cond = nil
 
 	outport uint
-	inport uint
+	inport  uint
 )
 
 func main() {
@@ -66,7 +66,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -127,9 +127,11 @@ func main() {
 
 // Generate packets of 1 group
 func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
+	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
 	}
 	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
 
@@ -148,9 +150,11 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 
 // Generate packets of 2 group
 func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
+	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
 	}
 	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
 
@@ -169,9 +173,11 @@ func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 
 // Generate packets of 3 group
 func generatePacketGroup3(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
+	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
 	}
 	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_3)
 

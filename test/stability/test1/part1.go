@@ -33,7 +33,7 @@ var (
 	passed          int32      = 1
 
 	outport uint
-	inport uint
+	inport  uint
 )
 
 // This part of test generates packets on port 0 and receives them on
@@ -50,7 +50,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -93,8 +93,10 @@ func main() {
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE))
-
+	if packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE)) == false {
+		fmt.Println("TEST FAILED")
+		panic("Failed to init empty packet")
+	}
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xad, 0xbe, 0xaf, 0xff, 0xfe}
 
 	sent := atomic.LoadUint64(&sentPackets)

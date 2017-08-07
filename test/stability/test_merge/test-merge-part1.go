@@ -54,7 +54,7 @@ var (
 
 	outport1 uint
 	outport2 uint
-	inport  uint
+	inport   uint
 )
 
 func main() {
@@ -65,7 +65,7 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
 
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -127,9 +127,11 @@ func main() {
 }
 
 func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
+	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
 	}
 	pkt.IPv4.SrcAddr = IPV4ADDR_1
 
@@ -143,9 +145,11 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 }
 
 func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
+	}
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
 	}
 	pkt.IPv4.SrcAddr = IPV4ADDR_2
 

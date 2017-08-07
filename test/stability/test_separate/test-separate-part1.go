@@ -59,7 +59,7 @@ var (
 
 	testDoneEvent *sync.Cond = nil
 
-	outport  uint
+	outport uint
 	inport1 uint
 	inport2 uint
 )
@@ -71,7 +71,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -138,11 +138,15 @@ func main() {
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
-	atomic.AddUint64(&count, 1)
-	packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE)
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
+	atomic.AddUint64(&count, 1)
+
+	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+		panic("Failed to init empty packet")
+	}
+
 	// Generate packets of 3 groups
 	if count%3 == 0 {
 		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)

@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library at 16 available cores
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -41,8 +41,9 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	// Total packet size will be 14+20+20+70+4(crc)=128 bytes
-	packet.InitEmptyEtherIPv4TCPPacket(pkt, 70)
-	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+	if packet.InitEmptyEtherPacket(pkt, 70) == true {
+		pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+	}
 }
 
 func generatePacketFromByte(emptyPacket *packet.Packet, context flow.UserContext) {
