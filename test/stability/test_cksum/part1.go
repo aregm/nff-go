@@ -229,13 +229,12 @@ func initPacketIPv6(emptyPacket *packet.Packet) {
 	emptyPacket.IPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 }
 
-func initPacketUDP(emptyPacket *packet.Packet, length uint16) {
+func initPacketUDP(emptyPacket *packet.Packet) {
 	emptyPacket.UDP.SrcPort = packet.SwapBytesUint16(1234)
 	emptyPacket.UDP.DstPort = packet.SwapBytesUint16(2345)
-	emptyPacket.UDP.DgramLen = packet.SwapBytesUint16(length)
 }
 
-func initPacketTCP(emptyPacket *packet.Packet, length uint16) {
+func initPacketTCP(emptyPacket *packet.Packet) {
 	emptyPacket.TCP.SrcPort = packet.SwapBytesUint16(3456)
 	emptyPacket.TCP.DstPort = packet.SwapBytesUint16(4567)
 }
@@ -246,11 +245,13 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv4(emptyPacket)
-	initPacketUDP(emptyPacket, length)
+	initPacketUDP(emptyPacket)
 
-	if !hwol {
-		emptyPacket.IPv4.HdrChecksum = packet.CalculateIPv4Checksum(emptyPacket)
-		emptyPacket.UDP.DgramCksum = packet.CalculateIPv4UDPChecksum(emptyPacket)
+	if hwol {
+		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.IPv4, emptyPacket.UDP))
+	} else {
+		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
 	}
 }
 
@@ -260,11 +261,13 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv4(emptyPacket)
-	initPacketTCP(emptyPacket, length)
+	initPacketTCP(emptyPacket)
 
-	if !hwol {
-		emptyPacket.IPv4.HdrChecksum = packet.CalculateIPv4Checksum(emptyPacket)
-		emptyPacket.TCP.Cksum = packet.CalculateIPv4TCPChecksum(emptyPacket)
+	if hwol {
+		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.IPv4))
+	} else {
+		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
 	}
 }
 
@@ -274,10 +277,12 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv6(emptyPacket)
-	initPacketUDP(emptyPacket, length)
+	initPacketUDP(emptyPacket)
 
-	if !hwol {
-		emptyPacket.UDP.DgramCksum = packet.CalculateIPv6UDPChecksum(emptyPacket)
+	if hwol {
+		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.IPv6, emptyPacket.UDP))
+	} else {
+		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
 	}
 }
 
@@ -287,10 +292,12 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv6(emptyPacket)
-	initPacketTCP(emptyPacket, length)
+	initPacketTCP(emptyPacket)
 
-	if !hwol {
-		emptyPacket.TCP.Cksum = packet.CalculateIPv6TCPChecksum(emptyPacket)
+	if hwol {
+		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.IPv6))
+	} else {
+		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
 	}
 }
 

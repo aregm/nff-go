@@ -42,11 +42,12 @@ func main() {
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
+	offset := pkt.ParseL4Data()
+
 	if !test_common.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")
 	}
 
-	offset := pkt.ParseL4Data()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
 		println("TEST FAILED")
@@ -63,6 +64,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	ptr.F2 = ptr.F1
 
 	if hwol {
+		packet.SetPseudoHdrChecksum(pkt)
 		packet.SetHWCksumOLFlags(pkt)
 	} else {
 		test_common.CalculateChecksum(pkt)

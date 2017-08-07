@@ -747,7 +747,7 @@ func InitEmptyEtherIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	}
 	packet.ParseEtherIPv6()
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len))
-	packet.Data = unsafe.Pointer(packet.Unparsed + EtherLen + IPv4MinLen + TCPMinLen)
+	packet.Data = unsafe.Pointer(packet.Unparsed + EtherLen + IPv6Len + TCPMinLen)
 
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.IPv6.Proto = TCPNumber

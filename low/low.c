@@ -142,9 +142,9 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 		// Get RX packets from port
 		const uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
 
-        for (i = 0; i < rx_pkts_number; i++) {
-            printf("Recv packet flags = 0x%llx, packet type = 0x%x, tx_offload = 0x%016llx\n", bufs[i]->ol_flags, bufs[i]->packet_type, bufs[i]->tx_offload);
-        }
+        //for (i = 0; i < rx_pkts_number; i++) {
+        //    printf("Recv packet flags = 0x%llx, packet type = 0x%x, tx_offload = 0x%016llx\n", bufs[i]->ol_flags, bufs[i]->packet_type, bufs[i]->tx_offload);
+        //}
 
 		if (unlikely(rx_pkts_number == 0))
 			continue;
