@@ -296,7 +296,7 @@ func SystemInit(args *Config) {
 	schedulerOffRemove := args.PersistentClones
 	stopDedicatedCore := args.StopOnDedicatedCore
 
-	mbufNumber := uint(8191)
+	mbufNumber := uint(4 * 8191)
 	if args.MbufNumber != 0 {
 		mbufNumber = args.MbufNumber
 	}

@@ -27,12 +27,13 @@
 	_mm_storeu_ps((float*)(buf + mbufStructSize + 16), zero128);
 #endif
 
+// This 56 offset is Unparsed field of packet struct. We can't non-set it here
+// because it can be different due to encapsulations and decapsulations.
 #define mbufInit(buf) \
 	mbufClear(buf) \
 	_mm_storeu_ps((float*)(buf + mbufStructSize + 32), zero128); \
 	*(char**)((char*)(buf) + mbufStructSize + 48) = 0; \
-	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf) + defaultStart; \
-	*(char**)((char*)(buf) + mbufStructSize + 64) = (char*)(buf);
+	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf) + defaultStart;
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
@@ -136,7 +137,8 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 			continue;
 
 		for (i = 0; i < rx_pkts_number; i++) {
-			// TODO refetcht here
+			// Prefetch decreases speed here.
+			// Speed of this is highly influenced by size of mempool. It seems that due to caches.
 			mbufInit(bufs[i]);
 		}
 
@@ -258,6 +260,8 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	defaultStart = mbufStructSize + headroomSize;
 }
 
+int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
+
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
 
@@ -269,6 +273,19 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 
 	if (mbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
+
+	// Put mbuf addresses in all packets. It is CMbuf GO field.
+	struct rte_mbuf **temp;
+	temp = malloc(sizeof(struct rte_mbuf *) * num_mbufs);
+	allocateMbufs(mbuf_pool, temp, num_mbufs);
+	for (int i = 0; i < num_mbufs; i++) {
+		// TODO 64 const should be checked after all changes with packet struct
+		*(char**)((char*)(temp[i]) + mbufStructSize + 64) = (char*)(temp[i]);
+	}
+	for (int i = 0; i < num_mbufs; i++) {
+		rte_pktmbuf_free(temp[i]);
+	}
+	free(temp);
 
 	return mbuf_pool;
 }
