@@ -50,7 +50,7 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	sent := atomic.LoadInt64(&count)
-	if packet.InitEmptyEtherIPv4TCPPacket(pkt, payload_size) == false {
+	if packet.InitEmptyIPv4TCPPacket(pkt, payload_size) == false {
 		panic("Failed to init empty packet")
 	}
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}

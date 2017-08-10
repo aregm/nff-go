@@ -93,7 +93,7 @@ func main() {
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
-	if packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE)) == false {
+	if packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE)) == false {
 		fmt.Println("TEST FAILED")
 		panic("Failed to init empty packet")
 	}

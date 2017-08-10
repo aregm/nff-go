@@ -12,10 +12,10 @@ import "flag"
 var (
 	mode uint
 
-	inport1 uint
-	inport2 uint
-	outport1 uint
-	outport2 uint
+	inport1     uint
+	inport2     uint
+	outport1    uint
+	outport2    uint
 	noscheduler bool
 )
 
@@ -29,8 +29,8 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library at 15 cores by default
-	config := flow.Config {
-		CPUCoresNumber: 15,
+	config := flow.Config{
+		CPUCoresNumber:   15,
 		DisableScheduler: noscheduler,
 	}
 	flow.SystemInit(&config)
@@ -62,11 +62,11 @@ func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {
 }
 
 func heavyFunc1(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseEtherIPv4()
+	currentPacket.ParseIPv4()
 }
 
 func heavyFunc2(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseEtherIPv4()
+	currentPacket.ParseIPv4()
 	T := (currentPacket.IPv4.DstAddr)
 	currentPacket.IPv4.SrcAddr = 263 + (T)
 }

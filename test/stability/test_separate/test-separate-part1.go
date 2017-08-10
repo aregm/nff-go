@@ -143,7 +143,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	}
 	atomic.AddUint64(&count, 1)
 
-	if packet.InitEmptyEtherIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+	if packet.InitEmptyIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
 		panic("Failed to init empty packet")
 	}
 
@@ -155,8 +155,8 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	} else {
 		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_3)
 	}
-	headerSize := uintptr(pkt.Data) - pkt.Unparsed
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
+	headerSize := uintptr(pkt.Data) - pkt.Start()
+	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
 	ptr := (*PacketData)(pkt.Data)
 	ptr.HdrsMD5 = md5.Sum(hdrs)
 }
@@ -173,8 +173,8 @@ func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
 		ptr := (*PacketData)(pkt.Data)
 
 		// Recompute hash to check how many packets are valid
-		headerSize := uintptr(pkt.Data) - pkt.Unparsed
-		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
+		headerSize := uintptr(pkt.Data) - pkt.Start()
+		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
 		hash := md5.Sum(hdrs)
 
 		if hash != ptr.HdrsMD5 {
@@ -201,8 +201,8 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 		ptr := (*PacketData)(pkt.Data)
 
 		// Recompute hash to check how many packets are valid
-		headerSize := uintptr(pkt.Data) - pkt.Unparsed
-		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Unparsed))[0:headerSize]
+		headerSize := uintptr(pkt.Data) - pkt.Start()
+		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
 		hash := md5.Sum(hdrs)
 
 		if hash != ptr.HdrsMD5 {

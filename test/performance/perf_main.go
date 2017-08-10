@@ -57,7 +57,7 @@ func main() {
 }
 
 func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseEtherIPv4()
+	currentPacket.ParseIPv4()
 	T := currentPacket.IPv4.DstAddr
 	for j := uint32(0); j < uint32(load); j++ {
 		T += j

@@ -15,7 +15,7 @@ var (
 	L3Rules *rules.L3Rules
 
 	outport uint
-	inport uint
+	inport  uint
 )
 
 // Main function for constructing packet processing graph.
@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -47,6 +47,6 @@ func main() {
 }
 
 func L3Handler(pkt *packet.Packet, context flow.UserContext) bool {
-	pkt.ParseEtherIPv4UDP()
+	pkt.ParseIPv4UDP()
 	return rules.L3_ACL_permit(pkt, L3Rules)
 }

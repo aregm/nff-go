@@ -28,13 +28,16 @@
 	_mm_storeu_ps((float*)(buf + mbufStructSize + 16), zero128);
 #endif
 
-// This 56 offset is Unparsed field of packet struct. We can't non-set it here
-// because it can be different due to encapsulations and decapsulations.
+// This macros clears packet structure which is stored inside mbuf
+// mbufClear clears IPv4, IPv6, TCP and UDP protocols
+// 32 offset clears ICMP protocol
+// 40 offset is a data oddset and shouldn't be cleared
+// 48 offset is L2 offset and is always begining of packet
+// 56 offset is CMbuf offset and is initilized when mempool is created
 #define mbufInit(buf) \
 	mbufClear(buf) \
-	_mm_storeu_ps((float*)(buf + mbufStructSize + 32), zero128); \
-	*(char**)((char*)(buf) + mbufStructSize + 48) = 0; \
-	*(char**)((char*)(buf) + mbufStructSize + 56) = (char*)(buf) + defaultStart;
+	*(char**)((char*)(buf) + mbufStructSize + 32) = 0; \
+	*(char**)((char*)(buf) + mbufStructSize + 48) = (char*)(buf) + defaultStart;
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
@@ -291,9 +294,10 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	struct rte_mbuf **temp;
 	temp = malloc(sizeof(struct rte_mbuf *) * num_mbufs);
 	allocateMbufs(mbuf_pool, temp, num_mbufs);
+	// This initializes CMbuf field of packet structure stored in mbuf
+	// All CMbuf pointers is set to point to starting of cerresponding mbufs
 	for (int i = 0; i < num_mbufs; i++) {
-		// TODO 64 const should be checked after all changes with packet struct
-		*(char**)((char*)(temp[i]) + mbufStructSize + 64) = (char*)(temp[i]);
+		*(char**)((char*)(temp[i]) + mbufStructSize + 56) = (char*)(temp[i]);
 	}
 	for (int i = 0; i < num_mbufs; i++) {
 		rte_pktmbuf_free(temp[i]);
@@ -305,9 +309,10 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 
 int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
 	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
-
-	for (int i = 0; i < count; i++) {
-		mbufInit(bufs[i]);
+	if (ret == 0) {
+		for (int i = 0; i < count; i++) {
+			mbufInit(bufs[i]);
+		}
 	}
 	return ret;
 }
