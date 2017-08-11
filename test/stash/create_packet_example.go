@@ -16,7 +16,7 @@ var buffer []byte
 
 func main() {
 	// By default this example generates 128-byte empty packets with
-	// InitEmptyEtherIPv4TCPPacket() and set Ethernet destination address.
+	// InitEmptyIPv4TCPPacket() and set Ethernet destination address.
 	// If flag enabled, generates packets with PacketFromByte() from raw buffer.
 	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with PacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
 	flag.Parse()
@@ -41,7 +41,7 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	// Total packet size will be 14+20+20+70+4(crc)=128 bytes
-	if packet.InitEmptyEtherPacket(pkt, 70) == true {
+	if packet.InitEmptyPacket(pkt, 70) == true {
 		pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	}
 }

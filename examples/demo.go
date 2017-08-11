@@ -16,7 +16,7 @@ var (
 	L3Rules *rules.L3Rules
 	load    uint
 
-	inport  uint
+	inport   uint
 	outport1 uint
 	outport2 uint
 )
@@ -29,7 +29,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library at 16 cores by default
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -56,7 +56,7 @@ func main() {
 }
 
 func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
-	currentPacket.ParseEtherIPv4()
+	currentPacket.ParseIPv4()
 	localL2Rules := L2Rules
 	localL3Rules := L3Rules
 	return rules.L2_ACL_permit(currentPacket, localL2Rules) &&

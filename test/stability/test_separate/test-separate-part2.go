@@ -14,7 +14,7 @@ import (
 var (
 	L3Rules *rules.L3Rules
 
-	inport  uint
+	inport   uint
 	outport1 uint
 	outport2 uint
 )
@@ -27,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
@@ -51,6 +51,6 @@ func main() {
 }
 
 func L3Separator(pkt *packet.Packet, context flow.UserContext) bool {
-	pkt.ParseEtherIPv4UDP()
+	pkt.ParseIPv4UDP()
 	return rules.L3_ACL_permit(pkt, L3Rules)
 }

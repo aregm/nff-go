@@ -162,7 +162,7 @@ func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 		fmt.Println("TEST FAILED")
 		panic("Failed to create new packet")
 	}
-	if packet.InitEmptyEtherIPv4UDPPacket(pkt, uint(payloadSize)) == false {
+	if packet.InitEmptyIPv4UDPPacket(pkt, uint(payloadSize)) == false {
 		fmt.Println("TEST FAILED")
 		panic("Failed to init empty packet")
 	}

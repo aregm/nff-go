@@ -22,8 +22,10 @@ var mempool *low.Mempool
 
 func init() {
 	argc, argv := low.InitDPDKArguments([]string{})
-	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-	low.InitDPDK(argc, argv, 32, 8191, 250)
+	// TODO DPDK fails if mbufCacheSize=250. After allocation of all
+	// mbufs were done for initilization. Need to investigate.
+	// burstSize=32, mbufNumber=8191, mbufCacheSize=0
+	low.InitDPDK(argc, argv, 32, 8191, 0)
 	mempool = low.CreateMempool()
 }
 
@@ -221,68 +223,60 @@ var UDPHeader = [2]UDPHdr{
 }
 var pkts = [8]Packet{
 	{
-		Ether:    &MacHeader[0],
-		IPv4:     &IPHeader[0],
-		IPv6:     nil,
-		TCP:      &TCPHeader[0],
-		UDP:      nil,
-		Unparsed: 0,
+		Ether: &MacHeader[0],
+		IPv4:  &IPHeader[0],
+		IPv6:  nil,
+		TCP:   &TCPHeader[0],
+		UDP:   nil,
 	},
 	{
-		Ether:    &MacHeader[1],
-		IPv4:     &IPHeader[1],
-		IPv6:     nil,
-		TCP:      &TCPHeader[1],
-		UDP:      nil,
-		Unparsed: 0,
+		Ether: &MacHeader[1],
+		IPv4:  &IPHeader[1],
+		IPv6:  nil,
+		TCP:   &TCPHeader[1],
+		UDP:   nil,
 	},
 	{
-		Ether:    &MacHeader[2],
-		IPv4:     &IPHeader[2],
-		IPv6:     nil,
-		TCP:      nil,
-		UDP:      &UDPHeader[0],
-		Unparsed: 0,
+		Ether: &MacHeader[2],
+		IPv4:  &IPHeader[2],
+		IPv6:  nil,
+		TCP:   nil,
+		UDP:   &UDPHeader[0],
 	},
 	{
-		Ether:    &MacHeader[3],
-		IPv4:     &IPHeader[3],
-		IPv6:     nil,
-		TCP:      &TCPHeader[2],
-		UDP:      nil,
-		Unparsed: 0,
+		Ether: &MacHeader[3],
+		IPv4:  &IPHeader[3],
+		IPv6:  nil,
+		TCP:   &TCPHeader[2],
+		UDP:   nil,
 	},
 	{
-		Ether:    &MacHeader[4],
-		IPv4:     &IPHeader[4],
-		IPv6:     nil,
-		TCP:      &TCPHeader[3],
-		UDP:      nil,
-		Unparsed: 0,
+		Ether: &MacHeader[4],
+		IPv4:  &IPHeader[4],
+		IPv6:  nil,
+		TCP:   &TCPHeader[3],
+		UDP:   nil,
 	},
 	{
-		Ether:    &MacHeader[5],
-		IPv4:     &IPHeader[5],
-		IPv6:     nil,
-		TCP:      nil,
-		UDP:      &UDPHeader[1],
-		Unparsed: 0,
+		Ether: &MacHeader[5],
+		IPv4:  &IPHeader[5],
+		IPv6:  nil,
+		TCP:   nil,
+		UDP:   &UDPHeader[1],
 	},
 	{
-		Ether:    &MacHeader[6],
-		IPv4:     &IPHeader[6],
-		IPv6:     nil,
-		TCP:      &TCPHeader[3],
-		UDP:      nil,
-		Unparsed: 0,
+		Ether: &MacHeader[6],
+		IPv4:  &IPHeader[6],
+		IPv6:  nil,
+		TCP:   &TCPHeader[3],
+		UDP:   nil,
 	},
 	{
-		Ether:    &MacHeader[7],
-		IPv4:     &IPHeader[5],
-		IPv6:     nil,
-		TCP:      nil,
-		UDP:      &UDPHeader[1],
-		Unparsed: 0,
+		Ether: &MacHeader[7],
+		IPv4:  &IPHeader[5],
+		IPv6:  nil,
+		TCP:   nil,
+		UDP:   &UDPHeader[1],
 	},
 }
 
@@ -330,7 +324,7 @@ func TestParseL4(t *testing.T) {
 	}
 }
 
-func TestParseEther(t *testing.T) {
+func TestParseIPv4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
@@ -338,24 +332,7 @@ func TestParseEther(t *testing.T) {
 		pkt := ExtractPacket(mb[0])
 		PacketFromByte(pkt, decoded)
 
-		pkt.ParseEther()
-
-		if !reflect.DeepEqual(pkt.Ether, pkts[i].Ether) {
-			t.Errorf("Parse ethernet: packet %d: wrong Ether header: \ngot: %+v, \nwant: %+v\n\n", i, pkt.Ether, pkts[i].Ether)
-			t.FailNow()
-		}
-	}
-}
-
-func TestParseEtherIPv4(t *testing.T) {
-	for i := 0; i < len(lines); i++ {
-		decoded, _ := hex.DecodeString(lines[i])
-		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb, mempool)
-		pkt := ExtractPacket(mb[0])
-		PacketFromByte(pkt, decoded)
-
-		pkt.ParseEtherIPv4()
+		pkt.ParseIPv4()
 
 		if !reflect.DeepEqual(pkt.Ether, pkts[i].Ether) {
 			t.Errorf("Parse ethernet and IPv4: packet %d: wrong Ether header: \ngot: %+v, \nwant: %+v\n\n", i, pkt.Ether, pkts[i].Ether)
@@ -368,8 +345,8 @@ func TestParseEtherIPv4(t *testing.T) {
 	}
 }
 
-// Test ParseEtherIPv4UDP and ParseEtherIPv4TCP
-func TestParseEtherIPv4_(t *testing.T) {
+// Test ParseIPv4UDP and ParseIPv4TCP
+func TestParseIPv4_(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
@@ -378,9 +355,9 @@ func TestParseEtherIPv4_(t *testing.T) {
 		PacketFromByte(pkt, decoded)
 
 		if i == 2 || i == 5 || i == 7 {
-			pkt.ParseEtherIPv4UDP()
+			pkt.ParseIPv4UDP()
 		} else {
-			pkt.ParseEtherIPv4TCP()
+			pkt.ParseIPv4TCP()
 		}
 
 		if !reflect.DeepEqual(pkt.Ether, pkts[i].Ether) {
@@ -404,14 +381,13 @@ func TestParseEtherIPv4_(t *testing.T) {
 }
 
 // Tested functions:
-// ParseEtherData
-// ParseEtherIPv4Data
-// ParseEtherIPv4TCPData
+// ParseData
+// ParseIPv4Data
 // ParseIPv4TCPData
 // ParseL3Data
 // ParseL4Data
 // ParseTCPData
-func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
+func TestParseIPv4TCPDataFunctions(t *testing.T) {
 	// Ether IPv4 TCP packet with payload gt_payload
 	gt_payload := uint64(12345)
 	buffer := "001122334455011121314151080045000030bffd00000406eebb7f0000018009090504d2162e123456781234569050102000621c00003930000000000000"
@@ -424,9 +400,9 @@ func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
 	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
-	parsedPkt.ParseEtherIPv4TCP()
+	parsedPkt.ParseIPv4TCP()
 
-	pkt.ParseEtherData()
+	pkt.ParseData()
 	gotIpv4 := *(*IPv4Hdr)(pkt.Data)
 	wantIpv4 := *(parsedPkt.IPv4)
 	if gotIpv4 != wantIpv4 {
@@ -434,17 +410,11 @@ func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
 	}
 	clearPacket(pkt)
 
-	pkt.ParseEtherIPv4Data()
+	pkt.ParseIPv4Data()
 	gotTcp := *(*TCPHdr)(pkt.Data)
 	wantTcp := *(parsedPkt.TCP)
 	if gotTcp != wantTcp {
-		t.Errorf("ParseEtherIPv4Data incorrect result:\ngot:%x\nwant:%x\n", gotTcp, wantTcp)
-	}
-	clearPacket(pkt)
-
-	pkt.ParseEtherIPv4TCPData()
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseEtherIPv4TCPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
+		t.Errorf("ParseIPv4Data incorrect result:\ngot:%x\nwant:%x\n", gotTcp, wantTcp)
 	}
 	clearPacket(pkt)
 
@@ -468,14 +438,13 @@ func TestParseEtherIPv4TCPDataFunctions(t *testing.T) {
 	}
 	clearPacket(pkt)
 
-	pkt.ParseTCPData(EtherLen + IPv4MinLen)
+	pkt.ParseTCPData(IPv4MinLen)
 	if *(*uint64)(pkt.Data) != gt_payload {
 		t.Errorf("ParseTCPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
 	}
 }
 
 // Tested functions:
-// ParseEtherIPv4UDPData
 // ParseIPv4UDPData
 // ParseL4Data
 // ParseUDPData
@@ -489,12 +458,6 @@ func TestParseIPv4UDPDataFunctions(t *testing.T) {
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
 
-	pkt.ParseEtherIPv4UDPData()
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseEtherIPv4UDPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
-	}
-	clearPacket(pkt)
-
 	pkt.ParseIPv4UDPData()
 	if *(*uint64)(pkt.Data) != gt_payload {
 		t.Errorf("ParseIPv4UDPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
@@ -507,19 +470,17 @@ func TestParseIPv4UDPDataFunctions(t *testing.T) {
 	}
 	clearPacket(pkt)
 
-	pkt.ParseUDPData(EtherLen + IPv4MinLen)
+	pkt.ParseUDPData(IPv4MinLen)
 	if *(*uint64)(pkt.Data) != gt_payload {
 		t.Errorf("ParseUDPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
 	}
 }
 
 // Tested functions:
-// ParseEtherIPv6Data
-// ParseEtherIPv6TCPData
+// ParseIPv6Data
 // ParseIPv6TCPData
 // ParseL3Data
 // ParseL4Data
-// ParseTCPData
 func TestParseIPv6TCPDataFunctions(t *testing.T) {
 	// IPv6 TCP packet with payload gt_payload
 	gt_payload := uint64(12345)
@@ -533,19 +494,13 @@ func TestParseIPv6TCPDataFunctions(t *testing.T) {
 	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
 	PacketFromByte(parsedPkt, decoded)
-	parsedPkt.ParseEtherIPv6TCP()
+	parsedPkt.ParseIPv6TCP()
 
-	pkt.ParseEtherIPv6Data()
+	pkt.ParseIPv6Data()
 	gotTcp := *(*TCPHdr)(pkt.Data)
 	wantTcp := *(parsedPkt.TCP)
 	if gotTcp != wantTcp {
-		t.Errorf("ParseEtherIPv6Data incorrect result:\ngot:%x\nwant:%x\n", gotTcp, wantTcp)
-	}
-	clearPacket(pkt)
-
-	pkt.ParseEtherIPv6TCPData()
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseEtherIPv6TCPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
+		t.Errorf("ParseIPv6Data incorrect result:\ngot:%x\nwant:%x\n", gotTcp, wantTcp)
 	}
 	clearPacket(pkt)
 
@@ -568,18 +523,11 @@ func TestParseIPv6TCPDataFunctions(t *testing.T) {
 		t.Errorf("ParseL4Data incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
 	}
 	clearPacket(pkt)
-
-	pkt.ParseTCPData(EtherLen + IPv6Len)
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseTCPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
-	}
 }
 
 // Tested functions
-// ParseEtherIPv6UDPData
 // ParseIPv6UDPData
 // ParseL4Data
-// ParseUDPData
 func TestParseIPv6UDPDataFunctions(t *testing.T) {
 	// IPv6 UDP packet with payload gt_payload
 	gt_payload := uint64(12345)
@@ -589,12 +537,6 @@ func TestParseIPv6UDPDataFunctions(t *testing.T) {
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
 	PacketFromByte(pkt, decoded)
-
-	pkt.ParseEtherIPv6UDPData()
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseEtherIPv6UDPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
-	}
-	clearPacket(pkt)
 
 	pkt.ParseIPv6UDPData()
 	if *(*uint64)(pkt.Data) != gt_payload {
@@ -607,19 +549,14 @@ func TestParseIPv6UDPDataFunctions(t *testing.T) {
 		t.Errorf("ParseL4Data incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
 	}
 	clearPacket(pkt)
-
-	pkt.ParseUDPData(EtherLen + IPv6Len)
-	if *(*uint64)(pkt.Data) != gt_payload {
-		t.Errorf("ParseUDPData incorrect result:\ngot:%x\nwant:%x\n", *(*uint64)(pkt.Data), gt_payload)
-	}
 }
 
 func clearPacket(packet *Packet) {
-	packet.Ether = nil
 	packet.IPv4 = nil
 	packet.IPv6 = nil
 	packet.TCP = nil
 	packet.UDP = nil
+	packet.ICMP = nil
 	packet.Data = nil
 }
 
@@ -719,35 +656,35 @@ var (
 	gtLineIPv6UDP = "00000000000000000000000086dd6000000000081100000000000000000000000000000000000000000000000000000000000000000004d2162e00080000"
 )
 
-func TestInitEmptyEtherPacket(t *testing.T) {
+func TestInitEmptyPacket(t *testing.T) {
 	// Create empty packet, set Ether header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherPacket(pkt, 0)
+	InitEmptyPacket(pkt, 0)
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 	pkt.Ether.SAddr = [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineEther)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:EtherLen]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:EtherLen]
 	// DEEP equal for whole packet buffer
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv4Packet(t *testing.T) {
+func TestInitEmptyIPv4Packet(t *testing.T) {
 	// Create empty packet, set IPv4 header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv4Packet(pkt, testPlSize)
+	InitEmptyIPv4Packet(pkt, testPlSize)
 	dst := net.ParseIP("128.9.9.5").To4()
 	src := net.ParseIP("127.0.0.1").To4()
 	pkt.IPv4.DstAddr = binary.LittleEndian.Uint32([]byte(dst))
@@ -756,126 +693,126 @@ func TestInitEmptyEtherIPv4Packet(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv6Packet(t *testing.T) {
+func TestInitEmptyIPv6Packet(t *testing.T) {
 	// Create empty packet, set IPv6 header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv6Packet(pkt, testPlSize)
+	InitEmptyIPv6Packet(pkt, testPlSize)
 	pkt.IPv6.SrcAddr = [16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xaf}
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv4TCPPacket(t *testing.T) {
+func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv4TCPPacket(pkt, 0)
+	InitEmptyIPv4TCPPacket(pkt, 0)
 	pkt.TCP.DstPort = SwapBytesUint16(5678)
 	pkt.TCP.SrcPort = SwapBytesUint16(1234)
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4TCP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen + TCPMinLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv4UDPPacket(t *testing.T) {
+func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv4UDPPacket(pkt, 0)
+	InitEmptyIPv4UDPPacket(pkt, 0)
 	pkt.UDP.DstPort = SwapBytesUint16(5678)
 	pkt.UDP.SrcPort = SwapBytesUint16(1234)
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4UDP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen + UDPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv6TCPPacket(t *testing.T) {
+func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv6TCPPacket(pkt, 0)
+	InitEmptyIPv6TCPPacket(pkt, 0)
 	pkt.TCP.DstPort = SwapBytesUint16(5678)
 	pkt.TCP.SrcPort = SwapBytesUint16(1234)
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6TCP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len + TCPMinLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
 }
 
-func TestInitEmptyEtherIPv6UDPPacket(t *testing.T) {
+func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	InitEmptyEtherIPv6UDPPacket(pkt, 0)
+	InitEmptyIPv6UDPPacket(pkt, 0)
 	pkt.UDP.DstPort = SwapBytesUint16(5678)
 	pkt.UDP.SrcPort = SwapBytesUint16(1234)
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6UDP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb)
+	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
 	PacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len + UDPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Unparsed))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}

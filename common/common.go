@@ -27,9 +27,9 @@ const (
 // Supported L4 types
 const (
 	ICMPNumber = 0x01
-	IPNumber  = 0x04
-	TCPNumber = 0x06
-	UDPNumber = 0x11
+	IPNumber   = 0x04
+	TCPNumber  = 0x06
+	UDPNumber  = 0x11
 )
 
 // These constants keep length of supported headers in bytes.
@@ -49,10 +49,6 @@ const (
 	TCPMinLen  = 20
 	UDPLen     = 8
 )
-
-// EtherIPv6Len is used in packet parsing only when we sure that
-// the next protocol is TCP or UDP.
-const EtherIPv6Len = EtherLen + IPv6Len
 
 type LogType uint8
 
