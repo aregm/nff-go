@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	cores     uint
+	cores   uint
 	outport uint
-	inport uint
+	inport  uint
 )
 
 // Main function for constructing packet processing graph.
@@ -27,7 +27,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)

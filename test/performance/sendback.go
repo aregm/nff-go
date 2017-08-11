@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library to use specified number of CPU cores
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: cores,
 	}
 	flow.SystemInit(&config)

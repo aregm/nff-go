@@ -11,8 +11,8 @@ import (
 
 var (
 	outport uint
-	inport uint
-	cores uint
+	inport  uint
+	cores   uint
 )
 
 // Main function for constructing packet processing graph.
@@ -22,7 +22,7 @@ func main() {
 	flag.UintVar(&cores, "cores", 16, "Specifies number of CPU cores to be used by YANFF library")
 
 	// Initialize YANFF library at requested number of cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: cores,
 	}
 	flow.SystemInit(&config)

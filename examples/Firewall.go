@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	L3Rules   *rules.L3Rules
+	L3Rules *rules.L3Rules
 	outport uint
-	inport uint
+	inport  uint
 )
 
 // Main function for constructing packet processing graph.
@@ -24,7 +24,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize YANFF library at 8 cores by default
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 8,
 	}
 	flow.SystemInit(&config)

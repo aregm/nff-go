@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	L3Rules    *rules.L3Rules
-	inport  uint
+	L3Rules  *rules.L3Rules
+	inport   uint
 	outport1 uint
 	outport2 uint
 	outport3 uint
@@ -29,7 +29,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at requested number of cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)

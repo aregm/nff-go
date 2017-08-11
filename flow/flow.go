@@ -260,7 +260,7 @@ type Config struct {
 	// needs to recalculate their checksums. If application doesn't
 	// modify many packets, it may chose to calculate checksums in SW
 	// and leave this flag off. Default value is false.
-	HWTXChecksum        bool
+	HWTXChecksum bool
 	// Specifies number of mbufs in mempool per port. Default value is
 	// 8191.
 	MbufNumber uint
