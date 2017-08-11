@@ -4,6 +4,8 @@
 
 #define _GNU_SOURCE
 
+#include <stdbool.h>
+
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>

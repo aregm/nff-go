@@ -12,7 +12,8 @@ extern void recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreId
 extern void send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreId);
 extern void stop(struct rte_ring *);
 extern void initCPUSet(uint8_t coreId, cpu_set_t* cpuset);
-extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr *addr);
+extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
+    struct ether_addr *addr, bool hwtxchecksum);
 extern struct rte_mempool * createMempool(uint32_t num_mbuf, uint32_t mbuf_cache_size);
 extern int directStop(int pkts_for_free_number, struct rte_mbuf ** buf);
 extern char ** makeArgv(int n);
@@ -119,6 +120,71 @@ func TrimMbuf(m *Mbuf, length uint) bool {
 	m.data_len -= C.uint16_t(length)
 	m.pkt_len -= C.uint32_t(length)
 	return true
+}
+
+func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
+	// PKT_TX_IP_CKSUM | PKT_TX_IPV4
+	mb.ol_flags = (1 << 54) | (1 << 55)
+	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon3[1] = uint8(l3len >> 1)
+	mb.anon3[2] = 0
+	mb.anon3[3] = 0
+	mb.anon3[4] = 0
+	mb.anon3[5] = 0
+	mb.anon3[6] = 0
+	mb.anon3[7] = 0
+}
+
+func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
+	// PKT_TX_UDP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
+	mb.ol_flags = (3 << 52) | (1 << 54) | (1 << 55)
+	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon3[1] = uint8(l3len >> 1)
+	mb.anon3[2] = 0
+	mb.anon3[3] = 0
+	mb.anon3[4] = 0
+	mb.anon3[5] = 0
+	mb.anon3[6] = 0
+	mb.anon3[7] = 0
+}
+
+func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
+	// PKT_TX_TCP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
+	mb.ol_flags = (1 << 52) | (1 << 54) | (1 << 55)
+	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon3[1] = uint8(l3len >> 1)
+	mb.anon3[2] = 0
+	mb.anon3[3] = 0
+	mb.anon3[4] = 0
+	mb.anon3[5] = 0
+	mb.anon3[6] = 0
+	mb.anon3[7] = 0
+}
+
+func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
+	// PKT_TX_UDP_CKSUM | PKT_TX_IPV6
+	mb.ol_flags = (3 << 52) | (1 << 56)
+	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon3[1] = uint8(l3len >> 1)
+	mb.anon3[2] = 0
+	mb.anon3[3] = 0
+	mb.anon3[4] = 0
+	mb.anon3[5] = 0
+	mb.anon3[6] = 0
+	mb.anon3[7] = 0
+}
+
+func SetTXIPv6TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
+	// PKT_TX_TCP_CKSUM | PKT_TX_IPV4
+	mb.ol_flags = (1 << 52) | (1 << 56)
+	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon3[1] = uint8(l3len >> 1)
+	mb.anon3[2] = 0
+	mb.anon3[3] = 0
+	mb.anon3[4] = 0
+	mb.anon3[5] = 0
+	mb.anon3[6] = 0
+	mb.anon3[7] = 0
 }
 
 // These constants are used by packet package to parse protocol headers
@@ -402,7 +468,7 @@ func GetPortsNumber() int {
 	return int(C.rte_eth_dev_count())
 }
 
-func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16) {
+func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) {
 	addr := make([]byte, C.ETHER_ADDR_LEN)
 	var mempool *C.struct_rte_mempool
 	if receiveQueuesNumber != 0 {
@@ -412,7 +478,7 @@ func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16)
 		mempool = nil
 	}
 	if C.port_init(C.uint8_t(port), C.uint16_t(receiveQueuesNumber), C.uint16_t(sendQueuesNumber),
-		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0])))) != 0 {
+		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
 		common.LogError(common.Initialization, "Cannot init port ", port, "!")
 	}
 	t := hex.Dump(addr)

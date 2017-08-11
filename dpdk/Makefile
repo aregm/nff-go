@@ -14,6 +14,8 @@ include $(PATH_TO_MK)/leaf.mk
 # Main DPDK variables
 DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export WORKDIR=/workdir
+# Uncomment to build DEBUG DPDK
+# EXTRA_CFLAGS = -g -O0
 
 all: pktgen
 	cp $(PKTGEN_DIR)/Pktgen.lua .
