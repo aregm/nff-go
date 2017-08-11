@@ -15,7 +15,7 @@ var L3Rules *rules.L3Rules
 // Main function for constructing packet processing graph.
 func main() {
 	// Initialize YANFF library at 16 cores by default
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)

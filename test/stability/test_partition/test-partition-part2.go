@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	inport  uint
+	inport   uint
 	outport1 uint
 	outport2 uint
 )
@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
-	config := flow.Config {
+	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
