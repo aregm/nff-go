@@ -650,6 +650,26 @@ func InitEmptyIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+// InitEmptyIPv6ICMPPacket initializes input packet with preallocated plSize of bytes for payload
+// and init pointers to Ethernet, IPv6 and ICMP headers.
+func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
+	bufSize := plSize + EtherLen + IPv6Len + ICMPLen
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyIPv6ICMPPacket: Cannot append mbuf")
+		return false
+	}
+	packet.ParseIPv6()
+	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.unparsed() + IPv6Len))
+	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
+	packet.Data = unsafe.Pointer(packet.unparsed() + IPv6Len + ICMPLen)
+
+	// Next fields not required by pktgen to accept packet. But set anyway
+	packet.IPv6.Proto = ICMPNumber
+	packet.IPv6.PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.IPv6.VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	return true
+}
+
 func SetHWCksumOLFlags(packet *Packet) {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV4Number) {
 		packet.IPv4.HdrChecksum = 0

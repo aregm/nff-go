@@ -32,6 +32,12 @@ const (
 	UDPNumber  = 0x11
 )
 
+// Supported ICMP Types
+const (
+	ICMP_TYPE_ECHO_REQUEST  uint8 = 8
+	ICMP_TYPE_ECHO_RESPONSE uint8 = 0
+)
+
 // These constants keep length of supported headers in bytes.
 //
 // IPv6Len - minimum length of IPv6 header in bytes. It can be higher and it

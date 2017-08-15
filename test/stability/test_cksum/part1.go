@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -26,15 +27,16 @@ const (
 	MAXL3 = 2
 	UDP   = 0
 	TCP   = 1
+	ICMP  = 2
 	MAXL4 = 2
 )
 
 var (
 	totalPackets uint64 = 10
 
-	// Packet should hold two int64 fields
-	MIN_PACKET_SIZE int = int(unsafe.Sizeof(sentPackets) * 2)
-	MAX_PACKET_SIZE int = 1400
+	// Packet should hold at least two int64 fields
+	MIN_PAYLOAD_SIZE int = int(unsafe.Sizeof(sentPackets) * 2)
+	MAX_PAYLOAD_SIZE int = 1400
 
 	sentPackets     uint64     = 0
 	receivedPackets uint64     = 0
@@ -51,6 +53,7 @@ var (
 	l3type       int
 	useUDP       bool
 	useTCP       bool
+	useICMP      bool
 	randomL4     bool = false
 	l4type       int
 	packetLength int
@@ -70,6 +73,7 @@ func main() {
 	flag.UintVar(&outport, "outport", 0, "Output port number")
 	flag.BoolVar(&useUDP, "udp", false, "Generate UDP packets")
 	flag.BoolVar(&useTCP, "tcp", false, "Generate TCP packets")
+	flag.BoolVar(&useICMP, "icmp", false, "Generate ICMP Echo Request packets")
 	flag.BoolVar(&useIPv4, "ipv4", false, "Generate IPv4 packets")
 	flag.BoolVar(&useIPv6, "ipv6", false, "Generate IPv6 packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
@@ -101,20 +105,28 @@ func main() {
 		randomL3 = true
 	}
 
-	if !useUDP && !useTCP {
+	if !useUDP && !useTCP && !useICMP {
 		println("No L4 packet type mode selected. Enabling UDP by default")
 		useUDP = true
 	}
 
-	if useUDP && !useTCP {
+	if useUDP && !useTCP && !useICMP {
 		println("UDP L4 mode is enabled")
 		l4type = UDP
-	} else if !useUDP && useTCP {
+	} else if !useUDP && useTCP && !useICMP {
 		println("TCP L4 mode is enabled")
 		l4type = TCP
+	} else if !useUDP && !useTCP && useICMP {
+		println("ICMP L4 mode is enabled")
+		l4type = ICMP
 	} else {
 		println("UDP and TCP L4 modes are enabled")
 		randomL4 = true
+	}
+
+	if useICMP && hwol {
+		println("Cannot use HW offloading with ICMP protocol")
+		os.Exit(1)
 	}
 
 	var m sync.Mutex
@@ -157,9 +169,9 @@ func main() {
 	}
 }
 
-func generatePacketLength() uint16 {
+func generatePayloadLength() uint16 {
 	if packetLength == 0 {
-		return uint16(rnd.Intn(MAX_PACKET_SIZE-MIN_PACKET_SIZE) + MIN_PACKET_SIZE)
+		return uint16(rnd.Intn(MAX_PAYLOAD_SIZE-MIN_PAYLOAD_SIZE) + MIN_PAYLOAD_SIZE)
 	} else {
 		return uint16(packetLength)
 	}
@@ -176,12 +188,16 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	if l3type == IPV4 {
 		if l4type == UDP {
 			generateIPv4UDP(emptyPacket)
+		} else if l4type == ICMP {
+			generateIPv4ICMP(emptyPacket)
 		} else {
 			generateIPv4TCP(emptyPacket)
 		}
 	} else {
 		if l4type == UDP {
 			generateIPv6UDP(emptyPacket)
+		} else if l4type == ICMP {
+			generateIPv6ICMP(emptyPacket)
 		} else {
 			generateIPv6TCP(emptyPacket)
 		}
@@ -239,8 +255,14 @@ func initPacketTCP(emptyPacket *packet.Packet) {
 	emptyPacket.TCP.DstPort = packet.SwapBytesUint16(4567)
 }
 
+func initPacketICMP(emptyPacket *packet.Packet) {
+	emptyPacket.ICMP.Type = common.ICMP_TYPE_ECHO_REQUEST
+	emptyPacket.ICMP.Identifier = 0xdead
+	emptyPacket.ICMP.SeqNum = 0xbeef
+}
+
 func generateIPv4UDP(emptyPacket *packet.Packet) {
-	length := generatePacketLength()
+	length := generatePayloadLength()
 	packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
@@ -256,7 +278,7 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 }
 
 func generateIPv4TCP(emptyPacket *packet.Packet) {
-	length := generatePacketLength()
+	length := generatePayloadLength()
 	packet.InitEmptyIPv4TCPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
@@ -271,8 +293,22 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	}
 }
 
+func generateIPv4ICMP(emptyPacket *packet.Packet) {
+	length := generatePayloadLength()
+	packet.InitEmptyIPv4ICMPPacket(emptyPacket, uint(length))
+
+	initPacketCommon(emptyPacket, length)
+	initPacketIPv4(emptyPacket)
+	initPacketICMP(emptyPacket)
+
+	if !hwol {
+		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
+	}
+}
+
 func generateIPv6UDP(emptyPacket *packet.Packet) {
-	length := generatePacketLength()
+	length := generatePayloadLength()
 	packet.InitEmptyIPv6UDPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
@@ -287,7 +323,7 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 }
 
 func generateIPv6TCP(emptyPacket *packet.Packet) {
-	length := generatePacketLength()
+	length := generatePayloadLength()
 	packet.InitEmptyIPv6TCPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
@@ -298,6 +334,19 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.IPv6))
 	} else {
 		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
+	}
+}
+
+func generateIPv6ICMP(emptyPacket *packet.Packet) {
+	length := generatePayloadLength()
+	packet.InitEmptyIPv6ICMPPacket(emptyPacket, uint(length))
+
+	initPacketCommon(emptyPacket, length)
+	initPacketIPv6(emptyPacket)
+	initPacketICMP(emptyPacket)
+
+	if !hwol {
+		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
 	}
 }
 
