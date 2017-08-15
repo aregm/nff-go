@@ -241,7 +241,7 @@ func initPacketTCP(emptyPacket *packet.Packet) {
 
 func generateIPv4UDP(emptyPacket *packet.Packet) {
 	length := generatePacketLength()
-	packet.InitEmptyEtherIPv4UDPPacket(emptyPacket, uint(length))
+	packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv4(emptyPacket)
@@ -257,7 +257,7 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 
 func generateIPv4TCP(emptyPacket *packet.Packet) {
 	length := generatePacketLength()
-	packet.InitEmptyEtherIPv4TCPPacket(emptyPacket, uint(length))
+	packet.InitEmptyIPv4TCPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv4(emptyPacket)
@@ -273,7 +273,7 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 
 func generateIPv6UDP(emptyPacket *packet.Packet) {
 	length := generatePacketLength()
-	packet.InitEmptyEtherIPv6UDPPacket(emptyPacket, uint(length))
+	packet.InitEmptyIPv6UDPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv6(emptyPacket)
@@ -288,7 +288,7 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 
 func generateIPv6TCP(emptyPacket *packet.Packet) {
 	length := generatePacketLength()
-	packet.InitEmptyEtherIPv6TCPPacket(emptyPacket, uint(length))
+	packet.InitEmptyIPv6TCPPacket(emptyPacket, uint(length))
 
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv6(emptyPacket)
