@@ -230,3 +230,23 @@ func CalculateIPv6TCPChecksum(p *Packet) uint16 {
 
 	return ^reduceChecksum(sum)
 }
+
+// Calculate ICMP checksum in case if L3 protocol is IPv4.
+func CalculateIPv4ICMPChecksum(p *Packet) uint16 {
+	hdr := p.IPv4
+	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
+
+	sum := calculateDataChecksum(unsafe.Pointer(p.ICMP), int(dataLength), 0)
+
+	return ^reduceChecksum(sum)
+}
+
+// Calculate ICMP checksum in case if L3 protocol is IPv6.
+func CalculateIPv6ICMPChecksum(p *Packet) uint16 {
+	hdr := p.IPv6
+	dataLength := SwapBytesUint16(hdr.PayloadLen)
+
+	sum := calculateDataChecksum(unsafe.Pointer(p.ICMP), int(dataLength), 0)
+
+	return ^reduceChecksum(sum)
+}
