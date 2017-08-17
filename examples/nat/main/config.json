@@ -1,12 +1,12 @@
 {
     "private-port": {
         "index": 0,
-        "hwaddr": "27:FF:6D:91:A4:15",
+        "dst_mac": "3c:fd:fe:a4:d3:b0",
         "subnet": "192.168.1.1/24"
     },
     "public-port": {
         "index": 1,
-        "hwaddr": "7F:4E:C3:8D:E3:10",
+        "dst_mac": "3c:fd:fe:a4:d3:b1",
         "subnet": "10.1.1.1"
     }
 }

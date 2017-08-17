@@ -21,7 +21,7 @@ type MACAddress [common.EtherAddrLen]uint8
 
 type IPv4Port struct {
 	Index         uint8      `json:"index"`
-	DstMACAddress MACAddress `json:"hwaddr"`
+	DstMACAddress MACAddress `json:"dst_mac"`
 	Subnet        IPv4Subnet `json:"subnet"`
 }
 
