@@ -11,7 +11,6 @@ import (
 	"github.com/intel-go/yanff/packet"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 type Tuple struct {
@@ -74,13 +73,12 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 
 // Ingress translation
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	l3offset := pkt.ParseL2()
-	var l4offset int
+	var l4offset uint8
 
 	// Parse packet type and address
 	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.IPv4 = (*packet.IPv4Hdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l3offset)))
-		l4offset = l3offset + int((pkt.IPv4.VersionIhl & 0x0f) << 2)
+		pkt.ParseIPv4()
+		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
 	} else {
 		// We don't currently support anything except for IPv4
 		return false
@@ -93,13 +91,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 	// Parse packet destination port
 	if protocol == common.TCPNumber {
-		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseTCP(l4offset)
 		pub2priKey.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
 	} else if protocol == common.UDPNumber {
-		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseUDP(l4offset)
 		pub2priKey.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
 	} else if protocol == common.ICMPNumber {
-		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseICMP(l4offset)
 		pub2priKey.port = pkt.ICMP.Identifier
 	} else {
 		return false
@@ -151,13 +149,12 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 // Egress translation
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	l3offset := pkt.ParseL2()
-	var l4offset int
+	var l4offset uint8
 
 	// Parse packet type and address
 	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.IPv4 = (*packet.IPv4Hdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l3offset)))
-		l4offset = l3offset + int((pkt.IPv4.VersionIhl & 0x0f) << 2)
+		pkt.ParseIPv4()
+		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
 	} else {
 		// We don't currently support anything except for IPv4
 		return false
@@ -171,13 +168,13 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Parse packet source port
 	if protocol == common.TCPNumber {
-		pkt.TCP = (*packet.TCPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseTCP(l4offset)
 		pri2pubKey.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
 	} else if protocol == common.UDPNumber {
-		pkt.UDP = (*packet.UDPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseUDP(l4offset)
 		pri2pubKey.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
 	} else if protocol == common.ICMPNumber {
-		pkt.ICMP = (*packet.ICMPHdr)(unsafe.Pointer(pkt.Unparsed + uintptr(l4offset)))
+		pkt.ParseICMP(l4offset)
 		pri2pubKey.port = pkt.ICMP.Identifier
 	} else {
 		return false
