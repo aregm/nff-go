@@ -32,6 +32,7 @@ func main() {
 	log.Println("NAT config:", nat.Natconfig)
 
 	cores := flag.Uint("cores", 44, "Specify number of CPU cores to use")
+	flag.Parse()
 	// Init YANFF system at 16 available cores
 	yanffconfig := flow.Config {
 		CPUCoresNumber: *cores,

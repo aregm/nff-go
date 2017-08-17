@@ -41,6 +41,7 @@ var (
 	loggedAdd int = 0
 	loggedDelete int = 0
 	loggedPri2PubLookup int = 0
+	loggedPub2PriLookup int = 0
 )
 
 func init() {
@@ -62,8 +63,8 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 	t.Store(privEntry, pubEntry)
 	t.Store(pubEntry, privEntry)
 
-	if debug && loggedAdd < 100 {
-		println("Added new connection:", privEntry.String(), "->", pubEntry.String(), "table", &table[protocol])
+	if debug && loggedAdd < 2000 {
+		println("Added new connection", loggedAdd, ":", privEntry.String(), "->", pubEntry.String(), "table", &table[protocol])
 		loggedAdd++
 	}
 
@@ -110,14 +111,21 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		if debug && loggedDrop < 100 {
-			println("Drop public2private packet because key",
+		if debug && loggedDrop < 2000 {
+			println("Drop public2private packet", loggedDrop, "because key",
 				pub2priKey.String(), "was not found")
 			loggedDrop++
 		}
 		return false
 	} else {
 		value := v.(Tuple)
+
+		if debug && loggedPub2PriLookup < 2000 {
+			println("Lookup pub2pri", loggedPub2PriLookup, ":", pub2priKey.String(),
+				"found =", found, value.String())
+			loggedPub2PriLookup++
+		}
+
 		// Check whether connection is too old
 		if portmap[protocol][pub2priKey.port].lastused.Add(CONNECTION_TIMEOUT).After(time.Now()) {
 			portmap[protocol][pub2priKey.port].lastused = time.Now()
@@ -183,15 +191,18 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Do lookup
 	var value Tuple
 	v, found := table[protocol].Load(pri2pubKey)
-	if debug && loggedPri2PubLookup < 100 {
-		println("Lookup", pri2pubKey.String(), "found =", found, "table =", &table[protocol])
-		loggedPri2PubLookup++
-	}
 	if !found {
 		value = allocateNewEgressConnection(protocol, pri2pubKey,
 			Natconfig.PublicPort.Subnet.Addr)
 	} else {
 		value = v.(Tuple)
+
+		if debug && loggedPri2PubLookup < 2000 {
+			println("Lookup pri2pub", loggedPri2PubLookup, ":", pri2pubKey.String(),
+				"found =", found, value.String())
+			loggedPri2PubLookup++
+		}
+
 		portmap[protocol][value.port].lastused = time.Now()
 	}
 

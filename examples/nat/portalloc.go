@@ -40,7 +40,7 @@ func init() {
 }
 
 func deleteOldConnection(protocol uint8, port int) {
-	t := table[protocol]
+	t := &table[protocol]
 
 	pub2priKey := Tuple{
 		addr: portmap[protocol][port].addr,
@@ -49,17 +49,17 @@ func deleteOldConnection(protocol uint8, port int) {
 	pri2pubKey, found := t.Load(pub2priKey)
 
 	if found {
-		if debug && loggedDelete < 100 {
+		if debug && loggedDelete < 2000 {
 			pri2pubVal := pri2pubKey.(Tuple)
-			println("Deleting connection:", pri2pubVal.String(), "->", pub2priKey.String())
+			println("Deleting connection", loggedDelete, ":", pri2pubVal.String(), "->", pub2priKey.String())
 			loggedDelete++
 		}
 
 		t.Delete(pri2pubKey)
 		t.Delete(pub2priKey)
 	} else {
-		if debug && loggedDelete < 100 {
-			println("Failing to delete connection:", pub2priKey.String())
+		if debug && loggedDelete < 2000 {
+			println("Failing to delete connection", loggedDelete, ":", pub2priKey.String())
 			loggedDelete++
 		}
 	}
