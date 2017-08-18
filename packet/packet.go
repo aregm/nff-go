@@ -321,6 +321,10 @@ func (packet *Packet) ParseUDP(offset uint8) {
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 }
 
+func (packet *Packet) ParseICMP(offset uint8) {
+	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
+}
+
 func (packet *Packet) ParseUDPData(offset uint8) {
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 	packet.Data = unsafe.Pointer(packet.unparsed() + uintptr(offset) + UDPLen)
