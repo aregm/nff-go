@@ -12,6 +12,11 @@
 #include <rte_ring.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
@@ -31,7 +36,7 @@
 // This macros clears packet structure which is stored inside mbuf
 // mbufClear clears IPv4, IPv6, TCP and UDP protocols
 // 32 offset clears ICMP protocol
-// 40 offset is a data oddset and shouldn't be cleared
+// 40 offset is a data offset and shouldn't be cleared
 // 48 offset is L2 offset and is always begining of packet
 // 56 offset is CMbuf offset and is initilized when mempool is created
 #define mbufInit(buf) \
@@ -39,11 +44,13 @@
 	*(char**)((char*)(buf) + mbufStructSize + 32) = 0; \
 	*(char**)((char*)(buf) + mbufStructSize + 48) = (char*)(buf) + defaultStart;
 
+int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
+
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
 long stop_freed = 0;
 
-int mbufStructSize;
+int64_t mbufStructSize;
 int headroomSize;
 int defaultStart;
 char mempoolName[9] = "mempool1\0";
@@ -271,8 +278,6 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	headroomSize = RTE_PKTMBUF_HEADROOM;
 	defaultStart = mbufStructSize + headroomSize;
 }
-
-int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
 
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;

@@ -30,14 +30,20 @@
 package flow
 
 import (
+	"bytes"
+	"encoding/binary"
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/scheduler"
+	"io"
+	"os"
 	"runtime"
 	"strconv"
+	"sync/atomic"
 	"time"
+	"unsafe"
 )
 
 var openFlowsNumber = uint32(0)
@@ -225,6 +231,36 @@ func makeHandler(in *low.Queue, out *low.Queue,
 	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
 }
 
+type writeParameters struct {
+	in       *low.Queue
+	filename string
+}
+
+func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
+	par := new(writeParameters)
+	par.in = in
+	par.filename = filename
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("writer", ffCount, write, par)
+}
+
+type readParameters struct {
+	out      *low.Queue
+	filename string
+	mempool  *low.Mempool
+	repcount int32
+}
+
+func makeReader(filename string, out *low.Queue, repcount int32) *scheduler.FlowFunction {
+	par := new(readParameters)
+	par.out = out
+	par.filename = filename
+	par.mempool = low.CreateMempool()
+	par.repcount = repcount
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
+}
+
 var burstSize uint
 var sizeMultiplier uint
 var schedTime uint
@@ -405,6 +441,33 @@ func generateRingName() string {
 	s := strconv.Itoa(ringName)
 	ringName++
 	return s
+}
+
+// SetWriter adds write function to flow graph.
+// Gets flow which packets will be written to file and
+// target file name.
+// Function can panic during execution.
+func SetWriter(IN *Flow, filename string) {
+	checkFlow(IN)
+	write := makeWriter(filename, IN.current)
+	schedState.UnClonable = append(schedState.UnClonable, write)
+	IN.current = nil
+	openFlowsNumber--
+}
+
+// SetReader adds read function to flow graph.
+// Gets name of pcap formatted file and number of reads. If repcount = -1,
+// file is read infinitely in circle.
+// Returns new opened flow with read packets.
+// Function can panic during execution.
+func SetReader(filename string, repcount int32) (OUT *Flow) {
+	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	read := makeReader(filename, ring, repcount)
+	schedState.UnClonable = append(schedState.UnClonable, read)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT
 }
 
 // SetReceiver adds receive function to flow graph.
@@ -1048,6 +1111,176 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	}
 }
 
+func write(parameters interface{}, coreId uint8) {
+	wp := parameters.(*writeParameters)
+	IN := wp.in
+	filename := wp.filename
+
+	bufIn := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Create(filename)
+	check(err)
+	defer f.Close()
+
+	WritePcapGlobalHdr(f)
+	for {
+		n := IN.DequeueBurst(bufIn, 1)
+		if n == 0 {
+			continue
+		}
+		tempPacket = packet.ExtractPacket(bufIn[0])
+		WritePcapOnePacket(tempPacket, f)
+	}
+}
+
+func read(parameters interface{}, coreId uint8) {
+	rp := parameters.(*readParameters)
+	OUT := rp.out
+	filename := rp.filename
+	mempool := rp.mempool
+	repcount := rp.repcount
+
+	buf := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Open(filename)
+	check(err)
+	defer f.Close()
+
+	// Read pcap gloabl header once
+	var glHdr pcapGlobHdr
+	readPcapGlobalHdr(f, &glHdr)
+
+	count := int32(0)
+
+	for {
+		low.AllocateMbufs(buf, mempool)
+		tempPacket = packet.ExtractPacket(buf[0])
+		isEOF := readOnePacket(tempPacket, f)
+		if isEOF {
+			atomic.AddInt32(&count, 1)
+			if count == repcount {
+				break
+			}
+			_, err := f.Seek(int64(unsafe.Sizeof(glHdr)), 0)
+			check(err)
+			readOnePacket(tempPacket, f)
+		}
+		safeEnqueue(OUT, buf, 1)
+	}
+}
+
+// Pcap global header
+type pcapGlobHdr struct {
+	MagicNumber  uint32 /* magic number */
+	VersionMajor uint16 /* major version number */
+	VersionMinor uint16 /* minor version number */
+	Thiszone     int32  /* GMT to local correction */
+	Sigfigs      uint32 /* accuracy of timestamps */
+	Snaplen      uint32 /* max length of captured packets, in octets */
+	Network      uint32 /* data link type */
+}
+
+// Pcap packet header
+type pcapRecHdr struct {
+	TsSec   uint32 /* timestamp seconds */
+	TsUsec  uint32 /* timestamp microseconds */
+	InclLen uint32 /* number of octets of packet saved in file */
+	OrigLen uint32 /* actual length of packet */
+}
+
+// Writes global pcap header into file.
+func WritePcapGlobalHdr(f *os.File) {
+	glHdr := pcapGlobHdr{
+		MagicNumber:  0xa1b2c3d4,
+		VersionMajor: 2,
+		VersionMinor: 4,
+		Snaplen:      65535,
+		Network:      1,
+	}
+	buffer := bytes.Buffer{}
+	err := binary.Write(&buffer, binary.LittleEndian, &glHdr)
+	check(err)
+
+	_, err = f.Write(buffer.Bytes())
+	check(err)
+}
+
+// Write one packet with pcap header in file. Assumes global
+// pcap header is already present in file.
+func WritePcapOnePacket(pkt *packet.Packet, f *os.File) {
+	bytes := low.GetRawPacketBytesMbuf(pkt.CMbuf)
+	writePcapRecHdr(f, bytes)
+	writePacketBytes(f, bytes)
+}
+
+func writePcapRecHdr(f *os.File, pktBytes []byte) error {
+	t := time.Now()
+	hdr := pcapRecHdr{
+		TsSec:   uint32(t.Unix()),
+		TsUsec:  uint32(t.UnixNano() - t.Unix()*1e9),
+		InclLen: uint32(len(pktBytes)),
+		OrigLen: uint32(len(pktBytes)),
+	}
+	buffer := bytes.Buffer{}
+	err := binary.Write(&buffer, binary.LittleEndian, &hdr)
+	check(err)
+
+	_, err = f.Write(buffer.Bytes())
+	check(err)
+	return nil
+}
+
+func writePacketBytes(f *os.File, pktBytes []byte) {
+	_, err := f.Write(pktBytes)
+	check(err)
+}
+
+func readPcapGlobalHdr(f *os.File, glHdr *pcapGlobHdr) {
+	data := make([]byte, unsafe.Sizeof(*glHdr))
+	_, err := f.Read(data)
+	check(err)
+
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.LittleEndian, glHdr)
+	check(err)
+}
+
+func readPcapRecHdr(f *os.File, hdr *pcapRecHdr) error {
+	data := make([]byte, unsafe.Sizeof(*hdr))
+	_, err := f.Read(data)
+
+	if err != nil {
+		return err
+	}
+
+	buffer := bytes.NewBuffer(data)
+	err = binary.Read(buffer, binary.LittleEndian, hdr)
+	check(err)
+	return nil
+}
+
+func readPacketBytes(f *os.File, inclLen uint32) []byte {
+	pkt := make([]byte, inclLen)
+	_, err := f.Read(pkt)
+	check(err)
+	return pkt
+}
+
+func readOnePacket(pkt *packet.Packet, f *os.File) bool {
+	var hdr pcapRecHdr
+	err := readPcapRecHdr(f, &hdr)
+	if err == io.EOF {
+		return true
+	} else {
+		check(err)
+	}
+	bytes := readPacketBytes(f, hdr.InclLen)
+	packet.PacketFromByte(pkt, bytes)
+	return false
+}
+
 // This function tries to write elements to input ring. However
 // if this ring can't get these elements they will be placed
 // inside stop ring which is emptied in separate thread.
@@ -1096,5 +1329,11 @@ func checkSystem() {
 				common.LogWarning(common.Initialization, "Port", createdPorts[i].port, "has unused send queue. Performance can be lower than it is expected!")
 			}
 		}
+	}
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
 	}
 }
