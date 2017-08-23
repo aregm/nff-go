@@ -1,11 +1,58 @@
 # YANFF - Yet Another Network Function Framework 
 
 ## What it is
-
 YANFF is a set of libraries for creating and deploying cloud-native Network
 Functions (NFs). It simplifies the creation of network functions without
-sacrificing performance. Network functions are written in Go using high-level
-abstractions like flows and packets.
+sacrificing performance. 
+* Higher level abstractions than DPDK. Using DPDK as a fast I/O engine for performance
+* Go language: safety, productivity, performance, concurrency
+* Network functions are application programs not virtual machines
+* Built-in scheduler to auto-scale processing based on input traffic. Both up and down.
+
+### Benefits:
+* Easily leverage Intel hardware capabilities: multi-cores, AES-NI, CAT, QAT, DPDK
+* 10x reduction in lines of code
+* No need to be an expert network programmer to develop performant network function
+* Similar performance with C/DPDK per box 
+* No need to worry on elasticity - done automatically
+* Take advantage of cloud native deployment: continuous delivery, micro-services, containers
+
+### Feel the difference
+Simple ACL based firewall
+```Go
+func main() {
+	// Initialize YANFF library to use 8 cores max.   
+	config := flow.Config{
+		CPUCoresNumber: 8,
+	}
+	flow.SystemInit(&config)
+
+	// Get filtering rules from access control file.
+	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
+
+	// Receive packets from zero port. Receive queue will be added automatically.
+	inputFlow := flow.SetReceiver(0)
+
+	// Separate packet flow based on ACL.
+	rejectFlow := flow.SetSeparator(inputFlow, L3Separator, nil)
+
+	// Drop rejected packets.
+	flow.SetStopper(rejectFlow)
+
+	// Send accepted packets to first port. Send queue will be added automatically.
+	flow.SetSender(inputFlow, 1)
+
+	// Begin to process packets.
+	flow.SystemStart()
+}
+
+// User defined function for separating packets
+func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
+	currentPacket.ParseL4()
+	// Return whether packet is accepted or not. Based on ACL rules.
+	return rules.L3_ACL_permit(currentPacket, L3Rules)
+}
+```
 
 YANFF is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
