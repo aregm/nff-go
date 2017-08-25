@@ -17,7 +17,9 @@ yanff_ring_create(const char *name, unsigned count, int socket_id, unsigned flag
 	r = malloc(sizeof(struct yanff_ring));
 
 	r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
-	r->internal_DPDK_ring = r->DPDK_ring->ring;
-	r->offset = sizeof(r->DPDK_ring->ring[0]);
+	// Ring elements are located immidiately behind rte_ring structure
+	// So ring[1] is pointed to the beginning of this data
+	r->internal_DPDK_ring = &(r->DPDK_ring)[1];
+	r->offset = sizeof(void*);
 	return r;
 }
