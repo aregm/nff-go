@@ -33,7 +33,6 @@ import (
 	"runtime"
 	"sync/atomic"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -215,7 +214,7 @@ func (self *Queue) DequeueBurst(buffer []uintptr, count uint) uint {
 // Heavily based on DPDK ENQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
 func _ENQUEUE_PTRS(r *C.struct_yanff_ring, prod_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr /*const*/) {
-	var size C.uint32_t = r.DPDK_ring.prod.size
+	var size C.uint32_t = r.DPDK_ring.size
 	var idx C.uint32_t = prod_head & mask
 	var i uint
 	if idx+C.uint32_t(n) < size { //likely
@@ -256,7 +255,7 @@ func _ENQUEUE_PTRS(r *C.struct_yanff_ring, prod_head C.uint32_t, mask C.uint32_t
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
 func _DEQUEUE_PTRS(r *C.struct_yanff_ring, cons_head C.uint32_t, mask C.uint32_t, n uint, obj_table []uintptr) {
 	var idx C.uint32_t = cons_head & mask
-	var size C.uint32_t = r.DPDK_ring.cons.size
+	var size C.uint32_t = r.DPDK_ring.size
 	var i uint
 	if idx+C.uint32_t(n) < size { //likely
 		for i = 0; i < (n & (^(uint(0x3)))); i, idx = i+4, idx+4 {
@@ -298,8 +297,7 @@ func yanff_ring_mp_do_enqueue(r *C.struct_yanff_ring, obj_table []uintptr, n uin
 	var cons_tail, free_entries C.uint32_t
 	var max uint = n //max should be const but can't
 	var success bool = false
-	var rep uint = 0
-	var mask C.uint32_t = r.DPDK_ring.prod.mask
+	var mask C.uint32_t = r.DPDK_ring.mask
 
 	// move prod.head atomically
 	for success == false { //unlikely
@@ -337,15 +335,6 @@ func yanff_ring_mp_do_enqueue(r *C.struct_yanff_ring, obj_table []uintptr, n uin
 	// we need to wait for them to complete
 	for r.DPDK_ring.prod.tail != prod_head { //unlikely
 		C.rte_pause()
-		rep++
-		// Set RTE_RING_PAUSE_REP_COUNT to avoid spin too long waiting
-		// for other thread finish. It gives pre-empted thread a chance
-		// to proceed and finish with ring dequeue operation.
-		if (C.RTE_RING_PAUSE_REP_COUNT != 0) && (rep == C.RTE_RING_PAUSE_REP_COUNT) {
-			rep = 0
-			// TODO C variant has sched_yield here we can use "runtime.Gosched()" or "C.sched_yield()"
-			time.Sleep(time.Millisecond)
-		}
 	}
 	r.DPDK_ring.prod.tail = prod_next
 	return n
@@ -357,8 +346,7 @@ func yanff_ring_mc_do_dequeue(r *C.struct_yanff_ring, obj_table []uintptr, n uin
 	var cons_next, entries C.uint32_t
 	var max uint = n // max should be const but can't
 	var success bool = false
-	var rep uint = 0
-	var mask C.uint32_t = r.DPDK_ring.prod.mask
+	var mask C.uint32_t = r.DPDK_ring.mask
 
 	// move cons.head atomically
 	for success == false { //unlikely
@@ -395,16 +383,6 @@ func yanff_ring_mc_do_dequeue(r *C.struct_yanff_ring, obj_table []uintptr, n uin
 	// we need to wait for them to complete
 	for r.DPDK_ring.cons.tail != cons_head { //unlikely
 		C.rte_pause()
-		rep++
-
-		// Set RTE_RING_PAUSE_REP_COUNT to avoid spin too long waiting
-		// for other thread finish. It gives pre-empted thread a chance
-		// to proceed and finish with ring dequeue operation.
-		if (C.RTE_RING_PAUSE_REP_COUNT != 0) && (rep == C.RTE_RING_PAUSE_REP_COUNT) {
-			rep = 0
-			// TODO C variant has sched_yield here. We can use "runtime.Gosched()" or "C.sched_yield()"
-			time.Sleep(time.Millisecond)
-		}
 	}
 	r.DPDK_ring.cons.tail = cons_next
 	return n
@@ -421,7 +399,7 @@ func yanff_ring_mc_dequeue_burst(r *C.struct_yanff_ring, obj_table []uintptr, n 
 }
 
 func (self *Queue) GetQueueCount() uint32 {
-	return uint32((self.ring.DPDK_ring.prod.tail - self.ring.DPDK_ring.cons.tail) & self.ring.DPDK_ring.prod.mask)
+	return uint32((self.ring.DPDK_ring.prod.tail - self.ring.DPDK_ring.cons.tail) & self.ring.DPDK_ring.mask)
 }
 
 func Receive(port uint8, queue uint16, OUT *Queue, coreId uint8) {

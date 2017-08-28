@@ -37,12 +37,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -74,12 +74,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -111,12 +111,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -148,12 +148,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -185,12 +185,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -222,12 +222,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -259,12 +259,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -296,12 +296,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -333,12 +333,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -370,12 +370,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -407,12 +407,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -444,12 +444,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -481,12 +481,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -518,12 +518,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -555,12 +555,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -592,12 +592,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -629,12 +629,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -666,12 +666,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -703,12 +703,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -740,12 +740,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -777,12 +777,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -814,12 +814,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -851,12 +851,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -888,12 +888,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -925,12 +925,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -962,12 +962,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -999,12 +999,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1036,12 +1036,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1073,12 +1073,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1110,12 +1110,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1147,12 +1147,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1184,12 +1184,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1221,12 +1221,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1258,12 +1258,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1295,12 +1295,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1332,12 +1332,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1369,12 +1369,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1406,12 +1406,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1443,12 +1443,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1480,12 +1480,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1517,12 +1517,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1554,12 +1554,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1591,12 +1591,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1628,12 +1628,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1665,12 +1665,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1702,12 +1702,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1739,12 +1739,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1776,12 +1776,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1813,12 +1813,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1850,12 +1850,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1887,12 +1887,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1924,12 +1924,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1961,12 +1961,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -1998,12 +1998,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2035,12 +2035,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2072,12 +2072,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2109,12 +2109,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2146,12 +2146,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2183,12 +2183,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2220,12 +2220,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2257,12 +2257,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2294,12 +2294,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2331,12 +2331,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2368,12 +2368,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2405,12 +2405,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2442,12 +2442,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2479,12 +2479,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2516,12 +2516,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2553,12 +2553,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2590,12 +2590,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2627,12 +2627,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2664,12 +2664,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2701,12 +2701,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2738,12 +2738,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2775,12 +2775,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2812,12 +2812,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2849,12 +2849,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2886,12 +2886,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2923,12 +2923,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2960,12 +2960,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -2997,12 +2997,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3034,12 +3034,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3071,12 +3071,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3108,12 +3108,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3145,12 +3145,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3182,12 +3182,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3219,12 +3219,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3256,12 +3256,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3293,12 +3293,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3330,12 +3330,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3367,12 +3367,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3404,12 +3404,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3441,12 +3441,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3478,12 +3478,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3515,12 +3515,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3552,12 +3552,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3589,12 +3589,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3626,12 +3626,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3663,12 +3663,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3700,12 +3700,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3737,12 +3737,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3774,12 +3774,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3811,12 +3811,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3848,12 +3848,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3885,12 +3885,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3922,12 +3922,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3959,12 +3959,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -3996,12 +3996,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 64);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 64);",
+                    "pktgen.pkt_size(\"0\", \"max\", 64);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4033,12 +4033,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4070,12 +4070,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 128);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 128);",
+                    "pktgen.pkt_size(\"0\", \"max\", 128);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4107,12 +4107,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4144,12 +4144,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 256);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 256);",
+                    "pktgen.pkt_size(\"0\", \"max\", 256);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4181,12 +4181,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],
@@ -4218,12 +4218,12 @@
             ],
             "benchmarking-settings": {
                 "pktgen-startup-commands": [
-                    "pktgen.range.src_ip(\"0\", \"min\", \"0.0.0.0\");",
-                    "pktgen.range.src_ip(\"0\", \"max\", \"0.0.0.1\");",
-                    "pktgen.range.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
-                    "pktgen.range.pkt_size(\"0\", \"min\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"max\", 1518);",
-                    "pktgen.range.pkt_size(\"0\", \"inc\", 64);",
+                    "pktgen.src_ip(\"0\", \"min\", \"0.0.0.0\");",
+                    "pktgen.src_ip(\"0\", \"max\", \"0.0.0.1\");",
+                    "pktgen.src_ip(\"0\", \"inc\", \"0.0.0.1\");",
+                    "pktgen.pkt_size(\"0\", \"min\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"max\", 1518);",
+                    "pktgen.pkt_size(\"0\", \"inc\", 64);",
                     "pktgen.set_range(\"0\", \"on\");",
                     "pktgen.start(0);"
                 ],

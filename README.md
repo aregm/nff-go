@@ -109,7 +109,7 @@ in the DPDK Getting Started Guide for Linux for more information.
 The kernel module, which is required for DPDK user-mode drivers, is built but
 not installed into kernel directory. You can load it using the full path to the
 module file:
-$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.02/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
 
 ### Go
@@ -190,10 +190,7 @@ deployed images listed in YANFF_HOSTS, use the **make cleanall** command.
 ## Changing the DPDK sources
 
 If you use the **make** command from YANFF directories, the DPDK driver is
-downloaded and patched automatically.  To use different sources, apply the
-patch from test/dpdk/DPDK_17_02.patch. The patch makes it impossible to use
-indirect mbufs due to data races, but it improves YANFF performance. YANFF
-doesn't use indirect mbufs.
+downloaded automatically.
 
 ## Contributing
 

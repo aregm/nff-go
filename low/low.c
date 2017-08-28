@@ -154,7 +154,7 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 			mbufInit(bufs[i]);
 		}
 
-		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number);
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
 		// Free any packets which can't be pushed to the ring. The ring is probably full.
 		if (unlikely(pushed_pkts_number < rx_pkts_number)) {
 			for (i = pushed_pkts_number; i < rx_pkts_number; i++) {
@@ -176,7 +176,7 @@ void send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId
 	// Run until the application is quit. Send can't be stopped now.
 	for (;;) {
 		// Get packets for TX from ring
-		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE);
+		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
 		if (unlikely(pkts_for_tx_number == 0))
 			continue;
@@ -201,7 +201,7 @@ void stop(struct rte_ring *in_ring) {
 	// Run until the application is quit. Stop can't be stopped now.
 	for (;;) {
 		// Get packets for freeing from ring
-		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE);
+		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
 		if (unlikely(pkts_for_free_number == 0))
 			continue;
