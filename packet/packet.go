@@ -779,3 +779,8 @@ func (packet *Packet) PacketBytesChange(start uint, bytes []byte) bool {
 	}
 	return true
 }
+
+// IPv4 converts four element address to uint32 representation
+func IPv4(a byte, b byte, c byte, d byte) uint32 {
+	return uint32(d)<<24 | uint32(c)<<16 | uint32(b)<<8 | uint32(a)
+}
