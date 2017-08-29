@@ -127,7 +127,7 @@ type TCPHdr struct {
 	SentSeq  uint32 // TX data sequence number
 	RecvAck  uint32 // RX data acknowledgement sequence number
 	DataOff  uint8  // Data offset
-	TCPFlags uint8  // TCP flags
+	TCPFlags TCPFlags // TCP flags
 	RxWin    uint16 // RX flow control window
 	Cksum    uint16 // TCP checksum
 	TCPUrp   uint16 // TCP urgent pointer, if any
