@@ -35,9 +35,8 @@ func convertIPv4(in []byte) (uint32, error) {
 		return 0, errors.New("Only IPv4 addresses are supported now")
 	}
 
-	// Swap bytes right here
-	addr := (uint32(in[3]) << 24) | (uint32(in[2]) << 16) |
-		(uint32(in[1]) << 8) | uint32(in[0])
+	addr := (uint32(in[0]) << 24) | (uint32(in[1]) << 16) |
+		(uint32(in[2]) << 8) | uint32(in[3])
 
 	return addr, nil
 }
@@ -85,19 +84,20 @@ func (out *MACAddress) UnmarshalJSON(b []byte) error {
 }
 
 // readConfig function reads and parses config file
-func ReadConfig(fileName string) (*Config, error) {
-	var config Config
-
+func ReadConfig(fileName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	decoder := json.NewDecoder(file)
 
-	err = decoder.Decode(&config)
+	err = decoder.Decode(&Natconfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &config, nil
+	if debug {
+		println("NAT config:", Natconfig)
+	}
+	return nil
 }
