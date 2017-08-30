@@ -84,19 +84,20 @@ func (out *MACAddress) UnmarshalJSON(b []byte) error {
 }
 
 // readConfig function reads and parses config file
-func ReadConfig(fileName string) (*Config, error) {
-	var config Config
-
+func ReadConfig(fileName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	decoder := json.NewDecoder(file)
 
-	err = decoder.Decode(&config)
+	err = decoder.Decode(&Natconfig)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &config, nil
+	if debug {
+		println("NAT config:", Natconfig)
+	}
+	return nil
 }

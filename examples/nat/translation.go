@@ -31,13 +31,14 @@ var (
 	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
 	Natconfig             *Config
 	// Main lookup table which contains entries
-	table                 []sync.Map
+	pri2pubTable          []sync.Map
+	pub2priTable          []sync.Map
 	mutex                 sync.Mutex
 
 	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
 
 	debugPort uint16 = 10000
-	debug bool = true
+	debug bool = false
 	logThreshold int = 20
 	loggedDrop int = 0
 	loggedAdd int = 0
@@ -47,35 +48,40 @@ var (
 )
 
 func init() {
-	table = make([]sync.Map, common.UDPNumber + 1)
+	pri2pubTable = make([]sync.Map, common.UDPNumber + 1)
+	pub2priTable = make([]sync.Map, common.UDPNumber + 1)
 }
 
-func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) Tuple {
+func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) (Tuple, error) {
 	mutex.Lock()
-	t := &table[protocol]
+
+	port, err := allocNewPort(protocol)
+	if err != nil {
+		return Tuple{}, err
+	}
 
 	pubEntry := Tuple{
 		addr: publicAddr,
-		port: uint16(allocNewPort(protocol)),
+		port: uint16(port),
 	}
 
-	portmap[protocol][pubEntry.port] = PortMapEntry{
+	portmap[protocol][port] = PortMapEntry{
 		lastused: time.Now(),
 		addr: publicAddr,
 		finCount: 0,
 		terminationDirection: 0,
 	}
 
-	t.Store(privEntry, pubEntry)
-	t.Store(pubEntry, privEntry)
+	pri2pubTable[protocol].Store(privEntry, pubEntry)
+	pub2priTable[protocol].Store(pubEntry, privEntry)
 
-	if debug && (loggedAdd < logThreshold || debugPort == pubEntry.port) {
+	if debug && (loggedAdd < logThreshold || debugPort == uint16(port)) {
 		println("Added new connection", loggedAdd, ":", privEntry.String(), "->", pubEntry.String())
 		loggedAdd++
 	}
 
 	mutex.Unlock()
-	return pubEntry
+	return pubEntry, nil
 }
 
 // Ingress translation
@@ -111,7 +117,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do lookup
-	v, found := table[protocol].Load(pub2priKey)
+	v, found := pub2priTable[protocol].Load(pub2priKey)
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
@@ -201,10 +207,31 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Do lookup
 	var value Tuple
-	v, found := table[protocol].Load(pri2pubKey)
+	v, found := pri2pubTable[protocol].Load(pri2pubKey)
 	if !found {
-		value = allocateNewEgressConnection(protocol, pri2pubKey,
+		value, err := allocateNewEgressConnection(protocol, pri2pubKey,
 			Natconfig.PublicPort.Subnet.Addr)
+
+		if err != nil {
+			if debug {
+				dst := Tuple{
+					addr: packet.SwapBytesUint32(pkt.IPv4.DstAddr),
+				}
+				if protocol == common.TCPNumber {
+					dst.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
+				} else if protocol == common.UDPNumber {
+					dst.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
+				} else if protocol == common.ICMPNumber {
+					dst.port = pkt.ICMP.Identifier
+				}
+				println("Failed lookup pri2pub packet dropped", loggedPri2PubLookup, ":",
+					pri2pubKey.String(), "->", value.String(), "->", dst.String())
+				loggedPri2PubLookup++
+			} else {
+				println("Warning! Failed to allocate new connection", err)
+			}
+			return false
+		}
 
 		if debug && (loggedPri2PubLookup < logThreshold || value.port == debugPort) {
 			dst := Tuple{

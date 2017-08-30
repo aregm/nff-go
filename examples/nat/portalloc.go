@@ -5,6 +5,7 @@
 package nat
 
 import (
+	"errors"
 	"github.com/intel-go/yanff/common"
 	"strconv"
 	"time"
@@ -58,14 +59,14 @@ func init() {
 }
 
 func deleteOldConnection(protocol uint8, port int) {
-	t := &table[protocol]
+	pubTable := &pub2priTable[protocol]
 	pm := portmap[protocol]
 
 	pub2priKey := Tuple{
 		addr: pm[port].addr,
 		port: uint16(port),
 	}
-	pri2pubKey, found := t.Load(pub2priKey)
+	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
 		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
@@ -74,8 +75,8 @@ func deleteOldConnection(protocol uint8, port int) {
 			loggedDelete++
 		}
 
-		t.Delete(pri2pubKey)
-		t.Delete(pub2priKey)
+		pri2pubTable[protocol].Delete(pri2pubKey)
+		pubTable.Delete(pub2priKey)
 	} else {
 		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
 			println("Failing to delete connection", loggedDelete, ":", pub2priKey.String())
@@ -87,7 +88,7 @@ func deleteOldConnection(protocol uint8, port int) {
 
 // This function currently is not thread safe and should be executed
 // under a global lock
-func allocNewPort(protocol uint8) int {
+func allocNewPort(protocol uint8) (int, error) {
 	pm := portmap[protocol]
 	for {
 		now := time.Now()
@@ -95,7 +96,7 @@ func allocNewPort(protocol uint8) int {
 			if pm[p].lastused.Add(CONNECTION_TIMEOUT).Before(now) {
 				lastport = p
 				deleteOldConnection(protocol, p)
-				return p
+				return p, nil
 			}
 		}
 
@@ -103,9 +104,9 @@ func allocNewPort(protocol uint8) int {
 			if pm[p].lastused.Add(CONNECTION_TIMEOUT).Before(now) {
 				lastport = p
 				deleteOldConnection(protocol, p)
-				return p
+				return p, nil
 			}
 		}
-		println("WARNING! All ports are allocated! Trying again")
+		return 0, errors.New("WARNING! All ports are allocated! Trying again")
 	}
 }
