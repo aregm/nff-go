@@ -1,3 +1,4 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff)
 # YANFF - Yet Another Network Function Framework 
 
 ## What it is
