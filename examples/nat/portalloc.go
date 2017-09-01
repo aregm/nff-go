@@ -17,8 +17,8 @@ const (
 	NUM_PUB_ADDRS = 1
 
 	PORT_START = 1024
-	PORT_END = 65500
-	NUM_PORTS = PORT_END - PORT_START
+	PORT_END   = 65500
+	NUM_PORTS  = PORT_END - PORT_START
 
 	CONNECTION_TIMEOUT time.Duration = 1 * time.Minute
 
@@ -37,9 +37,9 @@ func (dir terminationDirection) String() string {
 }
 
 type PortMapEntry struct {
-	lastused   time.Time
-	addr       uint32
-	finCount   uint8
+	lastused             time.Time
+	addr                 uint32
+	finCount             uint8
 	terminationDirection terminationDirection
 }
 
@@ -51,7 +51,7 @@ var (
 
 func init() {
 	maxport = PORT_END
-	portmap = make([][]PortMapEntry, common.UDPNumber + 1)
+	portmap = make([][]PortMapEntry, common.UDPNumber+1)
 	portmap[common.ICMPNumber] = make([]PortMapEntry, maxport)
 	portmap[common.TCPNumber] = make([]PortMapEntry, maxport)
 	portmap[common.UDPNumber] = make([]PortMapEntry, maxport)
@@ -69,19 +69,8 @@ func deleteOldConnection(protocol uint8, port int) {
 	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
-		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
-			pri2pubVal := pri2pubKey.(Tuple)
-			println("Deleting connection", loggedDelete, ":", pri2pubVal.String(), "->", pub2priKey.String())
-			loggedDelete++
-		}
-
 		pri2pubTable[protocol].Delete(pri2pubKey)
 		pubTable.Delete(pub2priKey)
-	} else {
-		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
-			println("Failing to delete connection", loggedDelete, ":", pub2priKey.String())
-			loggedDelete++
-		}
 	}
 	pm[port] = PortMapEntry{}
 }
