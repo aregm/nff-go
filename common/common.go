@@ -65,6 +65,19 @@ const (
 	Verbose                            // Output during execution as soon as something happens. Can influence performance
 )
 
+type TCPFlags uint8
+
+const (
+	TCP_FLAG_FIN = 0x01
+	TCP_FLAG_SYN = 0x02
+	TCP_FLAG_RST = 0x04
+	TCP_FLAG_PSH = 0x08
+	TCP_FLAG_ACK = 0x10
+	TCP_FLAG_URG = 0x20
+	TCP_FLAG_ECE = 0x40
+	TCP_FLAG_CWR = 0x80
+)
+
 var currentLogType LogType = No | Initialization | Debug
 
 func LogError(logType LogType, v ...interface{}) {

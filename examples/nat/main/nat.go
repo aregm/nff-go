@@ -9,30 +9,20 @@ import (
 	"github.com/intel-go/yanff/examples/nat"
 	"github.com/intel-go/yanff/flow"
 	"log"
-	"os"
 )
 
 func main() {
+	// Parse arguments
+	cores := flag.Uint("cores", 44, "Specify number of CPU cores to use")
+	configFile := flag.String("config", "config.json", "Specify config file name")
+	flag.Parse()
+
 	// Read config
-	configFile := "config.json"
-
-	if len(os.Args) > 1 {
-		index := 1
-
-		if len(os.Args) > index {
-			configFile = os.Args[index]
-		}
-	}
-
-	var err error
-	nat.Natconfig, err = nat.ReadConfig(configFile)
+	err := nat.ReadConfig(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("NAT config:", nat.Natconfig)
 
-	cores := flag.Uint("cores", 44, "Specify number of CPU cores to use")
-	flag.Parse()
 	// Init YANFF system at 16 available cores
 	yanffconfig := flow.Config {
 		CPUCoresNumber: *cores,
