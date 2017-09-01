@@ -388,12 +388,12 @@ func yanff_ring_mc_do_dequeue(r *C.struct_yanff_ring, obj_table []uintptr, n uin
 	return n
 }
 
-// Heavilly based on DPDK mp_enqueue_burst
+// Heavily based on DPDK mp_enqueue_burst
 func yanff_ring_mp_enqueue_burst(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
 	return yanff_ring_mp_do_enqueue(r, obj_table, n)
 }
 
-// Heavilly based on DPDK mc_dequeue_burst
+// Heavily based on DPDK mc_dequeue_burst
 func yanff_ring_mc_dequeue_burst(r *C.struct_yanff_ring, obj_table []uintptr, n uint) uint {
 	return yanff_ring_mc_do_dequeue(r, obj_table, n)
 }
