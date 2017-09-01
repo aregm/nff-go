@@ -61,8 +61,9 @@ func init() {
 
 // TODO Add function to write user data after headers and set "data" field
 
-// These structures must be consistent with these C duplications
-// L2 header from DPDK: lib/librte_ether/rte_ehter.h
+// The following structures must be consistent with these C duplications
+
+// EtherHdr L2 header from DPDK: lib/librte_ether/rte_ehter.h
 type EtherHdr struct {
 	DAddr     [EtherAddrLen]uint8 // Destination address
 	SAddr     [EtherAddrLen]uint8 // Source address
@@ -78,7 +79,7 @@ func (hdr *EtherHdr) String() string {
 	return r0 + r1 + r2
 }
 
-// L3 header from DPDK: lib/librte_net/rte_ip.h
+// IPv4Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
 type IPv4Hdr struct {
 	VersionIhl     uint8  // version and header length
 	TypeOfService  uint8  // type of service
@@ -101,7 +102,7 @@ func (hdr *IPv4Hdr) String() string {
 	return r0 + r1 + r2
 }
 
-// L3 header from DPDK: lib/librte_net/rte_ip.h
+// IPv6Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
 type IPv6Hdr struct {
 	VtcFlow    uint32             // IP version, traffic class & flow label
 	PayloadLen uint16             // IP packet length - includes sizeof(ip_header)
@@ -120,7 +121,7 @@ func (hdr *IPv6Hdr) String() string {
 	return r0 + r1 + r2
 }
 
-// L4 header from DPDK: lib/librte_net/rte_tcp.h
+// TCPHdr L4 header from DPDK: lib/librte_net/rte_tcp.h
 type TCPHdr struct {
 	SrcPort  uint16 // TCP source port
 	DstPort  uint16 // TCP destination port
@@ -140,7 +141,7 @@ func (hdr *TCPHdr) String() string {
 	return r0 + r1 + r2
 }
 
-// L4 header from DPDK: lib/librte_net/rte_udp.h
+// UDPHdr L4 header from DPDK: lib/librte_net/rte_udp.h
 type UDPHdr struct {
 	SrcPort    uint16 // UDP source port
 	DstPort    uint16 // UDP destination port
@@ -155,6 +156,7 @@ func (hdr *UDPHdr) String() string {
 	return r0 + r1 + r2
 }
 
+// ICMPHdr L4 header.
 type ICMPHdr struct {
 	Type       uint8  // ICMP message type
 	Code       uint8  // ICMP message code
@@ -256,7 +258,7 @@ func (packet *Packet) ParseIPv4UDP() {
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.unparsed() + uintptr((packet.IPv4.VersionIhl&0x0f)<<2)))
 }
 
-// ParseIPv4UDP set pointers to IPv4, UDP headers in packet.
+// ParseIPv4UDPData set pointers to IPv4, UDP headers in packet.
 // Data is considered to be everything after the headers.
 func (packet *Packet) ParseIPv4UDPData() {
 	packet.IPv4 = (*IPv4Hdr)(unsafe.Pointer(packet.unparsed()))
@@ -292,7 +294,7 @@ func (packet *Packet) ParseIPv6UDP() {
 	}
 }
 
-// ParseIPv6UDP will parse L4 level protocol and Data only if there are no extended headers
+// ParseIPv6UDPData will parse L4 level protocol and Data only if there are no extended headers
 // after IPv6 fix header. However fix IPv6 part will be parsed anyway.
 func (packet *Packet) ParseIPv6UDPData() {
 	packet.IPv6 = (*IPv6Hdr)(unsafe.Pointer(packet.unparsed()))
@@ -309,6 +311,7 @@ func (packet *Packet) ParseTCP(offset uint8) {
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 }
 
+// ParseTCPData like ParseTCP with Data
 func (packet *Packet) ParseTCPData(offset uint8) {
 	packet.TCP = (*TCPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 	packet.Data = unsafe.Pointer(packet.unparsed() + uintptr(offset) + uintptr(packet.TCP.DataOff&0xf0)>>2)
@@ -321,10 +324,14 @@ func (packet *Packet) ParseUDP(offset uint8) {
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 }
 
+// ParseICMP takes offset to beginning of UDP header as parameter. Offset is needed, because
+// length of L3 level protocol can be different, so parsing L4 without L3 is applicable
+// only with manual offset. Usually these offset will be 14 + 20 for IPv4 and 14 + 40 for IPv6.
 func (packet *Packet) ParseICMP(offset uint8) {
 	packet.ICMP = (*ICMPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 }
 
+// ParseUDPData like ParseUDP with Data
 func (packet *Packet) ParseUDPData(offset uint8) {
 	packet.UDP = (*UDPHdr)(unsafe.Pointer(packet.unparsed() + uintptr(offset)))
 	packet.Data = unsafe.Pointer(packet.unparsed() + uintptr(offset) + UDPLen)
@@ -350,7 +357,7 @@ func (packet *Packet) ParseL3() (int, uint8) {
 	return -1, 0
 }
 
-// ParseL3 fills L3 layer pointers: either IPv4 or IPv6, and also fills Data pointer.
+// ParseL3Data fills L3 layer pointers: either IPv4 or IPv6, and also fills Data pointer.
 // Returns length of IP headers and L4 layer protocol ID.
 // Return (-1, 0) if protocols are neither IPv4 nor IPv6 or if IPv6 has
 // additional components. Such packets aren't supported now.
@@ -424,27 +431,28 @@ func (packet *Packet) ParseL4Data() int {
 	return -1
 }
 
-// ExtractPacket, ExtractPacketAddr, ToPacket extract packet structure from mbuf
-// TODO These should be unexported method. However now it is exported to be used in package flow.
+// ExtractPacketAddr extracts packet structure from mbuf used in package flow
 func ExtractPacketAddr(IN uintptr) uintptr {
 	return IN + mbufStructSize
 }
 
+// ToPacket should be unexported, used in flow package
 func ToPacket(IN uintptr) *Packet {
 	return (*Packet)(unsafe.Pointer(IN))
 }
 
+// ExtractPacket extracts packet structure from mbuf used in package flow
 func ExtractPacket(IN uintptr) *Packet {
 	return ToPacket(ExtractPacketAddr(IN))
 }
 
-// Another function which should not be exported but it is used in flow.
+// SetHWTXChecksumFlag should not be exported but it is used in flow.
 func SetHWTXChecksumFlag(flag bool) {
 	hwtxchecksum = flag
 }
 
-// Create vector of packets by calling ExtractPacket function
-// TODO This should be unexported method. However now it is exported to be used in package flow.
+// ExtractPackets creates vector of packets by calling ExtractPacket function
+// is unexported, used in flow package
 func ExtractPackets(packet []*Packet, IN []uintptr, n uint) {
 	for i := uint(0); i < n; i++ {
 		packet[i] = ExtractPacket(IN[i])
@@ -674,6 +682,7 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+// SetHWCksumOLFlags sets hardware offloading flags to packet
 func SetHWCksumOLFlags(packet *Packet) {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV4Number) {
 		packet.IPv4.HdrChecksum = 0
@@ -691,12 +700,12 @@ func SetHWCksumOLFlags(packet *Packet) {
 	}
 }
 
-// Swapping uint16 in Little Endian and Big Endian
+// SwapBytesUint16 swaps uint16 in Little Endian and Big Endian
 func SwapBytesUint16(x uint16) uint16 {
 	return x<<8 | x>>8
 }
 
-// Swapping uint32 in Little Endian and Big Endian
+// SwapBytesUint32 swaps uint32 in Little Endian and Big Endian
 func SwapBytesUint32(x uint32) uint32 {
 	return ((x & 0x000000ff) << 24) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) >> 8) | ((x & 0xff000000) >> 24)
 }

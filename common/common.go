@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This package is used for combining common functions from other packages
+// Package common is used for combining common functions from other packages
 // which aren't connected with C language part
 package common
 
@@ -56,13 +56,18 @@ const (
 	UDPLen     = 8
 )
 
+// LogType - type of logging, used in flow package
 type LogType uint8
 
 const (
-	No             LogType = 1 << iota // No output even after fatal errors
-	Initialization                     // Output during system initialization
-	Debug                              // Output during execution one time per time period (scheduler ticks)
-	Verbose                            // Output during execution as soon as something happens. Can influence performance
+	// No - no output even after fatal errors
+	No LogType = 1 << iota
+	// Initialization - output during system initialization
+	Initialization
+	// Debug - output during execution one time per time period (scheduler ticks)
+	Debug
+	// Verbose - output during execution as soon as something happens. Can influence performance
+	Verbose
 )
 
 type TCPFlags uint8
@@ -80,6 +85,7 @@ const (
 
 var currentLogType LogType = No | Initialization | Debug
 
+// LogError internal, used in all packages
 func LogError(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -88,6 +94,7 @@ func LogError(logType LogType, v ...interface{}) {
 	os.Exit(1)
 }
 
+// LogWarning internal, used in all packages
 func LogWarning(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -95,6 +102,7 @@ func LogWarning(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogDebug internal, used in all packages
 func LogDebug(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -102,6 +110,7 @@ func LogDebug(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogDrop internal, used in all packages
 func LogDrop(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -109,17 +118,20 @@ func LogDrop(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogTitle internal, used in all packages
 func LogTitle(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		log.Print(v...)
 	}
 }
 
+// SetLogType internal, used in flow package
 func SetLogType(logType LogType) {
 	log.SetFlags(0)
 	currentLogType = logType
 }
 
+// GetDPDKLogLevel internal, used in flow package
 func GetDPDKLogLevel() string {
 	switch currentLogType {
 	case No:
