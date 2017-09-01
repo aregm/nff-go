@@ -13,8 +13,8 @@ import (
 )
 
 type IPv4Subnet struct {
-	Addr    uint32
-	Mask    uint32
+	Addr uint32
+	Mask uint32
 }
 
 type MACAddress [common.EtherAddrLen]uint8
@@ -26,8 +26,8 @@ type IPv4Port struct {
 }
 
 type Config struct {
-	PrivatePort   IPv4Port   `json:"private-port"`
-	PublicPort    IPv4Port   `json:"public-port"`
+	PrivatePort IPv4Port `json:"private-port"`
+	PublicPort  IPv4Port `json:"public-port"`
 }
 
 func convertIPv4(in []byte) (uint32, error) {

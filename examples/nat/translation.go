@@ -14,16 +14,16 @@ import (
 )
 
 type Tuple struct {
-	addr    uint32
-	port    uint16
+	addr uint32
+	port uint16
 }
 
 func (t *Tuple) String() string {
 	return fmt.Sprintf("addr = %d.%d.%d.%d:%d",
-		(t.addr >> 24) & 0xff,
-		(t.addr >> 16) & 0xff,
-		(t.addr >> 8) & 0xff,
-		t.addr & 0xff,
+		(t.addr>>24)&0xff,
+		(t.addr>>16)&0xff,
+		(t.addr>>8)&0xff,
+		t.addr&0xff,
 		t.port)
 }
 
@@ -31,16 +31,16 @@ var (
 	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
 	Natconfig             *Config
 	// Main lookup table which contains entries
-	pri2pubTable          []sync.Map
-	pub2priTable          []sync.Map
-	mutex                 sync.Mutex
+	pri2pubTable []sync.Map
+	pub2priTable []sync.Map
+	mutex        sync.Mutex
 
-	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
+	EMPTY_ENTRY = Tuple{addr: 0, port: 0}
 )
 
 func init() {
-	pri2pubTable = make([]sync.Map, common.UDPNumber + 1)
-	pub2priTable = make([]sync.Map, common.UDPNumber + 1)
+	pri2pubTable = make([]sync.Map, common.UDPNumber+1)
+	pub2priTable = make([]sync.Map, common.UDPNumber+1)
 }
 
 func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) (Tuple, error) {
@@ -58,9 +58,9 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 	}
 
 	portmap[protocol][port] = PortMapEntry{
-		lastused: time.Now(),
-		addr: publicAddr,
-		finCount: 0,
+		lastused:             time.Now(),
+		addr:                 publicAddr,
+		finCount:             0,
 		terminationDirection: 0,
 	}
 
@@ -221,7 +221,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 // Simple check for FIN or RST in TCP
 func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection) {
-	if hdr.TCPFlags & common.TCP_FLAG_FIN != 0 {
+	if hdr.TCPFlags&common.TCP_FLAG_FIN != 0 {
 		// First check for FIN
 		mutex.Lock()
 
@@ -234,12 +234,12 @@ func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection)
 		}
 
 		mutex.Unlock()
-	} else if hdr.TCPFlags & common.TCP_FLAG_RST != 0 {
+	} else if hdr.TCPFlags&common.TCP_FLAG_RST != 0 {
 		// RST means that connection is terminated immediatelly
 		mutex.Lock()
 		deleteOldConnection(common.TCPNumber, port)
 		mutex.Unlock()
-	} else if hdr.TCPFlags & common.TCP_FLAG_ACK != 0 {
+	} else if hdr.TCPFlags&common.TCP_FLAG_ACK != 0 {
 		// Check for ACK last so that if there is also FIN,
 		// termination doesn't happen. Last ACK should come without
 		// FIN
