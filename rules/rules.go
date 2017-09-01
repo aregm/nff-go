@@ -123,7 +123,7 @@ func GetL3RulesFromORIG(filename string) *L3Rules {
 		if len(lines) == 5 {
 			lines = append(lines, "false")
 		} else if len(lines) != 6 {
-			common.LogError(common.Debug, "Not compelte 5-tuple for rule parsing")
+			common.LogError(common.Debug, "Incomplete 5-tuple for rule parsing")
 		}
 		rawRules.L3Rules = append(rawRules.L3Rules, rawL3Rule{SrcAddr: lines[0], DstAddr: lines[1],
 			ID: lines[2], SrcPort: lines[3], DstPort: lines[4], OutputNumber: lines[5]})
