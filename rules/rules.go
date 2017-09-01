@@ -369,11 +369,13 @@ type l3Rules6 struct {
 	L4           l4Rules
 }
 
+// L3Rules - struct for rules of l3 level
 type L3Rules struct {
 	ip4 []l3Rules4
 	ip6 []l3Rules6
 }
 
+// L2Rules - struct for rules of l2 level
 type L2Rules struct {
 	eth []l2Rules
 }
@@ -383,9 +385,8 @@ type L2Rules struct {
 func L2_ACL_permit(pkt *packet.Packet, rules *L2Rules) bool {
 	if l2_ACL(pkt, rules) > 0 {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 // L2_ACL_port gets packet (with parsed L2) and L2Rules.
@@ -415,9 +416,8 @@ func l2_ACL(pkt *packet.Packet, rules *L2Rules) uint {
 func L3_ACL_permit(pkt *packet.Packet, rules *L3Rules) bool {
 	if l3_ACL(pkt, rules) > 0 {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 // L3_ACL_port gets packet (with parsed L3 or L3 with L4) and L3Rules.

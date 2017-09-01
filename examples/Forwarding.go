@@ -10,7 +10,7 @@ import (
 	"github.com/intel-go/yanff/rules"
 )
 
-var L3Rules *rules.L3Rules
+var l3Rules *rules.L3Rules
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -21,14 +21,14 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get splitting rules from access control file.
-	L3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")
+	l3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)
 
 	// Split packet flow based on ACL.
 	flowsNumber := 5
-	outputFlows := flow.SetSplitter(inputFlow, L3Splitter, uint(flowsNumber), nil)
+	outputFlows := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
 
 	// "0" flow is used for dropping packets without sending them.
 	flow.SetStopper(outputFlows[0])
@@ -43,10 +43,10 @@ func main() {
 }
 
 // User defined function for splitting packets
-func L3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
+func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
 	currentPacket.ParseL4()
 
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3_ACL_port(currentPacket, L3Rules)
+	return rules.L3_ACL_port(currentPacket, l3Rules)
 }

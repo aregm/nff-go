@@ -26,7 +26,7 @@ import "flag"
 // 3 - 1/30 (if input speed 60GB -> 2GB)
 // Pktgen MBits: 13743/30462         28634/29442             13743/0              1955/0           58076/59905
 
-var L3Rules *rules.L3Rules
+var l3Rules *rules.L3Rules
 
 func main() {
 	var mode string
@@ -42,9 +42,9 @@ func main() {
 	// Start regular updating forwarding rules
 	switch mode {
 	case "json":
-		L3Rules = rules.GetL3RulesFromJSON("forwardingTestL3_ACL.json")
+		l3Rules = rules.GetL3RulesFromJSON("forwardingTestL3_ACL.json")
 	case "orig":
-		L3Rules = rules.GetL3RulesFromORIG("forwardingTestL3_ACL.orig")
+		l3Rules = rules.GetL3RulesFromORIG("forwardingTestL3_ACL.orig")
 	}
 
 	// Receive packets from zero port. One queue will be added automatically.
@@ -55,7 +55,7 @@ func main() {
 	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
 
 	// Split packet flow based on ACL
-	Flows := flow.SetSplitter(firstFlow, L3Splitter, 4, nil)
+	Flows := flow.SetSplitter(firstFlow, l3Splitter, 4, nil)
 
 	// Send each flow to corresponding port
 	flow.SetSender(Flows[0], 0) // It is test. So we don't stop "0" packets, we count them as others.
@@ -66,7 +66,7 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
+func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	currentPacket.ParseL4()
-	return rules.L3_ACL_port(currentPacket, L3Rules)
+	return rules.L3_ACL_port(currentPacket, l3Rules)
 }

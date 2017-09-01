@@ -12,8 +12,8 @@ import "flag"
 import "time"
 
 var (
-	L2Rules *rules.L2Rules
-	L3Rules *rules.L3Rules
+	l2Rules *rules.L2Rules
+	l3Rules *rules.L3Rules
 	load    uint
 
 	inport   uint
@@ -35,15 +35,15 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Start regular updating forwarding rules
-	L2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
-	L3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
+	l2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
+	l3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
 	go updateSeparateRules()
 
 	// Receive packets from zero port. One queue will be added automatically.
 	firstFlow := flow.SetReceiver(uint8(inport))
 
 	// Separate packets for additional flow due to some rules
-	secondFlow := flow.SetSeparator(firstFlow, L3Separator, nil)
+	secondFlow := flow.SetSeparator(firstFlow, l3Separator, nil)
 
 	// Handle second flow via some heavy function
 	flow.SetHandler(firstFlow, heavyFunc, nil)
@@ -55,10 +55,10 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
+func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	currentPacket.ParseIPv4()
-	localL2Rules := L2Rules
-	localL3Rules := L3Rules
+	localL2Rules := l2Rules
+	localL3Rules := l3Rules
 	return rules.L2_ACL_permit(currentPacket, localL2Rules) &&
 		rules.L3_ACL_permit(currentPacket, localL3Rules)
 }
@@ -71,7 +71,7 @@ func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 func updateSeparateRules() {
 	for true {
 		time.Sleep(time.Second * 5)
-		L2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
-		L3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
+		l2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
+		l3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
 	}
 }
