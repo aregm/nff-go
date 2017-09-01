@@ -39,7 +39,7 @@ func main() {
 	// Receive packets from 0 port
 	flow1 := flow.SetReceiver(uint8(inport))
 
-	// Seperate packet flow based on ACL.
+	// Separate packet flow based on ACL.
 	flow2 := flow.SetSeparator(flow1, L3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
