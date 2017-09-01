@@ -186,7 +186,7 @@ func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
 
 func setAppStatusOnPassed(apps []RunningApp) {
 	// If it was a scenario, and some apps didn't finish, they are
-	// considered as timed out, for benchmars it is normal
+	// considered as timed out, for benchmarks it is normal
 	var setStatus TestStatus
 	setStatus = TEST_REPORTED_PASSED
 
