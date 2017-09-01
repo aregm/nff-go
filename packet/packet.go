@@ -192,7 +192,7 @@ type Packet struct {
 
 	// Last two fields of this structure is filled during InitMbuf macros inside low.c file
 	// Need to change low.c for all changes in these fields or adding/removing fields before them.
-	Ether *EtherHdr // Pointer to L2 header in mbuf. It is always parsed and point begining of packet.
+	Ether *EtherHdr // Pointer to L2 header in mbuf. It is always parsed and point beginning of packet.
 	CMbuf *low.Mbuf // Private pointer to mbuf. Users shouldn't know anything about mbuf
 }
 
