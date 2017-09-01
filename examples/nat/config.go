@@ -96,8 +96,5 @@ func ReadConfig(fileName string) error {
 		return err
 	}
 
-	if debug {
-		println("NAT config:", Natconfig)
-	}
 	return nil
 }

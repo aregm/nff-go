@@ -69,19 +69,8 @@ func deleteOldConnection(protocol uint8, port int) {
 	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
-		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
-			pri2pubVal := pri2pubKey.(Tuple)
-			println("Deleting connection", loggedDelete, ":", pri2pubVal.String(), "->", pub2priKey.String())
-			loggedDelete++
-		}
-
 		pri2pubTable[protocol].Delete(pri2pubKey)
 		pubTable.Delete(pub2priKey)
-	} else {
-		if debug && (loggedDelete < logThreshold || debugPort == uint16(port)) {
-			println("Failing to delete connection", loggedDelete, ":", pub2priKey.String())
-			loggedDelete++
-		}
 	}
 	pm[port] = PortMapEntry{}
 }
