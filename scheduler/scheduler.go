@@ -231,7 +231,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 				for j := 0; j < ff.cloneNumber; j++ {
 					ff.clone[j].channel <- ff.cloneNumber
 				}
-				// After removing a clone we don't want to try to add clone immidiately
+				// After removing a clone we don't want to try to add clone immediately
 				continue
 			}
 
