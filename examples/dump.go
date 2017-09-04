@@ -17,7 +17,7 @@ var (
 )
 
 func main() {
-	hexdumpOn := flag.Bool("hex", false, "enable dumping of packets in hex format")
+	dumptype := flag.Uint("dumptype", 0, "dumping format type (0 - dumper function, 1 - hex, 2 - pcap file)")
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
@@ -35,16 +35,23 @@ func main() {
 	secondFlow := flow.SetPartitioner(firstFlow, 50000000, 1)
 
 	// Dump separated packet. By default function dumper() is used.
-	if *hexdumpOn {
+	switch *dumptype {
+	case 1:
 		flow.SetHandler(secondFlow, hexdumper, nil)
-	} else {
+	case 2:
+		// Writer closes flow
+		flow.SetWriter(secondFlow, "out.pcap")
+	default:
 		flow.SetHandler(secondFlow, dumper, nil)
 	}
 
-	// Merge packet to original flow
-	output := flow.SetMerger(firstFlow, secondFlow)
-
-	// Send packets to control speed. One queue will be added automatically.
+	// All cases except SetWriter require to merge partitioned packets to original flow
+	var output *flow.Flow
+	if *dumptype == 2 {
+		output = firstFlow
+	} else {
+		output = flow.SetMerger(firstFlow, secondFlow)
+	}
 	flow.SetSender(output, uint8(outport))
 
 	flow.SystemStart()

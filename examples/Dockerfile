@@ -11,5 +11,6 @@ COPY Firewall .
 COPY Firewall.conf .
 COPY Forwarding .
 COPY Forwarding.conf .
+COPY clonable_pcap_dumper .
 
 CMD ["./demo"]
