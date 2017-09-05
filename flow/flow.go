@@ -35,8 +35,10 @@ import (
 	"github.com/intel-go/yanff/low"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/scheduler"
+	"os"
 	"runtime"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -225,6 +227,36 @@ func makeHandler(in *low.Queue, out *low.Queue,
 	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
 }
 
+type writeParameters struct {
+	in       *low.Queue
+	filename string
+}
+
+func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
+	par := new(writeParameters)
+	par.in = in
+	par.filename = filename
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("writer", ffCount, write, par)
+}
+
+type readParameters struct {
+	out      *low.Queue
+	filename string
+	mempool  *low.Mempool
+	repcount int32
+}
+
+func makeReader(filename string, out *low.Queue, repcount int32) *scheduler.FlowFunction {
+	par := new(readParameters)
+	par.out = out
+	par.filename = filename
+	par.mempool = low.CreateMempool()
+	par.repcount = repcount
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
+}
+
 var burstSize uint
 var sizeMultiplier uint
 var schedTime uint
@@ -405,6 +437,33 @@ func generateRingName() string {
 	s := strconv.Itoa(ringName)
 	ringName++
 	return s
+}
+
+// SetWriter adds write function to flow graph.
+// Gets flow which packets will be written to file and
+// target file name.
+// Function can panic during execution.
+func SetWriter(IN *Flow, filename string) {
+	checkFlow(IN)
+	write := makeWriter(filename, IN.current)
+	schedState.UnClonable = append(schedState.UnClonable, write)
+	IN.current = nil
+	openFlowsNumber--
+}
+
+// SetReader adds read function to flow graph.
+// Gets name of pcap formatted file and number of reads. If repcount = -1,
+// file is read infinitely in circle.
+// Returns new opened flow with read packets.
+// Function can panic during execution.
+func SetReader(filename string, repcount int32) (OUT *Flow) {
+	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	read := makeReader(filename, ring, repcount)
+	schedState.UnClonable = append(schedState.UnClonable, read)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT
 }
 
 // SetReceiver adds receive function to flow graph.
@@ -1045,6 +1104,73 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 			safeEnqueue(OUT, bufs, uint(n))
 			currentSpeed += uint64(n)
 		}
+	}
+}
+
+func write(parameters interface{}, coreId uint8) {
+	wp := parameters.(*writeParameters)
+	IN := wp.in
+	filename := wp.filename
+
+	bufIn := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Create(filename)
+	if err != nil {
+		common.LogError(common.Debug, err)
+	}
+	defer f.Close()
+
+	packet.WritePcapGlobalHdr(f)
+	for {
+		n := IN.DequeueBurst(bufIn, 1)
+		if n == 0 {
+			continue
+		}
+		tempPacket = packet.ExtractPacket(bufIn[0])
+		tempPacket.WritePcapOnePacket(f)
+		low.DirectStop(1, bufIn)
+	}
+}
+
+func read(parameters interface{}, coreId uint8) {
+	rp := parameters.(*readParameters)
+	OUT := rp.out
+	filename := rp.filename
+	mempool := rp.mempool
+	repcount := rp.repcount
+
+	buf := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Open(filename)
+	if err != nil {
+		common.LogError(common.Debug, err)
+	}
+	defer f.Close()
+
+	// Read pcap gloabl header once
+	var glHdr packet.PcapGlobHdr
+	packet.ReadPcapGlobalHdr(f, &glHdr)
+
+	count := int32(0)
+
+	for {
+		low.AllocateMbufs(buf, mempool)
+		tempPacket = packet.ExtractPacket(buf[0])
+		isEOF := tempPacket.ReadPcapOnePacket(f)
+		if isEOF {
+			atomic.AddInt32(&count, 1)
+			if count == repcount {
+				break
+			}
+			_, err := f.Seek(packet.PcapGlobHdrSize, 0)
+			if err != nil {
+				common.LogError(common.Debug, err)
+			}
+			tempPacket.ReadPcapOnePacket(f)
+		}
+		safeEnqueue(OUT, buf, 1)
 	}
 }
 
