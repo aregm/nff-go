@@ -4,6 +4,9 @@
 
 package asm
 
-func Rte_compiler_rmb() /* lfence*/
-func Rte_compiler_wmb() /* sfence */
+// RteCompilerRmb is lfence
+func RteCompilerRmb()
+// RteCompilerWmb is sfence
+func RteCompilerWmb()
+// Prefetcht0 is prefetch
 func Prefetcht0(addr uintptr)

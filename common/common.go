@@ -34,8 +34,8 @@ const (
 
 // Supported ICMP Types
 const (
-	ICMP_TYPE_ECHO_REQUEST  uint8 = 8
-	ICMP_TYPE_ECHO_RESPONSE uint8 = 0
+	ICMPTypeEchoRequest  uint8 = 8
+	ICMPTypeEchoResponse uint8 = 0
 )
 
 // These constants keep length of supported headers in bytes.
@@ -70,20 +70,22 @@ const (
 	Verbose
 )
 
+// TCPFlags contains set TCP flags.
 type TCPFlags uint8
 
+// Constants for valuues of TCP flags.
 const (
-	TCP_FLAG_FIN = 0x01
-	TCP_FLAG_SYN = 0x02
-	TCP_FLAG_RST = 0x04
-	TCP_FLAG_PSH = 0x08
-	TCP_FLAG_ACK = 0x10
-	TCP_FLAG_URG = 0x20
-	TCP_FLAG_ECE = 0x40
-	TCP_FLAG_CWR = 0x80
+	TCPFlagFin = 0x01
+	TCPFlagSyn = 0x02
+	TCPFlagRst = 0x04
+	TCPFlagPsh = 0x08
+	TCPFlagAck = 0x10
+	TCPFlagUrg = 0x20
+	TCPFlagEce = 0x40
+	TCPFlagCwr = 0x80
 )
 
-var currentLogType LogType = No | Initialization | Debug
+var currentLogType = No | Initialization | Debug
 
 // LogError internal, used in all packages
 func LogError(logType LogType, v ...interface{}) {

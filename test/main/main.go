@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	test.SetLogLevel(test.LOG_DEBUG)
+	test.SetLogLevel(test.LogDebugLvl)
 	// Read config
 	configFile := "config.json"
 	if len(os.Args) > 1 {

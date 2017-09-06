@@ -30,16 +30,17 @@
 package flow
 
 import (
-	"github.com/intel-go/yanff/asm"
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
-	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/scheduler"
 	"os"
 	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/intel-go/yanff/asm"
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/scheduler"
 )
 
 var openFlowsNumber = uint32(0)
@@ -1107,7 +1108,7 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	}
 }
 
-func write(parameters interface{}, coreId uint8) {
+func write(parameters interface{}, coreID uint8) {
 	wp := parameters.(*writeParameters)
 	IN := wp.in
 	filename := wp.filename
@@ -1133,7 +1134,7 @@ func write(parameters interface{}, coreId uint8) {
 	}
 }
 
-func read(parameters interface{}, coreId uint8) {
+func read(parameters interface{}, coreID uint8) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
@@ -1149,7 +1150,7 @@ func read(parameters interface{}, coreId uint8) {
 	}
 	defer f.Close()
 
-	// Read pcap gloabl header once
+	// Read pcap global header once
 	var glHdr packet.PcapGlobHdr
 	packet.ReadPcapGlobalHdr(f, &glHdr)
 

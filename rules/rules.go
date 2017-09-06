@@ -20,10 +20,10 @@
 // used dynamically in parallel which make a possibility of changing rules during execution.
 //
 // After rules are constructed the four functions can be used to filter packets according to rules:
-// 		L2_ACL_permit
-//		L2_ACL_port
-//		L3_ACL_permit
-// 		L3_ACL_port
+// 		L2ACLPermit
+//		L2ACLPort
+//		L3ACLPermit
+// 		L3ACLPort
 package rules
 
 import (
@@ -380,22 +380,22 @@ type L2Rules struct {
 	eth []l2Rules
 }
 
-// L2_ACL_permit gets packet (with parsed L2) and L2Rules.
+// L2ACLPermit gets packet (with parsed L2) and L2Rules.
 // Returns accept or reject for this packet
-func L2_ACL_permit(pkt *packet.Packet, rules *L2Rules) bool {
-	if l2_ACL(pkt, rules) > 0 {
+func L2ACLPermit(pkt *packet.Packet, rules *L2Rules) bool {
+	if l2ACL(pkt, rules) > 0 {
 		return true
 	}
 	return false
 }
 
-// L2_ACL_port gets packet (with parsed L2) and L2Rules.
+// L2ACLPort gets packet (with parsed L2) and L2Rules.
 // Returns number of output for packet
-func L2_ACL_port(pkt *packet.Packet, rules *L2Rules) uint {
-	return l2_ACL(pkt, rules)
+func L2ACLPort(pkt *packet.Packet, rules *L2Rules) uint {
+	return l2ACL(pkt, rules)
 }
 
-func l2_ACL(pkt *packet.Packet, rules *L2Rules) uint {
+func l2ACL(pkt *packet.Packet, rules *L2Rules) uint {
 	for _, rule := range rules.eth {
 		if rule.SAddrNotAny == true && rule.SAddr != pkt.Ether.SAddr {
 			continue
@@ -411,22 +411,22 @@ func l2_ACL(pkt *packet.Packet, rules *L2Rules) uint {
 	return 0
 }
 
-// L3_ACL_permit gets packet (with parsed L3 or L3 with L4) and L3Rules.
+// L3ACLPermit gets packet (with parsed L3 or L3 with L4) and L3Rules.
 // Returns accept or reject for this packet
-func L3_ACL_permit(pkt *packet.Packet, rules *L3Rules) bool {
-	if l3_ACL(pkt, rules) > 0 {
+func L3ACLPermit(pkt *packet.Packet, rules *L3Rules) bool {
+	if l3ACL(pkt, rules) > 0 {
 		return true
 	}
 	return false
 }
 
-// L3_ACL_port gets packet (with parsed L3 or L3 with L4) and L3Rules.
+// L3ACLPort gets packet (with parsed L3 or L3 with L4) and L3Rules.
 // Returns number of output for this packet
-func L3_ACL_port(pkt *packet.Packet, rules *L3Rules) uint {
-	return l3_ACL(pkt, rules)
+func L3ACLPort(pkt *packet.Packet, rules *L3Rules) uint {
+	return l3ACL(pkt, rules)
 }
 
-func l4_ACL(pkt *packet.Packet, L4 *l4Rules) bool {
+func l4ACL(pkt *packet.Packet, L4 *l4Rules) bool {
 	if pkt.TCP != nil {
 		srcPort := packet.SwapBytesUint16(pkt.TCP.SrcPort)
 		if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
@@ -453,7 +453,7 @@ func l4_ACL(pkt *packet.Packet, L4 *l4Rules) bool {
 	return true
 }
 
-func l3_ACL(pkt *packet.Packet, rules *L3Rules) uint {
+func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
 	if pkt.IPv4 != nil {
 		for _, rule := range rules.ip4 {
 			if ((rule.SrcAddr ^ pkt.IPv4.SrcAddr) & rule.SrcMask) != 0 {
@@ -465,7 +465,7 @@ func l3_ACL(pkt *packet.Packet, rules *L3Rules) uint {
 			if ((rule.L4.ID ^ pkt.IPv4.NextProtoID) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4_ACL(pkt, &rule.L4) {
+			if rule.L4.valid && !l4ACL(pkt, &rule.L4) {
 				continue
 			}
 			return rule.OutputNumber
@@ -482,7 +482,7 @@ func l3_ACL(pkt *packet.Packet, rules *L3Rules) uint {
 			if ((rule.L4.ID ^ pkt.IPv6.Proto) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4_ACL(pkt, &rule.L4) {
+			if rule.L4.valid && !l4ACL(pkt, &rule.L4) {
 				continue
 			}
 			return rule.OutputNumber

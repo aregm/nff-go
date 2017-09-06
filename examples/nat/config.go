@@ -12,22 +12,23 @@ import (
 	"os"
 )
 
-type IPv4Subnet struct {
+type ipv4Subnet struct {
 	Addr uint32
 	Mask uint32
 }
 
-type MACAddress [common.EtherAddrLen]uint8
+type macAddress [common.EtherAddrLen]uint8
 
-type IPv4Port struct {
+type ipv4Port struct {
 	Index         uint8      `json:"index"`
-	DstMACAddress MACAddress `json:"dst_mac"`
-	Subnet        IPv4Subnet `json:"subnet"`
+	DstMACAddress macAddress `json:"dst_mac"`
+	Subnet        ipv4Subnet `json:"subnet"`
 }
 
+// Config for NAT.
 type Config struct {
-	PrivatePort IPv4Port `json:"private-port"`
-	PublicPort  IPv4Port `json:"public-port"`
+	PrivatePort ipv4Port `json:"private-port"`
+	PublicPort  ipv4Port `json:"public-port"`
 }
 
 func convertIPv4(in []byte) (uint32, error) {
@@ -41,7 +42,8 @@ func convertIPv4(in []byte) (uint32, error) {
 	return addr, nil
 }
 
-func (out *IPv4Subnet) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON parses ipv 4 subnet details.
+func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -64,12 +66,12 @@ func (out *IPv4Subnet) UnmarshalJSON(b []byte) error {
 		}
 		out.Mask = 0xffffffff
 		return nil
-	} else {
-		return errors.New("Failed to parse address " + s)
 	}
+	return errors.New("Failed to parse address " + s)
 }
 
-func (out *MACAddress) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON parses MAC address.
+func (out *macAddress) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err
@@ -83,7 +85,7 @@ func (out *MACAddress) UnmarshalJSON(b []byte) error {
 	}
 }
 
-// readConfig function reads and parses config file
+// ReadConfig function reads and parses config file
 func ReadConfig(fileName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {

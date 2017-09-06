@@ -30,7 +30,7 @@
 //
 // Packets should be placed in special memory to be sent, so user should use
 // additional functions to generate packets. There are two possibilities to do this:
-//		PacketFromByte function
+//		GeneratePacketFromByte function
 // This function get slice of bytes of any size. Returns packet which contains only these bytes.
 //		CreateEmpty function family
 // There is family of functions to generate empty packets of predefined
@@ -43,9 +43,10 @@ package packet
 
 import (
 	"fmt"
+	"unsafe"
+
 	. "github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
-	"unsafe"
 )
 
 var mbufStructSize uintptr
@@ -123,15 +124,15 @@ func (hdr *IPv6Hdr) String() string {
 
 // TCPHdr L4 header from DPDK: lib/librte_net/rte_tcp.h
 type TCPHdr struct {
-	SrcPort  uint16 // TCP source port
-	DstPort  uint16 // TCP destination port
-	SentSeq  uint32 // TX data sequence number
-	RecvAck  uint32 // RX data acknowledgement sequence number
-	DataOff  uint8  // Data offset
+	SrcPort  uint16   // TCP source port
+	DstPort  uint16   // TCP destination port
+	SentSeq  uint32   // TX data sequence number
+	RecvAck  uint32   // RX data acknowledgement sequence number
+	DataOff  uint8    // Data offset
 	TCPFlags TCPFlags // TCP flags
-	RxWin    uint16 // RX flow control window
-	Cksum    uint16 // TCP checksum
-	TCPUrp   uint16 // TCP urgent pointer, if any
+	RxWin    uint16   // RX flow control window
+	Cksum    uint16   // TCP checksum
+	TCPUrp   uint16   // TCP urgent pointer, if any
 }
 
 func (hdr *TCPHdr) String() string {
@@ -459,11 +460,11 @@ func ExtractPackets(packet []*Packet, IN []uintptr, n uint) {
 	}
 }
 
-// PacketFromByte function gets non-initialized packet and slice of bytes of any size.
+// GeneratePacketFromByte function gets non-initialized packet and slice of bytes of any size.
 // Initializes input packet and fills it with these bytes.
-func PacketFromByte(packet *Packet, data []byte) bool {
+func GeneratePacketFromByte(packet *Packet, data []byte) bool {
 	if low.AppendMbuf(packet.CMbuf, uint(len(data))) == false {
-		LogWarning(Debug, "PacketFromByte: Cannot append mbuf")
+		LogWarning(Debug, "GeneratePacketFromByte: Cannot append mbuf")
 		return false
 	}
 	low.WriteDataToMbuf(packet.CMbuf, data)

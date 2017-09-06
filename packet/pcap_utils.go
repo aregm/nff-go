@@ -7,17 +7,19 @@ package packet
 import (
 	"bytes"
 	"encoding/binary"
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
 	"io"
 	"os"
 	"time"
 	"unsafe"
+
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
 )
 
+// PcapGlobHdrSize is a size of cap global header.
 const PcapGlobHdrSize int64 = 24
 
-// Pcap global header
+// PcapGlobHdr is a Pcap global header.
 type PcapGlobHdr struct {
 	MagicNumber  uint32 /* magic number */
 	VersionMajor uint16 /* major version number */
@@ -28,7 +30,7 @@ type PcapGlobHdr struct {
 	Network      uint32 /* data link type */
 }
 
-// Pcap packet header
+// PcapRecHdr is a Pcap packet header.
 type PcapRecHdr struct {
 	TsSec   uint32 /* timestamp seconds */
 	TsUsec  uint32 /* timestamp microseconds */
@@ -36,7 +38,7 @@ type PcapRecHdr struct {
 	OrigLen uint32 /* actual length of packet */
 }
 
-// Writes global pcap header into file.
+// WritePcapGlobalHdr writes global pcap header into file.
 func WritePcapGlobalHdr(f *os.File) {
 	glHdr := PcapGlobHdr{
 		MagicNumber:  0xa1b2c3d4,
@@ -142,6 +144,6 @@ func (pkt *Packet) ReadPcapOnePacket(f *os.File) bool {
 		common.LogError(common.Debug, err)
 	}
 	bytes := readPacketBytes(f, hdr.InclLen)
-	PacketFromByte(pkt, bytes)
+	GeneratePacketFromByte(pkt, bytes)
 	return false
 }

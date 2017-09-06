@@ -6,13 +6,15 @@ package nat
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"sync"
-	"time"
 )
 
+// Tuple is a pair of address and port.
 type Tuple struct {
 	addr uint32
 	port uint16
@@ -28,14 +30,18 @@ func (t *Tuple) String() string {
 }
 
 var (
-	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
-	Natconfig             *Config
+	// PublicMAC is a public port MAC address.
+	PublicMAC [common.EtherAddrLen]uint8
+	// PrivateMAC is a private port MAC address.
+	PrivateMAC [common.EtherAddrLen]uint8
+	// Natconfig is a config file.
+	Natconfig *Config
 	// Main lookup table which contains entries
 	pri2pubTable []sync.Map
 	pub2priTable []sync.Map
 	mutex        sync.Mutex
 
-	EMPTY_ENTRY = Tuple{addr: 0, port: 0}
+	emptyEntry = Tuple{addr: 0, port: 0}
 )
 
 func init() {
@@ -57,7 +63,7 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 		port: uint16(port),
 	}
 
-	portmap[protocol][port] = PortMapEntry{
+	portmap[protocol][port] = portMapEntry{
 		lastused:             time.Now(),
 		addr:                 publicAddr,
 		finCount:             0,
@@ -71,7 +77,7 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 	return pubEntry, nil
 }
 
-// Ingress translation
+// PublicToPrivateTranslation does ingress translation.
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	var l4offset uint8
 
@@ -111,44 +117,43 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// packet is ignored.
 	if !found {
 		return false
-	} else {
-		value := v.(Tuple)
-
-		// Check whether connection is too old
-		if portmap[protocol][pub2priKey.port].lastused.Add(CONNECTION_TIMEOUT).After(time.Now()) {
-			portmap[protocol][pub2priKey.port].lastused = time.Now()
-		} else {
-			// There was no transfer on this port for too long
-			// time. We don't allow it any more
-			mutex.Lock()
-			deleteOldConnection(protocol, int(pub2priKey.port))
-			mutex.Unlock()
-			return false
-		}
-
-		// Check whether TCP connection could be reused
-		if protocol == common.TCPNumber {
-			checkTCPTermination(pkt.TCP, int(pub2priKey.port), PUB2PRI)
-		}
-
-		// Do packet translation
-		pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
-		pkt.Ether.SAddr = PrivateMAC
-		pkt.IPv4.DstAddr = packet.SwapBytesUint32(value.addr)
-
-		if pkt.IPv4.NextProtoID == common.TCPNumber {
-			pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
-		} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-			pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
-		} else {
-			// Only address is not modified in ICMP packets
-		}
-
-		return true
 	}
+	value := v.(Tuple)
+
+	// Check whether connection is too old
+	if portmap[protocol][pub2priKey.port].lastused.Add(connectionTimeout).After(time.Now()) {
+		portmap[protocol][pub2priKey.port].lastused = time.Now()
+	} else {
+		// There was no transfer on this port for too long
+		// time. We don't allow it any more
+		mutex.Lock()
+		deleteOldConnection(protocol, int(pub2priKey.port))
+		mutex.Unlock()
+		return false
+	}
+
+	// Check whether TCP connection could be reused
+	if protocol == common.TCPNumber {
+		checkTCPTermination(pkt.TCP, int(pub2priKey.port), pub2pri)
+	}
+
+	// Do packet translation
+	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
+	pkt.Ether.SAddr = PrivateMAC
+	pkt.IPv4.DstAddr = packet.SwapBytesUint32(value.addr)
+
+	if pkt.IPv4.NextProtoID == common.TCPNumber {
+		pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
+	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
+		pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
+	} else {
+		// Only address is not modified in ICMP packets
+	}
+
+	return true
 }
 
-// Egress translation
+// PrivateToPublicTranslation does egress translation.
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	var l4offset uint8
 
@@ -200,7 +205,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Check whether TCP connection could be reused
 	if protocol == common.TCPNumber {
-		checkTCPTermination(pkt.TCP, int(value.port), PRI2PUB)
+		checkTCPTermination(pkt.TCP, int(value.port), pri2pub)
 	}
 
 	// Do packet translation
@@ -221,7 +226,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 // Simple check for FIN or RST in TCP
 func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection) {
-	if hdr.TCPFlags&common.TCP_FLAG_FIN != 0 {
+	if hdr.TCPFlags&common.TCPFlagFin != 0 {
 		// First check for FIN
 		mutex.Lock()
 
@@ -234,12 +239,12 @@ func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection)
 		}
 
 		mutex.Unlock()
-	} else if hdr.TCPFlags&common.TCP_FLAG_RST != 0 {
-		// RST means that connection is terminated immediatelly
+	} else if hdr.TCPFlags&common.TCPFlagRst != 0 {
+		// RST means that connection is terminated immediately
 		mutex.Lock()
 		deleteOldConnection(common.TCPNumber, port)
 		mutex.Unlock()
-	} else if hdr.TCPFlags&common.TCP_FLAG_ACK != 0 {
+	} else if hdr.TCPFlags&common.TCPFlagAck != 0 {
 		// Check for ACK last so that if there is also FIN,
 		// termination doesn't happen. Last ACK should come without
 		// FIN

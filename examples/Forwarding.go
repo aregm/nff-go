@@ -48,5 +48,5 @@ func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	currentPacket.ParseL4()
 
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3_ACL_port(currentPacket, l3Rules)
+	return rules.L3ACLPort(currentPacket, l3Rules)
 }

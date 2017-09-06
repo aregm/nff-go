@@ -59,8 +59,8 @@ func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	currentPacket.ParseIPv4()
 	localL2Rules := l2Rules
 	localL3Rules := l3Rules
-	return rules.L2_ACL_permit(currentPacket, localL2Rules) &&
-		rules.L3_ACL_permit(currentPacket, localL3Rules)
+	return rules.L2ACLPermit(currentPacket, localL2Rules) &&
+		rules.L3ACLPermit(currentPacket, localL3Rules)
 }
 
 func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
