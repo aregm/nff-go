@@ -6,6 +6,7 @@ PATH_TO_MK = ../mk
 IMAGENAME = yanff-pktgen
 
 # Pktgen variables
+NOCHECK_PKTGEN = yes
 PKTGEN_VERSION=3.4.0
 PKTGEN_DIR=pktgen-$(PKTGEN_VERSION)
 

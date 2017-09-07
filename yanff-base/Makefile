@@ -5,5 +5,6 @@
 PATH_TO_MK = ../mk
 IMAGENAME = yanff-base
 EXECUTABLES =
+NOCHECK_PKTGEN = yes
 
 include $(PATH_TO_MK)/leaf.mk
