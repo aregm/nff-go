@@ -10,7 +10,7 @@ FROM fedora
 # Install build tools
 # RUN dnf install -y @development-tools
 
-RUN dnf -y install numactl-devel.x86_64; dnf clean all
+# RUN dnf -y install numactl-devel.x86_64; dnf clean all
 
 # Install DPDK support packages.
 # RUN dnf install -y tar libhugetlbfs-utils libpcap-devel kernel kernel-devel kernel-headers

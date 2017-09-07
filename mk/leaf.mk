@@ -12,7 +12,7 @@ include $(PATH_TO_MK)/include.mk
 $(EXECUTABLES) : % : %.go
 	go build $<
 
-ifndef PKTGEN_VERSION
+ifndef NOCHECK_PKTGEN
 all: check-pktgen
 endif
 all: $(EXECUTABLES)
