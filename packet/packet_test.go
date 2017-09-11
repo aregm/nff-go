@@ -22,10 +22,8 @@ var mempool *low.Mempool
 
 func init() {
 	argc, argv := low.InitDPDKArguments([]string{})
-	// TODO DPDK fails if mbufCacheSize=250. After allocation of all
-	// mbufs were done for initilization. Need to investigate.
-	// burstSize=32, mbufNumber=8191, mbufCacheSize=0
-	low.InitDPDK(argc, argv, 32, 8191, 0)
+	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
+	low.InitDPDK(argc, argv, 32, 8191, 250)
 	mempool = low.CreateMempool()
 }
 

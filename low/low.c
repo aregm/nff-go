@@ -21,11 +21,11 @@
 
 #ifdef RTE_MACHINE_CPUFLAG_AVX
 #define mbufClear(buf) \
-	_mm256_storeu_ps((float*)(buf + mbufStructSize), zero256);
+	_mm256_storeu_ps((float*)((char*)(buf) + mbufStructSize), zero256);
 #else
 #define mbufClear(buf) \
-	_mm_storeu_ps((float*)(buf + mbufStructSize), zero128); \
-	_mm_storeu_ps((float*)(buf + mbufStructSize + 16), zero128);
+	_mm_storeu_ps((float*)((char*)(buf) + mbufStructSize), zero128); \
+	_mm_storeu_ps((float*)((char*)(buf) + mbufStructSize + 16), zero128);
 #endif
 
 // This macros clears packet structure which is stored inside mbuf
