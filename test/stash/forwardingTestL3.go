@@ -68,5 +68,5 @@ func main() {
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	currentPacket.ParseL4()
-	return rules.L3_ACL_port(currentPacket, l3Rules)
+	return rules.L3ACLPort(currentPacket, l3Rules)
 }

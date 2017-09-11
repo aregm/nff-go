@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	L3Rules  *rules.L3Rules
+	l3Rules  *rules.L3Rules
 	inport   uint
 	outport1 uint
 	outport2 uint
@@ -35,7 +35,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get splitting rules from access control file.
-	L3Rules = rules.GetL3RulesFromORIG(*filename)
+	l3Rules = rules.GetL3RulesFromORIG(*filename)
 
 	inputFlow1 := flow.SetReceiver(uint8(inport))
 	inputFlow2 := flow.SetReceiver(uint8(inport))
@@ -43,7 +43,7 @@ func main() {
 
 	// Split packet flow based on ACL.
 	flowsNumber := 3
-	outputFlows := flow.SetSplitter(inputFlow, L3Splitter, uint(flowsNumber), nil)
+	outputFlows := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
 
 	// "0" flow is used for dropping packets without sending them.
 	flow.SetStopper(outputFlows[0])
@@ -56,10 +56,10 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
+func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
 	currentPacket.ParseL4()
 
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3_ACL_port(currentPacket, L3Rules)
+	return rules.L3ACLPort(currentPacket, l3Rules)
 }

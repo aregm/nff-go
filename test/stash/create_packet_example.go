@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/hex"
 	"flag"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 )
@@ -17,8 +18,8 @@ var buffer []byte
 func main() {
 	// By default this example generates 128-byte empty packets with
 	// InitEmptyIPv4TCPPacket() and set Ethernet destination address.
-	// If flag enabled, generates packets with PacketFromByte() from raw buffer.
-	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with PacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
+	// If flag enabled, generates packets with GeneratePacketFromByte() from raw buffer.
+	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with GeneratePacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
 	flag.Parse()
 
 	// Initialize YANFF library at 16 available cores
@@ -48,5 +49,5 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 
 func generatePacketFromByte(emptyPacket *packet.Packet, context flow.UserContext) {
 	// Total packet size is 64 bytes
-	packet.PacketFromByte(emptyPacket, buffer)
+	packet.GeneratePacketFromByte(emptyPacket, buffer)
 }

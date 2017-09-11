@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package test_common
+package testCommon
 
 import (
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/packet"
 )
 
+// Packetdata is a structure for packet pointer cast.
 type Packetdata struct {
 	F1, F2 uint64
 }
 
+// CheckPacketChecksums calculates and checks checksum for packet.
 func CheckPacketChecksums(p *packet.Packet) bool {
 	status := false
 
@@ -65,6 +67,7 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 	return status
 }
 
+// CalculateChecksum calculates checksum and writes to fields of packet.
 func CalculateChecksum(p *packet.Packet) {
 	if p.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
 		p.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(p))

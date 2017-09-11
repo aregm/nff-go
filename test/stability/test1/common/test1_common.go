@@ -4,6 +4,7 @@
 
 package common
 
+// Packetdata is a structure for packet pointer cast.
 type Packetdata struct {
 	F1, F2 uint64
 }

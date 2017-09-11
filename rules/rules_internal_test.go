@@ -56,13 +56,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/intel-go/yanff/low"
-	"github.com/intel-go/yanff/packet"
 	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/yanff/packet"
 )
 
 var mempool *low.Mempool
@@ -93,9 +94,9 @@ func TestL2RulesReadingGen(t *testing.T) {
 			{"01:11:21:31:41:51", gtMacAddr{[6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}, true}},
 		},
 		ids: []idTest{ // {rawid, ground truth {id, idmask}}
-			{"ANY", gtId{0, 0x0000}},
-			{"IPv4", gtId{0x0800, 0xffff}},
-			{"IPv6", gtId{0x86dd, 0xffff}},
+			{"ANY", gtID{0, 0x0000}},
+			{"IPv4", gtID{0x0800, 0xffff}},
+			{"IPv6", gtID{0x86dd, 0xffff}},
 		},
 	}
 
@@ -130,7 +131,7 @@ func TestL2RulesReadingGen(t *testing.T) {
 					}
 
 					// Expected result of parsing
-					rule_want := l2Rules{
+					ruleWant := l2Rules{
 						OutputNumber: r.gtrule,
 						DAddrNotAny:  dst.addrNotAny,
 						SAddrNotAny:  src.addrNotAny,
@@ -141,9 +142,9 @@ func TestL2RulesReadingGen(t *testing.T) {
 					}
 
 					// Now we can read file, parse l2 rule and compare result with expected
-					rule_got := GetL2RulesFromJSON(tmpfile.Name())
+					ruleGot := GetL2RulesFromJSON(tmpfile.Name())
 
-					if !reflect.DeepEqual(rule_got.eth[0], rule_want) {
+					if !reflect.DeepEqual(ruleGot.eth[0], ruleWant) {
 						t.Errorf("Incorrect parse L2 rules")
 						t.FailNow()
 					}
@@ -219,9 +220,9 @@ func TestL3RulesReadingGen(t *testing.T) {
 		},
 
 		ids: []idTest{ // {rawid, ground truth {id, idmask}}
-			{"ANY", gtId{0, 0x0000}},
-			{"TCP", gtId{0x06, 0xff}},
-			{"UDP", gtId{0x11, 0xff}},
+			{"ANY", gtID{0, 0x0000}},
+			{"TCP", gtID{0x06, 0xff}},
+			{"UDP", gtID{0x11, 0xff}},
 		},
 		srcports: []portTest{
 			{"ANY", gtPort{0, 65535, false}},
@@ -252,15 +253,15 @@ func TestL3RulesReadingGen(t *testing.T) {
 					for _, src4 := range rulesCtxt.srcs4 {
 						for _, dst4 := range rulesCtxt.dsts4 {
 							// Form expected result of parsing
-							rule_want := l3Rules4{
+							ruleWant := l3Rules4{
 								OutputNumber: r.gtrule,
 								SrcAddr:      src4.gtAddr4.addr,
 								DstAddr:      dst4.gtAddr4.addr,
 								SrcMask:      src4.gtAddr4.mask,
 								DstMask:      dst4.gtAddr4.mask,
 								L4: l4Rules{
-									IDMask:     uint8(id.gtId.idmsk),
-									ID:         uint8(id.gtId.id),
+									IDMask:     uint8(id.gtID.idmsk),
+									ID:         uint8(id.gtID.id),
 									valid:      sport.gtPort.valid || dport.gtPort.valid,
 									SrcPortMin: sport.gtPort.min,
 									SrcPortMax: sport.gtPort.max,
@@ -293,11 +294,11 @@ func TestL3RulesReadingGen(t *testing.T) {
 							}
 
 							// Now we can read file, parse l2 rule and compare result with expected.
-							rule_got := GetL3RulesFromJSON(tmpfile.Name())
+							ruleGot := GetL3RulesFromJSON(tmpfile.Name())
 
-							if !reflect.DeepEqual(rule_got.ip4[0], rule_want) {
+							if !reflect.DeepEqual(ruleGot.ip4[0], ruleWant) {
 								t.Errorf("Incorrect parse L3 ipv4 rules:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
-									rule_got.ip4[0], rule_want, rule_got.ip4[0].L4, rule_want.L4)
+									ruleGot.ip4[0], ruleWant, ruleGot.ip4[0].L4, ruleWant.L4)
 								t.Errorf("Test JSON file %s\n\n", tmpfile.Name())
 								t.FailNow()
 							}
@@ -321,11 +322,11 @@ func TestL3RulesReadingGen(t *testing.T) {
 							}
 
 							// Now we can read file, parse l2 rule and compare result with expected.
-							rule_got = GetL3RulesFromORIG(tmpfile.Name())
+							ruleGot = GetL3RulesFromORIG(tmpfile.Name())
 
-							if !reflect.DeepEqual(rule_got.ip4[0], rule_want) {
+							if !reflect.DeepEqual(ruleGot.ip4[0], ruleWant) {
 								t.Errorf("Incorrect parse L3 ipv4 rules from ORIG:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
-									rule_got.ip4[0], rule_want, rule_got.ip4[0].L4, rule_want.L4)
+									ruleGot.ip4[0], ruleWant, ruleGot.ip4[0].L4, ruleWant.L4)
 								t.Errorf("Test ORIG file %s\n\n", tmpfile.Name())
 								t.FailNow()
 							}
@@ -364,15 +365,15 @@ func TestL3RulesReadingGen(t *testing.T) {
 							}
 
 							// Form expected result of parsing
-							rule_want := l3Rules6{
+							ruleWant := l3Rules6{
 								OutputNumber: r.gtrule,
 								SrcAddr:      src6.gtAddr6.addr,
 								DstAddr:      dst6.gtAddr6.addr,
 								SrcMask:      src6.gtAddr6.mask,
 								DstMask:      dst6.gtAddr6.mask,
 								L4: l4Rules{
-									IDMask:     uint8(id.gtId.idmsk),
-									ID:         uint8(id.gtId.id),
+									IDMask:     uint8(id.gtID.idmsk),
+									ID:         uint8(id.gtID.id),
 									valid:      sport.gtPort.valid || dport.gtPort.valid,
 									SrcPortMin: sport.gtPort.min,
 									SrcPortMax: sport.gtPort.max,
@@ -382,11 +383,11 @@ func TestL3RulesReadingGen(t *testing.T) {
 							}
 
 							// Now we can read file, parse l2 rule and compare result with expected.
-							rule_got := GetL3RulesFromJSON(tmpfile.Name())
+							ruleGot := GetL3RulesFromJSON(tmpfile.Name())
 
-							if !reflect.DeepEqual(rule_got.ip6[0], rule_want) {
+							if !reflect.DeepEqual(ruleGot.ip6[0], ruleWant) {
 								t.Errorf("Incorrect parse L3 ipv6 rules:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
-									rule_got.ip6[0], rule_want, rule_got.ip6[0].L4, rule_want.L4)
+									ruleGot.ip6[0], ruleWant, ruleGot.ip6[0].L4, ruleWant.L4)
 								t.Errorf("Test JSON file %s\n\n", tmpfile.Name())
 								t.FailNow()
 							}
@@ -441,8 +442,8 @@ func TestL3RulesReadingGen(t *testing.T) {
 //		SrcPort = 1234
 //		DstPort = 5678
 
-// Tests for l4_ACL internal function on TCP packet
-// This functions is called only inside l3_ACL, so we need to test it standalone first
+// Tests for l4ACL internal function on TCP packet
+// This functions is called only inside l3ACL, so we need to test it standalone first
 func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	// TCP packet Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
@@ -450,7 +451,7 @@ func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 	pkt.ParseL4()
 
 	// Generate rules by combining these given field values:
@@ -478,7 +479,7 @@ func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 				DstPortMax: dstRange.max,
 			}
 
-			got := l4_ACL(pkt, &rule)
+			got := l4ACL(pkt, &rule)
 			want := srcRange.ok && dstRange.ok
 
 			if got != want {
@@ -504,7 +505,7 @@ func (rule l3Rules6) String() string {
 	return h0 + h1
 }
 
-// Tests for l3_ACL (without call to l4_ACL)
+// Tests for l3ACL (without call to l4ACL)
 func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
@@ -512,7 +513,7 @@ func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
 
@@ -552,7 +553,7 @@ func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 					ip6: nil,
 				}
 
-				got := l3_ACL(pkt, &l3rule)
+				got := l3ACL(pkt, &l3rule)
 				var want uint
 				if srcAddrMsk.ok && dstAddrMsk.ok { // check only l3-related fields here
 					want = outNum
@@ -568,7 +569,7 @@ func TestInternal_l3_ACL_packetIPv4_TCP(t *testing.T) {
 	}
 }
 
-// Tests for l3_ACL (with call to l4_ACL) for IPv4/TCP packet
+// Tests for l3ACL (with call to l4ACL) for IPv4/TCP packet
 func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
@@ -576,7 +577,7 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
 
@@ -651,7 +652,7 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 								ip6: nil,
 							}
 
-							got := l3_ACL(pkt, &l3rule)
+							got := l3ACL(pkt, &l3rule)
 							var want uint
 							if idMsk.ok && srcRange.ok && dstRange.ok && srcAddrMsk.ok && dstAddrMsk.ok {
 								want = outNum
@@ -684,14 +685,14 @@ func TestInternal_l3_l4_ACL_packetIPv4_TCP(t *testing.T) {
 //		SrcPort = 1234
 //		DstPort = 5678
 
-// Tests for l3_ACL (with call to l4_ACL) for IPv6/TCP packet
+// Tests for l3ACL (with call to l4ACL) for IPv6/TCP packet
 func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000140600dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e123456781234569050102000495b0000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
 
@@ -788,7 +789,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 								ip6: l3rule6,
 							}
 
-							got := l3_ACL(pkt, &l3rule)
+							got := l3ACL(pkt, &l3rule)
 							var want uint
 							if idMsk.ok && srcRange.ok && dstRange.ok && srcAddrMsk.ok && dstAddrMsk.ok {
 								want = outNum
@@ -821,14 +822,14 @@ func TestInternal_l3_l4_ACL_packetIPv6_TCP(t *testing.T) {
 //		SrcPort = 1234
 //		DstPort = 5678
 
-// Tests for l3_ACL (with call to l4_ACL) for IPv6/UDP packet
+// Tests for l3ACL (with call to l4ACL) for IPv6/UDP packet
 func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 	buffer := "00112233445501112131415186dd6000000000081100dead000000000000000000000000beafdead000000000000000000000000ddfd04d2162e00088ad5"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
 
@@ -926,7 +927,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 								ip6: l3rule6,
 							}
 
-							got := l3_ACL(pkt, &l3rule)
+							got := l3ACL(pkt, &l3rule)
 							var want uint
 							if idMsk.ok && srcRange.ok && dstRange.ok && srcAddrMsk.ok && dstAddrMsk.ok {
 								want = outNum
@@ -945,7 +946,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 	}
 }
 
-// Tests for l2_ACL
+// Tests for l2ACL
 func TestInternal_l2_ACL(t *testing.T) {
 	// Packet 1
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
@@ -953,7 +954,7 @@ func TestInternal_l2_ACL(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := packet.ExtractPacket(mb[0])
-	packet.PacketFromByte(pkt, decoded)
+	packet.GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseL4()
 
@@ -1001,7 +1002,7 @@ func TestInternal_l2_ACL(t *testing.T) {
 						eth: ethRule,
 					}
 
-					got := l2_ACL(pkt, &l2rule)
+					got := l2ACL(pkt, &l2rule)
 					var want uint
 					if idMsk.ok && src.ok && dst.ok {
 						want = outNum
@@ -1091,10 +1092,10 @@ type ruleTest struct {
 
 type idTest struct {
 	rawid string
-	gtId
+	gtID
 }
 
-type gtId struct {
+type gtID struct {
 	id    uint16
 	idmsk uint16
 }

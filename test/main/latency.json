@@ -16,12 +16,12 @@
         {
             "name": "latency-test-light",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1"
                     ]
@@ -29,7 +29,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_light"
                     ]
@@ -39,12 +39,12 @@
 		{
             "name": "latency-test-seq",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1", "-LAT_NUMBER=1000"
                     ]
@@ -52,7 +52,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_seq"
                     ]
@@ -62,12 +62,12 @@
 		{
             "name": "latency-test-main",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_BENCHMARK",
+            "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1", "-LAT_NUMBER=1000"
                     ]
@@ -75,7 +75,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-performance",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_main"
                     ]

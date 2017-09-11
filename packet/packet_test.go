@@ -298,7 +298,7 @@ func TestParseL4(t *testing.T) {
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
-		PacketFromByte(pkt, decoded)
+		GeneratePacketFromByte(pkt, decoded)
 		if pkt == nil {
 			t.Fatal("Unable to construct mbuf")
 		}
@@ -330,7 +330,7 @@ func TestParseIPv4(t *testing.T) {
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
-		PacketFromByte(pkt, decoded)
+		GeneratePacketFromByte(pkt, decoded)
 
 		pkt.ParseIPv4()
 
@@ -352,7 +352,7 @@ func TestParseIPv4_(t *testing.T) {
 		mb := make([]uintptr, 1)
 		low.AllocateMbufs(mb, mempool)
 		pkt := ExtractPacket(mb[0])
-		PacketFromByte(pkt, decoded)
+		GeneratePacketFromByte(pkt, decoded)
 
 		if i == 2 || i == 5 || i == 7 {
 			pkt.ParseIPv4UDP()
@@ -395,11 +395,11 @@ func TestParseIPv4TCPDataFunctions(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	PacketFromByte(pkt, decoded)
+	GeneratePacketFromByte(pkt, decoded)
 
 	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
-	PacketFromByte(parsedPkt, decoded)
+	GeneratePacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseIPv4TCP()
 
 	pkt.ParseData()
@@ -456,7 +456,7 @@ func TestParseIPv4UDPDataFunctions(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	PacketFromByte(pkt, decoded)
+	GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseIPv4UDPData()
 	if *(*uint64)(pkt.Data) != gt_payload {
@@ -489,11 +489,11 @@ func TestParseIPv6TCPDataFunctions(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	PacketFromByte(pkt, decoded)
+	GeneratePacketFromByte(pkt, decoded)
 
 	low.AllocateMbufs(mb, mempool)
 	parsedPkt := ExtractPacket(mb[0])
-	PacketFromByte(parsedPkt, decoded)
+	GeneratePacketFromByte(parsedPkt, decoded)
 	parsedPkt.ParseIPv6TCP()
 
 	pkt.ParseIPv6Data()
@@ -536,7 +536,7 @@ func TestParseIPv6UDPDataFunctions(t *testing.T) {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, mempool)
 	pkt := ExtractPacket(mb[0])
-	PacketFromByte(pkt, decoded)
+	GeneratePacketFromByte(pkt, decoded)
 
 	pkt.ParseIPv6UDPData()
 	if *(*uint64)(pkt.Data) != gt_payload {
@@ -576,7 +576,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 		for j := uint(1); j < 21; j++ {
 			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
-			PacketFromByte(pkt, init)
+			GeneratePacketFromByte(pkt, init)
 
 			pkt.EncapsulateHead(i, j)
 			pkt.PacketBytesChange(i, add[0:j])
@@ -593,7 +593,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 		for j := uint(1); j < 21; j++ {
 			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
-			PacketFromByte(pkt, init)
+			GeneratePacketFromByte(pkt, init)
 
 			pkt.EncapsulateTail(i, j)
 			pkt.PacketBytesChange(i, add[0:j])
@@ -610,7 +610,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 		for j := uint(1); j < 20-i+1; j++ {
 			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
-			PacketFromByte(pkt, add)
+			GeneratePacketFromByte(pkt, add)
 
 			pkt.DecapsulateHead(i, j)
 			var temp []byte
@@ -626,7 +626,7 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 		for j := uint(1); j < 20-i+1; j++ {
 			low.AllocateMbufs(mb, mempool)
 			pkt := ExtractPacket(mb[0])
-			PacketFromByte(pkt, add)
+			GeneratePacketFromByte(pkt, add)
 
 			pkt.DecapsulateTail(i, j)
 			var temp []byte
@@ -670,7 +670,7 @@ func TestInitEmptyPacket(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:EtherLen]
 	// DEEP equal for whole packet buffer
@@ -695,7 +695,7 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
@@ -717,7 +717,7 @@ func TestInitEmptyIPv6Packet(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
@@ -740,7 +740,7 @@ func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen + TCPMinLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
@@ -763,7 +763,7 @@ func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv4MinLen + UDPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
@@ -786,7 +786,7 @@ func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len + TCPMinLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
@@ -809,7 +809,7 @@ func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	gtMb := make([]uintptr, 1)
 	low.AllocateMbufs(gtMb, mempool)
 	gtPkt := ExtractPacket(gtMb[0])
-	PacketFromByte(gtPkt, gtBuf)
+	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + IPv6Len + UDPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
