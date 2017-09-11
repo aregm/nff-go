@@ -41,7 +41,7 @@ const (
 var (
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint = 16
-	d            uint = 10
+	d           uint = 10
 
 	sentPacketsGroup1 uint64
 	sentPacketsGroup2 uint64

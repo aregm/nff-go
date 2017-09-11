@@ -30,7 +30,7 @@ var (
 	sentPackets     uint64
 	receivedPackets uint64
 	testDoneEvent   *sync.Cond
-	passed          int32      = 1
+	passed          int32 = 1
 
 	outport uint
 	inport  uint
