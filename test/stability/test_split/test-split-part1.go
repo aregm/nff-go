@@ -44,7 +44,7 @@ const (
 var (
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 454
-	speed        uint64 = 6000000 // for 512 pkt ~ 25Gb/s
+	speed       uint64 = 6000000 // for 512 pkt ~ 25Gb/s
 	passedLimit uint64 = 85
 
 	sentPacketsGroup1 uint64

@@ -30,13 +30,13 @@ import (
 
 // These are default test settings. Can be modified with command line.
 var (
-	latNumber       = 500
-	bins            = 10
+	latNumber          = 500
+	bins               = 10
 	skipNumber  uint64 = 100000
-	speed        uint64 = 1000000
+	speed       uint64 = 1000000
 	passedLimit uint64 = 80
 
-	packetSize    uint64 = 128
+	packetSize   uint64 = 128
 	servDataSize uint64 = 46 // Ether + IPv4 + UDP + 4
 
 	dstPort1 uint16 = 111

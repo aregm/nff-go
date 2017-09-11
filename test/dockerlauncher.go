@@ -22,12 +22,12 @@ import (
 // Pktgen commands constants
 const (
 	PktgenGetPortsNumberCommand = "printf(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n);"
-	PktgenGetPortStatsCommand  = "stat = pktgen.portStats(\"all\", \"rate\");"
+	PktgenGetPortStatsCommand   = "stat = pktgen.portStats(\"all\", \"rate\");"
 	PktgenPrintPortStatsCommand = "printf(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx);"
-	PktgenExitCommand             = "os.exit(0);"
+	PktgenExitCommand           = "os.exit(0);"
 
 	PktgenGetPortsNumberFormat = "%d"
-	PktgenGetPortStatsFormat  = "%d %d %d %d"
+	PktgenGetPortStatsFormat   = "%d %d %d %d"
 )
 
 // Test statuses regular expressions.

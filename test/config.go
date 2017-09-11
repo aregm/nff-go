@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// BenchmarkConfig struct has settings controlling benchmark 
+// BenchmarkConfig struct has settings controlling benchmark
 // parameters, usually for tests with type TestTypeBenchmark.
 type BenchmarkConfig struct {
 	// Array of strings to pass to pktgen Lua scripting interface upon
