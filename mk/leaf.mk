@@ -25,7 +25,7 @@ clean: clean-default
 # Local docker targets
 .PHONY: images clean-images
 
-images: .check-defined-IMAGENAME all
+images: Dockerfile .check-defined-IMAGENAME all
 	docker build -t $(IMAGENAME) .
 
 clean-images: .check-defined-IMAGENAME clean
