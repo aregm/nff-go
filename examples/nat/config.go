@@ -7,9 +7,10 @@ package nat
 import (
 	"encoding/json"
 	"errors"
-	"github.com/intel-go/yanff/common"
 	"net"
 	"os"
+
+	"github.com/intel-go/yanff/common"
 )
 
 type ipv4Subnet struct {
@@ -77,12 +78,13 @@ func (out *macAddress) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if hw, err := net.ParseMAC(s); err == nil {
-		copy(out[:], hw)
-		return nil
-	} else {
+	hw, err := net.ParseMAC(s)
+	if err != nil {
 		return err
 	}
+
+	copy(out[:], hw)
+	return nil
 }
 
 // ReadConfig function reads and parses config file
