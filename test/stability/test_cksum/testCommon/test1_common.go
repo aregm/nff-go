@@ -19,46 +19,52 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 	status := false
 
 	if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV4Number {
+		pIPv4 := p.GetIPv4()
 		l3status := true
-		if packet.SwapBytesUint16(p.IPv4.HdrChecksum) != packet.CalculateIPv4Checksum(p) {
+		if packet.SwapBytesUint16(pIPv4.HdrChecksum) != packet.CalculateIPv4Checksum(p) {
 			println("IPv4 checksum mismatch")
 			l3status = false
 		}
 
-		if p.IPv4.NextProtoID == common.UDPNumber {
+		if pIPv4.NextProtoID == common.UDPNumber {
+			pUDP := p.GetUDPForIPv4()
 			csum := packet.CalculateIPv4UDPChecksum(p)
-			if packet.SwapBytesUint16(p.UDP.DgramCksum) != csum {
-				println("IPv4 UDP datagram checksum mismatch", packet.SwapBytesUint16(p.UDP.DgramCksum), "should be", csum)
+			if packet.SwapBytesUint16(pUDP.DgramCksum) != csum {
+				println("IPv4 UDP datagram checksum mismatch", packet.SwapBytesUint16(pUDP.DgramCksum), "should be", csum)
 			} else {
 				status = l3status
 			}
-		} else if p.IPv4.NextProtoID == common.TCPNumber {
+		} else if pIPv4.NextProtoID == common.TCPNumber {
+			pTCP := p.GetTCPForIPv4()
 			csum := packet.CalculateIPv4TCPChecksum(p)
-			if packet.SwapBytesUint16(p.TCP.Cksum) != csum {
-				println("IPv4 TCP checksum mismatch", packet.SwapBytesUint16(p.TCP.Cksum), "should be", csum)
+			if packet.SwapBytesUint16(pTCP.Cksum) != csum {
+				println("IPv4 TCP checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
 			} else {
 				status = l3status
 			}
 		} else {
-			println("Unknown IPv4 protocol number", p.IPv4.NextProtoID)
+			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 		}
 	} else if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV6Number {
-		if p.IPv6.Proto == common.UDPNumber {
+		pIPv6 := p.GetIPv6()
+		if pIPv6.Proto == common.UDPNumber {
+			pUDP := p.GetUDPForIPv6()
 			csum := packet.CalculateIPv6UDPChecksum(p)
-			if packet.SwapBytesUint16(p.UDP.DgramCksum) != csum {
-				println("IPv6 UDP datagram checksum mismatch:", packet.SwapBytesUint16(p.UDP.DgramCksum), "should be", csum)
+			if packet.SwapBytesUint16(pUDP.DgramCksum) != csum {
+				println("IPv6 UDP datagram checksum mismatch:", packet.SwapBytesUint16(pUDP.DgramCksum), "should be", csum)
 			} else {
 				status = true
 			}
-		} else if p.IPv6.Proto == common.TCPNumber {
+		} else if pIPv6.Proto == common.TCPNumber {
+			pTCP := p.GetTCPForIPv6()
 			csum := packet.CalculateIPv6TCPChecksum(p)
-			if packet.SwapBytesUint16(p.TCP.Cksum) != csum {
-				println("IPv6 TCP datagram checksum mismatch", packet.SwapBytesUint16(p.TCP.Cksum), "should be", csum)
+			if packet.SwapBytesUint16(pTCP.Cksum) != csum {
+				println("IPv6 TCP datagram checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
 			} else {
 				status = true
 			}
 		} else {
-			println("Unknown IPv6 protocol number", p.IPv6.Proto)
+			println("Unknown IPv6 protocol number", pIPv6.Proto)
 		}
 	} else {
 		println("Unknown packet EtherType", p.Ether.EtherType)
@@ -70,23 +76,25 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 // CalculateChecksum calculates checksum and writes to fields of packet.
 func CalculateChecksum(p *packet.Packet) {
 	if p.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		p.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(p))
+		pIPv4 := p.GetIPv4()
+		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(p))
 
-		if p.IPv4.NextProtoID == common.UDPNumber {
-			p.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(p))
-		} else if p.IPv4.NextProtoID == common.TCPNumber {
-			p.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(p))
+		if pIPv4.NextProtoID == common.UDPNumber {
+			p.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(p))
+		} else if pIPv4.NextProtoID == common.TCPNumber {
+			p.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(p))
 		} else {
-			println("Unknown IPv4 protocol number", p.IPv4.NextProtoID)
+			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 			println("TEST FAILED")
 		}
 	} else if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV6Number {
-		if p.IPv6.Proto == common.UDPNumber {
-			p.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(p))
-		} else if p.IPv6.Proto == common.TCPNumber {
-			p.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(p))
+		pIPv6 := p.GetIPv6()
+		if pIPv6.Proto == common.UDPNumber {
+			p.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(p))
+		} else if pIPv6.Proto == common.TCPNumber {
+			p.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(p))
 		} else {
-			println("Unknown IPv6 protocol number", p.IPv6.Proto)
+			println("Unknown IPv6 protocol number", pIPv6.Proto)
 			println("TEST FAILED")
 		}
 	} else {

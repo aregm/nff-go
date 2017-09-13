@@ -111,7 +111,7 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	newValue := atomic.AddUint64(&receivedPackets, 1)
 
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
 		atomic.StoreInt32(&passed, 0)

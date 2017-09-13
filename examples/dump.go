@@ -51,19 +51,28 @@ func main() {
 }
 
 func dumper(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseL4()
+	var tcp *packet.TCPHdr
+	var udp *packet.UDPHdr
+	var icmp *packet.ICMPHdr
+
 	fmt.Printf("%v", currentPacket.Ether)
-	if currentPacket.IPv4 != nil {
-		fmt.Printf("%v", currentPacket.IPv4)
-	} else if currentPacket.IPv6 != nil {
-		fmt.Printf("%v", currentPacket.IPv6)
+	ipv4, ipv6 := currentPacket.ParseAllKnownL3()
+	if ipv4 != nil {
+		fmt.Printf("%v", ipv4)
+		tcp, udp, icmp = currentPacket.ParseAllKnownL4ForIPv4()
+	} else if ipv6 != nil {
+		fmt.Printf("%v", ipv6)
+		tcp, udp, icmp = currentPacket.ParseAllKnownL4ForIPv6()
 	} else {
 		fmt.Println("    Unknown L3 protocol")
 	}
-	if currentPacket.TCP != nil {
-		fmt.Printf("%v", currentPacket.TCP)
-	} else if currentPacket.UDP != nil {
-		fmt.Printf("%v", currentPacket.UDP)
+
+	if tcp != nil {
+		fmt.Printf("%v", tcp)
+	} else if udp != nil {
+		fmt.Printf("%v", udp)
+	} else if icmp != nil {
+		fmt.Printf("%v", icmp)
 	} else {
 		fmt.Println("        Unknown L4 protocol")
 	}

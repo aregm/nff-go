@@ -57,9 +57,6 @@ func main() {
 }
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
-	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
-	currentPacket.ParseL4()
-
 	// Return number of flow to which put this packet. Based on ACL rules.
 	return rules.L3ACLPort(currentPacket, l3Rules)
 }

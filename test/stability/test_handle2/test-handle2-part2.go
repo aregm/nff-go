@@ -47,6 +47,5 @@ func main() {
 }
 
 func l3Handler(pkt *packet.Packet, context flow.UserContext) bool {
-	pkt.ParseIPv4UDP()
 	return rules.L3ACLPermit(pkt, l3Rules)
 }

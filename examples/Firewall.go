@@ -50,9 +50,6 @@ func main() {
 
 // User defined function for separating packets
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
-	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
-	currentPacket.ParseL4()
-
 	// Return whether packet is accepted or not. Based on ACL rules.
 	return rules.L3ACLPermit(currentPacket, l3Rules)
 }
