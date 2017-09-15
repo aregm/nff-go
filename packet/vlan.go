@@ -56,21 +56,19 @@ func (packet *Packet) GetEtherType() uint16 {
 		vptr := packet.unparsed()
 		vhdr := (*VLANHdr)(unsafe.Pointer(vptr))
 		return SwapBytesUint16(vhdr.EtherType)
-	} else {
-		return SwapBytesUint16(packet.Ether.EtherType)
 	}
+	return SwapBytesUint16(packet.Ether.EtherType)
 }
 
 // ParseL3CheckVLAN set pointer to start of L3 header taking possible
 // presence of VLAN header into account.
 func (packet *Packet) ParseL3CheckVLAN() *VLANHdr {
 	ptr := packet.unparsed()
-
 	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
-		packet.L3 = unsafe.Pointer(ptr + VLANLen)
-		return (*VLANHdr)(unsafe.Pointer(packet.unparsed()))
+		packet.L3 = unsafe.Pointer(uintptr(ptr) + VLANLen)
+		return (*VLANHdr)(ptr)
 	}
-	packet.L3 = unsafe.Pointer(ptr)
+	packet.L3 = ptr
 	return nil
 }
 
@@ -111,9 +109,8 @@ func (packet *Packet) ParseAllKnownL3CheckVLAN() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
 		return nil, packet.GetIPv6NoCheck(), nil
 	} else if packet.GetARPCheckVLAN() != nil {
 		return nil, nil, packet.GetARPNoCheck()
-	} else {
-		return nil, nil, nil
 	}
+	return nil, nil, nil
 }
 
 // AddVLANTag increases size of packet on VLANLen and adds 802.1Q VLAN header

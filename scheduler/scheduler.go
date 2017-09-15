@@ -340,10 +340,9 @@ func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 			}
 		}()
 		return true
-	} else {
-		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
-		return false
 	}
+	common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
+	return false
 }
 
 func (scheduler *Scheduler) removeClone(ff *FlowFunction) {
