@@ -62,7 +62,7 @@ func initCommonState() {
 		target = &direct
 	}
 
-	// Get destination MAC addressess for port 0 and 1
+	// Get destination MAC addresses for port 0 and 1
 	if hw, err := net.ParseMAC(config[*target][0]); err == nil {
 		copy(dstMac0[:], hw)
 	} else {

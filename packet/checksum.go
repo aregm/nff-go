@@ -51,13 +51,13 @@ func (packet *Packet) SetTXIPv4TCPOLFlags(l2len, l3len uint32) {
 	low.SetTXIPv4TCPOLFlags(packet.CMbuf, l2len, l3len)
 }
 
-// SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header checksum
+// SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP header checksum
 // calculation hardware offloading.
 func (packet *Packet) SetTXIPv6TCPOLFlags(l2len, l3len uint32) {
 	low.SetTXIPv6TCPOLFlags(packet.CMbuf, l2len, l3len)
 }
 
-// SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP header checksum
+// SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header checksum
 // calculation hardware offloading.
 func (packet *Packet) SetTXIPv6UDPOLFlags(l2len, l3len uint32) {
 	low.SetTXIPv6UDPOLFlags(packet.CMbuf, l2len, l3len)

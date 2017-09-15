@@ -54,7 +54,7 @@ func TestInitARPCommonDataacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
@@ -80,7 +80,7 @@ func TestInitARPRequestPacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
@@ -107,7 +107,7 @@ func TestInitARPReplyPacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
@@ -132,7 +132,7 @@ func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
@@ -157,7 +157,7 @@ func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
@@ -177,7 +177,7 @@ func TestInitEmptyARPPacket(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 	}
