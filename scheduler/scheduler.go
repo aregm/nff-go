@@ -212,8 +212,8 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// We multiply by 8 to translate bytes to bits
 			// We divide by 1000 and 1000 because networking suppose that megabit has 1000 kilobits instead of 1024
 			// TODO This Mbits measurement should be used only for 84 packet size for debug purposes
-			speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
-			common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedMbits, "Mbits/S,", speedPKTS, "PKT/S")
+//			speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
+			common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S")
 
 			// After we gather current speed we can add or remove clones.
 

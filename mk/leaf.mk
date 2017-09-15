@@ -10,7 +10,7 @@ include $(PATH_TO_MK)/include.mk
 # Build all
 .PHONY: clean
 $(EXECUTABLES) : % : %.go
-	go build $<
+	go build $< $(COMMON_FILES)
 
 ifndef NOCHECK_PKTGEN
 all: check-pktgen

@@ -1,0 +1,82 @@
+{
+    "dcomp01": [
+        "3c:fd:fe:9d:6a:c2",
+        "3c:fd:fe:9d:6a:c3"
+    ],
+    "dcomp02": [
+        "3c:fd:fe:9d:67:ea",
+        "3c:fd:fe:9d:67:eb"
+    ],
+    "dcomp03": [
+        "3c:fd:fe:9d:6a:ba",
+        "3c:fd:fe:9d:6a:bb"
+    ],
+    "dcomp10": [
+        "3c:fd:fe:9d:69:2a",
+        "3c:fd:fe:9d:69:2b"
+    ],
+    "dcomp11": [
+        "3c:fd:fe:9d:63:1a",
+        "3c:fd:fe:9d:63:1b"
+    ],
+    "dcomp12": [
+        "3c:fd:fe:9d:6a:fa",
+        "3c:fd:fe:9d:6a:fb"
+    ],
+    "dbdw04": [
+        "90:e2:ba:af:c5:70",
+        "90:e2:ba:af:c5:71"
+    ],
+    "dbdw05": [
+        "ff:ff:ff:ff:ff:ff",
+        "ff:ff:ff:ff:ff:ff"
+    ],
+    "dbdw06": [
+        "90:e2:ba:af:d7:f8",
+        "90:e2:ba:af:d7:f9"
+    ],
+    "dbdw07": [
+        "90:e2:ba:c6:7a:74",
+        "90:e2:ba:c6:7a:75"
+    ],
+    "dbdw08": [
+        "90:e2:ba:c6:7e:00",
+        "90:e2:ba:c6:7e:01"
+    ],
+    "dbdw09": [
+        "90:e2:ba:af:d7:f0",
+        "90:e2:ba:af:d7:f1"
+    ],
+    "dbdw10": [
+        "90:e2:ba:b1:e1:f4",
+        "90:e2:ba:b1:e1:f5"
+    ],
+    "dbdw11": [
+        "90:e2:ba:b1:e2:00",
+        "90:e2:ba:b1:e2:01"
+    ],
+    "dbdw12": [
+        "90:e2:ba:b1:dd:c8",
+        "90:e2:ba:b1:dd:c9"
+    ],
+    "dbdw13": [
+        "90:e2:ba:b1:e1:d4",
+        "90:e2:ba:b1:e1:d5"
+    ],
+    "dbdw14": [
+        "90:e2:ba:b1:e1:d8",
+        "90:e2:ba:b1:e1:d9"
+    ],
+    "dbdw15": [
+        "90:e2:ba:b1:dd:bc",
+        "90:e2:ba:b1:dd:bd"
+    ],
+    "dbdw16": [
+        "90:e2:ba:d3:70:dc",
+        "90:e2:ba:d3:70:dd"
+    ],
+    "dbdw17": [
+        "90:e2:ba:b1:07:e8",
+        "90:e2:ba:b1:07:e9"
+    ]
+}
