@@ -72,9 +72,21 @@ enable 0 range
     }
 }
 `
+	workaroundScript = `
+start 1
+sleep 1
+stop 1
+`
 )
 
-func genScript(hostdir string, hosts []string, format, mac0, mac1 string) {
+var	workaroundTargets map[string]struct{} = map[string]struct{} {
+	"dbdw14": {},
+	"dbdw15": {},
+	"dbdw16": {},
+	"dbdw17": {},
+}
+
+func genScript(hostdir string, hosts []string, format, mac0, mac1 string, workaround bool) {
 	for _, hostname := range hosts {
 		if hostdir != "" {
 			hostname = hostdir + string(os.PathSeparator) + hostname
@@ -87,6 +99,9 @@ func genScript(hostdir string, hosts []string, format, mac0, mac1 string) {
 		}
 
 		fmt.Fprintf(file, format, mac0, mac1)
+		if workaround {
+			fmt.Fprintf(file, workaroundScript)
+		}
 	}
 }
 
@@ -108,16 +123,18 @@ func main() {
 		log.Fatal("You must specify either -target or -pktgen parameter")
 	}
 
+	_, needWO := workaroundTargets[*target]
+
 	if *target != "" {
-		genScript(*pktgenDir, []string{"step2.pg", "step3.pg"}, script1, config[*target][0], config[*target][1])
-		genScript(*pktgenDir, []string{"step4.pg"}, script2, config[*target][0], config[*target][1])
+		genScript(*pktgenDir, []string{"step2.pg", "step3.pg"}, script1, config[*target][0], config[*target][1], needWO)
+		genScript(*pktgenDir, []string{"step4.pg"}, script2, config[*target][0], config[*target][1], needWO)
 		genScript(*pktgenDir, []string{"step5.pg", "step6.pg", "step7.pg", "step8.pg", "step9.pg", "step10.pg", "step11.pg"},
-			script3, config[*target][0], config[*target][1])
-		genScript(*pktgenDir, []string{"nat.pg"}, scriptNat, config[*target][0], config[*target][1])
+			script3, config[*target][0], config[*target][1], needWO)
+		genScript(*pktgenDir, []string{"nat.pg"}, scriptNat, config[*target][0], config[*target][1], needWO)
 	}
 
 	if *pktgen != "" {
 		// Write NAT config file
-		genScript("", []string{"nat.json"}, jsonNat, config[*pktgen][0], config[*pktgen][1])
+		genScript("", []string{"nat.json"}, jsonNat, config[*pktgen][0], config[*pktgen][1], false)
 	}
 }
