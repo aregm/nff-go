@@ -22,6 +22,5 @@ func main() {
 }
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
-	cur.ParseIPv4TCP()
 	return rules.L3ACLPermit(cur, L3Rules)
 }

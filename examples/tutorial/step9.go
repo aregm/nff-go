@@ -30,18 +30,17 @@ func main() {
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
-	cur.ParseIPv4TCP()
 	localL3Rules := L3Rules
 	return rules.L3ACLPort(cur, localL3Rules)
 }
 
 func myHandler(cur *packet.Packet, ctx flow.UserContext) {
 	cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
-	cur.ParseIPv4()
-	cur.IPv4.SrcAddr = packet.IPv4(111, 22, 3, 0)
-	cur.IPv4.DstAddr = packet.IPv4(3, 22, 111, 0)
-	cur.IPv4.VersionIhl = 0x45
-	cur.IPv4.NextProtoID = 0x04
+	cur.ParseL3()
+	cur.GetIPv4().SrcAddr = packet.IPv4(111, 22, 3, 0)
+	cur.GetIPv4().DstAddr = packet.IPv4(3, 22, 111, 0)
+	cur.GetIPv4().VersionIhl = 0x45
+	cur.GetIPv4().NextProtoID = 0x04
 }
 
 func updateSeparateRules() {

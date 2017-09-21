@@ -28,7 +28,6 @@ func main() {
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
-	cur.ParseIPv4TCP()
 	localL3Rules := L3Rules
 	return rules.L3ACLPort(cur, localL3Rules)
 }
