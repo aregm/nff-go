@@ -79,32 +79,25 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 
 // PublicToPrivateTranslation does ingress translation.
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	var l4offset uint8
-
 	// Parse packet type and address
-	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.ParseIPv4()
-		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
-	} else {
+	pktIPv4, _ := pkt.ParseAllKnownL3()
+	if pktIPv4 == nil {
 		// We don't currently support anything except for IPv4
 		return false
 	}
-
+	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 	// Create a lookup key
-	protocol := pkt.IPv4.NextProtoID
+	protocol := pktIPv4.NextProtoID
 	pub2priKey := Tuple{
-		addr: packet.SwapBytesUint32(pkt.IPv4.DstAddr),
+		addr: packet.SwapBytesUint32(pktIPv4.DstAddr),
 	}
 	// Parse packet destination port
-	if protocol == common.TCPNumber {
-		pkt.ParseTCP(l4offset)
-		pub2priKey.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
-	} else if protocol == common.UDPNumber {
-		pkt.ParseUDP(l4offset)
-		pub2priKey.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
-	} else if protocol == common.ICMPNumber {
-		pkt.ParseICMP(l4offset)
-		pub2priKey.port = pkt.ICMP.Identifier
+	if pktTCP != nil {
+		pub2priKey.port = packet.SwapBytesUint16(pktTCP.DstPort)
+	} else if pktUDP != nil {
+		pub2priKey.port = packet.SwapBytesUint16(pktUDP.DstPort)
+	} else if pktICMP != nil {
+		pub2priKey.port = pktICMP.Identifier
 	} else {
 		return false
 	}
@@ -134,18 +127,18 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Check whether TCP connection could be reused
 	if protocol == common.TCPNumber {
-		checkTCPTermination(pkt.TCP, int(pub2priKey.port), pub2pri)
+		checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
 	}
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
 	pkt.Ether.SAddr = PrivateMAC
-	pkt.IPv4.DstAddr = packet.SwapBytesUint32(value.addr)
+	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
-	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
-	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
+	if pktTCP != nil {
+		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
+	} else if pktUDP != nil {
+		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
 	} else {
 		// Only address is not modified in ICMP packets
 	}
@@ -155,33 +148,27 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 // PrivateToPublicTranslation does egress translation.
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	var l4offset uint8
-
 	// Parse packet type and address
-	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.ParseIPv4()
-		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
-	} else {
+	pktIPv4, _ := pkt.ParseAllKnownL3()
+	if pktIPv4 == nil {
 		// We don't currently support anything except for IPv4
 		return false
 	}
+	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 
 	// Create a lookup key
-	protocol := pkt.IPv4.NextProtoID
+	protocol := pktIPv4.NextProtoID
 	pri2pubKey := Tuple{
-		addr: packet.SwapBytesUint32(pkt.IPv4.SrcAddr),
+		addr: packet.SwapBytesUint32(pktIPv4.SrcAddr),
 	}
 
 	// Parse packet source port
-	if protocol == common.TCPNumber {
-		pkt.ParseTCP(l4offset)
-		pri2pubKey.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
-	} else if protocol == common.UDPNumber {
-		pkt.ParseUDP(l4offset)
-		pri2pubKey.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
-	} else if protocol == common.ICMPNumber {
-		pkt.ParseICMP(l4offset)
-		pri2pubKey.port = pkt.ICMP.Identifier
+	if pktTCP != nil {
+		pri2pubKey.port = packet.SwapBytesUint16(pktTCP.SrcPort)
+	} else if pktUDP != nil {
+		pri2pubKey.port = packet.SwapBytesUint16(pktUDP.SrcPort)
+	} else if pktICMP != nil {
+		pri2pubKey.port = pktICMP.Identifier
 	} else {
 		return false
 	}
@@ -204,19 +191,19 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Check whether TCP connection could be reused
-	if protocol == common.TCPNumber {
-		checkTCPTermination(pkt.TCP, int(value.port), pri2pub)
+	if pktTCP != nil {
+		checkTCPTermination(pktTCP, int(value.port), pri2pub)
 	}
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PublicPort.DstMACAddress
 	pkt.Ether.SAddr = PublicMAC
-	pkt.IPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
+	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
-	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.SrcPort = packet.SwapBytesUint16(value.port)
-	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.SrcPort = packet.SwapBytesUint16(value.port)
+	if pktTCP != nil {
+		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
+	} else if pktUDP != nil {
+		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
 	} else {
 		// Only address is not modified in ICMP packets
 	}

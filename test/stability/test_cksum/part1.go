@@ -233,31 +233,36 @@ func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
 
 func initPacketIPv4(emptyPacket *packet.Packet) {
 	// Initialize IPv4 addresses
-	emptyPacket.IPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
-	emptyPacket.IPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
-	emptyPacket.IPv4.TimeToLive = 100
+	emptyPacketIPv4 := emptyPacket.GetIPv4()
+	emptyPacketIPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
+	emptyPacketIPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
+	emptyPacketIPv4.TimeToLive = 100
 }
 
 func initPacketIPv6(emptyPacket *packet.Packet) {
 	// Initialize IPv6 addresses
-	emptyPacket.IPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	emptyPacket.IPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	emptyPacketIPv6 := emptyPacket.GetIPv6()
+	emptyPacketIPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	emptyPacketIPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 }
 
 func initPacketUDP(emptyPacket *packet.Packet) {
-	emptyPacket.UDP.SrcPort = packet.SwapBytesUint16(1234)
-	emptyPacket.UDP.DstPort = packet.SwapBytesUint16(2345)
+	emptyPacketUDP := (*packet.UDPHdr)(emptyPacket.L4)
+	emptyPacketUDP.SrcPort = packet.SwapBytesUint16(1234)
+	emptyPacketUDP.DstPort = packet.SwapBytesUint16(2345)
 }
 
 func initPacketTCP(emptyPacket *packet.Packet) {
-	emptyPacket.TCP.SrcPort = packet.SwapBytesUint16(3456)
-	emptyPacket.TCP.DstPort = packet.SwapBytesUint16(4567)
+	emptyPacketTCP := (*packet.TCPHdr)(emptyPacket.L4)
+	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(3456)
+	emptyPacketTCP.DstPort = packet.SwapBytesUint16(4567)
 }
 
 func initPacketICMP(emptyPacket *packet.Packet) {
-	emptyPacket.ICMP.Type = common.ICMPTypeEchoRequest
-	emptyPacket.ICMP.Identifier = 0xdead
-	emptyPacket.ICMP.SeqNum = 0xbeef
+	emptyPacketICMP := (*packet.ICMPHdr)(emptyPacket.L4)
+	emptyPacketICMP.Type = common.ICMPTypeEchoRequest
+	emptyPacketICMP.Identifier = 0xdead
+	emptyPacketICMP.SeqNum = 0xbeef
 }
 
 func generateIPv4UDP(emptyPacket *packet.Packet) {
@@ -269,10 +274,10 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 	initPacketUDP(emptyPacket)
 
 	if hwol {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.IPv4, emptyPacket.UDP))
+		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.GetIPv4(), emptyPacket.GetUDPForIPv4()))
 	} else {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
 	}
 }
 
@@ -285,10 +290,10 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	initPacketTCP(emptyPacket)
 
 	if hwol {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.IPv4))
+		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.GetIPv4()))
 	} else {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
 	}
 }
 
@@ -301,8 +306,8 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
 	}
 }
 
@@ -315,9 +320,9 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 	initPacketUDP(emptyPacket)
 
 	if hwol {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.IPv6, emptyPacket.UDP))
+		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.GetIPv6(), emptyPacket.GetUDPForIPv6()))
 	} else {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
+		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
 	}
 }
 
@@ -330,9 +335,9 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 	initPacketTCP(emptyPacket)
 
 	if hwol {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.IPv6))
+		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.GetIPv6()))
 	} else {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
+		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
 	}
 }
 
@@ -345,12 +350,12 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
+		emptyPacket.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
 	}
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 
 	if !testCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")

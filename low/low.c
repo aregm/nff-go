@@ -19,25 +19,14 @@
 
 // #define DEBUG
 
-#ifdef RTE_MACHINE_CPUFLAG_AVX
-#define mbufClear(buf) \
-	_mm256_storeu_ps((float*)((char*)(buf) + mbufStructSize), zero256);
-#else
-#define mbufClear(buf) \
-	_mm_storeu_ps((float*)((char*)(buf) + mbufStructSize), zero128); \
-	_mm_storeu_ps((float*)((char*)(buf) + mbufStructSize + 16), zero128);
-#endif
-
 // This macros clears packet structure which is stored inside mbuf
-// mbufClear clears IPv4, IPv6, TCP and UDP protocols
-// 32 offset clears ICMP protocol
-// 40 offset is a data oddset and shouldn't be cleared
-// 48 offset is L2 offset and is always begining of packet
-// 56 offset is CMbuf offset and is initilized when mempool is created
+// 0 offset is L3 protocol pointer
+// 8 offset is L4 protocol pointer
+// 16 offset is a data offset and shouldn't be cleared
+// 24 offset is L2 offset and is always begining of packet
+// 32 offset is CMbuf offset and is initilized when mempool is created
 #define mbufInit(buf) \
-	mbufClear(buf) \
-	*(char**)((char*)(buf) + mbufStructSize + 32) = 0; \
-	*(char**)((char*)(buf) + mbufStructSize + 48) = (char*)(buf) + defaultStart;
+*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart;
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
@@ -293,7 +282,7 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	// This initializes CMbuf field of packet structure stored in mbuf
 	// All CMbuf pointers is set to point to starting of cerresponding mbufs
 	for (int i = 0; i < num_mbufs; i++) {
-		*(char**)((char*)(temp[i]) + mbufStructSize + 56) = (char*)(temp[i]);
+		*(char**)((char*)(temp[i]) + mbufStructSize + 32) = (char*)(temp[i]);
 	}
 	for (int i = 0; i < num_mbufs; i++) {
 		rte_pktmbuf_free(temp[i]);

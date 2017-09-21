@@ -121,14 +121,16 @@ func encapsulation(currentPacket *packet.Packet, context flow.UserContext) bool 
 	// Limitation: All packets will be encapsulated as 1230
 	currentPacket.EncapsulateHead(etherLen, outerIPLen+espHeadLen)
 
-	currentPacket.ParseIPv4()
-	*(*([4]byte))(unsafe.Pointer(&currentPacket.IPv4.SrcAddr)) = [4]byte{111, 22, 3, 0}
-	*(*([4]byte))(unsafe.Pointer(&currentPacket.IPv4.DstAddr)) = [4]byte{3, 22, 111, 0}
-	currentPacket.IPv4.VersionIhl = 0x45
-	currentPacket.IPv4.NextProtoID = esp
+	currentPacket.ParseL3()
+	ipv4 := currentPacket.GetIPv4()
+	if ipv4 != nil {
+		*(*([4]byte))(unsafe.Pointer(&ipv4.SrcAddr)) = [4]byte{111, 22, 3, 0}
+		*(*([4]byte))(unsafe.Pointer(&ipv4.DstAddr)) = [4]byte{3, 22, 111, 0}
+		ipv4.VersionIhl = 0x45
+		ipv4.NextProtoID = esp
 
-	encapsulationSPI123(currentPacket, context)
-
+		encapsulationSPI123(currentPacket, context)
+	}
 	return true
 }
 

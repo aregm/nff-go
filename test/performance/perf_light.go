@@ -62,11 +62,14 @@ func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {
 }
 
 func heavyFunc1(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseIPv4()
+	currentPacket.ParseL3()
 }
 
 func heavyFunc2(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseIPv4()
-	T := (currentPacket.IPv4.DstAddr)
-	currentPacket.IPv4.SrcAddr = 263 + (T)
+	currentPacket.ParseL3()
+	ipv4 := currentPacket.GetIPv4()
+	if ipv4 != nil {
+		T := ipv4.DstAddr
+		ipv4.SrcAddr = 263 + (T)
+	}
 }

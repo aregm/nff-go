@@ -42,7 +42,7 @@ func main() {
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 
 	if !testCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")

@@ -427,62 +427,54 @@ func L3ACLPort(pkt *packet.Packet, rules *L3Rules) uint {
 }
 
 func l4ACL(pkt *packet.Packet, L4 *l4Rules) bool {
-	if pkt.TCP != nil {
-		srcPort := packet.SwapBytesUint16(pkt.TCP.SrcPort)
-		if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
-			return false
-		}
-		dstPort := packet.SwapBytesUint16(pkt.TCP.DstPort)
-		if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
-			return false
-		}
-	} else if pkt.UDP != nil {
-		srcPort := packet.SwapBytesUint16(pkt.UDP.SrcPort)
-		if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
-			return false
-		}
-		dstPort := packet.SwapBytesUint16(pkt.UDP.DstPort)
-		if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
-			return false
-		}
-	} else {
-		// This situation takes place when we request any protocol ID at previous stage
-		// however packet has neither TCP nor UDP protocols.
+	// Src and Dst port numbers placed at the same offset from L4 start in both tcp and udp
+	l4 := (*packet.UDPHdr)(pkt.L4)
+	srcPort := packet.SwapBytesUint16(l4.SrcPort)
+	if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
+		return false
+	}
+	dstPort := packet.SwapBytesUint16(l4.DstPort)
+	if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
 		return false
 	}
 	return true
 }
 
 func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
-	if pkt.IPv4 != nil {
+	ipv4, ipv6 := pkt.ParseAllKnownL3()
+	if ipv4 != nil {
 		for _, rule := range rules.ip4 {
-			if ((rule.SrcAddr ^ pkt.IPv4.SrcAddr) & rule.SrcMask) != 0 {
+			if ((rule.SrcAddr ^ ipv4.SrcAddr) & rule.SrcMask) != 0 {
 				continue
 			}
-			if ((rule.DstAddr ^ pkt.IPv4.DstAddr) & rule.DstMask) != 0 {
+			if ((rule.DstAddr ^ ipv4.DstAddr) & rule.DstMask) != 0 {
 				continue
 			}
-			if ((rule.L4.ID ^ pkt.IPv4.NextProtoID) & rule.L4.IDMask) != 0 {
+			if ((rule.L4.ID ^ ipv4.NextProtoID) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4ACL(pkt, &rule.L4) {
-				continue
+			if rule.L4.valid {
+				pkt.ParseL4ForIPv4()
+				if !l4ACL(pkt, &rule.L4) {
+					continue
+				}
 			}
 			return rule.OutputNumber
 		}
-	} else if pkt.IPv6 != nil {
+	} else if ipv6 != nil {
 	IPv6:
 		for _, rule := range rules.ip6 {
 			for i := 0; i < 16; i++ {
-				if ((rule.SrcAddr[i]^pkt.IPv6.SrcAddr[i])&rule.SrcMask[i] != 0) ||
-					((rule.DstAddr[i]^pkt.IPv6.DstAddr[i])&rule.DstMask[i] != 0) {
+				if ((rule.SrcAddr[i]^ipv6.SrcAddr[i])&rule.SrcMask[i] != 0) ||
+					((rule.DstAddr[i]^ipv6.DstAddr[i])&rule.DstMask[i] != 0) {
 					continue IPv6
 				}
 			}
-			if ((rule.L4.ID ^ pkt.IPv6.Proto) & rule.L4.IDMask) != 0 {
+			if ((rule.L4.ID ^ ipv6.Proto) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4ACL(pkt, &rule.L4) {
+			pkt.ParseL4ForIPv6()
+			if !l4ACL(pkt, &rule.L4) {
 				continue
 			}
 			return rule.OutputNumber

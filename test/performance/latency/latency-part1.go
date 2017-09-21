@@ -169,9 +169,9 @@ func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 
 	// We need different packets to gain from RSS
 	if count%2 == 0 {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(dstPort1)
+		pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort1)
 	} else {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(dstPort2)
+		pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort2)
 	}
 
 	ptr := (*packetData)(pkt.Data)
@@ -200,9 +200,9 @@ func latenciesLogger(ch <-chan time.Duration, stop <-chan string) {
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	checkCount := atomic.AddUint64(&checkedPackets, 1)
 
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 	if offset < 0 {
-		fmt.Printf("ParseL4Data returned negative value:\noffset:%d,\n packet: %x\n", offset, pkt.GetRawPacketBytes())
+		fmt.Printf("ParseData returned negative value:\noffset:%d,\n packet: %x\n", offset, pkt.GetRawPacketBytes())
 	} else {
 		ptr := (*packetData)(pkt.Data)
 		RecvTime := time.Now()
