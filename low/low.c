@@ -123,7 +123,7 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 	return 0;
 }
 
-void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -157,7 +157,7 @@ void recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreI
 	}
 }
 
-void send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -184,7 +184,7 @@ void send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId
 	}
 }
 
-void stop(struct rte_ring *in_ring) {
+void yanff_stop(struct rte_ring *in_ring) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.
