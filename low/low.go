@@ -8,9 +8,9 @@ package low
 #include "yanff_queue.h"
 
 extern void eal_init(int argc, char **argv, uint32_t burstSize);
-extern void recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
-extern void send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
-extern void stop(struct rte_ring *);
+extern void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
+extern void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
+extern void yanff_stop(struct rte_ring *);
 extern void initCPUSet(uint8_t coreID, cpu_set_t* cpuset);
 extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
     struct ether_addr *addr, bool hwtxchecksum);
@@ -437,7 +437,7 @@ func Receive(port uint8, queue uint16, OUT *Queue, coreID uint8) {
 	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.recv(C.uint8_t(port), C.uint16_t(queue), OUT.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_recv(C.uint8_t(port), C.uint16_t(queue), OUT.ring.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Send - dequeue packets and send.
@@ -446,12 +446,12 @@ func Send(port uint8, queue uint16, IN *Queue, coreID uint8) {
 	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.send(C.uint8_t(port), C.uint16_t(queue), IN.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_send(C.uint8_t(port), C.uint16_t(queue), IN.ring.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Stop - dequeue and free packets.
 func Stop(IN *Queue) {
-	C.stop(IN.ring.DPDK_ring)
+	C.yanff_stop(IN.ring.DPDK_ring)
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
