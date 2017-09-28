@@ -218,7 +218,7 @@ func CalculateIPv6UDPChecksum(p *Packet) uint16 {
 // CalculateIPv6TCPChecksum calculates TCP checksum for case if L3 protocol is IPv6.
 func CalculateIPv6TCPChecksum(p *Packet) uint16 {
 	hdr := p.GetIPv6()
-	tcp := p.GetTCPForIPv4()
+	tcp := p.GetTCPForIPv6()
 	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
 	sum := calculateDataChecksum(p.Data, int(dataLength-TCPMinLen), 0)
