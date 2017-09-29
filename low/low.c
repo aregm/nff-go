@@ -13,11 +13,15 @@
 #include <unistd.h>
 #include <stdbool.h>
 
+#include <rte_cycles.h>
+#include <rte_ip_frag.h>
+
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
 
 // #define DEBUG
+// #define REASSEMBLY
 
 // This macros clears packet structure which is stored inside mbuf
 // 0 offset is L3 protocol pointer
@@ -97,8 +101,8 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
     struct rte_eth_dev_info dev_info;
     rte_eth_dev_info_get(port, &dev_info);
     if (hwtxchecksum) {
-        /* Default TX settings are to disable offload operations, need to fix it */
-        dev_info.default_txconf.txq_flags = 0;
+	/* Default TX settings are to disable offload operations, need to fix it */
+	dev_info.default_txconf.txq_flags = 0;
     }
 
 	/* Allocate and set up 1 TX queue per Ethernet port. */
@@ -123,25 +127,94 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 	return 0;
 }
 
+struct rte_ip_frag_tbl* create_reassemble_table() {
+	static uint32_t max_flow_num = 0x1000;
+	static uint32_t max_flow_ttl = MS_PER_S;
+	// TODO maybe we want these as parameters?
+	uint64_t frag_cycles = (rte_get_tsc_hz() + MS_PER_S - 1) / MS_PER_S * max_flow_ttl;
+	struct rte_ip_frag_tbl* tbl = rte_ip_frag_table_create(max_flow_num, 16, max_flow_num, frag_cycles, SOCKET_ID_ANY);
+	if (tbl == NULL) {
+		fprintf(stderr, "ERROR: Can't create a table for ip reassemble");
+		exit(0);
+	}
+	return tbl;
+}
+
+struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, struct rte_ip_frag_death_row* death_row, uint64_t cur_tsc) {
+	struct ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct ether_hdr *);
+
+	// TODO packet_type is not mandatory required for drivers.
+	// Some drivers won't set it. However this is DPDK implementation.
+	if (RTE_ETH_IS_IPV4_HDR(buf->packet_type)) { // if packet is IPv4
+		struct ipv4_hdr *ip_hdr = (struct ipv4_hdr *)(eth_hdr + 1);
+
+		if (rte_ipv4_frag_pkt_is_fragmented(ip_hdr)) { // try to reassemble
+			buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
+			buf->l3_len = sizeof(*ip_hdr); // prepare mbuf: setup l2_len/l3_len.
+			// This function will return first mbuf from mbuf chain
+			// Following mbufs in a chain will be without L2 and L3 headers
+			return rte_ipv4_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr);
+		}
+	}
+	if (RTE_ETH_IS_IPV6_HDR(buf->packet_type)) { // if packet is IPv6
+	        struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
+	        struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
+
+	        if (frag_hdr != NULL) {
+	                buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
+	                buf->l3_len = sizeof(*ip_hdr) + sizeof(*frag_hdr); // prepare mbuf: setup l2_len/l3_len.
+			// This function will return first mbuf from mbuf chain
+			// Following mbufs in a chain will be without L2 and L3 headers
+	                return rte_ipv6_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr, frag_hdr);
+	        }
+	}
+	return buf;
+}
+
 void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t i;
 
+#ifdef REASSEMBLY
+	struct rte_ip_frag_tbl* tbl = create_reassemble_table();
+	struct rte_ip_frag_death_row death_row;
+	death_row.cnt = 0; // DPDK doesn't initialize this field. It is probably a bug.
+#endif
 	// Run until the application is quit. Recv can't be stopped now.
 	for (;;) {
 		// Get RX packets from port
-		const uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
+		uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
+#ifdef REASSEMBLY
+		uint16_t temp_number = 0;
+		uint64_t cur_tsc = rte_rdtsc();
+#endif
 
 		if (unlikely(rx_pkts_number == 0))
 			continue;
 
 		for (i = 0; i < rx_pkts_number; i++) {
-			// Prefetch decreases speed here.
+			// Prefetch decreases speed here without reassembly and increases with reassembly.
 			// Speed of this is highly influenced by size of mempool. It seems that due to caches.
 			mbufInit(bufs[i]);
+#ifdef REASSEMBLY
+			// TODO prefetch will give 8-10% performance in reassembly case.
+			// However we need additional investigations about small (< 3) packet numbers.
+			//rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3 /* PREFETCH_OFFSET */], void *));
+			bufs[i] = reassemble(tbl, bufs[i], &death_row, cur_tsc);
+			if (bufs[i] == NULL) {
+				continue; // no packet to send out.
+			}
+			bufs[temp_number] = bufs[i];
+			temp_number++;
+#endif
 		}
+
+#ifdef REASSEMBLY
+		rx_pkts_number = temp_number;
+		rte_ip_frag_free_death_row(&death_row, 0 /* PREFETCH_OFFSET */);
+#endif
 
 		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
 		// Free any packets which can't be pushed to the ring. The ring is probably full.
@@ -232,7 +305,7 @@ void statistics(float N) {
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	if (send_sent < send_required) {
 		fprintf(stderr, "DROP: Send dropped %d packets\n", send_required - send_sent);
-        }
+	}
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more
 	// important to report real speed in 90% times than to slow it by adding atomic stores to
