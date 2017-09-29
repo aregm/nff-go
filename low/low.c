@@ -29,8 +29,18 @@
 // 16 offset is a data offset and shouldn't be cleared
 // 24 offset is L2 offset and is always begining of packet
 // 32 offset is CMbuf offset and is initilized when mempool is created
+// 40 offset is Next field. SHould be nil. Will be filled later if required
 #define mbufInit(buf) \
-*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart;
+*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart; \
+*(char **)((char *)(buf) + mbufStructSize + 40) = 0;
+
+// Firstly we set "next" packet pointer (+40) to the packet from next mbuf
+// Secondly we know that followed mbufs don't contain L2 and L3 headers. We assume that they start with a data
+// so we assume that Data packet field (+16) should be equal to Ether packet field (+24)
+// (which we parse at this packet segment receiving
+#define mbufSetNext(buf) \
+*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
+*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
@@ -181,6 +191,7 @@ void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t
 	struct rte_ip_frag_tbl* tbl = create_reassemble_table();
 	struct rte_ip_frag_death_row death_row;
 	death_row.cnt = 0; // DPDK doesn't initialize this field. It is probably a bug.
+	struct rte_mbuf *temp;
 #endif
 	// Run until the application is quit. Recv can't be stopped now.
 	for (;;) {
@@ -205,6 +216,11 @@ void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t
 			bufs[i] = reassemble(tbl, bufs[i], &death_row, cur_tsc);
 			if (bufs[i] == NULL) {
 				continue; // no packet to send out.
+			}
+			temp = bufs[i];
+			while (temp->next != NULL) {
+				mbufSetNext(temp);
+				temp = temp->next;
 			}
 			bufs[temp_number] = bufs[i];
 			temp_number++;
