@@ -31,9 +31,9 @@ func (t *Tuple) String() string {
 
 var (
 	// PublicMAC is a public port MAC address.
-	PublicMAC [common.EtherAddrLen]uint8
+	PublicMAC [][common.EtherAddrLen]uint8
 	// PrivateMAC is a private port MAC address.
-	PrivateMAC [common.EtherAddrLen]uint8
+	PrivateMAC [][common.EtherAddrLen]uint8
 	// Natconfig is a config file.
 	Natconfig *Config
 	// Main lookup table which contains entries
@@ -130,9 +130,10 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
 	}
 
+	pi := ctx.(pairIndex)
 	// Do packet translation
-	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
-	pkt.Ether.SAddr = PrivateMAC
+	pkt.Ether.DAddr = Natconfig.PortPairs[pi.index].PrivatePort.DstMACAddress
+	pkt.Ether.SAddr = PrivateMAC[pi.index]
 	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {
@@ -173,13 +174,14 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		return false
 	}
 
+	pi := ctx.(pairIndex)
 	// Do lookup
 	var value Tuple
 	v, found := pri2pubTable[protocol].Load(pri2pubKey)
 	if !found {
 		var err error
 		value, err = allocateNewEgressConnection(protocol, pri2pubKey,
-			Natconfig.PublicPort.Subnet.Addr)
+			Natconfig.PortPairs[pi.index].PublicPort.Subnet.Addr)
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
@@ -196,8 +198,8 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Do packet translation
-	pkt.Ether.DAddr = Natconfig.PublicPort.DstMACAddress
-	pkt.Ether.SAddr = PublicMAC
+	pkt.Ether.DAddr = Natconfig.PortPairs[pi.index].PublicPort.DstMACAddress
+	pkt.Ether.SAddr = PublicMAC[pi.index]
 	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {

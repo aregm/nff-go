@@ -1,0 +1,28 @@
+{
+    "port-pairs": [
+        {
+            "private-port": {
+                "index": 2,
+                "dst_mac": "3c:fd:fe:a5:4d:61",
+                "subnet": "192.168.1.1/24"
+            },
+            "public-port": {
+                "index": 3,
+                "dst_mac": "3c:fd:fe:a5:4d:68",
+                "subnet": "10.1.1.1"
+            }
+        },
+        {
+            "private-port": {
+                "index": 4,
+                "dst_mac": "3c:fd:fe:a5:4d:63",
+                "subnet": "192.168.1.1/24"
+            },
+            "public-port": {
+                "index": 5,
+                "dst_mac": "3c:fd:fe:a5:4d:6a",
+                "subnet": "10.1.1.1"
+            }
+        }
+    ]
+}
