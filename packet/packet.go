@@ -519,6 +519,7 @@ func InitEmptyIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.GetIPv4().NextProtoID = ICMPNumber
 	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
 	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	packet.ParseL4ForIPv4()
 	return true
 }
 
@@ -593,6 +594,7 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.GetIPv6().Proto = ICMPNumber
 	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
 	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.ParseL4ForIPv6()
 	return true
 }
 
