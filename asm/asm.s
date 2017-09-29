@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 #include "textflag.h"
-TEXT ·Rte_compiler_rmb(SB),NOSPLIT,$0-0
+TEXT ·RteCompilerRmb(SB),NOSPLIT,$0-0
         LFENCE
         RET
-TEXT ·Rte_compiler_wmb(SB),NOSPLIT,$0-0
+TEXT ·RteCompilerWmb(SB),NOSPLIT,$0-0
         SFENCE
         RET
 TEXT ·Prefetcht0(SB),NOSPLIT,$0-8

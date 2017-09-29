@@ -10,9 +10,9 @@ include $(PATH_TO_MK)/include.mk
 # Build all
 .PHONY: clean
 $(EXECUTABLES) : % : %.go
-	go build $<
+	go build $< $(COMMON_FILES)
 
-ifndef PKTGEN_VERSION
+ifndef NOCHECK_PKTGEN
 all: check-pktgen
 endif
 all: $(EXECUTABLES)
@@ -25,7 +25,7 @@ clean: clean-default
 # Local docker targets
 .PHONY: images clean-images
 
-images: .check-defined-IMAGENAME all
+images: Dockerfile .check-defined-IMAGENAME all
 	docker build -t $(IMAGENAME) .
 
 clean-images: .check-defined-IMAGENAME clean

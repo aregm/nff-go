@@ -79,10 +79,10 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 				HostName:  "hostname",
 				ImageName: "yanff-tests",
 			}
-			if iii == 0 && testtype == test.TEST_TYPE_BENCHMARK {
-				appConfig[iii].Type = test.TESTAPP_PKTGEN
+			if iii == 0 && testtype == test.TestTypeBenchmark {
+				appConfig[iii].Type = test.TestAppPktgen
 			} else {
-				appConfig[iii].Type = test.TESTAPP_GO
+				appConfig[iii].Type = test.TestAppGo
 			}
 		}
 
@@ -110,20 +110,20 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 				t.Fatal("Error running test application", &apps[iii], ":", err)
 			}
 
-			apps[iii].Status = test.TEST_REPORTED_PASSED
-			if appConfig[iii].Type == test.TESTAPP_PKTGEN {
+			apps[iii].Status = test.TestReportedPassed
+			if appConfig[iii].Type == test.TestAppPktgen {
 				apps[iii].Benchmarks = make([][]test.Measurement, NUM_MEASUREMENTS)
 				for jjj := range apps[iii].Benchmarks {
 					bencdata := make([]test.Measurement, NUM_PORTS)
 					for iii := range bencdata {
-						bencdata[iii].Pkts_TX = PKTS + 2
-						bencdata[iii].Pkts_RX = PKTS + 1
-						bencdata[iii].Mbits_TX = MBITS + 2
-						bencdata[iii].Mbits_RX = MBITS + 1
+						bencdata[iii].PktsTX = PKTS + 2
+						bencdata[iii].PktsRX = PKTS + 1
+						bencdata[iii].MbitsTX = MBITS + 2
+						bencdata[iii].MbitsRX = MBITS + 1
 					}
 					apps[iii].Benchmarks[jjj] = bencdata
 				}
-			} else if testtype == test.TEST_TYPE_BENCHMARK {
+			} else if testtype == test.TestTypeBenchmark {
 				apps[iii].CoresStats = make([]test.CoresInfo, NUM_MEASUREMENTS)
 
 				for jjj := range apps[iii].CoresStats {
@@ -133,16 +133,16 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 			}
 		}
 
-		tests[jjj].Status = test.TEST_REPORTED_PASSED
+		tests[jjj].Status = test.TestReportedPassed
 		tests[jjj].Apps = apps
 
-		if testtype == test.TEST_TYPE_BENCHMARK {
+		if testtype == test.TestTypeBenchmark {
 			bencdata := make([]test.Measurement, NUM_PORTS)
 			for iii := range bencdata {
-				bencdata[iii].Pkts_TX = PKTS + 2
-				bencdata[iii].Pkts_RX = PKTS + 1
-				bencdata[iii].Mbits_TX = MBITS + 2
-				bencdata[iii].Mbits_RX = MBITS + 1
+				bencdata[iii].PktsTX = PKTS + 2
+				bencdata[iii].PktsRX = PKTS + 1
+				bencdata[iii].MbitsTX = MBITS + 2
+				bencdata[iii].MbitsRX = MBITS + 1
 			}
 			tests[jjj].Benchdata = bencdata
 
@@ -157,9 +157,9 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 }
 
 func TestBenchmarkManyApps(t *testing.T) {
-	testManyApps(t, test.TEST_TYPE_BENCHMARK)
+	testManyApps(t, test.TestTypeBenchmark)
 }
 
 func TestScenarioManyApps(t *testing.T) {
-	testManyApps(t, test.TEST_TYPE_SCENARIO)
+	testManyApps(t, test.TestTypeScenario)
 }

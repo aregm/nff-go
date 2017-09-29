@@ -18,7 +18,7 @@ import (
 // test-handle2-part1: sends packets to 0 port, receives from 0 and 1 ports.
 // This part of test generates three packet flows (1st, 2nd and 3rd), merges them into one flow
 // and send it to 0 port. Packets in original 1st, 2nd and 3rd flows has UDP destination addresses
-// DSTPORT_1, DSTPORT_2, DSTPORT_3 respectively. For each packet sender calculates md5 hash sum
+// dstPort1, dstPort2, dstPort3 respectively. For each packet sender calculates md5 hash sum
 // from all headers, write it to packet.Data and check it on packet receive.
 // This part of test receive packets on 0 port, expects to receive ~33% of packets.
 // Test also calculates number of broken packets and prints it when a predefined number
@@ -29,32 +29,32 @@ import (
 // in test-separate-l3rules.conf into 2 flows. Accepted flow sent to 0 port, rejected flow is stopped.
 
 const (
-	TOTAL_PACKETS = 100000000
+	totalPackets = 100000000
 
 	// Test expects to receive 33% of packets on 0 port.
-	// Test is PASSSED, if p1 is in [LOW1;HIGH1]
+	// Test is PASSSED, if p1 is in [low1;high1]
 	eps   = 5
-	HIGH1 = 33 + eps
-	LOW1  = 33 - eps
+	high1 = 33 + eps
+	low1  = 33 - eps
 )
 
 var (
 	// Payload is 16 byte md5 hash sum of headers
-	PAYLOAD_SIZE uint = 16
-	d            uint = 10
+	payloadSize uint = 16
+	d           uint = 10
 
-	sentPacketsGroup1 uint64 = 0
-	sentPacketsGroup2 uint64 = 0
-	sentPacketsGroup3 uint64 = 0
+	sentPacketsGroup1 uint64
+	sentPacketsGroup2 uint64
+	sentPacketsGroup3 uint64
 
-	recv          uint64 = 0
-	brokenPackets uint64 = 0
+	recv          uint64
+	brokenPackets uint64
 
-	DSTPORT_1 uint16 = 111
-	DSTPORT_2 uint16 = 222
-	DSTPORT_3 uint16 = 333
+	dstPort1 uint16 = 111
+	dstPort2 uint16 = 222
+	dstPort3 uint16 = 333
 
-	testDoneEvent *sync.Cond = nil
+	testDoneEvent *sync.Cond
 
 	outport uint
 	inport  uint
@@ -117,7 +117,7 @@ func main() {
 	println("Broken = ", broken, "packets")
 
 	// Test is PASSSED, if p is ~33%
-	if p <= HIGH1 && p >= LOW1 {
+	if p <= high1 && p >= low1 {
 		println("TEST PASSED")
 	} else {
 		println("TEST FAILED")
@@ -130,19 +130,19 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	if packet.InitEmptyIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
+	pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort1)
 
 	// Extract headers of packet
 	headerSize := uintptr(pkt.Data) - pkt.Start()
 	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*PacketData)(pkt.Data)
+	ptr := (*packetData)(pkt.Data)
 	ptr.HdrsMD5 = md5.Sum(hdrs)
 
 	sentPacketsGroup1++
-	if sentPacketsGroup1 > TOTAL_PACKETS/3 {
+	if sentPacketsGroup1 > totalPackets/3 {
 		time.Sleep(time.Second * time.Duration(d))
 		println("TEST FAILED")
 	}
@@ -153,19 +153,19 @@ func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	if packet.InitEmptyIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
+	pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort2)
 
 	// Extract headers of packet
 	headerSize := uintptr(pkt.Data) - pkt.Start()
 	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*PacketData)(pkt.Data)
+	ptr := (*packetData)(pkt.Data)
 	ptr.HdrsMD5 = md5.Sum(hdrs)
 
 	sentPacketsGroup2++
-	if sentPacketsGroup1 > TOTAL_PACKETS/3 {
+	if sentPacketsGroup1 > totalPackets/3 {
 		time.Sleep(time.Second * time.Duration(d))
 		println("TEST FAILED")
 	}
@@ -176,32 +176,32 @@ func generatePacketGroup3(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	if packet.InitEmptyIPv4UDPPacket(pkt, PAYLOAD_SIZE) == false {
+	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
-	pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_3)
+	pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort3)
 
 	// Extract headers of packet
 	headerSize := uintptr(pkt.Data) - pkt.Start()
 	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*PacketData)(pkt.Data)
+	ptr := (*packetData)(pkt.Data)
 	ptr.HdrsMD5 = md5.Sum(hdrs)
 
 	sentPacketsGroup3++
-	if sentPacketsGroup1 > TOTAL_PACKETS/3 {
+	if sentPacketsGroup1 > totalPackets/3 {
 		time.Sleep(time.Second * time.Duration(d))
 		println("TEST FAILED")
 	}
 }
 
 func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 	if offset < 0 {
-		println("ParseL4Data returned negative value", offset)
+		println("ParseData returned negative value", offset)
 		// Some received packets are not generated by this example
 		// They cannot be parsed due to unknown protocols, skip them
 	} else {
-		ptr := (*PacketData)(pkt.Data)
+		ptr := (*packetData)(pkt.Data)
 
 		// Recompute hash to check how many packets are valid
 		headerSize := uintptr(pkt.Data) - pkt.Start()
@@ -216,11 +216,11 @@ func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
 		atomic.AddUint64(&recv, 1)
 	}
 	// TODO 80% of requested number of packets.
-	if recv >= TOTAL_PACKETS/32*8 {
+	if recv >= totalPackets/32*8 {
 		testDoneEvent.Signal()
 	}
 }
 
-type PacketData struct {
+type packetData struct {
 	HdrsMD5 [16]byte
 }

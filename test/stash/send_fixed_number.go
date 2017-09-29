@@ -12,22 +12,22 @@ import (
 	"sync/atomic"
 )
 
-var TOTAL_PACKETS int64
-var PACKET_SIZE uint
+var totalPackets int64
+var packetSize uint
 var outport uint
-var count int64 = 0
+var count int64
 
 // Total packet size is 14+20+20+payload_size+4(crc)
-var payload_size uint
-var hdrs_size uint = 14 + 20 + 20 + 4
+var payloadSize uint
+var hdrsSize uint = 14 + 20 + 20 + 4
 
 func main() {
-	flag.Int64Var(&TOTAL_PACKETS, "TOTAL_PACKETS", 1234, "Number of packets to send")
-	flag.UintVar(&PACKET_SIZE, "PACKET_SIZE", 128, "Size of generated packet")
+	flag.Int64Var(&totalPackets, "totalPackets", 1234, "Number of packets to send")
+	flag.UintVar(&packetSize, "packetSize", 128, "Size of generated packet")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.Parse()
 
-	payload_size = PACKET_SIZE - hdrs_size
+	payloadSize = packetSize - hdrsSize
 
 	// Initialize YANFF library at 16 cores by default
 	config := flow.Config{
@@ -50,11 +50,11 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	sent := atomic.LoadInt64(&count)
-	if packet.InitEmptyIPv4TCPPacket(pkt, payload_size) == false {
+	if packet.InitEmptyIPv4TCPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
-	if sent >= TOTAL_PACKETS {
+	if sent >= totalPackets {
 		println("Sent ", sent, "number of packets")
 		os.Exit(0)
 	}

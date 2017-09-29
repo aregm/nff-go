@@ -56,7 +56,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 		// Run all test app containers
 		for iii := range apps {
 			go apps[iii].testRoutine(report, cancel)
-			if apps[iii].config.Type == TESTAPP_PKTGEN {
+			if apps[iii].config.Type == TestAppPktgen {
 				go apps[iii].testPktgenRoutine(report, cancel)
 				pktgenAppIndex = iii
 			} else {
@@ -72,12 +72,12 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 			select {
 			case r := <-report:
 				apps[r.AppIndex].Logger.LogInfo(r.AppIndex, "\"", r.msg, "\"")
-				if r.AppStatus == TEST_REPORTED_FAILED || r.AppStatus == TEST_REPORTED_PASSED {
+				if r.AppStatus == TestReportedFailed || r.AppStatus == TestReportedPassed {
 					apps[r.AppIndex].Logger.LogDebug("Finished with code", r.AppStatus)
 
 					killAllRunningAndRemoveData(apps)
 					apps[r.AppIndex].Status = r.AppStatus
-					if r.AppStatus == TEST_REPORTED_PASSED {
+					if r.AppStatus == TestReportedPassed {
 						setAppStatusOnPassed(apps)
 					}
 					break endtest
@@ -93,10 +93,10 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 		}
 	}
 
-	testStatus := TEST_REPORTED_PASSED
+	testStatus := TestReportedPassed
 	// Try to figure out test status
 	for iii := range apps {
-		if apps[iii].Status != TEST_REPORTED_PASSED {
+		if apps[iii].Status != TestReportedPassed {
 			testStatus = apps[iii].Status
 			break
 		}
@@ -105,31 +105,31 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 	LogInfo("\\--- Finished test", test.Name, "--- status:", testStatus)
 
 	var b []Measurement
-	if test.Type == TEST_TYPE_BENCHMARK && pktgenAppIndex >= 0 && apps[pktgenAppIndex].Benchmarks != nil {
+	if test.Type == TestTypeBenchmark && pktgenAppIndex >= 0 && apps[pktgenAppIndex].Benchmarks != nil {
 		ports := len(apps[pktgenAppIndex].Benchmarks[0])
 		b = make([]Measurement, ports)
 		for _, m := range apps[pktgenAppIndex].Benchmarks {
 			for p := 0; p < ports; p++ {
-				b[p].Pkts_TX += m[p].Pkts_TX
-				b[p].Mbits_TX += m[p].Mbits_TX
-				b[p].Pkts_RX += m[p].Pkts_RX
-				b[p].Mbits_RX += m[p].Mbits_RX
+				b[p].PktsTX += m[p].PktsTX
+				b[p].MbitsTX += m[p].MbitsTX
+				b[p].PktsRX += m[p].PktsRX
+				b[p].MbitsRX += m[p].MbitsRX
 			}
 		}
 
 		number := int64(len(apps[pktgenAppIndex].Benchmarks))
 		for p := 0; p < ports; p++ {
-			b[p].Pkts_TX /= number
-			b[p].Mbits_TX /= number
-			b[p].Pkts_RX /= number
-			b[p].Mbits_RX /= number
+			b[p].PktsTX /= number
+			b[p].MbitsTX /= number
+			b[p].PktsRX /= number
+			b[p].MbitsRX /= number
 		}
 	}
 
 	var c CoresInfo
-	var clv int = 0
-	var cd bool = false
-	if test.Type == TEST_TYPE_BENCHMARK && coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
+	var clv int
+	var cd = false
+	if test.Type == TestTypeBenchmark && coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
 		for _, cs := range apps[coresAppIndex].CoresStats {
 			c.CoresUsed += cs.CoresUsed
 			c.CoresFree += cs.CoresFree
@@ -155,6 +155,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 	}
 }
 
+// RunAllTests launches all tests.
 func (config *TestsuiteConfig) RunAllTests(logdir string) {
 	report := StartReport(logdir)
 	if report == nil {
@@ -170,15 +171,15 @@ func (config *TestsuiteConfig) RunAllTests(logdir string) {
 
 func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
 	// If it was a scenario, and some apps didn't finish, they are
-	// considered as timed out, for benchmars it is normal
+	// considered as timed out, for benchmarks it is normal
 	var setStatus TestStatus
-	if testType == TEST_TYPE_BENCHMARK {
-		setStatus = TEST_REPORTED_PASSED
+	if testType == TestTypeBenchmark {
+		setStatus = TestReportedPassed
 	} else {
-		setStatus = TEST_TIMED_OUT
+		setStatus = TestTimedOut
 	}
 	for iii := range apps {
-		if apps[iii].Status == TEST_RUNNING {
+		if apps[iii].Status == TestRunning {
 			apps[iii].Status = setStatus
 		}
 	}
@@ -186,12 +187,12 @@ func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
 
 func setAppStatusOnPassed(apps []RunningApp) {
 	// If it was a scenario, and some apps didn't finish, they are
-	// considered as timed out, for benchmars it is normal
+	// considered as timed out, for benchmarks it is normal
 	var setStatus TestStatus
-	setStatus = TEST_REPORTED_PASSED
+	setStatus = TestReportedPassed
 
 	for iii := range apps {
-		if apps[iii].Status == TEST_RUNNING {
+		if apps[iii].Status == TestRunning {
 			apps[iii].Status = setStatus
 		}
 	}

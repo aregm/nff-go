@@ -23,44 +23,44 @@ import (
 // and send to port 0. Packets expected to be received back on 1 port. Received
 // flow is partitioned in 100000:1 relation. For this 1 packet latency is
 // calculated (current time minus time in packet) and then reported to channel.
-// Test is finished when number of reported latency measurements = LAT_NUMBER
+// Test is finished when number of reported latency measurements = latNumber
 //
 // latency-part2:
 // This part of test receives packets on 0 port and send it back to 1 port.
 
 // These are default test settings. Can be modified with command line.
 var (
-	LAT_NUMBER   int    = 500
-	BINS         int    = 10
-	SKIP_NUMBER  uint64 = 100000
-	SPEED        uint64 = 1000000
-	PASSED_LIMIT uint64 = 80
+	latNumber          = 500
+	bins               = 10
+	skipNumber  uint64 = 100000
+	speed       uint64 = 1000000
+	passedLimit uint64 = 80
 
-	PACKET_SIZE    uint64 = 128
-	SERV_DATA_SIZE uint64 = 46 // Ether + IPv4 + UDP + 4
+	packetSize   uint64 = 128
+	servDataSize uint64 = 46 // Ether + IPv4 + UDP + 4
 
-	DSTPORT_1 uint16 = 111
-	DSTPORT_2 uint16 = 222
+	dstPort1 uint16 = 111
+	dstPort2 uint16 = 222
 
 	outport uint
 	inport  uint
 )
 
 var (
-	// PACKET_SIZE - SERV_DATA_SIZE
-	payloadSize uint64 = 0
+	// packetSize - servDataSize
+	payloadSize uint64
 
 	// Counters of sent packets
-	sentPackets uint64 = 0
+	sentPackets uint64
 
 	// Received flow is partitioned in two flows. Each flow has separate packet counter:
 	// Counter of received packets, for which latency calculated
-	checkedPackets uint64 = 0
+	checkedPackets uint64
 	// Counter of other packets
-	packetCounter uint64 = 0
+	packetCounter uint64
 
-	// Event is to notify when LAT_NUMBER number of packets are received
-	testDoneEvent *sync.Cond = nil
+	// Event is to notify when latNumber number of packets are received
+	testDoneEvent *sync.Cond
 
 	// Channel is used to report packet latencies
 	latencies chan time.Duration
@@ -69,23 +69,23 @@ var (
 	// Latency values are stored here for next processing
 	latenciesStorage []time.Duration
 
-	count uint64 = 0
+	count uint64
 )
 
 func main() {
-	flag.IntVar(&LAT_NUMBER, "LAT_NUMBER", LAT_NUMBER, "number of packets, for which latency should be reported")
-	flag.IntVar(&BINS, "BINS", BINS, "number of bins")
-	flag.Uint64Var(&SKIP_NUMBER, "SKIP_NUMBER", SKIP_NUMBER, "test calculates latency only for 1 of SKIP_NUMBER packets")
-	flag.Uint64Var(&SPEED, "SPEED", SPEED, "speed of generator")
-	flag.Uint64Var(&PASSED_LIMIT, "PASSED_LIMIT", PASSED_LIMIT, "received/sent minimum ratio to pass test")
-	flag.Uint64Var(&PACKET_SIZE, "PACKET_SIZE", PACKET_SIZE, "size of packet")
+	flag.IntVar(&latNumber, "latNumber", latNumber, "number of packets, for which latency should be reported")
+	flag.IntVar(&bins, "bins", bins, "number of bins")
+	flag.Uint64Var(&skipNumber, "skipNumber", skipNumber, "test calculates latency only for 1 of skipNumber packets")
+	flag.Uint64Var(&speed, "speed", speed, "speed of generator")
+	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
+	flag.Uint64Var(&packetSize, "packetSize", packetSize, "size of packet")
 
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 1, "port for receiver")
 
 	latencies = make(chan time.Duration)
 	stop = make(chan string)
-	latenciesStorage = make([]time.Duration, 2*LAT_NUMBER)
+	latenciesStorage = make([]time.Duration, 2*latNumber)
 
 	go latenciesLogger(latencies, stop)
 
@@ -98,10 +98,10 @@ func main() {
 		CPUCoresNumber: 30,
 	}
 	flow.SystemInit(&config)
-	payloadSize = PACKET_SIZE - SERV_DATA_SIZE
+	payloadSize = packetSize - servDataSize
 
 	// Create packet flow
-	outputFlow := flow.SetGenerator(generatePackets, SPEED, nil)
+	outputFlow := flow.SetGenerator(generatePackets, speed, nil)
 	outputFlow2 := flow.SetPartitioner(outputFlow, 350, 350)
 	flow.SetSender(outputFlow, uint8(outport))
 	flow.SetSender(outputFlow2, uint8(outport))
@@ -111,8 +111,8 @@ func main() {
 	inputFlow2 := flow.SetReceiver(uint8(inport))
 	inputFlow := flow.SetMerger(inputFlow1, inputFlow2)
 
-	// Calculate latency only for 1 of SKIP_NUMBER packets.
-	latFlow := flow.SetPartitioner(inputFlow, SKIP_NUMBER, 1)
+	// Calculate latency only for 1 of skipNumber packets.
+	latFlow := flow.SetPartitioner(inputFlow, skipNumber, 1)
 
 	flow.SetHandler(latFlow, checkPackets, nil)
 	flow.SetHandler(inputFlow, countPackets, nil)
@@ -137,8 +137,8 @@ func main() {
 	ratio := received * 100 / sent
 
 	// Print report
-	fmt.Println("Packet size", PACKET_SIZE, "bytes")
-	fmt.Println("Requested speed", SPEED)
+	fmt.Println("Packet size", packetSize, "bytes")
+	fmt.Println("Requested speed", speed)
 	fmt.Println("Sent", sent, "packets")
 	fmt.Println("Received (total)", received, "packets")
 	fmt.Println("Received/sent ratio =", ratio, "%")
@@ -147,9 +147,9 @@ func main() {
 	aver, stddev := statLatency(latenciesStorage)
 	fmt.Println("Average = ", aver)
 	fmt.Println("Stddev = ", stddev)
-	displayHist(latenciesStorage, BINS)
+	displayHist(latenciesStorage, bins)
 
-	if ratio > PASSED_LIMIT {
+	if ratio > passedLimit {
 		fmt.Println("TEST PASSED")
 	} else {
 		fmt.Println("TEST FAILED")
@@ -169,12 +169,12 @@ func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 
 	// We need different packets to gain from RSS
 	if count%2 == 0 {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_1)
+		pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort1)
 	} else {
-		pkt.UDP.DstPort = packet.SwapBytesUint16(DSTPORT_2)
+		pkt.GetUDPForIPv4().DstPort = packet.SwapBytesUint16(dstPort2)
 	}
 
-	ptr := (*PacketData)(pkt.Data)
+	ptr := (*packetData)(pkt.Data)
 	ptr.SendTime = time.Now()
 	atomic.AddUint64(&sentPackets, 1)
 }
@@ -188,7 +188,7 @@ func latenciesLogger(ch <-chan time.Duration, stop <-chan string) {
 		case lat := <-ch:
 			sum += lat
 			latenciesStorage[count] = lat
-			count += 1
+			count++
 		case _ = <-stop:
 			testDoneEvent.Signal()
 			break
@@ -200,18 +200,18 @@ func latenciesLogger(ch <-chan time.Duration, stop <-chan string) {
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	checkCount := atomic.AddUint64(&checkedPackets, 1)
 
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 	if offset < 0 {
-		fmt.Printf("ParseL4Data returned negative value:\noffset:%d,\n packet: %x\n", offset, pkt.GetRawPacketBytes())
+		fmt.Printf("ParseData returned negative value:\noffset:%d,\n packet: %x\n", offset, pkt.GetRawPacketBytes())
 	} else {
-		ptr := (*PacketData)(pkt.Data)
+		ptr := (*packetData)(pkt.Data)
 		RecvTime := time.Now()
 		lat := RecvTime.Sub(ptr.SendTime)
 		// Report latency
 		latencies <- lat
 	}
 
-	if checkCount >= uint64(LAT_NUMBER) {
+	if checkCount >= uint64(latNumber) {
 		stop <- "stop"
 	}
 }
@@ -220,7 +220,7 @@ func countPackets(pkt *packet.Packet, context flow.UserContext) {
 	atomic.AddUint64(&packetCounter, 1)
 }
 
-type PacketData struct {
+type packetData struct {
 	SendTime time.Time
 }
 
@@ -228,7 +228,7 @@ type PacketData struct {
 func displayHist(times []time.Duration, maxBins int) {
 	min := time.Duration(1 << 10 * time.Second)
 	max := time.Duration(0)
-	for _, t := range times[0:LAT_NUMBER] {
+	for _, t := range times[0:latNumber] {
 		if t < min {
 			min = t
 		}
@@ -251,7 +251,7 @@ func displayHist(times []time.Duration, maxBins int) {
 
 	// Count observations in each interval
 	histObs := make([]int, maxBins)
-	for i := 0; i < LAT_NUMBER; i++ {
+	for i := 0; i < latNumber; i++ {
 		t := times[i]
 		for j := 1; j < maxBins+1; j++ {
 			if t > bounds[j-1] && t <= bounds[j] {
@@ -262,30 +262,30 @@ func displayHist(times []time.Duration, maxBins int) {
 	// Displaying latency intervals and counts
 	for i := 0; i < maxBins; i++ {
 		fmt.Printf("Interval %d: (%v, %v] count = %d - %v\n", i, bounds[i], bounds[i+1], histObs[i],
-			float32(histObs[i])/float32(LAT_NUMBER))
+			float32(histObs[i])/float32(latNumber))
 	}
 }
 
-// Calculate geomean for first LAT_NUMBER observations
+// Calculate geomean for first latNumber observations
 func geomeanLatency(times []time.Duration) time.Duration {
-	g := math.Pow(float64(times[0]), 1/float64(LAT_NUMBER))
-	for i := 1; i < LAT_NUMBER; i++ {
-		g = g * math.Pow(float64(times[i]), 1/float64(LAT_NUMBER))
+	g := math.Pow(float64(times[0]), 1/float64(latNumber))
+	for i := 1; i < latNumber; i++ {
+		g = g * math.Pow(float64(times[i]), 1/float64(latNumber))
 	}
 	return time.Duration(g)
 }
 
-// Calculate average and stddev for first LAT_NUMBER observations
+// Calculate average and stddev for first latNumber observations
 func statLatency(times []time.Duration) (time.Duration, time.Duration) {
 	var g time.Duration
 	var s float64
-	for i := 0; i < LAT_NUMBER; i++ {
+	for i := 0; i < latNumber; i++ {
 		g += times[i]
 	}
-	aver := float64(int(g) / LAT_NUMBER)
+	aver := float64(int(g) / latNumber)
 
-	for i := 0; i < LAT_NUMBER; i++ {
+	for i := 0; i < latNumber; i++ {
 		s += math.Pow(float64(times[i])-aver, 2)
 	}
-	return time.Duration(aver), time.Duration(math.Sqrt(s / float64(LAT_NUMBER)))
+	return time.Duration(aver), time.Duration(math.Sqrt(s / float64(latNumber)))
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// TestcaseReportInfo has all info about test.
 type TestcaseReportInfo struct {
 	Status        TestStatus
 	Benchdata     []Measurement
@@ -21,6 +22,7 @@ type TestcaseReportInfo struct {
 	Apps          []RunningApp
 }
 
+// Report represents test report.
 type Report struct {
 	output *os.File
 	t      *template.Template
@@ -107,7 +109,7 @@ const (
                 {{range .}}<th class="thinrborder">Pkts TX</th><th class="thinrborder">Mbit TX</th><th class="thinrborder">Pkts RX</th><th class="rbborder">Mbit RX</th>{{end}}
                 <th class="thinrborder">Used</th><th class="thinrborder">Free</th><th class="thinrborder">Last</th><th class="rbborder">Decreased</th>
             </tr><tr>
-                <td class="rborder">Average</td>{{range .}}<td>{{.Pkts_TX}}</td><td>{{.Mbits_TX}}</td><td>{{.Pkts_RX}}</td><td class="rborder">{{.Mbits_RX}}</td>{{end}}{{end}}{{/* end with .Benchdata */}}
+                <td class="rborder">Average</td>{{range .}}<td>{{.PktsTX}}</td><td>{{.MbitsTX}}</td><td>{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{end}}{{/* end with .Benchdata */}}
                 <td class="thinrborder">{{.CoresStats.CoresUsed}}</td><td class="thinrborder">{{.CoresStats.CoresFree}}</td><td class="thinrborder">{{.CoreLastValue}}</td><td class="rborder">{{if .CoreDecreased}}YES{{else}}NO{{end}}</td>
             </tr>
         </table>{{end}}{{/* end if .Benchdata */}}
@@ -124,7 +126,7 @@ const (
                 <th class="rbborder"></th>
                 {{range $element}}<th class="thinrborder">Pkts TX</th><th class="thinrborder">Mbit TX</th><th class="thinrborder">Pkts RX</th><th class="rbborder">Mbit RX</th>{{end}}
             </tr>{{end}}{{/* end of table header */}}<tr>
-                <td class="rborder">{{$index}}</td>{{range $element}}<td class="thinrborder">{{.Pkts_TX}}</td><td class="thinrborder">{{.Mbits_TX}}</td><td class="thinrborder">{{.Pkts_RX}}</td><td class="rborder">{{.Mbits_RX}}</td>{{end}}
+                <td class="rborder">{{$index}}</td>{{range $element}}<td class="thinrborder">{{.PktsTX}}</td><td class="thinrborder">{{.MbitsTX}}</td><td class="thinrborder">{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}
             </tr>
         {{end}}</table>{{end}}{{/* end with .Benchmarks */}}{{with .CoresStats}}<table class="bench">
             <tr>
@@ -155,13 +157,13 @@ var (
 		"getloggerfile": func(app RunningApp) template.HTMLAttr {
 			if app.Logger != nil {
 				return template.HTMLAttr("href=\"" + app.Logger.String() + "\"")
-			} else {
-				return ""
 			}
+			return ""
 		},
 	}
 )
 
+// StartReport initializes and starts report writing.
 func StartReport(logdir string) *Report {
 	var r Report
 	var err error
@@ -173,7 +175,7 @@ func StartReport(logdir string) *Report {
 		LogError("Report header template parse error:", err)
 		return nil
 	}
-	r.t, err = r.t.Parse(fmt.Sprintf(statusTemplate, TEST_REPORTED_PASSED))
+	r.t, err = r.t.Parse(fmt.Sprintf(statusTemplate, TestReportedPassed))
 	if err != nil {
 		LogError("Report status template parse error:", err)
 		return nil
@@ -224,6 +226,7 @@ func writeReport(r *Report) {
 	close(r.Done)
 }
 
+// FinishReport finishes report writing.
 func (r *Report) FinishReport() {
 	close(r.Pipe)
 

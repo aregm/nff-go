@@ -25,19 +25,22 @@
 // allocated packet in generate). Function types of user defined functions are
 // also defined in this file.
 
-// This is the main file of YANFF library and should be always imported by
+// Package flow is the main package of YANFF library and should be always imported by
 // user application.
 package flow
 
 import (
+	"os"
+	"runtime"
+	"strconv"
+	"sync/atomic"
+	"time"
+
 	"github.com/intel-go/yanff/asm"
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/scheduler"
-	"runtime"
-	"strconv"
-	"time"
 )
 
 var openFlowsNumber = uint32(0)
@@ -45,6 +48,7 @@ var ringName = 1
 var ffCount = 0
 var createdPorts []port
 
+// UserContext is a type which should be passed to all flow functions.
 type UserContext scheduler.UserContext
 
 // Flow is an abstraction for connecting flow functions with each other.
@@ -53,27 +57,33 @@ type Flow struct {
 	current *low.Queue
 }
 
-// Function type for user defined function which generates packets.
+// GenerateFunction is a function type for user defined function which generates packets.
 // Function receives preallocated packet where user should add
 // its size and content.
 type GenerateFunction func(*packet.Packet, UserContext)
+
+// VectorGenerateFunction is a function type like GenerateFunction for vector generating
 type VectorGenerateFunction func([]*packet.Packet, uint, UserContext)
 
-// Function type for user defined function which handles packets.
+// HandleFunction is a function type for user defined function which handles packets.
 // Function receives a packet from flow. User should parse it
 // and make necessary changes. It is prohibit to free packet in this
 // function.
 type HandleFunction func(*packet.Packet, UserContext)
+
+// VectorHandleFunction is a function type like GenerateFunction for vector handling
 type VectorHandleFunction func([]*packet.Packet, uint, UserContext)
 
-// Function type for user defined function which separates packets
+// SeparateFunction is a function type for user defined function which separates packets
 // based on some rule for two flows. Functions receives a packet from flow.
 // User should parse it and decide whether this packet should remains in
 // this flow - return true, or should be sent to new added flow - return false.
 type SeparateFunction func(*packet.Packet, UserContext) bool
+
+// VectorSeparateFunction is a function type like GenerateFunction for vector separation
 type VectorSeparateFunction func([]*packet.Packet, []bool, uint, UserContext)
 
-// Function type for user defined function which splits packets
+// SplitFunction is a function type for user defined function which splits packets
 // based in some rule for multiple flows. Function receives a packet from
 // flow. User should parse it and decide in which output flows this packet
 // should be sent. Return number of flow shouldn't exceed target number
@@ -106,7 +116,7 @@ type generateParameters struct {
 }
 
 func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *scheduler.FlowFunction {
-	var par *generateParameters = new(generateParameters)
+	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool()
@@ -116,7 +126,7 @@ func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *schedu
 
 func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
-	var par *generateParameters = new(generateParameters)
+	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool()
@@ -218,6 +228,36 @@ func makeHandler(in *low.Queue, out *low.Queue,
 	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
 }
 
+type writeParameters struct {
+	in       *low.Queue
+	filename string
+}
+
+func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
+	par := new(writeParameters)
+	par.in = in
+	par.filename = filename
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("writer", ffCount, write, par)
+}
+
+type readParameters struct {
+	out      *low.Queue
+	filename string
+	mempool  *low.Mempool
+	repcount int32
+}
+
+func makeReader(filename string, out *low.Queue, repcount int32) *scheduler.FlowFunction {
+	par := new(readParameters)
+	par.out = out
+	par.filename = filename
+	par.mempool = low.CreateMempool()
+	par.repcount = repcount
+	ffCount++
+	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
+}
+
 var burstSize uint
 var sizeMultiplier uint
 var schedTime uint
@@ -242,6 +282,7 @@ const (
 	manualPort
 )
 
+// Config is a struct with all parameters, which user can pass to YANFF library
 type Config struct {
 	// Number of threads, each bound to a separate CPU core. Default
 	// value is GOMAXPROCS.
@@ -290,7 +331,7 @@ type Config struct {
 	DPDKArgs []string
 }
 
-// Initializing of system. This function should be always called before graph construction.
+// SystemInit is initialization of system. This function should be always called before graph construction.
 // defaultCPUCoresNumber is a default number of cores which will be available for scheduler
 // to place flow functions and their clones. This number can be always changed by cores-number option.
 // Function can panic during execution.
@@ -369,7 +410,7 @@ func SystemInit(args *Config) {
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
 }
 
-// Starting system - begin packet receiving and packet sending.
+// SystemStart starts system - begin packet receiving and packet sending.
 // This functions should be always called after flow graph construction.
 // Function can panic during execution.
 func SystemStart() {
@@ -399,7 +440,34 @@ func generateRingName() string {
 	return s
 }
 
-// Add receive function to flow graph.
+// SetWriter adds write function to flow graph.
+// Gets flow which packets will be written to file and
+// target file name.
+// Function can panic during execution.
+func SetWriter(IN *Flow, filename string) {
+	checkFlow(IN)
+	write := makeWriter(filename, IN.current)
+	schedState.UnClonable = append(schedState.UnClonable, write)
+	IN.current = nil
+	openFlowsNumber--
+}
+
+// SetReader adds read function to flow graph.
+// Gets name of pcap formatted file and number of reads. If repcount = -1,
+// file is read infinitely in circle.
+// Returns new opened flow with read packets.
+// Function can panic during execution.
+func SetReader(filename string, repcount int32) (OUT *Flow) {
+	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	read := makeReader(filename, ring, repcount)
+	schedState.UnClonable = append(schedState.UnClonable, read)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT
+}
+
+// SetReceiver adds receive function to flow graph.
 // Gets port number from which packets will be received.
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
@@ -423,7 +491,7 @@ func SetReceiver(port uint8) (OUT *Flow) {
 	return OUT
 }
 
-// Add generate function to flow graph.
+// SetGenerator adds generate function to flow graph.
 // Gets user-defined generate function and target speed of generation user wants to achieve
 // Returns new open flow with generated packets. If targetSpeed equal to zero
 // single packet non-clonable flow function will be added. It can be used for waiting of
@@ -456,7 +524,7 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 	return OUT
 }
 
-// Add send function to flow graph.
+// SetSender adds send function to flow graph.
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
@@ -477,7 +545,7 @@ func SetSender(IN *Flow, port uint8) {
 	createdPorts[port].txQueuesNumber++
 }
 
-// Add partition function to flow graph.
+// SetPartitioner adds partition function to flow graph.
 // Gets input flow and N and M constants. Returns new opened flow.
 // Each loop N packets will be remained in input flow, next M packets will be sent to new flow.
 // It is advised not to use this function less then (75, 75) for performance reasons.
@@ -501,7 +569,7 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 	return OUT
 }
 
-// Add separate function to flow graph.
+// SetSeparator adds separate function to flow graph.
 // Gets flow and user defined separate function. Returns new opened flow.
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
@@ -526,7 +594,7 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 	return OUT
 }
 
-// Add split function to flow graph.
+// SetSplitter adds split function to flow graph.
 // Gets flow, user defined split function and flowNumber of new flows.
 // Returns array of new opened flows with corresponding length.
 // Each packet from input flow will be sent to one of new flows based on
@@ -549,7 +617,7 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 	return OutArray
 }
 
-// Add stop function to flow graph.
+// SetStopper adds stop function to flow graph.
 // Gets flow which will be closed and all packets from each will be dropped.
 // Function can panic during execution.
 func SetStopper(IN *Flow) {
@@ -559,7 +627,7 @@ func SetStopper(IN *Flow) {
 	openFlowsNumber--
 }
 
-// Add handle function to flow graph.
+// SetHandler adds handle function to flow graph.
 // Gets flow and user defined handle function. Function can receive either HandleFunction
 // or SeparateFunction. If input argument is HandleFunction then each packet from
 // input flow will be handle inside user defined function and sent further in the same flow.
@@ -585,7 +653,7 @@ func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
 	IN.current = ring
 }
 
-// Add merge function to flow graph.
+// SetMerger adds merge function to flow graph.
 // Gets any number of flows. Returns new opened flow.
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
@@ -603,14 +671,14 @@ func SetMerger(InArray ...*Flow) (OUT *Flow) {
 	return OUT
 }
 
-// Returns default MAC address of an Ethernet port.
+// GetPortMACAddress returns default MAC address of an Ethernet port.
 func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
-func receive(parameters interface{}, coreId uint8) {
+func receive(parameters interface{}, coreID uint8) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(srp.port, srp.queue, srp.out, coreId)
+	low.Receive(srp.port, srp.queue, srp.out, coreID)
 }
 
 func generateCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
@@ -650,9 +718,9 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	bufs := make([]uintptr, burstSize)
 	var tempPacket *packet.Packet
 	tempPackets := make([]*packet.Packet, burstSize)
-	var currentSpeed uint64 = 0
-	var tick <-chan time.Time = time.Tick(time.Duration(schedTime) * time.Millisecond)
-	var pause int = 0
+	var currentSpeed uint64
+	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
+	var pause int
 
 	for {
 		select {
@@ -685,9 +753,9 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	}
 }
 
-func send(parameters interface{}, coreId uint8) {
+func send(parameters interface{}, coreID uint8) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.queue, srp.in, coreId)
+	low.Send(srp.port, srp.queue, srp.in, coreID)
 }
 
 func merge(from *low.Queue, to *low.Queue) {
@@ -774,7 +842,7 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 	tempPackets := make([]*packet.Packet, burstSize)
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
-	var pause int = 0
+	var pause int
 
 	for {
 		select {
@@ -923,7 +991,7 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 	var tempPacketAddr uintptr
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
-	var pause int = 0
+	var pause int
 
 	for {
 		select {
@@ -997,7 +1065,7 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	tempPackets := make([]*packet.Packet, burstSize)
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
-	var pause int = 0
+	var pause int
 
 	for {
 		select {
@@ -1037,6 +1105,73 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 			safeEnqueue(OUT, bufs, uint(n))
 			currentSpeed += uint64(n)
 		}
+	}
+}
+
+func write(parameters interface{}, coreID uint8) {
+	wp := parameters.(*writeParameters)
+	IN := wp.in
+	filename := wp.filename
+
+	bufIn := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Create(filename)
+	if err != nil {
+		common.LogError(common.Debug, err)
+	}
+	defer f.Close()
+
+	packet.WritePcapGlobalHdr(f)
+	for {
+		n := IN.DequeueBurst(bufIn, 1)
+		if n == 0 {
+			continue
+		}
+		tempPacket = packet.ExtractPacket(bufIn[0])
+		tempPacket.WritePcapOnePacket(f)
+		low.DirectStop(1, bufIn)
+	}
+}
+
+func read(parameters interface{}, coreID uint8) {
+	rp := parameters.(*readParameters)
+	OUT := rp.out
+	filename := rp.filename
+	mempool := rp.mempool
+	repcount := rp.repcount
+
+	buf := make([]uintptr, 1)
+	var tempPacket *packet.Packet
+
+	f, err := os.Open(filename)
+	if err != nil {
+		common.LogError(common.Debug, err)
+	}
+	defer f.Close()
+
+	// Read pcap global header once
+	var glHdr packet.PcapGlobHdr
+	packet.ReadPcapGlobalHdr(f, &glHdr)
+
+	count := int32(0)
+
+	for {
+		low.AllocateMbufs(buf, mempool)
+		tempPacket = packet.ExtractPacket(buf[0])
+		isEOF := tempPacket.ReadPcapOnePacket(f)
+		if isEOF {
+			atomic.AddInt32(&count, 1)
+			if count == repcount {
+				break
+			}
+			_, err := f.Seek(packet.PcapGlobHdrSize, 0)
+			if err != nil {
+				common.LogError(common.Debug, err)
+			}
+			tempPacket.ReadPcapOnePacket(f)
+		}
+		safeEnqueue(OUT, buf, 1)
 	}
 }
 

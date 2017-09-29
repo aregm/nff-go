@@ -20,10 +20,10 @@
 // used dynamically in parallel which make a possibility of changing rules during execution.
 //
 // After rules are constructed the four functions can be used to filter packets according to rules:
-// 		L2_ACL_permit
-//		L2_ACL_port
-//		L3_ACL_permit
-// 		L3_ACL_port
+// 		L2ACLPermit
+//		L2ACLPort
+//		L3ACLPermit
+// 		L3ACLPort
 package rules
 
 import (
@@ -123,7 +123,7 @@ func GetL3RulesFromORIG(filename string) *L3Rules {
 		if len(lines) == 5 {
 			lines = append(lines, "false")
 		} else if len(lines) != 6 {
-			common.LogError(common.Debug, "Not compelte 5-tuple for rule parsing")
+			common.LogError(common.Debug, "Incomplete 5-tuple for rule parsing")
 		}
 		rawRules.L3Rules = append(rawRules.L3Rules, rawL3Rule{SrcAddr: lines[0], DstAddr: lines[1],
 			ID: lines[2], SrcPort: lines[3], DstPort: lines[4], OutputNumber: lines[5]})
@@ -369,32 +369,33 @@ type l3Rules6 struct {
 	L4           l4Rules
 }
 
+// L3Rules - struct for rules of l3 level
 type L3Rules struct {
 	ip4 []l3Rules4
 	ip6 []l3Rules6
 }
 
+// L2Rules - struct for rules of l2 level
 type L2Rules struct {
 	eth []l2Rules
 }
 
-// L2_ACL_permit gets packet (with parsed L2) and L2Rules.
+// L2ACLPermit gets packet (with parsed L2) and L2Rules.
 // Returns accept or reject for this packet
-func L2_ACL_permit(pkt *packet.Packet, rules *L2Rules) bool {
-	if l2_ACL(pkt, rules) > 0 {
+func L2ACLPermit(pkt *packet.Packet, rules *L2Rules) bool {
+	if l2ACL(pkt, rules) > 0 {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
-// L2_ACL_port gets packet (with parsed L2) and L2Rules.
+// L2ACLPort gets packet (with parsed L2) and L2Rules.
 // Returns number of output for packet
-func L2_ACL_port(pkt *packet.Packet, rules *L2Rules) uint {
-	return l2_ACL(pkt, rules)
+func L2ACLPort(pkt *packet.Packet, rules *L2Rules) uint {
+	return l2ACL(pkt, rules)
 }
 
-func l2_ACL(pkt *packet.Packet, rules *L2Rules) uint {
+func l2ACL(pkt *packet.Packet, rules *L2Rules) uint {
 	for _, rule := range rules.eth {
 		if rule.SAddrNotAny == true && rule.SAddr != pkt.Ether.SAddr {
 			continue
@@ -410,79 +411,70 @@ func l2_ACL(pkt *packet.Packet, rules *L2Rules) uint {
 	return 0
 }
 
-// L3_ACL_permit gets packet (with parsed L3 or L3 with L4) and L3Rules.
+// L3ACLPermit gets packet (with parsed L3 or L3 with L4) and L3Rules.
 // Returns accept or reject for this packet
-func L3_ACL_permit(pkt *packet.Packet, rules *L3Rules) bool {
-	if l3_ACL(pkt, rules) > 0 {
+func L3ACLPermit(pkt *packet.Packet, rules *L3Rules) bool {
+	if l3ACL(pkt, rules) > 0 {
 		return true
-	} else {
+	}
+	return false
+}
+
+// L3ACLPort gets packet (with parsed L3 or L3 with L4) and L3Rules.
+// Returns number of output for this packet
+func L3ACLPort(pkt *packet.Packet, rules *L3Rules) uint {
+	return l3ACL(pkt, rules)
+}
+
+func l4ACL(pkt *packet.Packet, L4 *l4Rules) bool {
+	// Src and Dst port numbers placed at the same offset from L4 start in both tcp and udp
+	l4 := (*packet.UDPHdr)(pkt.L4)
+	srcPort := packet.SwapBytesUint16(l4.SrcPort)
+	if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
 		return false
 	}
-}
-
-// L3_ACL_port gets packet (with parsed L3 or L3 with L4) and L3Rules.
-// Returns number of output for this packet
-func L3_ACL_port(pkt *packet.Packet, rules *L3Rules) uint {
-	return l3_ACL(pkt, rules)
-}
-
-func l4_ACL(pkt *packet.Packet, L4 *l4Rules) bool {
-	if pkt.TCP != nil {
-		srcPort := packet.SwapBytesUint16(pkt.TCP.SrcPort)
-		if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
-			return false
-		}
-		dstPort := packet.SwapBytesUint16(pkt.TCP.DstPort)
-		if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
-			return false
-		}
-	} else if pkt.UDP != nil {
-		srcPort := packet.SwapBytesUint16(pkt.UDP.SrcPort)
-		if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
-			return false
-		}
-		dstPort := packet.SwapBytesUint16(pkt.UDP.DstPort)
-		if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
-			return false
-		}
-	} else {
-		// This situation takes place when we request any protocol ID at previous stage
-		// however packet has neither TCP nor UDP protocols.
+	dstPort := packet.SwapBytesUint16(l4.DstPort)
+	if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
 		return false
 	}
 	return true
 }
 
-func l3_ACL(pkt *packet.Packet, rules *L3Rules) uint {
-	if pkt.IPv4 != nil {
+func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
+	ipv4, ipv6 := pkt.ParseAllKnownL3()
+	if ipv4 != nil {
 		for _, rule := range rules.ip4 {
-			if ((rule.SrcAddr ^ pkt.IPv4.SrcAddr) & rule.SrcMask) != 0 {
+			if ((rule.SrcAddr ^ ipv4.SrcAddr) & rule.SrcMask) != 0 {
 				continue
 			}
-			if ((rule.DstAddr ^ pkt.IPv4.DstAddr) & rule.DstMask) != 0 {
+			if ((rule.DstAddr ^ ipv4.DstAddr) & rule.DstMask) != 0 {
 				continue
 			}
-			if ((rule.L4.ID ^ pkt.IPv4.NextProtoID) & rule.L4.IDMask) != 0 {
+			if ((rule.L4.ID ^ ipv4.NextProtoID) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4_ACL(pkt, &rule.L4) {
-				continue
+			if rule.L4.valid {
+				pkt.ParseL4ForIPv4()
+				if !l4ACL(pkt, &rule.L4) {
+					continue
+				}
 			}
 			return rule.OutputNumber
 		}
-	} else if pkt.IPv6 != nil {
+	} else if ipv6 != nil {
 	IPv6:
 		for _, rule := range rules.ip6 {
 			for i := 0; i < 16; i++ {
-				if ((rule.SrcAddr[i]^pkt.IPv6.SrcAddr[i])&rule.SrcMask[i] != 0) ||
-					((rule.DstAddr[i]^pkt.IPv6.DstAddr[i])&rule.DstMask[i] != 0) {
+				if ((rule.SrcAddr[i]^ipv6.SrcAddr[i])&rule.SrcMask[i] != 0) ||
+					((rule.DstAddr[i]^ipv6.DstAddr[i])&rule.DstMask[i] != 0) {
 					continue IPv6
 				}
 			}
-			if ((rule.L4.ID ^ pkt.IPv6.Proto) & rule.L4.IDMask) != 0 {
+			if ((rule.L4.ID ^ ipv6.Proto) & rule.L4.IDMask) != 0 {
 				continue
 			}
-			if rule.L4.valid && !l4_ACL(pkt, &rule.L4) {
+			pkt.ParseL4ForIPv6()
+			if !l4ACL(pkt, &rule.L4) {
 				continue
 			}
 			return rule.OutputNumber

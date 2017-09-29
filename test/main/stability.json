@@ -16,12 +16,12 @@
         {
             "name": "generate",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test1",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./part1"
                     ]
@@ -29,7 +29,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test1",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./part2"
                     ]
@@ -39,12 +39,12 @@
         {
             "name": "merge1",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test-merge",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-merge-part1"
                     ]
@@ -52,7 +52,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test-merge",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-merge-part2"
                     ]
@@ -62,12 +62,12 @@
         {
             "name": "split1",
             "test-time": 90000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test-split",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-split-part1"
                     ]
@@ -75,7 +75,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test-split",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-split-part2"
                     ]
@@ -85,12 +85,12 @@
         {
             "name": "separate1",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test-separate",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-separate-part1"
                     ]
@@ -98,7 +98,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test-separate",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-separate-part2"
                     ]
@@ -108,12 +108,12 @@
         {
             "name": "partition1",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test-partition",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-partition-part1"
                     ]
@@ -121,7 +121,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test-partition",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-partition-part2"
                     ]
@@ -131,12 +131,12 @@
         {
             "name": "handle2",
             "test-time": 60000000000,
-            "test-type": "TEST_TYPE_SCENARIO",
+            "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "host-name": "hostname1",
                     "image-name": "yanff-test-handle2",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-handle2-part1"
                     ]
@@ -144,7 +144,7 @@
                 {
                     "host-name": "hostname2",
                     "image-name": "yanff-test-handle2",
-                    "app-type": "TESTAPP_GO",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./test-handle2-part2"
                     ]

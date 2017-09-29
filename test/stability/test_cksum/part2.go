@@ -11,7 +11,7 @@ import (
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 
-	"github.com/intel-go/yanff/test/stability/test_cksum/test_common"
+	"github.com/intel-go/yanff/test/stability/test_cksum/testCommon"
 )
 
 var hwol bool
@@ -42,9 +42,9 @@ func main() {
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 
-	if !test_common.CheckPacketChecksums(pkt) {
+	if !testCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")
 	}
 
@@ -54,7 +54,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 		return
 	}
 
-	ptr := (*test_common.Packetdata)(pkt.Data)
+	ptr := (*testCommon.Packetdata)(pkt.Data)
 	if ptr.F2 != 0 {
 		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
 		println("TEST FAILED")
@@ -67,6 +67,6 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 		packet.SetPseudoHdrChecksum(pkt)
 		packet.SetHWCksumOLFlags(pkt)
 	} else {
-		test_common.CalculateChecksum(pkt)
+		testCommon.CalculateChecksum(pkt)
 	}
 }

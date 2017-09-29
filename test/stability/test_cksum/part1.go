@@ -18,30 +18,30 @@ import (
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 
-	"github.com/intel-go/yanff/test/stability/test_cksum/test_common"
+	"github.com/intel-go/yanff/test/stability/test_cksum/testCommon"
 )
 
 const (
-	IPV4  = 0
-	IPV6  = 1
-	MAXL3 = 2
-	UDP   = 0
-	TCP   = 1
-	ICMP  = 2
-	MAXL4 = 2
+	ipv4  = 0
+	ipv5  = 1
+	maxL3 = 2
+	udp   = 0
+	tcp   = 1
+	icmp  = 2
+	maxL4 = 2
 )
 
 var (
 	totalPackets uint64 = 10
 
 	// Packet should hold at least two int64 fields
-	MIN_PAYLOAD_SIZE int = int(unsafe.Sizeof(sentPackets) * 2)
-	MAX_PAYLOAD_SIZE int = 1400
+	minPayloadSize = int(unsafe.Sizeof(sentPackets) * 2)
+	maxPayloadSize = 1400
 
-	sentPackets     uint64     = 0
-	receivedPackets uint64     = 0
-	testDoneEvent   *sync.Cond = nil
-	passed          int32      = 1
+	sentPackets     uint64
+	receivedPackets uint64
+	testDoneEvent   *sync.Cond
+	passed          int32 = 1
 	rnd             *rand.Rand
 
 	hwol         bool
@@ -49,12 +49,12 @@ var (
 	outport      uint
 	useIPv4      bool
 	useIPv6      bool
-	randomL3     bool = false
+	randomL3     = false
 	l3type       int
 	useUDP       bool
 	useTCP       bool
 	useICMP      bool
-	randomL4     bool = false
+	randomL4     = false
 	l4type       int
 	packetLength int
 )
@@ -96,10 +96,10 @@ func main() {
 
 	if useIPv4 && !useIPv6 {
 		print("IPv4 L3 and ")
-		l3type = IPV4
+		l3type = ipv4
 	} else if !useIPv4 && useIPv6 {
 		print("IPv6 L3 and ")
-		l3type = IPV6
+		l3type = ipv5
 	} else {
 		print("IPv4 and IPv6 L3 and ")
 		randomL3 = true
@@ -112,13 +112,13 @@ func main() {
 
 	if useUDP && !useTCP && !useICMP {
 		println("UDP L4 mode is enabled")
-		l4type = UDP
+		l4type = udp
 	} else if !useUDP && useTCP && !useICMP {
 		println("TCP L4 mode is enabled")
-		l4type = TCP
+		l4type = tcp
 	} else if !useUDP && !useTCP && useICMP {
 		println("ICMP L4 mode is enabled")
-		l4type = ICMP
+		l4type = icmp
 	} else {
 		println("UDP and TCP L4 modes are enabled")
 		randomL4 = true
@@ -171,32 +171,31 @@ func main() {
 
 func generatePayloadLength() uint16 {
 	if packetLength == 0 {
-		return uint16(rnd.Intn(MAX_PAYLOAD_SIZE-MIN_PAYLOAD_SIZE) + MIN_PAYLOAD_SIZE)
-	} else {
-		return uint16(packetLength)
+		return uint16(rnd.Intn(maxPayloadSize-minPayloadSize) + minPayloadSize)
 	}
+	return uint16(packetLength)
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	if randomL3 {
-		l3type = rnd.Intn(MAXL3)
+		l3type = rnd.Intn(maxL3)
 	}
 	if randomL4 {
-		l4type = rnd.Intn(MAXL4)
+		l4type = rnd.Intn(maxL4)
 	}
 
-	if l3type == IPV4 {
-		if l4type == UDP {
+	if l3type == ipv4 {
+		if l4type == udp {
 			generateIPv4UDP(emptyPacket)
-		} else if l4type == ICMP {
+		} else if l4type == icmp {
 			generateIPv4ICMP(emptyPacket)
 		} else {
 			generateIPv4TCP(emptyPacket)
 		}
 	} else {
-		if l4type == UDP {
+		if l4type == udp {
 			generateIPv6UDP(emptyPacket)
-		} else if l4type == ICMP {
+		} else if l4type == icmp {
 			generateIPv6ICMP(emptyPacket)
 		} else {
 			generateIPv6TCP(emptyPacket)
@@ -227,38 +226,43 @@ func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
 
 	// Put a unique non-zero value here
 	sent := atomic.LoadUint64(&sentPackets)
-	ptr := (*test_common.Packetdata)(emptyPacket.Data)
+	ptr := (*testCommon.Packetdata)(emptyPacket.Data)
 	ptr.F1 = sent + 1
 	ptr.F2 = 0
 }
 
 func initPacketIPv4(emptyPacket *packet.Packet) {
 	// Initialize IPv4 addresses
-	emptyPacket.IPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
-	emptyPacket.IPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
-	emptyPacket.IPv4.TimeToLive = 100
+	emptyPacketIPv4 := emptyPacket.GetIPv4()
+	emptyPacketIPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
+	emptyPacketIPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
+	emptyPacketIPv4.TimeToLive = 100
 }
 
 func initPacketIPv6(emptyPacket *packet.Packet) {
 	// Initialize IPv6 addresses
-	emptyPacket.IPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	emptyPacket.IPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	emptyPacketIPv6 := emptyPacket.GetIPv6()
+	emptyPacketIPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	emptyPacketIPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 }
 
 func initPacketUDP(emptyPacket *packet.Packet) {
-	emptyPacket.UDP.SrcPort = packet.SwapBytesUint16(1234)
-	emptyPacket.UDP.DstPort = packet.SwapBytesUint16(2345)
+	emptyPacketUDP := (*packet.UDPHdr)(emptyPacket.L4)
+	emptyPacketUDP.SrcPort = packet.SwapBytesUint16(1234)
+	emptyPacketUDP.DstPort = packet.SwapBytesUint16(2345)
 }
 
 func initPacketTCP(emptyPacket *packet.Packet) {
-	emptyPacket.TCP.SrcPort = packet.SwapBytesUint16(3456)
-	emptyPacket.TCP.DstPort = packet.SwapBytesUint16(4567)
+	emptyPacketTCP := (*packet.TCPHdr)(emptyPacket.L4)
+	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(3456)
+	emptyPacketTCP.DstPort = packet.SwapBytesUint16(4567)
 }
 
 func initPacketICMP(emptyPacket *packet.Packet) {
-	emptyPacket.ICMP.Type = common.ICMP_TYPE_ECHO_REQUEST
-	emptyPacket.ICMP.Identifier = 0xdead
-	emptyPacket.ICMP.SeqNum = 0xbeef
+	emptyPacketICMP := (*packet.ICMPHdr)(emptyPacket.L4)
+	emptyPacketICMP.Type = common.ICMPTypeEchoRequest
+	emptyPacketICMP.Identifier = 0xdead
+	emptyPacketICMP.SeqNum = 0xbeef
 }
 
 func generateIPv4UDP(emptyPacket *packet.Packet) {
@@ -270,10 +274,10 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 	initPacketUDP(emptyPacket)
 
 	if hwol {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.IPv4, emptyPacket.UDP))
+		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.GetIPv4(), emptyPacket.GetUDPForIPv4()))
 	} else {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
 	}
 }
 
@@ -286,10 +290,10 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	initPacketTCP(emptyPacket)
 
 	if hwol {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.IPv4))
+		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.GetIPv4()))
 	} else {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
 	}
 }
 
@@ -302,8 +306,8 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.IPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
+		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
+		emptyPacket.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
 	}
 }
 
@@ -316,9 +320,9 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 	initPacketUDP(emptyPacket)
 
 	if hwol {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.IPv6, emptyPacket.UDP))
+		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.GetIPv6(), emptyPacket.GetUDPForIPv6()))
 	} else {
-		emptyPacket.UDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
+		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
 	}
 }
 
@@ -331,9 +335,9 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 	initPacketTCP(emptyPacket)
 
 	if hwol {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.IPv6))
+		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.GetIPv6()))
 	} else {
-		emptyPacket.TCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
+		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
 	}
 }
 
@@ -346,14 +350,14 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.ICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
+		emptyPacket.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
 	}
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 
-	if !test_common.CheckPacketChecksums(pkt) {
+	if !testCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")
 	}
 
@@ -364,7 +368,7 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 		println("TEST FAILED")
 		atomic.StoreInt32(&passed, 0)
 	} else {
-		ptr := (*test_common.Packetdata)(pkt.Data)
+		ptr := (*testCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {
 			fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)

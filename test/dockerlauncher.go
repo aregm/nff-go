@@ -19,38 +19,44 @@ import (
 	"github.com/docker/go-connections/nat"
 )
 
+// Pktgen commands constants
 const (
-	PKTGEN_GET_PORTS_NUMBER_COMMAND = "printf(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n);"
-	PKTGEN_GET_PORT_STARTS_COMMAND  = "stat = pktgen.portStats(\"all\", \"rate\");"
-	PKTGEN_PRINT_PORT_STATS_COMMAND = "printf(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx);"
-	PKTGEN_EXIT_COMMAND             = "os.exit(0);"
+	PktgenGetPortsNumberCommand = "printf(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n);"
+	PktgenGetPortStatsCommand   = "stat = pktgen.portStats(\"all\", \"rate\");"
+	PktgenPrintPortStatsCommand = "printf(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx);"
+	PktgenExitCommand           = "os.exit(0);"
 
-	PKTGET_GET_PORTS_NUMBER_FORMAT = "%d"
-	PKTGEN_GET_PORT_STARTS_FORMAT  = "%d %d %d %d"
+	PktgenGetPortsNumberFormat = "%d"
+	PktgenGetPortStatsFormat   = "%d %d %d %d"
 )
 
+// Test statuses regular expressions.
 var (
-	TEST_PASSED_REGEXP = regexp.MustCompile(`^TEST PASSED$`)
-	TEST_FAILED_REGEXP = regexp.MustCompile(`^TEST FAILED$`)
-	TEST_CORES_REGEXP  = regexp.MustCompile(`^DEBUG: System is using (\d+) cores now\. (\d+) cores are left available\.$`)
+	TestPassedRegexp = regexp.MustCompile(`^TEST PASSED$`)
+	TestFailedRegexp = regexp.MustCompile(`^TEST FAILED$`)
+	TestCoresRegexp  = regexp.MustCompile(`^DEBUG: System is using (\d+) cores now\. (\d+) cores are left available\.$`)
 
 	DeleteContainersOnExit = true
 )
 
+// Measurement has measured by benchmark values.
 type Measurement struct {
-	Pkts_TX, Mbits_TX, Pkts_RX, Mbits_RX int64
+	PktsTX, MbitsTX, PktsRX, MbitsRX int64
 }
 
+// CoresInfo has info about used and free cores.
 type CoresInfo struct {
 	CoresUsed, CoresFree int
 }
 
+// TestReport has info about test status and application.
 type TestReport struct {
 	AppIndex  int
 	AppStatus TestStatus
 	msg       string
 }
 
+// RunningApp structure represents the app being run.
 type RunningApp struct {
 	index          int
 	config         *AppConfig
@@ -89,7 +95,7 @@ func (app *RunningApp) sendMessageOrFinish(str string, status TestStatus, report
 func (app *RunningApp) sendErrorOrFinish(err error, report chan<- TestReport, done <-chan struct{}) {
 	r := TestReport{
 		AppIndex:  app.index,
-		AppStatus: TEST_REPORTED_FAILED,
+		AppStatus: TestReportedFailed,
 		msg:       err.Error(),
 	}
 
@@ -113,11 +119,10 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 	defer logs.Close()
 	if err != nil {
 		app.Logger.LogError("Failed to get logs from ", app, ":", err)
-		app.Status = TEST_INVALID
+		app.Status = TestInvalid
 		return
-	} else {
-		app.Status = TEST_RUNNING
 	}
+	app.Status = TestRunning
 
 	scanner := bufio.NewScanner(logs)
 
@@ -127,14 +132,14 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 		str := scanner.Text()
 		status := app.Status
 
-		if TEST_PASSED_REGEXP.FindStringIndex(str) != nil {
-			status = TEST_REPORTED_PASSED
-		} else if TEST_FAILED_REGEXP.FindStringIndex(str) != nil {
-			status = TEST_REPORTED_FAILED
+		if TestPassedRegexp.FindStringIndex(str) != nil {
+			status = TestReportedPassed
+		} else if TestFailedRegexp.FindStringIndex(str) != nil {
+			status = TestReportedFailed
 		} else {
 			t := time.Now()
 			if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
-				matches := TEST_CORES_REGEXP.FindStringSubmatch(str)
+				matches := TestCoresRegexp.FindStringSubmatch(str)
 				if len(matches) == 3 {
 					var c CoresInfo
 					c.CoresUsed, err = strconv.Atoi(matches[1])
@@ -150,7 +155,7 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 
 		finish := app.sendMessageOrFinish(str, status, report, done)
 
-		if app.Status != TEST_RUNNING || finish {
+		if app.Status != TestRunning || finish {
 			return
 		}
 	}
@@ -182,7 +187,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	sendExitCommand := func() {
 		// We don't care whether writeData returns to finish or not
 		// because after this call this goroutine is exiting anyway
-		writeData(PKTGEN_EXIT_COMMAND)
+		writeData(PktgenExitCommand)
 	}
 
 	readString := func() bool {
@@ -229,7 +234,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 
 	// Get number of ports seen by pktgen
 	var numberOfPorts int
-	if writeData(PKTGEN_GET_PORTS_NUMBER_COMMAND) {
+	if writeData(PktgenGetPortsNumberCommand) {
 		return
 	}
 
@@ -237,7 +242,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 		return
 	}
 
-	_, err = fmt.Sscanf(str, PKTGET_GET_PORTS_NUMBER_FORMAT, &numberOfPorts)
+	_, err = fmt.Sscanf(str, PktgenGetPortsNumberFormat, &numberOfPorts)
 	if err != nil {
 		app.Logger.LogError("Failed to scan number of ports from pktgen", err)
 		app.sendErrorOrFinish(err, report, done)
@@ -257,14 +262,14 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	// Gather statistics
 	for {
 		// Assign stat variable to an array of rates
-		if writeData(PKTGEN_GET_PORT_STARTS_COMMAND) {
+		if writeData(PktgenGetPortStatsCommand) {
 			return
 		}
 
 		bench := make([]Measurement, numberOfPorts)
 		for iii := 0; iii < numberOfPorts; iii++ {
 			// Print rate for every port from the stat array
-			str = fmt.Sprintf(PKTGEN_PRINT_PORT_STATS_COMMAND, iii, iii, iii, iii)
+			str = fmt.Sprintf(PktgenPrintPortStatsCommand, iii, iii, iii, iii)
 			if writeData(str) {
 				return
 			}
@@ -273,8 +278,8 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 				return
 			}
 
-			_, err = fmt.Sscanf(str, PKTGEN_GET_PORT_STARTS_FORMAT,
-				&bench[iii].Pkts_TX, &bench[iii].Mbits_TX, &bench[iii].Pkts_RX, &bench[iii].Mbits_RX)
+			_, err = fmt.Sscanf(str, PktgenGetPortStatsFormat,
+				&bench[iii].PktsTX, &bench[iii].MbitsTX, &bench[iii].PktsRX, &bench[iii].MbitsRX)
 			if err != nil {
 				app.Logger.LogError("Failed to scan port", iii, "stats from pktgen", err)
 				app.sendErrorOrFinish(err, report, done)
@@ -299,12 +304,13 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	}
 }
 
+// InitTest makes test initialization.
 func (app *RunningApp) InitTest(logger *Logger, index int, config *AppConfig, dc *DockerConfig, test *TestConfig) {
 	app.index = index
 	app.config = config
 	app.dockerConfig = dc
 	app.test = test
-	app.Status = TEST_CREATED
+	app.Status = TestCreated
 	app.Logger = logger
 }
 
@@ -316,7 +322,7 @@ func (app *RunningApp) startTest() error {
 	app.Logger.LogDebug("Created client for", app, ", client =", cl, ", err =", err)
 
 	if err != nil {
-		app.Status = TEST_INVALID
+		app.Status = TestInvalid
 		return err
 	}
 	app.cl = cl
@@ -362,11 +368,11 @@ func (app *RunningApp) startTest() error {
 	response, err := app.cl.ContainerCreate(ctx, &config, &hostConfig, nil, "")
 	cancel()
 	app.containerID = response.ID
-	app.Status = TEST_INITIALIZED
+	app.Status = TestInitialized
 	app.Logger.LogDebug("Created container for", app, ", response =", response, ", err =", err)
 
 	if err != nil {
-		app.Status = TEST_INVALID
+		app.Status = TestInvalid
 		return err
 	}
 
@@ -381,12 +387,11 @@ func (app *RunningApp) startTest() error {
 	app.Logger.LogDebug("Started container for", app, "err =", err)
 
 	if err != nil {
-		app.Status = TEST_INVALID
+		app.Status = TestInvalid
 		return err
-	} else {
-		app.Status = TEST_RUNNING
 	}
 
+	app.Status = TestRunning
 	t := time.Now()
 	app.benchStartTime = t.Add(app.test.BenchConf.MeasureAfter)
 	if app.test.BenchConf.MeasureFor > 0 {
@@ -407,7 +412,7 @@ func killAllRunningAndRemoveData(apps []RunningApp) {
 func killRunningAppAndRemoveData(app *RunningApp) {
 	var err error
 
-	if app.Status == TEST_RUNNING {
+	if app.Status == TestRunning {
 		app.Logger.LogDebug("Trying to kill container for app", app)
 
 		ctx, cancel := context.WithTimeout(context.Background(), app.dockerConfig.RequestTimeout)
@@ -417,7 +422,7 @@ func killRunningAppAndRemoveData(app *RunningApp) {
 		app.Logger.LogErrorsIfNotNil(err, "Error while killing container", &app)
 	}
 
-	if DeleteContainersOnExit && (app.Status == TEST_INITIALIZED || app.Status == TEST_RUNNING) {
+	if DeleteContainersOnExit && (app.Status == TestInitialized || app.Status == TestRunning) {
 		app.Logger.LogDebug("Trying to remove container for app", app)
 
 		ctx, cancel := context.WithTimeout(context.Background(), app.dockerConfig.RequestTimeout)

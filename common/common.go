@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This package is used for combining common functions from other packages
+// Package common is used for combining common functions from other packages
 // which aren't connected with C language part
 package common
 
@@ -34,8 +34,8 @@ const (
 
 // Supported ICMP Types
 const (
-	ICMP_TYPE_ECHO_REQUEST  uint8 = 8
-	ICMP_TYPE_ECHO_RESPONSE uint8 = 0
+	ICMPTypeEchoRequest  uint8 = 8
+	ICMPTypeEchoResponse uint8 = 0
 )
 
 // These constants keep length of supported headers in bytes.
@@ -56,30 +56,38 @@ const (
 	UDPLen     = 8
 )
 
+// LogType - type of logging, used in flow package
 type LogType uint8
 
 const (
-	No             LogType = 1 << iota // No output even after fatal errors
-	Initialization                     // Output during system initialization
-	Debug                              // Output during execution one time per time period (scheduler ticks)
-	Verbose                            // Output during execution as soon as something happens. Can influence performance
+	// No - no output even after fatal errors
+	No LogType = 1 << iota
+	// Initialization - output during system initialization
+	Initialization
+	// Debug - output during execution one time per time period (scheduler ticks)
+	Debug
+	// Verbose - output during execution as soon as something happens. Can influence performance
+	Verbose
 )
 
+// TCPFlags contains set TCP flags.
 type TCPFlags uint8
 
+// Constants for valuues of TCP flags.
 const (
-	TCP_FLAG_FIN = 0x01
-	TCP_FLAG_SYN = 0x02
-	TCP_FLAG_RST = 0x04
-	TCP_FLAG_PSH = 0x08
-	TCP_FLAG_ACK = 0x10
-	TCP_FLAG_URG = 0x20
-	TCP_FLAG_ECE = 0x40
-	TCP_FLAG_CWR = 0x80
+	TCPFlagFin = 0x01
+	TCPFlagSyn = 0x02
+	TCPFlagRst = 0x04
+	TCPFlagPsh = 0x08
+	TCPFlagAck = 0x10
+	TCPFlagUrg = 0x20
+	TCPFlagEce = 0x40
+	TCPFlagCwr = 0x80
 )
 
-var currentLogType LogType = No | Initialization | Debug
+var currentLogType = No | Initialization | Debug
 
+// LogError internal, used in all packages
 func LogError(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -88,6 +96,7 @@ func LogError(logType LogType, v ...interface{}) {
 	os.Exit(1)
 }
 
+// LogWarning internal, used in all packages
 func LogWarning(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -95,6 +104,7 @@ func LogWarning(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogDebug internal, used in all packages
 func LogDebug(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -102,6 +112,7 @@ func LogDebug(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogDrop internal, used in all packages
 func LogDrop(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
@@ -109,17 +120,20 @@ func LogDrop(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogTitle internal, used in all packages
 func LogTitle(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		log.Print(v...)
 	}
 }
 
+// SetLogType internal, used in flow package
 func SetLogType(logType LogType) {
 	log.SetFlags(0)
 	currentLogType = logType
 }
 
+// GetDPDKLogLevel internal, used in flow package
 func GetDPDKLogLevel() string {
 	switch currentLogType {
 	case No:

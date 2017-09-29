@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	L3Rules *rules.L3Rules
+	l3Rules *rules.L3Rules
 
 	inport   uint
 	outport1 uint
@@ -34,13 +34,13 @@ func main() {
 
 	// Get splitting rules from access control file.
 	//L2Rules = rules.GetL3RulesFromORIG("test-separate-l2rules.conf")
-	L3Rules = rules.GetL3RulesFromORIG("test-separate-l3rules.conf")
+	l3Rules = rules.GetL3RulesFromORIG("test-separate-l3rules.conf")
 
 	// Receive packets from 0 port
 	flow1 := flow.SetReceiver(uint8(inport))
 
-	// Seperate packet flow based on ACL.
-	flow2 := flow.SetSeparator(flow1, L3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
+	// Separate packet flow based on ACL.
+	flow2 := flow.SetSeparator(flow1, l3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	flow.SetSender(flow1, uint8(outport1))
@@ -50,7 +50,6 @@ func main() {
 	flow.SystemStart()
 }
 
-func L3Separator(pkt *packet.Packet, context flow.UserContext) bool {
-	pkt.ParseIPv4UDP()
-	return rules.L3_ACL_permit(pkt, L3Rules)
+func l3Separator(pkt *packet.Packet, context flow.UserContext) bool {
+	return rules.L3ACLPermit(pkt, l3Rules)
 }

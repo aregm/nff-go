@@ -6,50 +6,47 @@ package nat
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"sync"
-	"time"
 )
 
+// Tuple is a pair of address and port.
 type Tuple struct {
-	addr    uint32
-	port    uint16
+	addr uint32
+	port uint16
 }
 
 func (t *Tuple) String() string {
 	return fmt.Sprintf("addr = %d.%d.%d.%d:%d",
-		(t.addr >> 24) & 0xff,
-		(t.addr >> 16) & 0xff,
-		(t.addr >> 8) & 0xff,
-		t.addr & 0xff,
+		(t.addr>>24)&0xff,
+		(t.addr>>16)&0xff,
+		(t.addr>>8)&0xff,
+		t.addr&0xff,
 		t.port)
 }
 
 var (
-	PublicMAC, PrivateMAC [common.EtherAddrLen]uint8
-	Natconfig             *Config
+	// PublicMAC is a public port MAC address.
+	PublicMAC [common.EtherAddrLen]uint8
+	// PrivateMAC is a private port MAC address.
+	PrivateMAC [common.EtherAddrLen]uint8
+	// Natconfig is a config file.
+	Natconfig *Config
 	// Main lookup table which contains entries
-	pri2pubTable          []sync.Map
-	pub2priTable          []sync.Map
-	mutex                 sync.Mutex
+	pri2pubTable []sync.Map
+	pub2priTable []sync.Map
+	mutex        sync.Mutex
 
-	EMPTY_ENTRY = Tuple{ addr: 0, port: 0, }
-
-	debugPort uint16 = 10000
-	debug bool = false
-	logThreshold int = 20
-	loggedDrop int = 0
-	loggedAdd int = 0
-	loggedDelete int = 0
-	loggedPri2PubLookup int = 0
-	loggedPub2PriLookup int = 0
+	emptyEntry = Tuple{addr: 0, port: 0}
 )
 
 func init() {
-	pri2pubTable = make([]sync.Map, common.UDPNumber + 1)
-	pub2priTable = make([]sync.Map, common.UDPNumber + 1)
+	pri2pubTable = make([]sync.Map, common.UDPNumber+1)
+	pub2priTable = make([]sync.Map, common.UDPNumber+1)
 }
 
 func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uint32) (Tuple, error) {
@@ -57,6 +54,7 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 
 	port, err := allocNewPort(protocol)
 	if err != nil {
+		mutex.Unlock()
 		return Tuple{}, err
 	}
 
@@ -65,53 +63,41 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 		port: uint16(port),
 	}
 
-	portmap[protocol][port] = PortMapEntry{
-		lastused: time.Now(),
-		addr: publicAddr,
-		finCount: 0,
+	portmap[protocol][port] = portMapEntry{
+		lastused:             time.Now(),
+		addr:                 publicAddr,
+		finCount:             0,
 		terminationDirection: 0,
 	}
 
 	pri2pubTable[protocol].Store(privEntry, pubEntry)
 	pub2priTable[protocol].Store(pubEntry, privEntry)
 
-	if debug && (loggedAdd < logThreshold || debugPort == uint16(port)) {
-		println("Added new connection", loggedAdd, ":", privEntry.String(), "->", pubEntry.String())
-		loggedAdd++
-	}
-
 	mutex.Unlock()
 	return pubEntry, nil
 }
 
-// Ingress translation
+// PublicToPrivateTranslation does ingress translation.
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	var l4offset uint8
-
 	// Parse packet type and address
-	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.ParseIPv4()
-		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
-	} else {
+	pktIPv4, _ := pkt.ParseAllKnownL3()
+	if pktIPv4 == nil {
 		// We don't currently support anything except for IPv4
 		return false
 	}
-
+	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 	// Create a lookup key
-	protocol := pkt.IPv4.NextProtoID
+	protocol := pktIPv4.NextProtoID
 	pub2priKey := Tuple{
-		addr: packet.SwapBytesUint32(pkt.IPv4.DstAddr),
+		addr: packet.SwapBytesUint32(pktIPv4.DstAddr),
 	}
 	// Parse packet destination port
-	if protocol == common.TCPNumber {
-		pkt.ParseTCP(l4offset)
-		pub2priKey.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
-	} else if protocol == common.UDPNumber {
-		pkt.ParseUDP(l4offset)
-		pub2priKey.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
-	} else if protocol == common.ICMPNumber {
-		pkt.ParseICMP(l4offset)
-		pub2priKey.port = pkt.ICMP.Identifier
+	if pktTCP != nil {
+		pub2priKey.port = packet.SwapBytesUint16(pktTCP.DstPort)
+	} else if pktUDP != nil {
+		pub2priKey.port = packet.SwapBytesUint16(pktUDP.DstPort)
+	} else if pktICMP != nil {
+		pub2priKey.port = pktICMP.Identifier
 	} else {
 		return false
 	}
@@ -123,84 +109,66 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		if debug && (loggedDrop < logThreshold || pub2priKey.port == debugPort) {
-			println("Drop public2private packet", loggedDrop, "because key",
-				pub2priKey.String(), "was not found")
-			loggedDrop++
-		}
 		return false
-	} else {
-		value := v.(Tuple)
-
-		if debug && (loggedPub2PriLookup < logThreshold || pub2priKey.port == debugPort) {
-			println("Lookup pub2pri", loggedPub2PriLookup, ":", pub2priKey.String(),
-				"found =", found, value.String())
-			loggedPub2PriLookup++
-		}
-
-		// Check whether connection is too old
-		if portmap[protocol][pub2priKey.port].lastused.Add(CONNECTION_TIMEOUT).After(time.Now()) {
-			portmap[protocol][pub2priKey.port].lastused = time.Now()
-		} else {
-			// There was no transfer on this port for too long
-			// time. We don't allow it any more
-			mutex.Lock()
-			deleteOldConnection(protocol, int(pub2priKey.port))
-			mutex.Unlock()
-			return false
-		}
-
-		// Check whether TCP connection could be reused
-		if protocol == common.TCPNumber {
-			checkTCPTermination(pkt.TCP, int(pub2priKey.port), PUB2PRI)
-		}
-
-		// Do packet translation
-		pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
-		pkt.Ether.SAddr = PrivateMAC
-		pkt.IPv4.DstAddr = packet.SwapBytesUint32(value.addr)
-
-		if pkt.IPv4.NextProtoID == common.TCPNumber {
-			pkt.TCP.DstPort = packet.SwapBytesUint16(value.port)
-		} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-			pkt.UDP.DstPort = packet.SwapBytesUint16(value.port)
-		} else {
-			// Only address is not modified in ICMP packets
-		}
-
-		return true
 	}
+	value := v.(Tuple)
+
+	// Check whether connection is too old
+	if portmap[protocol][pub2priKey.port].lastused.Add(connectionTimeout).After(time.Now()) {
+		portmap[protocol][pub2priKey.port].lastused = time.Now()
+	} else {
+		// There was no transfer on this port for too long
+		// time. We don't allow it any more
+		mutex.Lock()
+		deleteOldConnection(protocol, int(pub2priKey.port))
+		mutex.Unlock()
+		return false
+	}
+
+	// Check whether TCP connection could be reused
+	if protocol == common.TCPNumber {
+		checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
+	}
+
+	// Do packet translation
+	pkt.Ether.DAddr = Natconfig.PrivatePort.DstMACAddress
+	pkt.Ether.SAddr = PrivateMAC
+	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
+
+	if pktTCP != nil {
+		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
+	} else if pktUDP != nil {
+		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
+	} else {
+		// Only address is not modified in ICMP packets
+	}
+
+	return true
 }
 
-// Egress translation
+// PrivateToPublicTranslation does egress translation.
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	var l4offset uint8
-
 	// Parse packet type and address
-	if pkt.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pkt.ParseIPv4()
-		l4offset = (pkt.IPv4.VersionIhl & 0x0f) << 2
-	} else {
+	pktIPv4, _ := pkt.ParseAllKnownL3()
+	if pktIPv4 == nil {
 		// We don't currently support anything except for IPv4
 		return false
 	}
+	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 
 	// Create a lookup key
-	protocol := pkt.IPv4.NextProtoID
+	protocol := pktIPv4.NextProtoID
 	pri2pubKey := Tuple{
-		addr: packet.SwapBytesUint32(pkt.IPv4.SrcAddr),
+		addr: packet.SwapBytesUint32(pktIPv4.SrcAddr),
 	}
 
 	// Parse packet source port
-	if protocol == common.TCPNumber {
-		pkt.ParseTCP(l4offset)
-		pri2pubKey.port = packet.SwapBytesUint16(pkt.TCP.SrcPort)
-	} else if protocol == common.UDPNumber {
-		pkt.ParseUDP(l4offset)
-		pri2pubKey.port = packet.SwapBytesUint16(pkt.UDP.SrcPort)
-	} else if protocol == common.ICMPNumber {
-		pkt.ParseICMP(l4offset)
-		pri2pubKey.port = pkt.ICMP.Identifier
+	if pktTCP != nil {
+		pri2pubKey.port = packet.SwapBytesUint16(pktTCP.SrcPort)
+	} else if pktUDP != nil {
+		pri2pubKey.port = packet.SwapBytesUint16(pktUDP.SrcPort)
+	} else if pktICMP != nil {
+		pri2pubKey.port = pktICMP.Identifier
 	} else {
 		return false
 	}
@@ -209,71 +177,33 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	var value Tuple
 	v, found := pri2pubTable[protocol].Load(pri2pubKey)
 	if !found {
-		value, err := allocateNewEgressConnection(protocol, pri2pubKey,
+		var err error
+		value, err = allocateNewEgressConnection(protocol, pri2pubKey,
 			Natconfig.PublicPort.Subnet.Addr)
 
 		if err != nil {
-			if debug {
-				dst := Tuple{
-					addr: packet.SwapBytesUint32(pkt.IPv4.DstAddr),
-				}
-				if protocol == common.TCPNumber {
-					dst.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
-				} else if protocol == common.UDPNumber {
-					dst.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
-				} else if protocol == common.ICMPNumber {
-					dst.port = pkt.ICMP.Identifier
-				}
-				println("Failed lookup pri2pub packet dropped", loggedPri2PubLookup, ":",
-					pri2pubKey.String(), "->", value.String(), "->", dst.String())
-				loggedPri2PubLookup++
-			} else {
-				println("Warning! Failed to allocate new connection", err)
-			}
+			println("Warning! Failed to allocate new connection", err)
 			return false
-		}
-
-		if debug && (loggedPri2PubLookup < logThreshold || value.port == debugPort) {
-			dst := Tuple{
-				addr: packet.SwapBytesUint32(pkt.IPv4.DstAddr),
-			}
-			if protocol == common.TCPNumber {
-				dst.port = packet.SwapBytesUint16(pkt.TCP.DstPort)
-			} else if protocol == common.UDPNumber {
-				dst.port = packet.SwapBytesUint16(pkt.UDP.DstPort)
-			} else if protocol == common.ICMPNumber {
-				dst.port = pkt.ICMP.Identifier
-			}
-			println("Failed lookup pri2pub added new connection", loggedPri2PubLookup, ":",
-				pri2pubKey.String(), "->", value.String(), "->", dst.String())
-			loggedPri2PubLookup++
 		}
 	} else {
 		value = v.(Tuple)
-
-		if debug && (loggedPri2PubLookup < logThreshold || value.port == debugPort) {
-			println("Lookup pri2pub", loggedPri2PubLookup, ":", pri2pubKey.String(),
-				"found =", found, value.String())
-			loggedPri2PubLookup++
-		}
-
 		portmap[protocol][value.port].lastused = time.Now()
 	}
 
 	// Check whether TCP connection could be reused
-	if protocol == common.TCPNumber {
-		checkTCPTermination(pkt.TCP, int(value.port), PRI2PUB)
+	if pktTCP != nil {
+		checkTCPTermination(pktTCP, int(value.port), pri2pub)
 	}
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PublicPort.DstMACAddress
 	pkt.Ether.SAddr = PublicMAC
-	pkt.IPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
+	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
-	if pkt.IPv4.NextProtoID == common.TCPNumber {
-		pkt.TCP.SrcPort = packet.SwapBytesUint16(value.port)
-	} else if pkt.IPv4.NextProtoID == common.UDPNumber {
-		pkt.UDP.SrcPort = packet.SwapBytesUint16(value.port)
+	if pktTCP != nil {
+		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
+	} else if pktUDP != nil {
+		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
 	} else {
 		// Only address is not modified in ICMP packets
 	}
@@ -283,18 +213,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 // Simple check for FIN or RST in TCP
 func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection) {
-	if debug && uint16(port) == debugPort {
-		if hdr.TCPFlags & common.TCP_FLAG_SYN != 0 {
-			println("Packet SYN", packet.SwapBytesUint32(hdr.SentSeq),
-				packet.SwapBytesUint32(hdr.RecvAck),
-				"arrived for check on port", port, "direction", dir.String())
-		} else {
-			println("Packet", hdr.SentSeq, hdr.RecvAck,
-				"arrived for check on port", port, "direction", dir.String())
-		}
-	}
-
-	if hdr.TCPFlags & common.TCP_FLAG_FIN != 0 {
+	if hdr.TCPFlags&common.TCPFlagFin != 0 {
 		// First check for FIN
 		mutex.Lock()
 
@@ -302,47 +221,24 @@ func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection)
 		if pme.finCount == 0 {
 			pme.finCount = 1
 			pme.terminationDirection = dir
-			if debug && uint16(port) == debugPort {
-				println("Packet", packet.SwapBytesUint32(hdr.SentSeq),
-					packet.SwapBytesUint32(hdr.RecvAck),
-					"has FIN1 state", port, "direction", dir.String())
-			}
 		} else if pme.finCount == 1 && pme.terminationDirection == ^dir {
 			pme.finCount = 2
-			if debug && uint16(port) == debugPort {
-				println("Packet", packet.SwapBytesUint32(hdr.SentSeq),
-					packet.SwapBytesUint32(hdr.RecvAck),
-					"has FIN2 state", port, "direction", dir.String())
-			}
 		}
 
 		mutex.Unlock()
-	} else if hdr.TCPFlags & common.TCP_FLAG_RST != 0 {
-		// RST means that connection is terminated immediatelly
+	} else if hdr.TCPFlags&common.TCPFlagRst != 0 {
+		// RST means that connection is terminated immediately
 		mutex.Lock()
-		if debug && uint16(port) == debugPort {
-			println("Packet", hdr.SentSeq, hdr.RecvAck,
-				"has RST flag", port, "direction", dir.String())
-		}
 		deleteOldConnection(common.TCPNumber, port)
 		mutex.Unlock()
-	} else if hdr.TCPFlags & common.TCP_FLAG_ACK != 0 {
+	} else if hdr.TCPFlags&common.TCPFlagAck != 0 {
 		// Check for ACK last so that if there is also FIN,
 		// termination doesn't happen. Last ACK should come without
 		// FIN
 		mutex.Lock()
 
-		if debug && uint16(port) == debugPort {
-			println("Packet", packet.SwapBytesUint32(hdr.SentSeq),
-				packet.SwapBytesUint32(hdr.RecvAck),
-				"has ACK flag", port, "direction", dir.String())
-		}
 		pme := &portmap[common.TCPNumber][port]
 		if pme.finCount == 2 {
-			if debug && uint16(port) == debugPort {
-				println("Delete connection in FIN state after last ACK", port,
-					"direction", dir.String())
-			}
 			deleteOldConnection(common.TCPNumber, port)
 		}
 

@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../mk
-SUBDIRS = main stability performance stash
+SUBDIRS = stability performance stash
 
 apptype_string.go:
 	go generate

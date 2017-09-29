@@ -6,8 +6,8 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
-DPDK_VERSION = 17.02.1
-DPDK_DIR = dpdk-stable-$(DPDK_VERSION)
+DPDK_VERSION = 17.08
+DPDK_DIR = dpdk-$(DPDK_VERSION)
 export RTE_SDK = $(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
 export RTE_TARGET = x86_64-native-linuxapp-gcc
 
@@ -110,6 +110,8 @@ export CGO_LDFLAGS =				\
 	-lrt					\
 	-lm					\
 	-ldl					\
+	-lnuma					\
+	-lrte_mempool_ring			\
 	-Wl,--end-group				\
 	-Wl,--no-whole-archive
 

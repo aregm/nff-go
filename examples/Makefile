@@ -6,10 +6,14 @@ PATH_TO_MK = ../mk
 IMAGENAME = yanff-examples
 EXECUTABLES = demo dump Forwarding Firewall
 
-all: nat
+all: nat tutorial
 
 .PHONY: nat
 nat:
+	$(MAKE) -C $@ $(MAKECMDGOALS)
+
+.PHONY: tutorial
+tutorial:
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 include $(PATH_TO_MK)/leaf.mk

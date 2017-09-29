@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// Settings controlling benchmark parameters, usually for tests with
-// type TEST_TYPE_BENCHMARK.
+// BenchmarkConfig struct has settings controlling benchmark
+// parameters, usually for tests with type TestTypeBenchmark.
 type BenchmarkConfig struct {
 	// Array of strings to pass to pktgen Lua scripting interface upon
 	// startup. All commands are executed once after getting port
@@ -26,7 +26,8 @@ type BenchmarkConfig struct {
 	MeasureFor time.Duration `json:"measure-for"`
 }
 
-// Settings controlling test distributed application parameters.
+// AppConfig struct has settings controlling test
+// distributed application parameters.
 type AppConfig struct {
 	// Specifies host name where docker daemon is running. Port number
 	// is specified in DockerConfig structure and is the same for all
@@ -34,7 +35,7 @@ type AppConfig struct {
 	HostName string `json:"host-name"`
 	// Specifies docker image to run for this test application.
 	ImageName string `json:"image-name"`
-	// Specifies application type. Valid values are "TESTAPP_GO" and "TESTAPP_PKTGEN"
+	// Specifies application type. Valid values are "TestAppGo" and "TestAppPktgen"
 	Type AppType `json:"app-type"`
 	// Specifies an array of application command line arguments. First
 	// argument is application executable.
@@ -45,7 +46,7 @@ func (app *AppConfig) String() string {
 	return fmt.Sprintf("%s:%s", app.HostName, app.ImageName)
 }
 
-// Settings for one test case.
+// TestConfig struct has settings for one test case.
 type TestConfig struct {
 	// Test case name identifier. It is better to be unique.
 	Name string `json:"name"`
@@ -55,8 +56,8 @@ type TestConfig struct {
 	// failed. For both test types applications are forcedly stopped
 	// after this time.
 	TestTime time.Duration `json:"test-time"`
-	// Type of the test. Valid values are "TEST_TYPE_BENCHMARK" and
-	// "TEST_TYPE_SCENARIO".
+	// Type of the test. Valid values are "TestTypeBenchmark" and
+	// "TestTypeScenario".
 	Type TestType `json:"test-type"`
 	// Array of settings specific for each test application.
 	Apps []AppConfig `json:"test-apps"`
@@ -69,7 +70,8 @@ func (test *TestConfig) String() string {
 	return fmt.Sprintf("%s:%s", test.Name, test.Type.String())
 }
 
-// Settings controlling communication with docker daemons.
+// DockerConfig struct has settings controlling
+// communication with docker daemons.
 type DockerConfig struct {
 	// Timeout for one http communication request. This setting is
 	// controlling all framework-application communications. If no
@@ -93,7 +95,8 @@ type DockerConfig struct {
 	PktgenPort int `json:"pktgen-port"`
 }
 
-// Settings which describe whole test suite.
+// TestsuiteConfig struct has settings which describe
+// whole test suite.
 type TestsuiteConfig struct {
 	// Settings which control docker daemon functionality.
 	Config DockerConfig `json:"docker-config"`
@@ -101,7 +104,7 @@ type TestsuiteConfig struct {
 	Tests []TestConfig `json:"tests"`
 }
 
-// readConfig function reads and parses config file
+// ReadConfig function reads and parses config file.
 func ReadConfig(fileName string) (*TestsuiteConfig, error) {
 	var config TestsuiteConfig
 

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	L3Rules *rules.L3Rules
+	l3Rules *rules.L3Rules
 	outport uint
 	inport  uint
 )
@@ -30,13 +30,13 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get filtering rules from access control file.
-	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
+	l3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(uint8(inport))
 
 	// Separate packet flow based on ACL.
-	rejectFlow := flow.SetSeparator(inputFlow, L3Separator, nil)
+	rejectFlow := flow.SetSeparator(inputFlow, l3Separator, nil)
 
 	// Drop rejected packets.
 	flow.SetStopper(rejectFlow)
@@ -49,10 +49,7 @@ func main() {
 }
 
 // User defined function for separating packets
-func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
-	// Firstly set up all fields at packet: MAC, IPv4 or IPv6, TCP or UDP.
-	currentPacket.ParseL4()
-
+func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	// Return whether packet is accepted or not. Based on ACL rules.
-	return rules.L3_ACL_permit(currentPacket, L3Rules)
+	return rules.L3ACLPermit(currentPacket, l3Rules)
 }

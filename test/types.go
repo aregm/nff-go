@@ -10,25 +10,31 @@ import (
 )
 
 //go:generate stringer -type=AppType,TestType,TestStatus types.go
+
+// TestStatus is a status of the test.
 type TestStatus int
 
+// Constants for different test statuses.
 const (
-	TEST_CREATED TestStatus = iota
-	TEST_INITIALIZED
-	TEST_INVALID
-	TEST_RUNNING
-	TEST_REPORTED_PASSED
-	TEST_REPORTED_FAILED
-	TEST_TIMED_OUT
+	TestCreated TestStatus = iota
+	TestInitialized
+	TestInvalid
+	TestRunning
+	TestReportedPassed
+	TestReportedFailed
+	TestTimedOut
 )
 
+// AppType is a type of application.
 type AppType int
 
+// Constants for different application types.
 const (
-	TESTAPP_GO AppType = iota
-	TESTAPP_PKTGEN
+	TestAppGo AppType = iota
+	TestAppPktgen
 )
 
+// UnmarshalJSON unmarshals data and checks app type validity.
 func (at *AppType) UnmarshalJSON(data []byte) error {
 	// Extract the string from data.
 	var s string
@@ -37,7 +43,7 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]AppType{"TESTAPP_GO": TESTAPP_GO, "TESTAPP_PKTGEN": TESTAPP_PKTGEN}[s]
+	got, ok := map[string]AppType{"TestAppGo": TestAppGo, "TestAppPktgen": TestAppPktgen}[s]
 	if !ok {
 		return fmt.Errorf("invalid AppType %q", s)
 	}
@@ -45,13 +51,16 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// TestType is a type of the test.
 type TestType int
 
+// Constants for different test types.
 const (
-	TEST_TYPE_BENCHMARK TestType = iota
-	TEST_TYPE_SCENARIO
+	TestTypeBenchmark TestType = iota
+	TestTypeScenario
 )
 
+// UnmarshalJSON unmarshals data and checks test type validity.
 func (at *TestType) UnmarshalJSON(data []byte) error {
 	// Extract the string from data.
 	var s string
@@ -60,7 +69,7 @@ func (at *TestType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]TestType{"TEST_TYPE_BENCHMARK": TEST_TYPE_BENCHMARK, "TEST_TYPE_SCENARIO": TEST_TYPE_SCENARIO}[s]
+	got, ok := map[string]TestType{"TestTypeBenchmark": TestTypeBenchmark, "TestTypeScenario": TestTypeScenario}[s]
 	if !ok {
 		return fmt.Errorf("invalid TestType %q", s)
 	}

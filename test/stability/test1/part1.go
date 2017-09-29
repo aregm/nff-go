@@ -20,17 +20,17 @@ import (
 const (
 	// With average speed of 1 million packets/s the test runs for
 	// about 10 seconds
-	TOTAL_PACKETS = 100000000
+	totalPackets = 100000000
 )
 
 var (
 	// Packet should hold two int64 fields
-	PACKET_SIZE uint64 = uint64(unsafe.Sizeof(PACKET_SIZE) * 2)
+	packetSize uint64 = uint64(unsafe.Sizeof(packetSize) * 2)
 
-	sentPackets     uint64     = 0
-	receivedPackets uint64     = 0
-	testDoneEvent   *sync.Cond = nil
-	passed          int32      = 1
+	sentPackets     uint64
+	receivedPackets uint64
+	testDoneEvent   *sync.Cond
+	passed          int32 = 1
 
 	outport uint
 	inport  uint
@@ -93,7 +93,7 @@ func main() {
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
-	if packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(PACKET_SIZE)) == false {
+	if packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(packetSize)) == false {
 		fmt.Println("TEST FAILED")
 		panic("Failed to init empty packet")
 	}
@@ -111,7 +111,7 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	newValue := atomic.AddUint64(&receivedPackets, 1)
 
-	offset := pkt.ParseL4Data()
+	offset := pkt.ParseData()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
 		atomic.StoreInt32(&passed, 0)
@@ -127,7 +127,7 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 		}
 	}
 
-	if newValue >= TOTAL_PACKETS {
+	if newValue >= totalPackets {
 		testDoneEvent.Signal()
 	}
 }

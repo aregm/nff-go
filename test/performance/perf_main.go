@@ -57,13 +57,16 @@ func main() {
 }
 
 func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
-	currentPacket.ParseIPv4()
-	T := currentPacket.IPv4.DstAddr
-	for j := uint32(0); j < uint32(load); j++ {
-		T += j
+	currentPacket.ParseL3()
+	ipv4 := currentPacket.GetIPv4()
+	if ipv4 != nil {
+		T := ipv4.DstAddr
+		for j := uint32(0); j < uint32(load); j++ {
+			T += j
+		}
+		for i := uint32(0); i < uint32(loadRW); i++ {
+			ipv4.DstAddr = ipv4.SrcAddr + i
+		}
+		ipv4.SrcAddr = 263 + (T)
 	}
-	for i := uint32(0); i < uint32(loadRW); i++ {
-		currentPacket.IPv4.DstAddr = currentPacket.IPv4.SrcAddr + i
-	}
-	currentPacket.IPv4.SrcAddr = 263 + (T)
 }

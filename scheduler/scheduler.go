@@ -11,13 +11,6 @@ import (
 	"time"
 )
 
-// TODO: now it is number of milliseconds after what we
-// check our system and add / delete clones. However it isn't
-// stable. We should calculate something more general than time
-// because our goroutine can not be stopped by timer when we
-// expect this.
-var ScaleTime uint
-
 // TODO: 1 is a delta of speeds. This delta should be
 // verified or should be tunable from outside.
 const speedDelta = 1
@@ -29,6 +22,7 @@ type clonePair struct {
 	channel chan int
 }
 
+// UserContext is used inside flow packet and is going for user via it
 type UserContext interface {
 	Copy() interface{}
 }
@@ -38,6 +32,7 @@ type uncloneFlowFunction func(interface{}, uint8)
 type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
 type conditionFlowFunction func(interface{}, uint64, bool) bool
 
+// FlowFunction is a structure for all functions, is used inside flow package
 type FlowFunction struct {
 	// All parameters which gets these flow function
 	Parameters interface{}
@@ -67,6 +62,7 @@ type FlowFunction struct {
 	context    UserContext
 }
 
+// NewUnclonableFlowFunction is a function for adding unclonable flow functions. Is used inside flow package
 func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction,
 	par interface{}) *FlowFunction {
 	ff := new(FlowFunction)
@@ -77,6 +73,7 @@ func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn 
 	return ff
 }
 
+// NewClonableFlowFunction is a function for adding clonable flow functions. Is used inside flow package
 func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction,
 	par interface{}, check conditionFlowFunction, report chan uint64, context UserContext) *FlowFunction {
 	ff := new(FlowFunction)
@@ -91,6 +88,7 @@ func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn clo
 	return ff
 }
 
+// Scheduler is a main structure for scheduler. Is used inside flow package
 type Scheduler struct {
 	Clonable          []*FlowFunction
 	UnClonable        []*FlowFunction
@@ -105,6 +103,7 @@ type Scheduler struct {
 	Dropped           uint
 }
 
+// NewScheduler is a function for creation new scheduler. Is used inside flow package
 func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint, debugTime uint) Scheduler {
 	// Init scheduler
@@ -125,6 +124,7 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 	return *scheduler
 }
 
+// SystemStart starts whole system. Is used inside flow package
 func (scheduler *Scheduler) SystemStart() {
 	core := scheduler.getCore(true)
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
@@ -165,6 +165,7 @@ func (scheduler *Scheduler) SystemStart() {
 	time.Sleep(time.Millisecond)
 }
 
+// Schedule - main execution. Is used inside flow package
 func (scheduler *Scheduler) Schedule(schedTime uint) {
 	tick := time.Tick(time.Duration(scheduler.checkTime) * time.Millisecond)
 	debugTick := time.Tick(time.Duration(scheduler.debugTime) * time.Millisecond)
@@ -211,8 +212,8 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// We multiply by 8 to translate bytes to bits
 			// We divide by 1000 and 1000 because networking suppose that megabit has 1000 kilobits instead of 1024
 			// TODO This Mbits measurement should be used only for 84 packet size for debug purposes
-			speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
-			common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedMbits, "Mbits/S,", speedPKTS, "PKT/S")
+//			speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
+			common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S")
 
 			// After we gather current speed we can add or remove clones.
 
@@ -230,7 +231,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 				for j := 0; j < ff.cloneNumber; j++ {
 					ff.clone[j].channel <- ff.cloneNumber
 				}
-				// After removing a clone we don't want to try to add clone immidiately
+				// After removing a clone we don't want to try to add clone immediately
 				continue
 			}
 

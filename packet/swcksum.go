@@ -15,7 +15,7 @@ import (
 // checksum with carry, so carry should be added and value negated for
 // use as network checksum.
 func calculateDataChecksum(ptr unsafe.Pointer, length, offset int) uint32 {
-	var sum uint32 = 0
+	var sum uint32
 	uptr := uintptr(ptr) + uintptr(offset)
 
 	slice := (*[1 << 30]uint16)(unsafe.Pointer(uptr))[0 : length/2]
@@ -30,7 +30,7 @@ func calculateDataChecksum(ptr unsafe.Pointer, length, offset int) uint32 {
 	return sum
 }
 
-// Implements one step of TCP checksum calculation. Separately computes checksum
+// CalculatePseudoHdrIPv4TCPCksum implements one step of TCP checksum calculation. Separately computes checksum
 // for TCP pseudo-header for case if L3 protocol is IPv4.
 // This precalculation is required for checksum compute by hardware offload.
 // Result should be put into TCP.Cksum field. See test_cksum as an example.
@@ -42,7 +42,7 @@ func CalculatePseudoHdrIPv4TCPCksum(hdr *IPv4Hdr) uint16 {
 	return reduceChecksum(pHdrCksum)
 }
 
-// Implements one step of UDP checksum calculation. Separately computes checksum
+// CalculatePseudoHdrIPv4UDPCksum implements one step of UDP checksum calculation. Separately computes checksum
 // for TCP pseudo-header for case if L3 protocol is IPv4.
 // This precalculation is required for checksum compute by hardware offload.
 // Result should be put into UDP.DgramCksum field. See test_cksum as an example.
@@ -53,7 +53,7 @@ func CalculatePseudoHdrIPv4UDPCksum(hdr *IPv4Hdr, udp *UDPHdr) uint16 {
 	return reduceChecksum(pHdrCksum)
 }
 
-// Implements one step of TCP checksum calculation. Separately computes checksum
+// CalculatePseudoHdrIPv6TCPCksum implements one step of TCP checksum calculation. Separately computes checksum
 // for TCP pseudo-header for case if L3 protocol is IPv6.
 // This precalculation is required for checksum compute by hardware offload.
 // Result should be put into TCP.Cksum field. See test_cksum as an example.
@@ -65,7 +65,7 @@ func CalculatePseudoHdrIPv6TCPCksum(hdr *IPv6Hdr) uint16 {
 	return reduceChecksum(pHdrCksum)
 }
 
-// Implements one step of UDP checksum calculation. Separately computes checksum
+// CalculatePseudoHdrIPv6UDPCksum implements one step of UDP checksum calculation. Separately computes checksum
 // for UDP pseudo-header for case if L3 protocol is IPv6.
 // This precalculation is required for checksum compute by hardware offload.
 // Result should be put into UDP.DgramCksum field. See test_cksum as an example.
@@ -76,25 +76,25 @@ func CalculatePseudoHdrIPv6UDPCksum(hdr *IPv6Hdr, udp *UDPHdr) uint16 {
 	return reduceChecksum(pHdrCksum)
 }
 
-// Make precalculation of pseudo header checksum. Separately computes
+// SetPseudoHdrChecksum makes precalculation of pseudo header checksum. Separately computes
 // checksum for required pseudo-header and writes result to correct place. This
 // is required for checksum compute by hardware offload.
 func SetPseudoHdrChecksum(p *Packet) {
-	offset := p.ParseL4()
-	if offset < 0 {
-		panic("ParseL4 cannot parse packet")
-	}
-	if SwapBytesUint16(p.Ether.EtherType) == IPV4Number {
-		if p.IPv4.NextProtoID == UDPNumber {
-			p.UDP.DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv4UDPCksum(p.IPv4, p.UDP))
-		} else if p.IPv4.NextProtoID == TCPNumber {
-			p.TCP.Cksum = SwapBytesUint16(CalculatePseudoHdrIPv4TCPCksum(p.IPv4))
+	ipv4, ipv6 := p.ParseAllKnownL3()
+	if ipv4 != nil {
+		p.GetIPv4().HdrChecksum = 0
+		tcp, udp, _ := p.ParseAllKnownL4ForIPv4()
+		if tcp != nil {
+			p.GetTCPForIPv4().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv4TCPCksum(p.GetIPv4()))
+		} else if udp != nil {
+			p.GetUDPForIPv4().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv4UDPCksum(p.GetIPv4(), p.GetUDPForIPv4()))
 		}
-	} else if SwapBytesUint16(p.Ether.EtherType) == IPV6Number {
-		if p.IPv6.Proto == UDPNumber {
-			p.UDP.DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv6UDPCksum(p.IPv6, p.UDP))
-		} else if p.IPv6.Proto == TCPNumber {
-			p.TCP.Cksum = SwapBytesUint16(CalculatePseudoHdrIPv6TCPCksum(p.IPv6))
+	} else if ipv6 != nil {
+		tcp, udp, _ := p.ParseAllKnownL4ForIPv6()
+		if tcp != nil {
+			p.GetTCPForIPv6().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv6TCPCksum(p.GetIPv6()))
+		} else if udp != nil {
+			p.GetUDPForIPv6().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv6UDPCksum(p.GetIPv6(), p.GetUDPForIPv6()))
 		}
 	}
 }
@@ -106,11 +106,10 @@ func reduceChecksum(sum uint32) uint16 {
 	return uint16(sum)
 }
 
-// Calculates checksum of IP header
+// CalculateIPv4Checksum calculates checksum of IP header
 func CalculateIPv4Checksum(p *Packet) uint16 {
 	var sum uint32
-	hdr := p.IPv4
-
+	hdr := p.GetIPv4()
 	sum = uint32(hdr.VersionIhl)<<8 + uint32(hdr.TypeOfService) +
 		uint32(SwapBytesUint16(hdr.TotalLength)) +
 		uint32(SwapBytesUint16(hdr.PacketID)) +
@@ -131,10 +130,10 @@ func calculateIPv4AddrChecksum(hdr *IPv4Hdr) uint32 {
 		uint32(SwapBytesUint16(uint16(hdr.DstAddr)))
 }
 
-// Calculate UDP checksum for case if L3 protocol is IPv4.
+// CalculateIPv4UDPChecksum calculates UDP checksum for case if L3 protocol is IPv4.
 func CalculateIPv4UDPChecksum(p *Packet) uint16 {
-	hdr := p.IPv4
-	udp := p.UDP
+	hdr := p.GetIPv4()
+	udp := p.GetUDPForIPv4()
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
 
 	sum := calculateDataChecksum(p.Data, int(dataLength-UDPLen), 0)
@@ -162,10 +161,11 @@ func calculateTCPChecksum(tcp *TCPHdr) uint32 {
 		uint32(SwapBytesUint16(tcp.TCPUrp))
 }
 
-// Calculate TCP checksum for case if L3 protocol is IPv4.
+// CalculateIPv4TCPChecksum calculates TCP checksum for case if L3 protocol is IPv4.
 func CalculateIPv4TCPChecksum(p *Packet) uint16 {
-	hdr := p.IPv4
-	tcp := p.TCP
+	hdr := p.GetIPv4()
+	tcp := p.GetTCPForIPv4()
+
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
 
 	sum := calculateDataChecksum(p.Data, int(dataLength-TCPMinLen), 0)
@@ -197,10 +197,10 @@ func calculateIPv6AddrChecksum(hdr *IPv6Hdr) uint32 {
 		uint32(uint16(hdr.DstAddr[14])<<8|uint16(hdr.DstAddr[15]))
 }
 
-// Calculate UDP checksum for case if L3 protocol is IPv6.
+// CalculateIPv6UDPChecksum calculates UDP checksum for case if L3 protocol is IPv6.
 func CalculateIPv6UDPChecksum(p *Packet) uint16 {
-	hdr := p.IPv6
-	udp := p.UDP
+	hdr := p.GetIPv6()
+	udp := p.GetUDPForIPv6()
 	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
 	sum := calculateDataChecksum(p.Data, int(dataLength-UDPLen), 0)
@@ -215,10 +215,10 @@ func CalculateIPv6UDPChecksum(p *Packet) uint16 {
 	return ^reduceChecksum(sum)
 }
 
-// Calculate TCP checksum for case if L3 protocol is IPv6.
+// CalculateIPv6TCPChecksum calculates TCP checksum for case if L3 protocol is IPv6.
 func CalculateIPv6TCPChecksum(p *Packet) uint16 {
-	hdr := p.IPv6
-	tcp := p.TCP
+	hdr := p.GetIPv6()
+	tcp := p.GetTCPForIPv6()
 	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
 	sum := calculateDataChecksum(p.Data, int(dataLength-TCPMinLen), 0)
@@ -231,22 +231,22 @@ func CalculateIPv6TCPChecksum(p *Packet) uint16 {
 	return ^reduceChecksum(sum)
 }
 
-// Calculate ICMP checksum in case if L3 protocol is IPv4.
+// CalculateIPv4ICMPChecksum calculates ICMP checksum in case if L3 protocol is IPv4.
 func CalculateIPv4ICMPChecksum(p *Packet) uint16 {
-	hdr := p.IPv4
+	hdr := p.GetIPv4()
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
 
-	sum := calculateDataChecksum(unsafe.Pointer(p.ICMP), int(dataLength), 0)
+	sum := calculateDataChecksum(unsafe.Pointer(p.GetICMPForIPv4()), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
 }
 
-// Calculate ICMP checksum in case if L3 protocol is IPv6.
+// CalculateIPv6ICMPChecksum calculates ICMP checksum in case if L3 protocol is IPv6.
 func CalculateIPv6ICMPChecksum(p *Packet) uint16 {
-	hdr := p.IPv6
+	hdr := p.GetIPv6()
 	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
-	sum := calculateDataChecksum(unsafe.Pointer(p.ICMP), int(dataLength), 0)
+	sum := calculateDataChecksum(unsafe.Pointer(p.GetICMPForIPv6()), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
 }
