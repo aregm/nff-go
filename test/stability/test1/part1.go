@@ -9,32 +9,37 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 
+	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 	"github.com/intel-go/yanff/test/stability/test1/common"
 )
 
-const (
-	// With average speed of 1 million packets/s the test runs for
-	// about 10 seconds
-	totalPackets = 10000000
-)
-
 var (
+	totalPackets uint64 = 10000000
+
 	// Packet should hold two int64 fields
 	packetSize uint64 = uint64(unsafe.Sizeof(packetSize) * 2)
 
 	sentPackets     uint64
 	receivedPackets uint64
 	testDoneEvent   *sync.Cond
-	passed          int32  = 1
+	passed          int32 = 1
+	progStart       time.Time
 	speed           uint64 = 1000000
+
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T = 10 * time.Second
 
 	outport uint
 	inport  uint
+
+	fixMACAddrs func(*packet.Packet, flow.UserContext)
 )
 
 // This part of test generates packets on port 0 and receives them on
@@ -48,6 +53,11 @@ var (
 func main() {
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 1, "port for receiver")
+	flag.Uint64Var(&speed, "speed", speed, "speed of generator")
+	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
+	flag.DurationVar(&T, "timeout", T, "test start timeout, time to stabilize speed. Packets sent during timeout do not affect test result")
+	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
+	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores
@@ -56,11 +66,14 @@ func main() {
 	}
 	flow.SystemInit(&config)
 
+	stabilityCommon.InitCommonState(*configFile, *target)
+	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
+
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Create packets with speed at least 1000 packets/s
 	firstFlow := flow.SetGenerator(generatePacket, speed, nil)
+
 	// Send all generated packets to the output
 	flow.SetSender(firstFlow, uint8(outport))
 
@@ -71,6 +84,7 @@ func main() {
 
 	// Start pipeline
 	go flow.SystemStart()
+	progStart = time.Now()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()
@@ -98,36 +112,40 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 		fmt.Println("TEST FAILED")
 		panic("Failed to init empty packet")
 	}
-	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xad, 0xbe, 0xaf, 0xff, 0xfe}
+
+	fixMACAddrs(emptyPacket, context)
 
 	sent := atomic.LoadUint64(&sentPackets)
 	ptr := (*common.Packetdata)(emptyPacket.Data)
+
 	// Put a unique non-zero value here
 	ptr.F1 = sent + 1
 	ptr.F2 = 0
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) < T {
+		return
+	}
 
 	atomic.AddUint64(&sentPackets, 1)
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	newValue := atomic.AddUint64(&receivedPackets, 1)
-
-	offset := pkt.ParseData()
-	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		atomic.StoreInt32(&passed, 0)
-	} else {
-		ptr := (*common.Packetdata)(pkt.Data)
-
-		if ptr.F1 != ptr.F2 {
-			fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)
-			atomic.StoreInt32(&passed, 0)
-		} else if ptr.F1 == 0 {
-			println("Zero data value encountered in the packet")
-			atomic.StoreInt32(&passed, 0)
-		}
+	if time.Since(progStart) < T {
+		return
 	}
-
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	newValue := atomic.AddUint64(&receivedPackets, 1)
+	pkt.ParseData()
+	ptr := (*common.Packetdata)(pkt.Data)
+	if ptr.F1 != ptr.F2 {
+		fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)
+		atomic.StoreInt32(&passed, 0)
+	} else if ptr.F1 == 0 {
+		println("Zero data value encountered in the packet")
+		atomic.StoreInt32(&passed, 0)
+	}
 	if newValue >= totalPackets {
 		testDoneEvent.Signal()
 	}

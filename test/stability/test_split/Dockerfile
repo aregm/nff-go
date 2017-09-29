@@ -10,3 +10,4 @@ WORKDIR /workdir
 COPY test-split-part1 .
 COPY test-split-part2 .
 COPY test-split.conf .
+COPY config.json .

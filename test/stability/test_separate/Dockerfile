@@ -10,3 +10,4 @@ WORKDIR /workdir
 COPY test-separate-part1 .
 COPY test-separate-part2 .
 COPY test-separate-l3rules.conf .
+COPY config.json .
