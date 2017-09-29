@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/flow"
 )
 
 type ipv4Subnet struct {
@@ -26,10 +27,25 @@ type ipv4Port struct {
 	Subnet        ipv4Subnet `json:"subnet"`
 }
 
-// Config for NAT.
-type Config struct {
+// Config for one port pair.
+type portPairsConfig struct {
 	PrivatePort ipv4Port `json:"private-port"`
 	PublicPort  ipv4Port `json:"public-port"`
+}
+
+// Config for NAT.
+type Config struct {
+	PortPairs   []portPairsConfig `json:"port-pairs"`
+}
+
+type pairIndex struct {
+	index int
+}
+
+func (pi pairIndex) Copy() interface{} {
+	return pairIndex{
+		index: pi.index,
+	}
 }
 
 func convertIPv4(in []byte) (uint32, error) {
@@ -101,4 +117,32 @@ func ReadConfig(fileName string) error {
 	}
 
 	return nil
+}
+
+func InitLocalMACs() {
+	PublicMAC = make([][common.EtherAddrLen]uint8, len(Natconfig.PortPairs))
+	PrivateMAC = make([][common.EtherAddrLen]uint8, len(Natconfig.PortPairs))
+	// Get port MACs
+	for i := range Natconfig.PortPairs {
+		PublicMAC[i] = flow.GetPortMACAddress(Natconfig.PortPairs[i].PublicPort.Index)
+		PrivateMAC[i] = flow.GetPortMACAddress(Natconfig.PortPairs[i].PrivatePort.Index)
+	}
+}
+
+func InitFlows() {
+	for i := range Natconfig.PortPairs {
+		// Handler context with handler index
+		context := new(pairIndex)
+		context.index = i
+
+		// Initialize public to private flow
+		publicToPrivate := flow.SetReceiver(Natconfig.PortPairs[i].PublicPort.Index)
+		flow.SetHandler(publicToPrivate, PublicToPrivateTranslation, context)
+		flow.SetSender(publicToPrivate, Natconfig.PortPairs[i].PrivatePort.Index)
+
+		// Initialize private to public flow
+		privateToPublic := flow.SetReceiver(Natconfig.PortPairs[i].PrivatePort.Index)
+		flow.SetHandler(privateToPublic, PrivateToPublicTranslation, context)
+		flow.SetSender(privateToPublic, Natconfig.PortPairs[i].PublicPort.Index)
+	}
 }

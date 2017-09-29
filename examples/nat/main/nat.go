@@ -30,19 +30,9 @@ func main() {
 
 	flow.SystemInit(&yanffconfig)
 
-	// Get port MACs
-	nat.PublicMAC = flow.GetPortMACAddress(nat.Natconfig.PublicPort.Index)
-	nat.PrivateMAC = flow.GetPortMACAddress(nat.Natconfig.PrivatePort.Index)
-
-	// Initialize public to private flow
-	publicToPrivate := flow.SetReceiver(nat.Natconfig.PublicPort.Index)
-	flow.SetHandler(publicToPrivate, nat.PublicToPrivateTranslation, nil)
-	flow.SetSender(publicToPrivate, nat.Natconfig.PrivatePort.Index)
-
-	// Initialize private to public flow
-	privateToPublic := flow.SetReceiver(nat.Natconfig.PrivatePort.Index)
-	flow.SetHandler(privateToPublic, nat.PrivateToPublicTranslation, nil)
-	flow.SetSender(privateToPublic, nat.Natconfig.PublicPort.Index)
+	// Read MAC addresses for local ports
+	nat.InitLocalMACs()
+	nat.InitFlows()
 
 	flow.SystemStart()
 }
