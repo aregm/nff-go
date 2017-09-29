@@ -540,7 +540,12 @@ func GetRawPacketBytesMbuf(mb *Mbuf) []byte {
 	return (*[1 << 30]byte)(unsafe.Pointer(dataPtr))[:dataLen]
 }
 
-// GetDataLenMbuf returns amount of data in a given Mbuf.
+// GetPktLenMbuf returns amount of data in a given chain of Mbufs - whole packet
+func GetPktLenMbuf(mb *Mbuf) uint {
+	return uint(mb.pkt_len)
+}
+
+// GetDataLenMbuf returns amount of data in a given Mbuf - one segment if scattered
 func GetDataLenMbuf(mb *Mbuf) uint {
 	return uint(mb.data_len)
 }

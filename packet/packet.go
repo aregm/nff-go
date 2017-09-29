@@ -193,6 +193,8 @@ type Packet struct {
 	// Need to change low.c for all changes in these fields or adding/removing fields before them.
 	Ether *EtherHdr // Pointer to L2 header in mbuf. It is always parsed and point beginning of packet.
 	CMbuf *low.Mbuf // Private pointer to mbuf. Users shouldn't know anything about mbuf
+
+	Next *Packet // non nil if packet consists of several chained mbufs
 }
 
 func (packet *Packet) unparsed() uintptr {
@@ -632,11 +634,17 @@ func (packet *Packet) GetRawPacketBytes() []byte {
 	return low.GetRawPacketBytesMbuf(packet.CMbuf)
 }
 
-// GetPacketLen returns length of this packet
+// GetPacketLen returns length of this packet. Sum of length of all segments if scattered.
 func (packet *Packet) GetPacketLen() uint {
+	return low.GetPktLenMbuf(packet.CMbuf)
+}
+
+// GetPacketSegmentLen returns length of this segment of packet. It is equal to whole length if packet not scattered
+func (packet *Packet) GetPacketSegmentLen() uint {
 	return low.GetDataLenMbuf(packet.CMbuf)
 }
 
+// TODO change this for scattered packet case (multiple mbufs)
 // EncapsulateHead adds bytes to packet. start - number of beginning byte, length - number of
 // added bytes. This function should be used to add bytes to the first half
 // of packet. Return false if error.
@@ -651,6 +659,7 @@ func (packet *Packet) EncapsulateHead(start uint, length uint) bool {
 	return true
 }
 
+// TODO change this for scattered packet case (multiple mbufs)
 // EncapsulateTail adds bytes to packet. start - number of beginning byte, length - number of
 // added bytes. This function should be used to add bytes to the second half
 // of packet. Return false if error.
@@ -665,6 +674,7 @@ func (packet *Packet) EncapsulateTail(start uint, length uint) bool {
 	return true
 }
 
+// TODO change this for scattered packet case (multiple mbufs)
 // DecapsulateHead removes bytes from packet. start - number of beginning byte, length - number of
 // removed bytes. This function should be used to remove bytes from the first half
 // of packet. Return false if error.
@@ -679,6 +689,7 @@ func (packet *Packet) DecapsulateHead(start uint, length uint) bool {
 	return true
 }
 
+// TODO change this for scattered packet case (multiple mbufs)
 // DecapsulateTail removes bytes from packet. start - number of beginning byte, length - number of
 // removed bytes. This function should be used to remove bytes from the second half
 // of packet. Return false if error.
