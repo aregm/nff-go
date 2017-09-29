@@ -1171,6 +1171,8 @@ func read(parameters interface{}, coreID uint8) {
 			}
 			tempPacket.ReadPcapOnePacket(f)
 		}
+		// TODO we need packet reassembly here. However we don't
+		// use mbuf packet_type here, so it is impossible.
 		safeEnqueue(OUT, buf, 1)
 	}
 }
