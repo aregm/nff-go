@@ -43,9 +43,10 @@ package packet
 
 import (
 	"fmt"
+	"unsafe"
+
 	. "github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/low"
-	"unsafe"
 )
 
 var mbufStructSize uintptr
@@ -440,6 +441,8 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.ParseL3()
 	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(plSize))
 	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6().Proto = IPv6NoNextHeader
+
 	return true
 }
 
