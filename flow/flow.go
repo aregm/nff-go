@@ -109,7 +109,6 @@ func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunct
 
 type generateParameters struct {
 	out                    *low.Queue
-	targetSpeed            uint64
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
@@ -131,9 +130,8 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool()
 	par.vectorGenerateFunction = vectorGenerateFunction
-	par.targetSpeed = targetSpeed
 	ffCount++
-	return schedState.NewClonableFlowFunction("fast generator", ffCount, generatePerf, par, generateCheck, make(chan uint64, 50), context)
+	return schedState.NewGenerateFlowFunction("fast generator", ffCount, generatePerf, par, float64(targetSpeed), make(chan uint64, 50), context)
 }
 
 type sendParameters struct {
@@ -509,7 +507,7 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 		} else {
 			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
 		}
-		schedState.Clonable = append(schedState.Clonable, generate)
+		schedState.Generate = append(schedState.Generate, generate)
 	} else {
 		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
 			generate = makeGeneratorOne(ring, GenerateFunction(f))
@@ -681,14 +679,6 @@ func receive(parameters interface{}, coreID uint8) {
 	low.Receive(srp.port, srp.queue, srp.out, coreID)
 }
 
-func generateCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
-	gp := parameters.(*generateParameters)
-	if speedPKTS < gp.targetSpeed {
-		return true
-	}
-	return false
-}
-
 func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
@@ -749,6 +739,14 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			}
 			safeEnqueue(OUT, bufs, burstSize)
 			currentSpeed = currentSpeed + uint64(burstSize)
+			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
+			// we just want to slow goroutine down without parking, so loop is OK for this.
+			// time.Now lasts approximately 70ns and this satisfies us
+			if pause != 0 {
+				a := time.Now()
+				for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
+				}
+			}
 		}
 	}
 }
@@ -811,7 +809,7 @@ func merge(from *low.Queue, to *low.Queue) {
 	}
 }
 
-func separateCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
+func separateCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	if debug == true {
@@ -961,7 +959,7 @@ func partition(parameters interface{}, core uint8) {
 	}
 }
 
-func splitCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
+func splitCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	if debug == true {
@@ -1039,7 +1037,7 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func handleCheck(parameters interface{}, speedPKTS uint64, debug bool) bool {
+func handleCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	if debug == true {
