@@ -30,12 +30,6 @@ func (t *Tuple) String() string {
 }
 
 var (
-	// PublicMAC is a public port MAC address.
-	PublicMAC [][common.EtherAddrLen]uint8
-	// PrivateMAC is a private port MAC address.
-	PrivateMAC [][common.EtherAddrLen]uint8
-	// Natconfig is a config file.
-	Natconfig *Config
 	// Main lookup table which contains entries
 	pri2pubTable []sync.Map
 	pub2priTable []sync.Map
@@ -138,10 +132,12 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	if pktTCP != nil {
 		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
+		setIPv4TCPChecksum(pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
+		setIPv4UDPChecksum(pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
 	} else {
-		// Only address is not modified in ICMP packets
+		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
 	return true
@@ -204,10 +200,12 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	if pktTCP != nil {
 		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
+		setIPv4TCPChecksum(pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
+		setIPv4UDPChecksum(pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
 	} else {
-		// Only address is not modified in ICMP packets
+		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
 	return true
