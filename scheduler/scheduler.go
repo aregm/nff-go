@@ -14,6 +14,7 @@ import (
 // TODO: 1 is a delta of speeds. This delta should be
 // verified or should be tunable from outside.
 const speedDelta = 1
+const generatePauseStep = 0.1
 
 // Clones of flow functions. They are determined
 // by their core and their stopper channel
@@ -30,7 +31,7 @@ type UserContext interface {
 // Function types which are used inside flow functions
 type uncloneFlowFunction func(interface{}, uint8)
 type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
-type conditionFlowFunction func(interface{}, uint64, bool) bool
+type conditionFlowFunction func(interface{}, bool) bool
 
 // FlowFunction is a structure for all functions, is used inside flow package
 type FlowFunction struct {
@@ -43,6 +44,8 @@ type FlowFunction struct {
 	// Function true or false
 	// and is used by scheduler
 	checkPrintFunction conditionFlowFunction
+	// Pause channel of function itself (not clones)
+	channel chan int
 	// Number of clones of this function
 	cloneNumber int
 	// Clones of this function. They are determined
@@ -60,8 +63,10 @@ type FlowFunction struct {
 	name string
 	// Identifier which could be used together with flow function name
 	// to uniquely identify this flow function
-	identifier int
-	context    UserContext
+	identifier  int
+	context     UserContext
+	targetSpeed float64
+	pause       int
 }
 
 // NewUnclonableFlowFunction is a function for adding unclonable flow functions. Is used inside flow package
@@ -90,10 +95,25 @@ func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn clo
 	return ff
 }
 
+// NewGenerateFlowFunction is a function for adding fast generate flow functions. Is used inside flow package
+func (scheduler *Scheduler) NewGenerateFlowFunction(name string, id int, cfn cloneFlowFunction,
+	par interface{}, targetSpeed float64, report chan uint64, context UserContext) *FlowFunction {
+	ff := new(FlowFunction)
+	ff.name = name
+	ff.identifier = id
+	ff.cloneFunction = cfn
+	ff.Parameters = par
+	ff.report = report
+	ff.context = context
+	ff.targetSpeed = targetSpeed
+	return ff
+}
+
 // Scheduler is a main structure for scheduler. Is used inside flow package
 type Scheduler struct {
 	Clonable          []*FlowFunction
 	UnClonable        []*FlowFunction
+	Generate          []*FlowFunction
 	freeCores         []bool
 	off               bool
 	offRemove         bool
@@ -150,21 +170,28 @@ func (scheduler *Scheduler) SystemStart() {
 		}()
 	}
 	for i := range scheduler.Clonable {
-		ff := scheduler.Clonable[i]
-		core := scheduler.getCore(true)
-		common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
-		go func() {
-			low.SetAffinity(uint8(core))
-			ff.cloneNumber = 0
-			if ff.context != nil {
-				ff.cloneFunction(ff.Parameters, nil, ff.report, (ff.context.Copy()).(UserContext))
-			} else {
-				ff.cloneFunction(ff.Parameters, nil, ff.report, nil)
-			}
-		}()
+		scheduler.startClonable(scheduler.Clonable[i])
+	}
+	for i := range scheduler.Generate {
+		scheduler.startClonable(scheduler.Generate[i])
 	}
 	// We need this to get a chance to all started goroutines to log their warnings.
 	time.Sleep(time.Millisecond)
+}
+
+func (scheduler *Scheduler) startClonable(ff *FlowFunction) {
+	core := scheduler.getCore(true)
+	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
+	go func() {
+		ff.channel = make(chan int)
+		low.SetAffinity(uint8(core))
+		ff.cloneNumber = 0
+		if ff.context != nil {
+			ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
+		} else {
+			ff.cloneFunction(ff.Parameters, ff.channel, ff.report, nil)
+		}
+	}()
 }
 
 // Schedule - main execution. Is used inside flow package
@@ -184,6 +211,9 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			low.Statistics(float32(scheduler.debugTime) / 1000)
 			for i := range scheduler.Clonable {
 				scheduler.Clonable[i].printDebug(schedTime)
+			}
+			for i := range scheduler.Generate {
+				scheduler.Generate[i].printDebug(schedTime)
 			}
 			if scheduler.Dropped != 0 {
 				common.LogDrop(common.Debug, "Flow functions together dropped", scheduler.Dropped, "packets")
@@ -207,9 +237,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 				// Save current speed as speed of flow function with this number of clones before removing
 				ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
 				scheduler.removeClone(ff)
-				for j := 0; j < ff.cloneNumber; j++ {
-					ff.clone[j].channel <- ff.cloneNumber
-				}
+				ff.updatePause(ff.cloneNumber)
 				// After removing a clone we don't want to try to add clone immediately
 				continue
 			}
@@ -218,17 +246,13 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// 1. check function signals that we need to clone
 			// 2. scheduler is switched on
 			// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
-			if (ff.checkPrintFunction(ff.Parameters, convertPKTS(ff.currentSpeed, schedTime), false) == true) && (scheduler.off == false) &&
+			if (ff.checkPrintFunction(ff.Parameters, false) == true) && (scheduler.off == false) &&
 				(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*ff.currentSpeed) {
 				// Save current speed as speed of flow function with this number of clones before adding
 				ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
 				if scheduler.startClone(ff) == true {
-					for j := 0; j < ff.cloneNumber-1; j++ {
-						// Here we want to add a pause to all clones. This pause depends on the number of clones.
-						// As we can't use a channel from its goroutine we iterates to cloneNumber-1. We are OK
-						// if the last clone will have zero pause as well as original (not cloned) function.
-						ff.clone[j].channel <- ff.cloneNumber
-					}
+					// Add a pause to all clones. This pause depends on the number of clones.
+					ff.updatePause(ff.cloneNumber)
 				}
 				continue
 			}
@@ -245,6 +269,42 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 				ff.previousSpeed[ff.cloneNumber+1] = 0
 			}
 		}
+
+		// Procced with each generate flow function
+		for i := range scheduler.Generate {
+			ff := scheduler.Generate[i]
+			ff.updateCurrentSpeed()
+
+			speedPKTS := float64(convertPKTS(ff.currentSpeed, schedTime))
+			if speedPKTS > 1.1*ff.targetSpeed {
+				if ff.targetSpeed/float64(ff.cloneNumber+1)*float64(ff.cloneNumber) > speedPKTS {
+					if scheduler.offRemove == false {
+						scheduler.removeClone(ff)
+						ff.updatePause(0)
+						continue
+					}
+				} else {
+					if ff.pause == 0 {
+						// This is proportion between required and current speeds.
+						// 1000000000 is converting to nanoseconds
+						ff.updatePause(int((speedPKTS - ff.targetSpeed) / speedPKTS / ff.targetSpeed * 1000000000))
+					} else if float64(ff.pause)*generatePauseStep < 2 {
+						// Multiplying can't be used here due to integer truncation
+						ff.updatePause(ff.pause + 3)
+					} else {
+						ff.updatePause(int((1 + generatePauseStep) * float64(ff.pause)))
+					}
+				}
+			} else if speedPKTS < ff.targetSpeed {
+				if ff.pause != 0 {
+					ff.updatePause(int((1 - generatePauseStep) * float64(ff.pause)))
+				} else if scheduler.off == false {
+					scheduler.startClone(ff)
+					ff.updatePause(0)
+					continue
+				}
+			}
+		}
 		checkRequired = false
 		runtime.Gosched()
 	}
@@ -253,14 +313,14 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 	core := scheduler.getCore(false)
 	if core != -1 {
+		quit := make(chan int)
+		cp := new(clonePair)
+		cp.channel = quit
+		cp.core = core
+		ff.clone = append(ff.clone, cp)
+		ff.cloneNumber++
 		go func() {
 			low.SetAffinity(uint8(core))
-			quit := make(chan int)
-			cp := new(clonePair)
-			cp.channel = quit
-			cp.core = core
-			ff.clone = append(ff.clone, cp)
-			ff.cloneNumber++
 			if ff.context != nil {
 				ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
 			} else {
@@ -281,15 +341,29 @@ func (scheduler *Scheduler) removeClone(ff *FlowFunction) {
 	ff.cloneNumber--
 }
 
+func (ff *FlowFunction) updatePause(pause int) {
+	ff.pause = pause
+	ff.channel <- ff.pause
+	for j := 0; j < ff.cloneNumber; j++ {
+		ff.clone[j].channel <- ff.pause
+	}
+}
+
 func (ff *FlowFunction) printDebug(schedTime uint) {
-	ff.checkPrintFunction(ff.Parameters, 0, true)
+	if ff.checkPrintFunction != nil {
+		ff.checkPrintFunction(ff.Parameters, true)
+	}
 	speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
 	// We multiply by 84 because it is the minimal packet size (64) plus before/after packet gaps in 40GB ethernet
 	// We multiply by 8 to translate bytes to bits
 	// We divide by 1000 and 1000 because networking suppose that megabit has 1000 kilobits instead of 1024
 	// TODO This Mbits measurement should be used only for 84 packet size for debug purposes
 	// speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
-	common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S")
+	if ff.targetSpeed == 0 {
+		common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S")
+	} else {
+		common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S, target speed is", int64(ff.targetSpeed), "PKT/S")
+	}
 }
 
 func convertPKTS(currentSpeed float64, schedTime uint) uint64 {
