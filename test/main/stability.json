@@ -150,6 +150,98 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "cksums_ipv4_tcp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part2", "-hwol"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part1", "-ipv4", "-tcp", "-number=10000"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv4_udp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part2", "-hwol"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part1", "-ipv4", "-udp", "-number=10000"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv6_tcp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part2", "-hwol"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part1", "-ipv6", "-tcp", "-number=10000"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv6_udp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "host-name": "hostname1",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part2", "-hwol"
+                    ]
+                },
+                {
+                    "host-name": "hostname2",
+                    "image-name": "yanff-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./part1", "-ipv6", "-udp", "-number=10000"
+                    ]
+                }
+            ]
         }
     ]
 }
