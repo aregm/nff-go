@@ -60,6 +60,7 @@ func (pd pcapdumperParameters) Copy() interface{} {
 }
 
 func (pd pcapdumperParameters) Delete() {
+	pd.f.Close()
 }
 
 func pcapdumper(currentPacket *packet.Packet, context flow.UserContext) {
