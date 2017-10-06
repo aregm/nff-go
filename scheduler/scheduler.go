@@ -26,6 +26,7 @@ type clonePair struct {
 // UserContext is used inside flow packet and is going for user via it
 type UserContext interface {
 	Copy() interface{}
+	Delete()
 }
 
 // Function types which are used inside flow functions

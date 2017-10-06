@@ -48,6 +48,9 @@ func (pi pairIndex) Copy() interface{} {
 	}
 }
 
+func (pi pairIndex) Delete() {
+}
+
 func convertIPv4(in []byte) (uint32, error) {
 	if in == nil || len(in) > 4 {
 		return 0, errors.New("Only IPv4 addresses are supported now")
