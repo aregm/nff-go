@@ -35,7 +35,7 @@ type portPairsConfig struct {
 
 // Config for NAT.
 type Config struct {
-	PortPairs   []portPairsConfig `json:"port-pairs"`
+	PortPairs []portPairsConfig `json:"port-pairs"`
 }
 
 type pairIndex struct {

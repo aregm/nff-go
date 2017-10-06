@@ -79,7 +79,7 @@ stop 1
 `
 )
 
-var	workaroundTargets map[string]struct{} = map[string]struct{} {
+var workaroundTargets map[string]struct{} = map[string]struct{}{
 	"dbdw14": {},
 	"dbdw15": {},
 	"dbdw16": {},
