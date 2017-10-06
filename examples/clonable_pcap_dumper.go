@@ -59,6 +59,9 @@ func (pd pcapdumperParameters) Copy() interface{} {
 	return pdp
 }
 
+func (pd pcapdumperParameters) Delete() {
+}
+
 func pcapdumper(currentPacket *packet.Packet, context flow.UserContext) {
 	pd := context.(pcapdumperParameters)
 	currentPacket.WritePcapOnePacket(pd.f)

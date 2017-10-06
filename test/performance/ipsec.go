@@ -54,6 +54,9 @@ func (c context) Copy() interface{} {
 	return n
 }
 
+func (c context) Delete() {
+}
+
 const esp = 0x32
 const mode1230 = 1230
 const espHeadLen = 24

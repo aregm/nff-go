@@ -718,6 +718,9 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			if pause == -1 {
 				// It is time to close this clone
 				close(stopper)
+				if context != nil {
+					context.Delete()
+				}
 				// We don't close report channel because all clones of one function use it.
 				// As one function entity will be working endlessly we don't close it anywhere.
 				return
@@ -848,6 +851,9 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 			if pause == -1 {
 				// It is time to close this clone
 				close(stopper)
+				if context != nil {
+					context.Delete()
+				}
 				// We don't close report channel because all clones of one function use it.
 				// As one function entity will be working endlessly we don't close it anywhere.
 				return
@@ -997,6 +1003,9 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 			if pause == -1 {
 				// It is time to close this clone
 				close(stopper)
+				if context != nil {
+					context.Delete()
+				}
 				// We don't close report channel because all clones of one function use it.
 				// As one function entity will be working endlessly we don't close it anywhere.
 				return
@@ -1071,6 +1080,9 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 			if pause == -1 {
 				// It is time to close this clone
 				close(stopper)
+				if context != nil {
+					context.Delete()
+				}
 				// We don't close report channel because all clones of one function use it.
 				// As one function entity will be working endlessly we don't close it anywhere.
 				return
