@@ -1,7 +1,9 @@
 package main
 
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import (
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+)
 
 func main() {
 	config := flow.Config{}
@@ -23,7 +25,6 @@ func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
 	cur.ParseL3()
 	if cur.GetIPv4() != nil && cur.GetTCPForIPv4() != nil && packet.SwapBytesUint16(cur.GetTCPForIPv4().DstPort) == 53 {
 		return false
-	} else {
-		return true
 	}
+	return true
 }

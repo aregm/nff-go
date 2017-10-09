@@ -1,12 +1,15 @@
 package main
 
-import "time"
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
-import "github.com/intel-go/yanff/rules"
+import (
+	"time"
+
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/rules"
+)
 
 var (
-	L3Rules *rules.L3Rules
+	l3Rules *rules.L3Rules
 )
 
 const flowN = 3
@@ -15,7 +18,7 @@ func main() {
 	config := flow.Config{}
 	flow.SystemInit(&config)
 	initCommonState()
-	L3Rules = rules.GetL3RulesFromORIG("rules2.conf")
+	l3Rules = rules.GetL3RulesFromORIG("rules2.conf")
 	go updateSeparateRules()
 	firstFlow := flow.SetReceiver(0)
 	outputFlows := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
@@ -28,13 +31,13 @@ func main() {
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
-	localL3Rules := L3Rules
+	localL3Rules := l3Rules
 	return rules.L3ACLPort(cur, localL3Rules)
 }
 
 func updateSeparateRules() {
-	for true {
+	for {
 		time.Sleep(time.Second * 5)
-		L3Rules = rules.GetL3RulesFromORIG("rules2.conf")
+		l3Rules = rules.GetL3RulesFromORIG("rules2.conf")
 	}
 }

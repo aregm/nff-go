@@ -7,9 +7,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"os"
 )
 
 var (
@@ -53,7 +54,7 @@ func (pd pcapdumperParameters) Copy() interface{} {
 		fmt.Println("Cannot create file: ", err)
 		os.Exit(0)
 	}
-	cloneNumber += 1
+	cloneNumber++
 	packet.WritePcapGlobalHdr(f)
 	pdp := pcapdumperParameters{f: f}
 	return pdp

@@ -4,12 +4,14 @@
 
 package main
 
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
-import "github.com/intel-go/yanff/rules"
+import (
+	"flag"
+	"time"
 
-import "flag"
-import "time"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/rules"
+)
 
 var (
 	l2Rules *rules.L2Rules
@@ -68,7 +70,7 @@ func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 }
 
 func updateSeparateRules() {
-	for true {
+	for {
 		time.Sleep(time.Second * 5)
 		l2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
 		l3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
