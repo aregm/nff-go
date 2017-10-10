@@ -26,11 +26,11 @@ const (
 
 // Supported L4 types
 const (
-	ICMPNumber       = 0x01
-	IPNumber         = 0x04
-	TCPNumber        = 0x06
-	UDPNumber        = 0x11
-	IPv6NoNextHeader = 0x3B
+	ICMPNumber   = 0x01
+	IPNumber     = 0x04
+	TCPNumber    = 0x06
+	UDPNumber    = 0x11
+	NoNextHeader = 0x3B
 )
 
 // Supported ICMP Types
