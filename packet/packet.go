@@ -72,12 +72,25 @@ type EtherHdr struct {
 }
 
 func (hdr *EtherHdr) String() string {
-	r0 := "L2 protocol: Ethernet\n"
+	r0 := fmt.Sprintf("L2 protocol: Ethernet\nEtherType: 0x%02x\n", hdr.EtherType)
 	s := hdr.SAddr
 	r1 := fmt.Sprintf("Ethernet Source: %02x:%02x:%02x:%02x:%02x:%02x\n", s[0], s[1], s[2], s[3], s[4], s[5])
 	d := hdr.DAddr
 	r2 := fmt.Sprintf("Ethernet Destination: %02x:%02x:%02x:%02x:%02x:%02x\n", d[0], d[1], d[2], d[3], d[4], d[5])
 	return r0 + r1 + r2
+}
+
+// VLANHdr 802.1Q VLAN header which may be added right after EtherHdr
+// if EtherHdr.EtherType is equal to VLANNumber
+type VLANHdr struct {
+	TCI       uint16 // Tag control information. Contains PCP, DEI and VID bit-fields
+	EtherType uint16 // Real EtherType instead of VLANNumber in EtherHdr.EtherType
+}
+
+func (hdr *VLANHdr) String() string {
+	return fmt.Sprintf(`L2 VLAN:\n
+TCI: 0x%02x (priority: %d, drop %d, ID: %d)\n
+EtherType: 0x%02x\n`, hdr.TCI, byte(hdr.TCI>>13), (hdr.TCI>>12)&1, hdr.TCI&0xfff, hdr.EtherType)
 }
 
 // IPv4Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
@@ -199,7 +212,12 @@ type Packet struct {
 }
 
 func (packet *Packet) unparsed() uintptr {
-	return uintptr(unsafe.Pointer(packet.Ether)) + EtherLen
+	ptr := uintptr(unsafe.Pointer(packet.Ether)) + EtherLen
+
+	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		ptr += VLANLen
+	}
+	return ptr
 }
 
 // Start function return pointer to first byte of packet
@@ -213,6 +231,14 @@ func (packet *Packet) ParseL3() {
 	packet.L3 = unsafe.Pointer(packet.unparsed())
 }
 
+// GetVLAN returns VLAN header pointer if it is present in the packet.
+func (packet *Packet) GetVLAN() *VLANHdr {
+	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		return (*VLANHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(packet.Ether)) + EtherLen))
+	}
+	return nil
+}
+
 // GetIPv4 ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
 func (packet *Packet) GetIPv4() *IPv4Hdr {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV4Number) {
@@ -221,10 +247,40 @@ func (packet *Packet) GetIPv4() *IPv4Hdr {
 	return nil
 }
 
-// GetIPv4 ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
+// GetIPv4CheckVLAN ensures if EtherType is IPv4 and cast L3 poinetr
+// to IPv4Hdr type. If EtherType has VLANNumber, then VLAN header
+// EtherType is checked instead.
+func (packet *Packet) GetIPv4CheckVLAN() *IPv4Hdr {
+	if packet.Ether.EtherType == SwapBytesUint16(IPV4Number) {
+		return (*IPv4Hdr)(packet.L3)
+	} else if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		vhdr := packet.GetVLAN()
+		if vhdr.EtherType == SwapBytesUint16(IPV4Number) {
+			return (*IPv4Hdr)(packet.L3)
+		}
+	}
+	return nil
+}
+
+// GetARP ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
 func (packet *Packet) GetARP() *ARPHdr {
 	if packet.Ether.EtherType == SwapBytesUint16(ARPNumber) {
 		return (*ARPHdr)(packet.L3)
+	}
+	return nil
+}
+
+// GetARPCheckVLAN ensures if EtherType is IPv4 and cast L3 poinetr to
+// IPv4Hdr type. If EtherType has VLANNumber, then VLAN header
+// EtherType is checked instead.
+func (packet *Packet) GetARPCheckVLAN() *ARPHdr {
+	if packet.Ether.EtherType == SwapBytesUint16(ARPNumber) {
+		return (*ARPHdr)(packet.L3)
+	} else if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		vhdr := packet.GetVLAN()
+		if vhdr.EtherType == SwapBytesUint16(ARPNumber) {
+			return (*ARPHdr)(packet.L3)
+		}
 	}
 	return nil
 }
@@ -233,6 +289,21 @@ func (packet *Packet) GetARP() *ARPHdr {
 func (packet *Packet) GetIPv6() *IPv6Hdr {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV6Number) {
 		return (*IPv6Hdr)(packet.L3)
+	}
+	return nil
+}
+
+// GetIPv6CheckVLAN ensures if EtherType is IPv6 and cast L3 poinetr
+// to IPv6Hdr type. If EtherType has VLANNumber, then VLAN header
+// EtherType is checked instead.
+func (packet *Packet) GetIPv6CheckVLAN() *IPv6Hdr {
+	if packet.Ether.EtherType == SwapBytesUint16(IPV6Number) {
+		return (*IPv6Hdr)(packet.L3)
+	} else if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		vhdr := packet.GetVLAN()
+		if vhdr.EtherType == SwapBytesUint16(IPV6Number) {
+			return (*IPv6Hdr)(packet.L3)
+		}
 	}
 	return nil
 }
