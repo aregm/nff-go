@@ -5,4 +5,4 @@ Tools for testing and running yanff applications on one local machine by writing
 
 ### Pktgen
 Pktgen parses config in json format and generates packets according to it in pcap file that can be read by YANFF reader, Wireshark, tcpdump and other tools reading pcap files.
-More detailed information can be found in [pktgen directory](https://github.com/intel-go/yanff/test/localTesting/pktgen)
+More detailed information can be found in [pktgen directory](https://github.com/intel-go/yanff/tree/master/test/localTesting/pktgen)
