@@ -221,6 +221,14 @@ func (packet *Packet) GetIPv4() *IPv4Hdr {
 	return nil
 }
 
+// GetIPv4 ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
+func (packet *Packet) GetARP() *ARPHdr {
+	if packet.Ether.EtherType == SwapBytesUint16(ARPNumber) {
+		return (*ARPHdr)(packet.L3)
+	}
+	return nil
+}
+
 // GetIPv6 ensures if EtherType is IPv6 and cast L3 poinetr to IPv6Hdr type.
 func (packet *Packet) GetIPv6() *IPv6Hdr {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV6Number) {
