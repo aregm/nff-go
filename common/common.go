@@ -22,6 +22,7 @@ const (
 const (
 	IPV4Number = 0x0800
 	ARPNumber  = 0x0806
+	VLANNumber = 0x8100
 	IPV6Number = 0x86dd
 )
 
@@ -51,6 +52,7 @@ const (
 // IPv4 take from Ihl field.
 const (
 	EtherLen   = 14
+	VLANLen    = 4
 	IPv4MinLen = 20
 	IPv6Len    = 40
 	ICMPLen    = 8
