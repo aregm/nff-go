@@ -15,6 +15,7 @@ import (
 // Length of addresses.
 const (
 	EtherAddrLen = 6
+	IPv4AddrLen  = 4
 	IPv6AddrLen  = 16
 )
 
