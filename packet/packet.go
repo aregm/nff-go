@@ -730,7 +730,12 @@ func (packet *Packet) PacketBytesChange(start uint, bytes []byte) bool {
 	return true
 }
 
-// IPv4 converts four element address to uint32 representation
-func IPv4(a byte, b byte, c byte, d byte) uint32 {
+// BytesToIPv4 converts four element address to uint32 representation
+func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
 	return uint32(d)<<24 | uint32(c)<<16 | uint32(b)<<8 | uint32(a)
+}
+
+// IPv4ToBytes converts four element address to uint32 representation
+func IPv4ToBytes(v uint32) [IPv4AddrLen]byte {
+	return [IPv4AddrLen]uint8{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
 }

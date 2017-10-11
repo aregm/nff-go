@@ -20,17 +20,17 @@ type ARPHdr struct {
 	PLen      uint8                      // Protocol address length, e.g. 4 for IPv4 address length
 	Operation uint16                     // Operation type, see ARP constants
 	SHA       [common.EtherAddrLen]uint8 // Sender hardware address (sender MAC address)
-	SPA       uint32                     // Sender protocol address (sender IPv4 address)
-	THA       [common.EtherAddrLen]uint8 // Target hardware address (target MAC address)
-	TPA       uint32                     // Target protocol address (target IPv4 address)
+	SPA       [common.IPv4AddrLen]uint8  // Sender protocol address (sender IPv4 address)
+	// array is used to avoid alignment (compiler alignes uint32 on 4 bytes)
+	THA [common.EtherAddrLen]uint8 // Target hardware address (target MAC address)
+	TPA [common.IPv4AddrLen]uint8  // Target protocol address (target IPv4 address)
+	// array is used to avoid alignment (compiler alignes uint32 on 4 bytes)
 }
 
 // ARP protocol operations
 const (
-	ARPRequest  = 1
-	ARPReply    = 2
-	RARPRequest = 3
-	RARPReply   = 4
+	ARPRequest = 1
+	ARPReply   = 2
 )
 
 func (hdr *ARPHdr) String() string {
@@ -50,9 +50,9 @@ func (hdr *ARPHdr) String() string {
 		hdr.PLen,
 		hdr.Operation,
 		hdr.SHA[0], hdr.SHA[1], hdr.SHA[2], hdr.SHA[3], hdr.SHA[4], hdr.SHA[5],
-		byte(hdr.SPA), byte(hdr.SPA>>8), byte(hdr.SPA>>16), byte(hdr.SPA>>24),
+		hdr.SPA[0], hdr.SPA[1], hdr.SPA[2], hdr.SPA[3],
 		hdr.THA[0], hdr.THA[1], hdr.THA[2], hdr.THA[3], hdr.THA[4], hdr.THA[5],
-		byte(hdr.TPA), byte(hdr.TPA>>8), byte(hdr.TPA>>16), byte(hdr.TPA>>24))
+		hdr.TPA[0], hdr.TPA[1], hdr.TPA[2], hdr.TPA[3])
 }
 
 // InitEmptyARPPacket initializes empty ARP packet
@@ -67,6 +67,26 @@ func InitEmptyARPPacket(packet *Packet) bool {
 	return true
 }
 
+// initARPCommonData allocates ARP packet, fills ether header and
+// arp hrd, pro, hln, pln with values for ether and IPv4
+func initARPCommonData(packet *Packet) bool {
+	var bufSize uint = common.EtherLen + common.ARPLen
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		common.LogWarning(common.Debug, "Cannot append mbuf")
+		return false
+	}
+
+	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
+
+	packet.ParseL3()
+	arp := packet.GetARP()
+	arp.HType = SwapBytesUint16(1)
+	arp.PType = SwapBytesUint16(common.IPV4Number)
+	arp.HLen = common.EtherAddrLen
+	arp.PLen = common.IPv4AddrLen
+	return true
+}
+
 // InitARPRequestPacket initialize ARP request packet for IPv4
 // protocol request with broadcast (zero) for THA (Target HW
 // address). SHA and SPA specify sender MAC and IP addresses, TPA
@@ -74,27 +94,18 @@ func InitEmptyARPPacket(packet *Packet) bool {
 // for. Destionation MAC address is L2 Ethernet header is set to
 // FF:FF:FF:FF:FF:FF (broadcast) and source address is set to SHA.
 func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, TPA uint32) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitARPRequestPacket: Cannot append mbuf")
+	if !initARPCommonData(packet) {
+		common.LogWarning(common.Debug, "InitARPRequestPacket: failed to fill common data")
 		return false
 	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	packet.Ether.SAddr = SHA
-
-	packet.ParseL3()
+	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp := packet.GetARP()
-	arp.HType = SwapBytesUint16(1)
-	arp.PType = SwapBytesUint16(common.IPV4Number)
-	arp.HLen = 6
-	arp.PLen = 4
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
-	arp.SPA = SPA
+	arp.SPA = IPv4ToBytes(SPA)
 	arp.THA = [common.EtherAddrLen]uint8{}
-	arp.TPA = TPA
+	arp.TPA = IPv4ToBytes(TPA)
 	return true
 }
 
@@ -104,27 +115,18 @@ func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, T
 // is L2 Ethernet header is set to THA and source address is set to
 // SHA.
 func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA, TPA uint32) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitGARPAnnouncementReplyPacket: Cannot append mbuf")
+	if !initARPCommonData(packet) {
+		common.LogWarning(common.Debug, "InitARPRequestPacket: failed to fill common data")
 		return false
 	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	packet.Ether.DAddr = THA
 	packet.Ether.SAddr = SHA
-
-	packet.ParseL3()
+	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp := packet.GetARP()
-	arp.HType = SwapBytesUint16(1)
-	arp.PType = SwapBytesUint16(common.IPV4Number)
-	arp.HLen = 6
-	arp.PLen = 4
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
-	arp.SPA = SPA
+	arp.SPA = IPv4ToBytes(SPA)
 	arp.THA = THA
-	arp.TPA = TPA
+	arp.TPA = IPv4ToBytes(TPA)
 	return true
 }
 
@@ -135,27 +137,18 @@ func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA
 // SPA. Destionation MAC address is L2 Ethernet header is set to
 // FF:FF:FF:FF:FF:FF (broadcast) and source address is set to SHA.
 func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA uint32) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitGARPAnnouncementRequestPacket: Cannot append mbuf")
+	if !initARPCommonData(packet) {
+		common.LogWarning(common.Debug, "InitARPRequestPacket: failed to fill common data")
 		return false
 	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	packet.Ether.SAddr = SHA
-
-	packet.ParseL3()
+	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp := packet.GetARP()
-	arp.HType = SwapBytesUint16(1)
-	arp.PType = SwapBytesUint16(common.IPV4Number)
-	arp.HLen = 6
-	arp.PLen = 4
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
-	arp.SPA = SPA
+	arp.SPA = IPv4ToBytes(SPA)
 	arp.THA = [common.EtherAddrLen]uint8{}
-	arp.TPA = SPA
+	arp.TPA = IPv4ToBytes(SPA)
 	return true
 }
 
@@ -166,26 +159,17 @@ func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]
 // is set to FF:FF:FF:FF:FF:FF (broadcast) and source address is set
 // to SHA.
 func InitGARPAnnouncementReplyPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA uint32) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitGARPAnnouncementReplyPacket: Cannot append mbuf")
+	if !initARPCommonData(packet) {
+		common.LogWarning(common.Debug, "InitARPRequestPacket: failed to fill common data")
 		return false
 	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	packet.Ether.SAddr = SHA
-
-	packet.ParseL3()
+	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp := packet.GetARP()
-	arp.HType = SwapBytesUint16(1)
-	arp.PType = SwapBytesUint16(common.IPV4Number)
-	arp.HLen = 6
-	arp.PLen = 4
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
-	arp.SPA = SPA
+	arp.SPA = IPv4ToBytes(SPA)
 	arp.THA = SHA
-	arp.TPA = SPA
+	arp.TPA = IPv4ToBytes(SPA)
 	return true
 }
