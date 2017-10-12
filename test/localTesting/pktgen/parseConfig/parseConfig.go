@@ -91,6 +91,16 @@ type ICMPConfig struct {
 	Data       interface{}
 }
 
+// ARPConfig configures arp header.
+type ARPConfig struct {
+	Operation  uint16
+	Gratuitous bool
+	SHA        AddrRange
+	SPA        AddrRange
+	THA        AddrRange
+	TPA        AddrRange
+}
+
 // PDistEntry gives data with associated probability of being chosen.
 type PDistEntry struct {
 	Probability float64
@@ -135,10 +145,7 @@ func ParsePacketConfig(f *os.File) (*PacketConfig, error) {
 }
 
 func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
-	ethConfig := EtherConfig{}
-	wasDaddr := false
-	wasSaddr := false
-	wasData := false
+	ethConfig := EtherConfig{DAddr: AddrRange{}, SAddr: AddrRange{}, Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "saddr":
@@ -147,21 +154,26 @@ func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
 				return EtherConfig{}, fmt.Errorf("parseMacAddr for ether saddr returned: %v", err)
 			}
 			ethConfig.SAddr = saddr
-			wasSaddr = true
 		case "daddr":
 			daddr, err := parseMacAddr(v)
 			if err != nil {
 				return EtherConfig{}, fmt.Errorf("parseMacAddr for ether daddr returned: %v", err)
 			}
 			ethConfig.DAddr = daddr
-			wasDaddr = true
 		case "ip":
 			ipConf, err := parseIPHdr(v.(map[string]interface{}))
 			if err != nil {
 				return EtherConfig{}, fmt.Errorf("parseIpHdr returned %v", err)
 			}
 			ethConfig.Data = ipConf
-			wasData = true
+			break
+		case "arp":
+			arpConfig := v.(map[string]interface{})
+			arpConf, err := parseARPHdr(arpConfig)
+			if err != nil {
+				return EtherConfig{}, fmt.Errorf("parseARPHdr returned %v", err)
+			}
+			ethConfig.Data = arpConf
 			break
 		default:
 			data, err := parseData(map[string]interface{}{k: v})
@@ -169,18 +181,8 @@ func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
 				return EtherConfig{}, fmt.Errorf("parseData for ether returned: %v", err)
 			}
 			ethConfig.Data = data
-			wasData = true
 			break
 		}
-	}
-	if !wasDaddr {
-		ethConfig.DAddr = AddrRange{}
-	}
-	if !wasSaddr {
-		ethConfig.SAddr = AddrRange{}
-	}
-	if !wasData {
-		ethConfig.Data = Raw{Data: ""}
 	}
 	return ethConfig, nil
 }
@@ -215,11 +217,7 @@ func parseData(in map[string]interface{}) (interface{}, error) {
 }
 
 func parseIPHdr(in map[string]interface{}) (IPConfig, error) {
-	ipHdr := IPConfig{}
-	wasVersion := false
-	wasSaddr := false
-	wasDaddr := false
-	wasData := false
+	ipHdr := IPConfig{Version: 4, DAddr: AddrRange{}, SAddr: AddrRange{}, Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "version":
@@ -228,28 +226,24 @@ func parseIPHdr(in map[string]interface{}) (IPConfig, error) {
 				return IPConfig{}, fmt.Errorf("ip version should be 4 or 6, got: %d", version)
 			}
 			ipHdr.Version = version
-			wasVersion = true
 		case "saddr":
 			saddr, err := parseIPAddr(v)
 			if err != nil {
 				return IPConfig{}, fmt.Errorf("parseIPAddr for ip saddr returned: %v", err)
 			}
 			ipHdr.SAddr = saddr
-			wasSaddr = true
 		case "daddr":
 			daddr, err := parseIPAddr(v)
 			if err != nil {
 				return IPConfig{}, fmt.Errorf("parseIPAddr for ip daddr returned: %v", err)
 			}
 			ipHdr.DAddr = daddr
-			wasDaddr = true
 		case "tcp":
 			tcpConf, err := parseTCPHdr(v.(map[string]interface{}))
 			if err != nil {
 				return IPConfig{}, fmt.Errorf("parseTCPHdr returned %v", err)
 			}
 			ipHdr.Data = tcpConf
-			wasData = true
 			break
 		case "udp":
 			udpConf, err := parseUDPHdr(v.(map[string]interface{}))
@@ -257,7 +251,6 @@ func parseIPHdr(in map[string]interface{}) (IPConfig, error) {
 				return IPConfig{}, fmt.Errorf("parseUDPHdr returned %v", err)
 			}
 			ipHdr.Data = udpConf
-			wasData = true
 			break
 		case "icmp":
 			icmpConf, err := parseICMPHdr(v.(map[string]interface{}))
@@ -265,7 +258,6 @@ func parseIPHdr(in map[string]interface{}) (IPConfig, error) {
 				return IPConfig{}, fmt.Errorf("parseICMPHdr returned %v", err)
 			}
 			ipHdr.Data = icmpConf
-			wasData = true
 			break
 		default:
 			data, err := parseData(map[string]interface{}{k: v})
@@ -273,30 +265,57 @@ func parseIPHdr(in map[string]interface{}) (IPConfig, error) {
 				return IPConfig{}, fmt.Errorf("parseData for ip returned: %v", err)
 			}
 			ipHdr.Data = data
-			wasData = true
 			break
 		}
-	}
-	if !wasVersion {
-		ipHdr.Version = 4
-	}
-	if !wasDaddr {
-		ipHdr.DAddr = AddrRange{}
-	}
-	if !wasSaddr {
-		ipHdr.SAddr = AddrRange{}
-	}
-	if !wasData {
-		ipHdr.Data = Raw{Data: ""}
 	}
 	return ipHdr, nil
 }
 
+func parseARPHdr(in map[string]interface{}) (ARPConfig, error) {
+	arpHdr := ARPConfig{Operation: 1, Gratuitous: false, SHA: AddrRange{}, SPA: AddrRange{}, THA: AddrRange{}, TPA: AddrRange{}}
+	for k, v := range in {
+		switch strings.ToLower(k) {
+		case "opcode":
+			opcode := v.(float64)
+			if opcode < 1 || opcode > 2 {
+				return ARPConfig{}, fmt.Errorf("support opcodes [1,2], got: %d", uint16(opcode))
+			}
+			arpHdr.Operation = uint16(opcode)
+		case "gratuitous":
+			arpHdr.Gratuitous = v.(bool)
+		case "sha":
+			sha, err := parseMacAddr(v)
+			if err != nil {
+				return ARPConfig{}, fmt.Errorf("parseMacAddr for sha returned: %v", err)
+			}
+			arpHdr.SHA = sha
+		case "spa":
+			spa, err := parseIPAddr(v)
+			if err != nil {
+				return ARPConfig{}, fmt.Errorf("parseIPAddr for spa returned: %v", err)
+			}
+			arpHdr.SPA = spa
+		case "tha":
+			tha, err := parseMacAddr(v)
+			if err != nil {
+				return ARPConfig{}, fmt.Errorf("parseMacAddr for tha returned: %v", err)
+			}
+			arpHdr.THA = tha
+		case "tpa":
+			tpa, err := parseIPAddr(v)
+			if err != nil {
+				return ARPConfig{}, fmt.Errorf("parseIPAddr for tpa returned: %v", err)
+			}
+			arpHdr.TPA = tpa
+		default:
+			return ARPConfig{}, fmt.Errorf("unrecognized key for arp configuration: %s", k)
+		}
+	}
+	return arpHdr, nil
+}
+
 func parseTCPHdr(in map[string]interface{}) (TCPConfig, error) {
-	tcpHdr := TCPConfig{}
-	wasDport := false
-	wasSport := false
-	wasData := false
+	tcpHdr := TCPConfig{SPort: PortRange{}, DPort: PortRange{}, Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "sport":
@@ -305,14 +324,12 @@ func parseTCPHdr(in map[string]interface{}) (TCPConfig, error) {
 				return TCPConfig{}, fmt.Errorf("parsePort for tcp sport returned: %v", err)
 			}
 			tcpHdr.SPort = sport
-			wasSport = true
 		case "dport":
 			dport, err := parsePort(v)
 			if err != nil {
 				return TCPConfig{}, fmt.Errorf("parsePort for tcp dport returned: %v", err)
 			}
 			tcpHdr.DPort = dport
-			wasDport = true
 		case "seq":
 			seq, err := parseSeq(v.(string))
 			if err != nil {
@@ -331,27 +348,14 @@ func parseTCPHdr(in map[string]interface{}) (TCPConfig, error) {
 				return TCPConfig{}, fmt.Errorf("parseData for tcp returned: %v", err)
 			}
 			tcpHdr.Data = data
-			wasData = true
 			break
 		}
-	}
-	if !wasDport {
-		tcpHdr.DPort = PortRange{}
-	}
-	if !wasSport {
-		tcpHdr.SPort = PortRange{}
-	}
-	if !wasData {
-		tcpHdr.Data = Raw{Data: ""}
 	}
 	return tcpHdr, nil
 }
 
 func parseUDPHdr(in map[string]interface{}) (UDPConfig, error) {
-	udpHdr := UDPConfig{}
-	wasDport := false
-	wasSport := false
-	wasData := false
+	udpHdr := UDPConfig{SPort: PortRange{}, DPort: PortRange{}, Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "sport":
@@ -360,39 +364,26 @@ func parseUDPHdr(in map[string]interface{}) (UDPConfig, error) {
 				return UDPConfig{}, fmt.Errorf("parsePort for tcp sport returned: %v", err)
 			}
 			udpHdr.SPort = sport
-			wasSport = true
 		case "dport":
 			dport, err := parsePort(v)
 			if err != nil {
 				return UDPConfig{}, fmt.Errorf("parsePort for tcp dport returned: %v", err)
 			}
 			udpHdr.DPort = dport
-			wasDport = true
 		default:
 			data, err := parseData(map[string]interface{}{k: v})
 			if err != nil {
 				return UDPConfig{}, fmt.Errorf("parseData for udp returned: %v", err)
 			}
 			udpHdr.Data = data
-			wasData = true
 			break
 		}
-	}
-	if !wasDport {
-		udpHdr.DPort = PortRange{}
-	}
-	if !wasSport {
-		udpHdr.SPort = PortRange{}
-	}
-	if !wasData {
-		udpHdr.Data = Raw{Data: ""}
 	}
 	return udpHdr, nil
 }
 
 func parseICMPHdr(in map[string]interface{}) (ICMPConfig, error) {
-	icmpHdr := ICMPConfig{}
-	wasData := false
+	icmpHdr := ICMPConfig{Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "type":
@@ -413,13 +404,8 @@ func parseICMPHdr(in map[string]interface{}) (ICMPConfig, error) {
 				return ICMPConfig{}, fmt.Errorf("parseData for icmp returned: %v", err)
 			}
 			icmpHdr.Data = data
-			wasData = true
 			break
 		}
-	}
-
-	if !wasData {
-		icmpHdr.Data = Raw{Data: ""}
 	}
 	return icmpHdr, nil
 }
@@ -606,8 +592,8 @@ func parseIPAddr(value interface{}) (AddrRange, error) {
 type fn func(string) ([]uint8, error)
 
 func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) {
-	addr := AddrRange{}
-	wasMin, wasMax, wasStart, wasIncr := false, false, false, false
+	addr := AddrRange{Incr: 0}
+	wasMin, wasMax, wasStart := false, false, false
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "min":
@@ -633,7 +619,6 @@ func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) 
 			wasStart = true
 		case "incr":
 			addr.Incr = (uint64)(v.(float64))
-			wasIncr = true
 		default:
 			return AddrRange{}, fmt.Errorf("unknown key %s", k)
 		}
@@ -649,9 +634,6 @@ func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) 
 	}
 	if bytes.Compare(addr.Start, addr.Min) < 0 || bytes.Compare(addr.Start, addr.Max) > 0 {
 		return AddrRange{}, fmt.Errorf("Start value should be between min and max")
-	}
-	if !wasIncr {
-		addr.Incr = 0
 	}
 	return addr, nil
 }
@@ -682,8 +664,8 @@ func parsePort(in interface{}) (PortRange, error) {
 }
 
 func parsePortRange(in map[string]interface{}) (PortRange, error) {
-	portRng := PortRange{}
-	wasMin, wasMax, wasStart, wasIncr := false, false, false, false
+	portRng := PortRange{Incr: 0}
+	wasMin, wasMax, wasStart := false, false, false
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "min":
@@ -709,7 +691,6 @@ func parsePortRange(in map[string]interface{}) (PortRange, error) {
 				return PortRange{}, fmt.Errorf("Incr should be positive")
 			}
 			portRng.Incr = (uint16)(v.(float64))
-			wasIncr = true
 		default:
 			return PortRange{}, fmt.Errorf("unknown key %s", k)
 		}
@@ -725,9 +706,6 @@ func parsePortRange(in map[string]interface{}) (PortRange, error) {
 	}
 	if portRng.Start[0] < portRng.Min || portRng.Start[0] > portRng.Max {
 		return PortRange{}, fmt.Errorf("Start should be in range of min and max")
-	}
-	if !wasIncr {
-		portRng.Incr = 0
 	}
 	return portRng, nil
 }

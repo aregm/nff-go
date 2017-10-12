@@ -91,6 +91,9 @@ func ReadConfig(fileName string) (*parseConfig.PacketConfig, error) {
 }
 
 func getNextAddr(addr parseConfig.AddrRange) (nextAddr []uint8) {
+	if addr.Incr == 0 {
+		return addr.Start
+	}
 	if len(addr.Start) == 0 {
 		return []uint8{0}
 	}
@@ -111,6 +114,24 @@ func getNextAddr(addr parseConfig.AddrRange) (nextAddr []uint8) {
 		addr.Start = addr.Min
 	}
 	return nextAddr
+}
+
+func copyAddr(destination []uint8, source []uint8, size int) {
+	if size < len(source) {
+		copy(destination[:], source[len(source)-size:])
+	} else {
+		copy(destination[size-len(source):], source[:])
+	}
+}
+
+func cropAddr(addr []uint8, size int) []uint8 {
+	cropped := make([]uint8, size)
+	if size < len(addr) {
+		copy(cropped[:], addr[len(addr)-size:])
+	} else {
+		copy(cropped[size-len(addr):], addr[:])
+	}
+	return cropped
 }
 
 func getNextPort(port parseConfig.PortRange) (nextPort uint16) {
@@ -202,6 +223,8 @@ func getGenerator() (interface{}, error) {
 			default:
 				return nil, fmt.Errorf("unknown packet l4 configuration")
 			}
+		case parseConfig.ARPConfig:
+			return generateARP, nil
 		case parseConfig.Raw, parseConfig.RandBytes, []parseConfig.PDistEntry:
 			return generateEther, nil
 		default:
@@ -280,6 +303,50 @@ func generateIP(pkt *packet.Packet, context flow.UserContext) {
 	}
 	if l3.Version == 4 {
 		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt))
+	}
+}
+
+func generateARP(pkt *packet.Packet, context flow.UserContext) {
+	if pkt == nil {
+		panic("Failed to create new packet")
+	}
+	checkFinish()
+	atomic.AddUint64(&count, 1)
+	l2 := configuration.Data.(parseConfig.EtherConfig)
+	l3 := l2.Data.(parseConfig.ARPConfig)
+	var SHA, THA [common.EtherAddrLen]uint8
+	copyAddr(SHA[:], getNextAddr(l3.SHA), common.EtherAddrLen)
+	SPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(l3.SPA)).To4())
+
+	switch l3.Operation {
+	case packet.ARPRequest:
+		if l3.Gratuitous {
+			if !packet.InitGARPAnnouncementRequestPacket(pkt, SHA, SPA) {
+				panic(fmt.Sprintf("InitGARPAnnouncementRequestPacket returned false"))
+			}
+		} else {
+			TPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(l3.TPA)).To4())
+			if !packet.InitARPRequestPacket(pkt, SHA, SPA, TPA) {
+				panic(fmt.Sprintf("InitARPRequestPacket returned false"))
+			}
+		}
+	case packet.ARPReply:
+		if l3.Gratuitous {
+			if !packet.InitGARPAnnouncementReplyPacket(pkt, SHA, SPA) {
+				panic(fmt.Sprintf("InitGARPAnnouncementReplyPacket returned false"))
+			}
+		} else {
+			copyAddr(THA[:], getNextAddr(l3.THA), common.EtherAddrLen)
+			TPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(l3.TPA)).To4())
+			if !packet.InitARPReplyPacket(pkt, SHA, THA, SPA, TPA) {
+				panic(fmt.Sprintf("InitARPReplyPacket returned false"))
+			}
+		}
+	default:
+		panic(fmt.Sprintf("unsupported operation code: %d", l3.Operation))
+	}
+	if len(l2.DAddr.Start) != 0 {
+		copyAddr(pkt.Ether.DAddr[:], getNextAddr(l2.DAddr), common.EtherAddrLen)
 	}
 }
 
@@ -458,32 +525,16 @@ func fillIPHdr(pkt *packet.Packet, l3 parseConfig.IPConfig) error {
 	}
 	pktIP := pkt.GetIPv6()
 	nextAddr := getNextAddr(l3.SAddr)
-	if common.IPv6AddrLen < len(nextAddr) {
-		copy(pktIP.SrcAddr[:], nextAddr[len(nextAddr)-common.IPv6AddrLen:])
-	} else {
-		copy(pktIP.SrcAddr[common.IPv6AddrLen-len(nextAddr):], nextAddr[:])
-	}
+	copyAddr(pktIP.SrcAddr[:], nextAddr, common.IPv6AddrLen)
 	nextAddr = getNextAddr(l3.DAddr)
-	if common.IPv6AddrLen < len(nextAddr) {
-		copy(pktIP.DstAddr[:], nextAddr[len(nextAddr)-common.IPv6AddrLen:])
-	} else {
-		copy(pktIP.DstAddr[common.IPv6AddrLen-len(nextAddr):], nextAddr[:])
-	}
+	copyAddr(pktIP.DstAddr[:], nextAddr, common.IPv6AddrLen)
 	return nil
 }
 
 func fillEtherHdr(pkt *packet.Packet, l2 parseConfig.EtherConfig) error {
 	nextAddr := getNextAddr(l2.DAddr)
-	if common.EtherAddrLen < len(nextAddr) {
-		copy(pkt.Ether.DAddr[:], nextAddr[len(nextAddr)-common.EtherAddrLen:])
-	} else {
-		copy(pkt.Ether.DAddr[common.EtherAddrLen-len(nextAddr):], nextAddr[:])
-	}
+	copyAddr(pkt.Ether.DAddr[:], nextAddr, common.EtherAddrLen)
 	nextAddr = getNextAddr(l2.SAddr)
-	if common.EtherAddrLen < len(nextAddr) {
-		copy(pkt.Ether.SAddr[:], nextAddr[len(nextAddr)-common.EtherAddrLen:])
-	} else {
-		copy(pkt.Ether.SAddr[common.EtherAddrLen-len(nextAddr):], nextAddr[:])
-	}
+	copyAddr(pkt.Ether.DAddr[:], nextAddr, common.EtherAddrLen)
 	return nil
 }

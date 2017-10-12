@@ -1,0 +1,10 @@
+{
+    "ether": {
+                "arp": {
+                    "opcode": 1,
+                    "gratuitous" : true,
+                    "sha": "99:25:96:FF:FE:12",
+                    "spa": "1.1.1.1"
+                }
+            }
+}
