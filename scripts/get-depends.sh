@@ -1,6 +1,6 @@
 #! /bin/sh -x
 
-go get -v -d github.com/docker/docker/api
+go get -v -d github.com/moby/moby/client
 rm -rf $GOPATH/src/github.com/docker/docker/vendor/github.com/docker/go-connections
 go get -v github.com/Sirupsen/logrus
 go get -v github.com/pkg/errors
