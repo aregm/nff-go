@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
 	"log"
 	"net"
 	"os"
+
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 )
 
 var config map[string][]string
@@ -16,7 +17,7 @@ var dstMac0 [common.EtherAddrLen]uint8
 var srcMac0 [common.EtherAddrLen]uint8
 var dstMac1 [common.EtherAddrLen]uint8
 var srcMac1 [common.EtherAddrLen]uint8
-var modifyPacket []interface{} = []interface{}{modifyPacket0, modifyPacket1}
+var modifyPacket = []interface{}{modifyPacket0, modifyPacket1}
 
 // readConfig function reads and parses config file
 func readConfig(fileName string) error {

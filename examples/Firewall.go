@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 	"github.com/intel-go/yanff/rules"
