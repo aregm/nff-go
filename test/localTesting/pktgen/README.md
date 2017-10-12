@@ -93,7 +93,7 @@ possible fields are:
 ```json
 "daddr": "00:FF:96:FF:FE:12"
 ```
-* l3 configuration or data, possible values are: "ip", "raw", "randbytes", "pdist":
+* l3 configuration or data, possible values are: "ip", "arp", "raw", "randbytes", "pdist":
 ```json
 {
     "ether": {
@@ -164,6 +164,28 @@ for ip v6:
     }
 }
 ```
+
+also arp packets are supported:
+```json
+{
+    "ether": {
+                "arp": {
+                    "opcode": 1,
+                    "gratuitous" : true,
+                    "sha": "99:25:96:FF:FE:12",
+                    "spa": "1.1.1.1"
+                }
+            }
+}
+```
+* "opcode" is the operation code, supported only two values 1 for ARP Request and 2 for ARP Reply
+* "gratuitous" is boolean field, can be ommited (false by default), but can be set to true to make announcement
+* "sha" is a string with sender hardware address
+* "tha" is a string with target hardware address
+* "spa" is a string with sender protocol address
+* "tpa" is a string with target protocol address
+Ethernet source is set to sha by default, destination is broadcast.
+
 #### l4 configuration:
 ##### "tcp" options:
 * "sport" sets a source port can be numeric value of range

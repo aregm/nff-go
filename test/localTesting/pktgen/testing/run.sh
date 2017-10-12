@@ -9,4 +9,5 @@
 ./../generate -totalPackets 1000 -infile ip6udp.json -outfile ip6udp.pcap
 ./../generate -totalPackets 1000000 -infile ip4icmp.json -outfile ip4icmp.pcap
 ./../generate -totalPackets 100000 -infile ip6icmp.json -outfile ip6icmp.pcap
+./../generate -totalPackets 1000 -infile arp.json -outfile arp.pcap
 ./../generate -totalPackets 100
