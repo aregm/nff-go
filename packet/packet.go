@@ -793,3 +793,16 @@ func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
 func IPv4ToBytes(v uint32) [IPv4AddrLen]byte {
 	return [IPv4AddrLen]uint8{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
 }
+
+// AddVLANTag increases size of packet on VLANLen and adds 802.1Q VLAN header
+// after Ether header, tag is a tag control information. Returns false if error.
+func (packet *Packet) AddVLANTag(tag uint16) bool {
+	if !packet.EncapsulateHead(EtherLen, VLANLen) {
+		return false
+	}
+	vhdr := (*VLANHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(packet.Ether)) + EtherLen))
+	vhdr.EtherType = packet.Ether.EtherType
+	packet.Ether.EtherType = SwapBytesUint16(VLANNumber)
+	vhdr.TCI = SwapBytesUint16(tag)
+	return true
+}
