@@ -348,6 +348,11 @@ func generateARP(pkt *packet.Packet, context flow.UserContext) {
 	if len(l2.DAddr.Start) != 0 {
 		copyAddr(pkt.Ether.DAddr[:], getNextAddr(l2.DAddr), common.EtherAddrLen)
 	}
+	if l2.VLAN != nil {
+		if !pkt.AddVLANTag(l2.VLAN.TCI) {
+			panic("failed to add vlan tag to arp packet")
+		}
+	}
 }
 
 func generateTCPIP(pkt *packet.Packet, context flow.UserContext) {
@@ -532,9 +537,30 @@ func fillIPHdr(pkt *packet.Packet, l3 parseConfig.IPConfig) error {
 }
 
 func fillEtherHdr(pkt *packet.Packet, l2 parseConfig.EtherConfig) error {
+	if l2.VLAN != nil {
+		if err := addVLAN(pkt, l2.VLAN.TCI); err != nil {
+			return err
+		}
+	}
 	nextAddr := getNextAddr(l2.DAddr)
 	copyAddr(pkt.Ether.DAddr[:], nextAddr, common.EtherAddrLen)
 	nextAddr = getNextAddr(l2.SAddr)
-	copyAddr(pkt.Ether.DAddr[:], nextAddr, common.EtherAddrLen)
+	copyAddr(pkt.Ether.SAddr[:], nextAddr, common.EtherAddrLen)
+	return nil
+}
+
+// faster version of packet.AddVLANTag, can be used only
+// when ether src and dst are not set, but ether type is
+// (most InitEmptyPacket functions do so).
+func addVLAN(pkt *packet.Packet, tag uint16) error {
+	if !pkt.EncapsulateHead(0, 4) {
+		return fmt.Errorf("failed to add vlan tag, EncapsulateHead returned false")
+	}
+	pkt.Ether.EtherType = packet.SwapBytesUint16(common.VLANNumber)
+	vhdr := pkt.GetVLAN()
+	if vhdr == nil {
+		return fmt.Errorf("failed to get vlan, GetVLAN returned nil")
+	}
+	vhdr.TCI = packet.SwapBytesUint16(tag)
 	return nil
 }

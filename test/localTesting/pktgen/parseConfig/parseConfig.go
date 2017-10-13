@@ -13,8 +13,6 @@ import (
 	"github.com/intel-go/yanff/common"
 )
 
-// TODO: ARP packets are not supported yet
-
 // AddrRange describes range of addresses.
 type AddrRange struct {
 	Min   []uint8
@@ -55,7 +53,13 @@ type PacketConfig struct {
 type EtherConfig struct {
 	DAddr AddrRange
 	SAddr AddrRange
+	VLAN  *VlanTagConfig
 	Data  interface{}
+}
+
+// VlanTagConfig configures vlan tag
+type VlanTagConfig struct {
+	TCI uint16
 }
 
 // IPConfig configures ip header.
@@ -145,7 +149,7 @@ func ParsePacketConfig(f *os.File) (*PacketConfig, error) {
 }
 
 func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
-	ethConfig := EtherConfig{DAddr: AddrRange{}, SAddr: AddrRange{}, Data: Raw{Data: ""}}
+	ethConfig := EtherConfig{DAddr: AddrRange{}, SAddr: AddrRange{}, VLAN: nil, Data: Raw{Data: ""}}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "saddr":
@@ -160,6 +164,9 @@ func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
 				return EtherConfig{}, fmt.Errorf("parseMacAddr for ether daddr returned: %v", err)
 			}
 			ethConfig.DAddr = daddr
+		case "vlan-tci":
+			ethConfig.VLAN = &(VlanTagConfig{TCI: uint16(v.(float64))})
+			break
 		case "ip":
 			ipConf, err := parseIPHdr(v.(map[string]interface{}))
 			if err != nil {
