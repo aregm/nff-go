@@ -72,12 +72,26 @@ type EtherHdr struct {
 }
 
 func (hdr *EtherHdr) String() string {
-	r0 := "L2 protocol: Ethernet\n"
+	r0 := fmt.Sprintf("L2 protocol: Ethernet\nEtherType: 0x%02x\n", hdr.EtherType)
 	s := hdr.SAddr
 	r1 := fmt.Sprintf("Ethernet Source: %02x:%02x:%02x:%02x:%02x:%02x\n", s[0], s[1], s[2], s[3], s[4], s[5])
 	d := hdr.DAddr
 	r2 := fmt.Sprintf("Ethernet Destination: %02x:%02x:%02x:%02x:%02x:%02x\n", d[0], d[1], d[2], d[3], d[4], d[5])
 	return r0 + r1 + r2
+}
+
+// VLANHdr 802.1Q VLAN header. We interpret it as an addition after
+// EtherHdr structure, so it contains actual frame EtherType after TCI
+// while TPID=0x8100 is present in EtherHdr.
+type VLANHdr struct {
+	TCI       uint16 // Tag control information. Contains PCP, DEI and VID bit-fields
+	EtherType uint16 // Real EtherType instead of VLANNumber in EtherHdr.EtherType
+}
+
+func (hdr *VLANHdr) String() string {
+	return fmt.Sprintf(`L2 VLAN:\n
+TCI: 0x%02x (priority: %d, drop %d, ID: %d)\n
+EtherType: 0x%02x\n`, hdr.TCI, byte(hdr.TCI>>13), (hdr.TCI>>12)&1, hdr.TCI&0xfff, hdr.EtherType)
 }
 
 // IPv4Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
@@ -208,12 +222,43 @@ func (packet *Packet) Start() uintptr {
 	return uintptr(unsafe.Pointer(packet.Ether))
 }
 
-// ParseL3 set poinetr to start of L3 header
+// ParseL3 set pointer to start of L3 header
 func (packet *Packet) ParseL3() {
 	packet.L3 = unsafe.Pointer(packet.unparsed())
 }
 
-// GetIPv4 ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
+// GetEtherType correctly returns EtherType from Ethernet header or
+// VLAN header.
+func (packet *Packet) GetEtherType() uint16 {
+	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		vptr := packet.unparsed()
+		vhdr := (*VLANHdr)(unsafe.Pointer(vptr))
+		return vhdr.EtherType
+	} else {
+		return packet.Ether.EtherType
+	}
+}
+
+// ParseL3 set pointer to start of L3 header taking possible presence
+// of VLAN header into account.
+func (packet *Packet) ParseL3CheckVLAN() {
+	ptr := packet.unparsed()
+
+	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		ptr += VLANLen
+	}
+	packet.L3 = unsafe.Pointer(ptr)
+}
+
+// GetVLAN returns VLAN header pointer if it is present in the packet.
+func (packet *Packet) GetVLAN() *VLANHdr {
+	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
+		return (*VLANHdr)(unsafe.Pointer(packet.unparsed()))
+	}
+	return nil
+}
+
+// GetIPv4 ensures if EtherType is IPv4 and cast L3 pointer to IPv4Hdr type.
 func (packet *Packet) GetIPv4() *IPv4Hdr {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV4Number) {
 		return (*IPv4Hdr)(packet.L3)
@@ -221,7 +266,7 @@ func (packet *Packet) GetIPv4() *IPv4Hdr {
 	return nil
 }
 
-// GetIPv4 ensures if EtherType is IPv4 and cast L3 poinetr to IPv4Hdr type.
+// GetARP ensures if EtherType is IPv4 and cast L3 pointer to IPv4Hdr type.
 func (packet *Packet) GetARP() *ARPHdr {
 	if packet.Ether.EtherType == SwapBytesUint16(ARPNumber) {
 		return (*ARPHdr)(packet.L3)
@@ -229,7 +274,7 @@ func (packet *Packet) GetARP() *ARPHdr {
 	return nil
 }
 
-// GetIPv6 ensures if EtherType is IPv6 and cast L3 poinetr to IPv6Hdr type.
+// GetIPv6 ensures if EtherType is IPv6 and cast L3 pointer to IPv6Hdr type.
 func (packet *Packet) GetIPv6() *IPv6Hdr {
 	if packet.Ether.EtherType == SwapBytesUint16(IPV6Number) {
 		return (*IPv6Hdr)(packet.L3)
@@ -239,12 +284,14 @@ func (packet *Packet) GetIPv6() *IPv6Hdr {
 
 // ParseL4ForIPv4 set L4 to start of L4 header, if L3 protocol is IPv4.
 func (packet *Packet) ParseL4ForIPv4() {
-	packet.L4 = unsafe.Pointer(packet.unparsed() + uintptr((packet.GetIPv4().VersionIhl&0x0f)<<2))
+	l3ptr := uintptr(unsafe.Pointer(packet.L3))
+	packet.L4 = unsafe.Pointer(l3ptr + uintptr((packet.GetIPv4().VersionIhl&0x0f)<<2))
 }
 
 // ParseL4ForIPv6 set L4 to start of L4 header, if L3 protocol is IPv6.
 func (packet *Packet) ParseL4ForIPv6() {
-	packet.L4 = unsafe.Pointer(packet.unparsed() + uintptr(IPv6Len))
+	l3ptr := uintptr(unsafe.Pointer(packet.L3))
+	packet.L4 = unsafe.Pointer(l3ptr + uintptr(IPv6Len))
 }
 
 // GetTCPForIPv4 ensures if L4 type is TCP and cast L4 pointer to TCPHdr type.
@@ -279,7 +326,7 @@ func (packet *Packet) GetUDPForIPv6() *UDPHdr {
 	return nil
 }
 
-// GetICMPForIPv4 ensures if L4 type is ICMP and cast L4 poinetr to *ICMPHdr type.
+// GetICMPForIPv4 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv4 type.
 func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
 	if packet.GetIPv4().NextProtoID == ICMPNumber {
@@ -288,7 +335,7 @@ func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
 	return nil
 }
 
-// GetICMPForIPv6 ensures if L4 type is ICMP and cast L4 poinetr to *ICMPHdr type.
+// GetICMPForIPv6 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv6 type.
 func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
 	if packet.GetIPv6().Proto == ICMPNumber {
@@ -300,6 +347,13 @@ func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
 // ParseAllKnownL3 parses L3 field and returns pointers to parsed headers.
 func (packet *Packet) ParseAllKnownL3() (*IPv4Hdr, *IPv6Hdr) {
 	packet.ParseL3()
+	return packet.GetIPv4(), packet.GetIPv6()
+}
+
+// ParseAllKnownL3 parses L3 field and returns pointers to parsed
+// headers taking possible presence of VLAN header into account.
+func (packet *Packet) ParseAllKnownL3CheckVLAN() (*IPv4Hdr, *IPv6Hdr) {
+	packet.ParseL3CheckVLAN()
 	return packet.GetIPv4(), packet.GetIPv6()
 }
 
