@@ -117,7 +117,7 @@ $GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.08/x86_64-native-linuxap
 
 ### Go
 
-Use Go version 1.8 or higher. To check the version of Go, do:
+Use Go version 1.9 or higher. To check the version of Go, do:
 
         go version
         
