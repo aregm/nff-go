@@ -93,6 +93,25 @@ possible fields are:
 ```json
 "daddr": "00:FF:96:FF:FE:12"
 ```
+* VLAN tagging:
+to each packet vlan tag can be added: "vlan-tci" and then numeric TCI information
+```json
+{
+    "ether": {
+                "saddr": "00:25:96:FF:FE:12",
+                "daddr": "00:00:96:FF:00:00",
+                "vlan-tci": 123,
+                "ip": {
+                    "version": 6,
+                    "saddr": "2001:db8:a0b:12f0::",
+                    "randbytes":    {
+                        "size": 70
+                    }
+                }
+            }
+}
+```
+
 * l3 configuration or data, possible values are: "ip", "arp", "raw", "randbytes", "pdist":
 ```json
 {
@@ -306,3 +325,4 @@ Ethernet source is set to sha by default, destination is broadcast.
     ]
 }
 ```
+
