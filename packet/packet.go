@@ -800,7 +800,9 @@ func (packet *Packet) AddVLANTag(tag uint16) bool {
 	if !packet.EncapsulateHead(EtherLen, VLANLen) {
 		return false
 	}
-	vhdr := (*VLANHdr)(unsafe.Pointer(uintptr(unsafe.Pointer(packet.Ether)) + EtherLen))
+	vhdr := (*VLANHdr)(unsafe.Pointer(packet.unparsed()))
+	// EncapsulateHead function has moved pointer to EtherType,
+	// so the following line is correct. L3 stayed at the same place.
 	vhdr.EtherType = packet.Ether.EtherType
 	packet.Ether.EtherType = SwapBytesUint16(VLANNumber)
 	vhdr.TCI = SwapBytesUint16(tag)
