@@ -273,11 +273,13 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 	initPacketIPv4(emptyPacket)
 	initPacketUDP(emptyPacket)
 
+	pIPv4 := emptyPacket.GetIPv4()
+	pUDP := emptyPacket.GetUDPForIPv4()
 	if hwol {
-		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(emptyPacket.GetIPv4(), emptyPacket.GetUDPForIPv4()))
+		pUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(pIPv4, pUDP))
 	} else {
-		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(emptyPacket))
+		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
+		pUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pIPv4, pUDP, emptyPacket.Data))
 	}
 }
 
@@ -289,11 +291,13 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	initPacketIPv4(emptyPacket)
 	initPacketTCP(emptyPacket)
 
+	pIPv4 := emptyPacket.GetIPv4()
+	pTCP := emptyPacket.GetTCPForIPv4()
 	if hwol {
-		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(emptyPacket.GetIPv4()))
+		pTCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(pIPv4))
 	} else {
-		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(emptyPacket))
+		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
+		pTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pIPv4, pTCP, emptyPacket.Data))
 	}
 }
 
@@ -306,8 +310,10 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(emptyPacket))
-		emptyPacket.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(emptyPacket))
+		pIPv4 := emptyPacket.GetIPv4()
+		pICMP := emptyPacket.GetICMPForIPv4()
+		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
+		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP))
 	}
 }
 
@@ -319,10 +325,12 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 	initPacketIPv6(emptyPacket)
 	initPacketUDP(emptyPacket)
 
+	pIPv6 := emptyPacket.GetIPv6()
+	pUDP := emptyPacket.GetUDPForIPv6()
 	if hwol {
-		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(emptyPacket.GetIPv6(), emptyPacket.GetUDPForIPv6()))
+		pUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(pIPv6, pUDP))
 	} else {
-		emptyPacket.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(emptyPacket))
+		pUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pIPv6, pUDP, emptyPacket.Data))
 	}
 }
 
@@ -334,10 +342,12 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 	initPacketIPv6(emptyPacket)
 	initPacketTCP(emptyPacket)
 
+	pIPv6 := emptyPacket.GetIPv6()
+	pTCP := emptyPacket.GetTCPForIPv6()
 	if hwol {
-		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(emptyPacket.GetIPv6()))
+		pTCP.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(pIPv6))
 	} else {
-		emptyPacket.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(emptyPacket))
+		pTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pIPv6, pTCP, emptyPacket.Data))
 	}
 }
 
@@ -350,7 +360,9 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 	initPacketICMP(emptyPacket)
 
 	if !hwol {
-		emptyPacket.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(emptyPacket))
+		pIPv6 := emptyPacket.GetIPv6()
+		pICMP := emptyPacket.GetICMPForIPv6()
+		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP))
 	}
 }
 

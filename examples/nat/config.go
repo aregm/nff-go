@@ -42,6 +42,19 @@ type pairIndex struct {
 	index int
 }
 
+var (
+	// PublicMAC is a public port MAC address.
+	PublicMAC [][common.EtherAddrLen]uint8
+	// PrivateMAC is a private port MAC address.
+	PrivateMAC [][common.EtherAddrLen]uint8
+	// Natconfig is a config file.
+	Natconfig *Config
+	// Flag whether checksums should be calculated for modified packets.
+	CalculateChecksum bool
+	// Flag whether checksums calculation should be offloaded to HW.
+	HWTXChecksum bool
+)
+
 func (pi pairIndex) Copy() interface{} {
 	return pairIndex{
 		index: pi.index,
