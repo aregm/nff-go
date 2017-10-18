@@ -28,7 +28,7 @@ func main() {
 	// Init YANFF system at 16 available cores
 	yanffconfig := flow.Config{
 		CPUCoresNumber: *cores,
-		HWTXChecksum: nat.HWTXChecksum,
+		HWTXChecksum:   nat.HWTXChecksum,
 	}
 
 	flow.SystemInit(&yanffconfig)

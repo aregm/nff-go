@@ -9,9 +9,17 @@ import (
 	"errors"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/flow"
+)
+
+const (
+	flowDrop   = 0
+	flowArp    = 1
+	flowOut    = 2
+	totalFlows = 3
 )
 
 type ipv4Subnet struct {
@@ -21,10 +29,13 @@ type ipv4Subnet struct {
 
 type macAddress [common.EtherAddrLen]uint8
 
+// Type describing a network port
 type ipv4Port struct {
 	Index         uint8      `json:"index"`
 	DstMACAddress macAddress `json:"dst_mac"`
 	Subnet        ipv4Subnet `json:"subnet"`
+	SrcMACAddress macAddress
+	ArpTable      sync.Map
 }
 
 // Config for one port pair.
@@ -38,20 +49,19 @@ type Config struct {
 	PortPairs []portPairsConfig `json:"port-pairs"`
 }
 
+// Type used to pass handler index to translation functions.
 type pairIndex struct {
 	index int
 }
 
 var (
-	// PublicMAC is a public port MAC address.
-	PublicMAC [][common.EtherAddrLen]uint8
-	// PrivateMAC is a private port MAC address.
-	PrivateMAC [][common.EtherAddrLen]uint8
 	// Natconfig is a config file.
 	Natconfig *Config
-	// Flag whether checksums should be calculated for modified packets.
+	// CalculateChecksum is a flag whether checksums should be
+	// calculated for modified packets.
 	CalculateChecksum bool
-	// Flag whether checksums calculation should be offloaded to HW.
+	// HWTXChecksum is a flag whether checksums calculation should be
+	// offloaded to HW.
 	HWTXChecksum bool
 )
 
@@ -135,16 +145,17 @@ func ReadConfig(fileName string) error {
 	return nil
 }
 
+// InitLocalMACs reads MAC addresses for local interfaces into NAT
+// config.
 func InitLocalMACs() {
-	PublicMAC = make([][common.EtherAddrLen]uint8, len(Natconfig.PortPairs))
-	PrivateMAC = make([][common.EtherAddrLen]uint8, len(Natconfig.PortPairs))
 	// Get port MACs
 	for i := range Natconfig.PortPairs {
-		PublicMAC[i] = flow.GetPortMACAddress(Natconfig.PortPairs[i].PublicPort.Index)
-		PrivateMAC[i] = flow.GetPortMACAddress(Natconfig.PortPairs[i].PrivatePort.Index)
+		Natconfig.PortPairs[i].PublicPort.SrcMACAddress = flow.GetPortMACAddress(Natconfig.PortPairs[i].PublicPort.Index)
+		Natconfig.PortPairs[i].PrivatePort.SrcMACAddress = flow.GetPortMACAddress(Natconfig.PortPairs[i].PrivatePort.Index)
 	}
 }
 
+// InitFlows initializes flow graph for all interface pairs.
 func InitFlows() {
 	for i := range Natconfig.PortPairs {
 		// Handler context with handler index
@@ -153,12 +164,26 @@ func InitFlows() {
 
 		// Initialize public to private flow
 		publicToPrivate := flow.SetReceiver(Natconfig.PortPairs[i].PublicPort.Index)
-		flow.SetHandler(publicToPrivate, PublicToPrivateTranslation, context)
-		flow.SetSender(publicToPrivate, Natconfig.PortPairs[i].PrivatePort.Index)
+		fromPublic := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
+			totalFlows, context)
+		flow.SetStopper(fromPublic[flowDrop])
 
 		// Initialize private to public flow
 		privateToPublic := flow.SetReceiver(Natconfig.PortPairs[i].PrivatePort.Index)
-		flow.SetHandler(privateToPublic, PrivateToPublicTranslation, context)
-		flow.SetSender(privateToPublic, Natconfig.PortPairs[i].PublicPort.Index)
+		fromPrivate := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
+			totalFlows, context)
+		flow.SetStopper(fromPrivate[flowDrop])
+
+		// ARP packets from public go back to public
+		toPublic := flow.SetMerger(fromPublic[flowArp], fromPrivate[flowOut])
+		// ARP packets from private go back to private
+		toPrivate := flow.SetMerger(fromPrivate[flowArp], fromPublic[flowOut])
+
+		flow.SetSender(toPrivate, Natconfig.PortPairs[i].PrivatePort.Index)
+		flow.SetSender(toPublic, Natconfig.PortPairs[i].PublicPort.Index)
+	}
+
+	if debugDump {
+		fdump = make([]*os.File, len(Natconfig.PortPairs))
 	}
 }

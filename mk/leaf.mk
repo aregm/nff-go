@@ -11,6 +11,8 @@ include $(PATH_TO_MK)/include.mk
 .PHONY: clean
 $(EXECUTABLES) : % : %.go
 	go build $< $(COMMON_FILES)
+# Use the following line to build Go files without optimizations
+#	go build -gcflags '-N -l' $< $(COMMON_FILES)
 
 ifndef NOCHECK_PKTGEN
 all: check-pktgen

@@ -158,7 +158,9 @@ func calculateTCPChecksum(tcp *TCPHdr) uint32 {
 		uint32(SwapBytesUint16(tcp.TCPUrp))
 }
 
-// CalculateIPv4TCPChecksum calculates TCP checksum for case if L3 protocol is IPv4.
+// CalculateIPv4TCPChecksum calculates TCP checksum for case if L3
+// protocol is IPv4. Here data pointer should point to end of minimal
+// TCP header because we consider TCP options as part of data.
 func CalculateIPv4TCPChecksum(hdr *IPv4Hdr, tcp *TCPHdr, data unsafe.Pointer) uint16 {
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
 
@@ -221,7 +223,9 @@ func CalculateIPv6TCPChecksum(hdr *IPv6Hdr, tcp *TCPHdr, data unsafe.Pointer) ui
 	return ^reduceChecksum(sum)
 }
 
-// CalculateIPv4ICMPChecksum calculates ICMP checksum in case if L3 protocol is IPv4.
+// CalculateIPv4ICMPChecksum calculates ICMP checksum in case if L3
+// protocol is IPv4. Before calling this function make sure that ICMP
+// L4 checksum is set to zero, otherwise you get a wrong calculation.
 func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr) uint16 {
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
 
@@ -230,7 +234,9 @@ func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr) uint16 {
 	return ^reduceChecksum(sum)
 }
 
-// CalculateIPv6ICMPChecksum calculates ICMP checksum in case if L3 protocol is IPv6.
+// CalculateIPv6ICMPChecksum calculates ICMP checksum in case if L3
+// protocol is IPv6. Before calling this function make sure that ICMP
+// L4 checksum is set to zero, otherwise you get a wrong calculation.
 func CalculateIPv6ICMPChecksum(hdr *IPv6Hdr, icmp *ICMPHdr) uint16 {
 	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
