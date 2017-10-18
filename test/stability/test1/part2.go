@@ -43,8 +43,7 @@ func main() {
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseData()
 	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		println("TEST FAILED")
+		println("ParseData returned negative value", offset)
 		return
 	}
 

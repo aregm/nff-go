@@ -20,7 +20,7 @@ import (
 const (
 	// With average speed of 1 million packets/s the test runs for
 	// about 10 seconds
-	totalPackets = 100000000
+	totalPackets = 10000000
 )
 
 var (
@@ -30,7 +30,8 @@ var (
 	sentPackets     uint64
 	receivedPackets uint64
 	testDoneEvent   *sync.Cond
-	passed          int32 = 1
+	passed          int32  = 1
+	speed           uint64 = 1000000
 
 	outport uint
 	inport  uint
@@ -59,7 +60,7 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create packets with speed at least 1000 packets/s
-	firstFlow := flow.SetGenerator(generatePacket, 1000, nil)
+	firstFlow := flow.SetGenerator(generatePacket, speed, nil)
 	// Send all generated packets to the output
 	flow.SetSender(firstFlow, uint8(outport))
 
