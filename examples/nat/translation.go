@@ -6,6 +6,7 @@ package nat
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -36,6 +37,10 @@ var (
 	mutex        sync.Mutex
 
 	emptyEntry = Tuple{addr: 0, port: 0}
+
+	// Debug variables
+	debugDump = false
+	fdump     []*os.File
 )
 
 func init() {
@@ -64,6 +69,7 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 		terminationDirection: 0,
 	}
 
+	// Add lookup entries for packet translation
 	pri2pubTable[protocol].Store(privEntry, pubEntry)
 	pub2priTable[protocol].Store(pubEntry, privEntry)
 
@@ -71,14 +77,47 @@ func allocateNewEgressConnection(protocol uint8, privEntry Tuple, publicAddr uin
 	return pubEntry, nil
 }
 
-// PublicToPrivateTranslation does ingress translation.
-func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
-	// Parse packet type and address
-	pktIPv4, _ := pkt.ParseAllKnownL3()
-	if pktIPv4 == nil {
-		// We don't currently support anything except for IPv4
-		return false
+func dumpInput(pkt *packet.Packet, index int) {
+	if debugDump {
+		// Dump input packet
+		if fdump[index] == nil {
+			fdump[index], _ = os.Create(fmt.Sprintf("%ddump.pcap", index))
+			packet.WritePcapGlobalHdr(fdump[index])
+			pkt.WritePcapOnePacket(fdump[index])
+		}
+
+		pkt.WritePcapOnePacket(fdump[index])
 	}
+}
+
+func dumpOutput(pkt *packet.Packet, index int) {
+	if debugDump {
+		pkt.WritePcapOnePacket(fdump[index])
+	}
+}
+
+// PublicToPrivateTranslation does ingress translation.
+func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
+	pi := ctx.(pairIndex)
+
+	dumpInput(pkt, pi.index)
+
+	// Parse packet type and address
+	pkt.ParseL3()
+	pktIPv4 := pkt.GetIPv4()
+	if pktIPv4 == nil {
+		arp := pkt.GetARP()
+		if arp != nil {
+			port := handleARP(pkt, &Natconfig.PortPairs[pi.index].PublicPort)
+			if port != flowDrop {
+				dumpOutput(pkt, pi.index)
+			}
+			return port
+		}
+		// We don't currently support anything except for IPv4 and ARP
+		return flowDrop
+	}
+
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 	// Create a lookup key
 	protocol := pktIPv4.NextProtoID
@@ -93,7 +132,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	} else if pktICMP != nil {
 		pub2priKey.port = pktICMP.Identifier
 	} else {
-		return false
+		return flowDrop
 	}
 
 	// Do lookup
@@ -103,7 +142,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		return false
+		return flowDrop
 	}
 	value := v.(Tuple)
 
@@ -116,7 +155,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		mutex.Lock()
 		deleteOldConnection(protocol, int(pub2priKey.port))
 		mutex.Unlock()
-		return false
+		return flowDrop
 	}
 
 	// Check whether TCP connection could be reused
@@ -124,10 +163,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
 	}
 
-	pi := ctx.(pairIndex)
 	// Do packet translation
-	pkt.Ether.DAddr = Natconfig.PortPairs[pi.index].PrivatePort.DstMACAddress
-	pkt.Ether.SAddr = PrivateMAC[pi.index]
+	pkt.Ether.DAddr = getMACForIP(&Natconfig.PortPairs[pi.index].PrivatePort, value.addr)
+	pkt.Ether.SAddr = Natconfig.PortPairs[pi.index].PrivatePort.SrcMACAddress
 	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {
@@ -140,17 +178,32 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
-	return true
+	dumpOutput(pkt, pi.index)
+	return flowOut
 }
 
 // PrivateToPublicTranslation does egress translation.
-func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
+func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
+	pi := ctx.(pairIndex)
+
+	dumpInput(pkt, pi.index)
+
 	// Parse packet type and address
-	pktIPv4, _ := pkt.ParseAllKnownL3()
+	pkt.ParseL3()
+	pktIPv4 := pkt.GetIPv4()
 	if pktIPv4 == nil {
-		// We don't currently support anything except for IPv4
-		return false
+		arp := pkt.GetARP()
+		if arp != nil {
+			port := handleARP(pkt, &Natconfig.PortPairs[pi.index].PrivatePort)
+			if port != flowDrop {
+				dumpOutput(pkt, pi.index)
+			}
+			return port
+		}
+		// We don't currently support anything except for IPv4 and ARP
+		return flowDrop
 	}
+
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 
 	// Create a lookup key
@@ -167,21 +220,23 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	} else if pktICMP != nil {
 		pri2pubKey.port = pktICMP.Identifier
 	} else {
-		return false
+		return flowDrop
 	}
 
-	pi := ctx.(pairIndex)
 	// Do lookup
 	var value Tuple
 	v, found := pri2pubTable[protocol].Load(pri2pubKey)
 	if !found {
 		var err error
+		// Store new local network entry in ARP cache
+		Natconfig.PortPairs[pi.index].PrivatePort.ArpTable.Store(pri2pubKey.addr, pkt.Ether.SAddr)
+		// Allocate new connection from private to public network
 		value, err = allocateNewEgressConnection(protocol, pri2pubKey,
 			Natconfig.PortPairs[pi.index].PublicPort.Subnet.Addr)
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
-			return false
+			return flowDrop
 		}
 	} else {
 		value = v.(Tuple)
@@ -195,7 +250,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Do packet translation
 	pkt.Ether.DAddr = Natconfig.PortPairs[pi.index].PublicPort.DstMACAddress
-	pkt.Ether.SAddr = PublicMAC[pi.index]
+	pkt.Ether.SAddr = Natconfig.PortPairs[pi.index].PublicPort.SrcMACAddress
 	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {
@@ -208,7 +263,8 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
-	return true
+	dumpOutput(pkt, pi.index)
+	return flowOut
 }
 
 // Simple check for FIN or RST in TCP
@@ -244,4 +300,43 @@ func checkTCPTermination(hdr *packet.TCPHdr, port int, dir terminationDirection)
 
 		mutex.Unlock()
 	}
+}
+
+func handleARP(pkt *packet.Packet, port *ipv4Port) uint {
+	arp := pkt.GetARP()
+
+	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
+		// We don't care about replies so far
+		return flowDrop
+	}
+
+	// Check that someone is asking about MAC of my IP address and HW
+	// address is blank in request
+	if packet.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != packet.SwapBytesUint32(port.Subnet.Addr) ||
+		arp.THA != [common.EtherAddrLen]byte{} {
+		return flowDrop
+	}
+
+	// Prepare an answer to this request
+	pkt.Ether.DAddr = pkt.Ether.SAddr
+	pkt.Ether.SAddr = port.SrcMACAddress
+	arp.Operation = packet.SwapBytesUint16(packet.ARPReply)
+	myIP := arp.TPA
+	arp.TPA = arp.SPA
+	arp.THA = arp.SHA
+	arp.SPA = myIP
+	arp.SHA = port.SrcMACAddress
+
+	return flowArp
+}
+
+func getMACForIP(port *ipv4Port, ip uint32) macAddress {
+	v, found := port.ArpTable.Load(ip)
+	if found {
+		return macAddress(v.([common.EtherAddrLen]byte))
+	}
+	println("Warning! IP address",
+		byte(ip), ".", byte(ip>>8), ".", byte(ip>>16), ".", byte(ip>>24),
+		"not found in ARP cache on port", port.Index)
+	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 }
