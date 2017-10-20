@@ -6,7 +6,6 @@ package nat
 
 import (
 	"errors"
-	"github.com/intel-go/yanff/common"
 	"strconv"
 	"time"
 )
@@ -36,31 +35,9 @@ func (dir terminationDirection) String() string {
 	}
 }
 
-type portMapEntry struct {
-	lastused             time.Time
-	addr                 uint32
-	finCount             uint8
-	terminationDirection terminationDirection
-}
-
-var (
-	portmap  [][]portMapEntry
-	lastport int
-	maxport  int
-)
-
-func init() {
-	maxport = portEnd
-	portmap = make([][]portMapEntry, common.UDPNumber+1)
-	portmap[common.ICMPNumber] = make([]portMapEntry, maxport)
-	portmap[common.TCPNumber] = make([]portMapEntry, maxport)
-	portmap[common.UDPNumber] = make([]portMapEntry, maxport)
-	lastport = portStart
-}
-
-func deleteOldConnection(protocol uint8, port int) {
-	pubTable := &pub2priTable[protocol]
-	pm := portmap[protocol]
+func (pp *portPair) deleteOldConnection(protocol uint8, port int) {
+	pubTable := &pp.pub2priTable[protocol]
+	pm := pp.portmap[protocol]
 
 	pub2priKey := Tuple{
 		addr: pm[port].addr,
@@ -69,7 +46,7 @@ func deleteOldConnection(protocol uint8, port int) {
 	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
-		pri2pubTable[protocol].Delete(pri2pubKey)
+		pp.pri2pubTable[protocol].Delete(pri2pubKey)
 		pubTable.Delete(pub2priKey)
 	}
 	pm[port] = portMapEntry{}
@@ -77,22 +54,22 @@ func deleteOldConnection(protocol uint8, port int) {
 
 // This function currently is not thread safe and should be executed
 // under a global lock
-func allocNewPort(protocol uint8) (int, error) {
-	pm := portmap[protocol]
+func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
+	pm := pp.portmap[protocol]
 	for {
 		now := time.Now()
-		for p := lastport; p < portEnd; p++ {
+		for p := pp.lastport; p < portEnd; p++ {
 			if pm[p].lastused.Add(connectionTimeout).Before(now) {
-				lastport = p
-				deleteOldConnection(protocol, p)
+				pp.lastport = p
+				pp.deleteOldConnection(protocol, p)
 				return p, nil
 			}
 		}
 
-		for p := portStart; p < lastport; p++ {
+		for p := portStart; p < pp.lastport; p++ {
 			if pm[p].lastused.Add(connectionTimeout).Before(now) {
-				lastport = p
-				deleteOldConnection(protocol, p)
+				pp.lastport = p
+				pp.deleteOldConnection(protocol, p)
 				return p, nil
 			}
 		}

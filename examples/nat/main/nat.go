@@ -33,8 +33,7 @@ func main() {
 
 	flow.SystemInit(&yanffconfig)
 
-	// Read MAC addresses for local ports
-	nat.InitLocalMACs()
+	// Initialize flows and necessary state
 	nat.InitFlows()
 
 	flow.SystemStart()

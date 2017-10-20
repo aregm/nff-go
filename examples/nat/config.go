@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/intel-go/yanff/common"
 	"github.com/intel-go/yanff/flow"
@@ -29,24 +30,44 @@ type ipv4Subnet struct {
 
 type macAddress [common.EtherAddrLen]uint8
 
+type portMapEntry struct {
+	lastused             time.Time
+	addr                 uint32
+	finCount             uint8
+	terminationDirection terminationDirection
+}
+
 // Type describing a network port
 type ipv4Port struct {
 	Index         uint8      `json:"index"`
 	DstMACAddress macAddress `json:"dst_mac"`
 	Subnet        ipv4Subnet `json:"subnet"`
 	SrcMACAddress macAddress
+	// ARP lookup table
 	ArpTable      sync.Map
 }
 
 // Config for one port pair.
-type portPairsConfig struct {
+type portPair struct {
 	PrivatePort ipv4Port `json:"private-port"`
 	PublicPort  ipv4Port `json:"public-port"`
+	// Main lookup table which contains entries for private to public translation
+	pri2pubTable []sync.Map
+	// Main lookup table which contains entries for public to private translation
+	pub2priTable []sync.Map
+	// Synchronization point for lookup table modifications
+	mutex        sync.Mutex
+	// Map of allocated IP ports on public interface
+	portmap      [][]portMapEntry
+	// Port that was allocated last
+	lastport     int
+	// Maximum allowed port number
+	maxport      int
 }
 
 // Config for NAT.
 type Config struct {
-	PortPairs []portPairsConfig `json:"port-pairs"`
+	PortPairs []portPair `json:"port-pairs"`
 }
 
 // Type used to pass handler index to translation functions.
@@ -145,31 +166,48 @@ func ReadConfig(fileName string) error {
 	return nil
 }
 
-// InitLocalMACs reads MAC addresses for local interfaces into NAT
-// config.
-func InitLocalMACs() {
-	// Get port MACs
-	for i := range Natconfig.PortPairs {
-		Natconfig.PortPairs[i].PublicPort.SrcMACAddress = flow.GetPortMACAddress(Natconfig.PortPairs[i].PublicPort.Index)
-		Natconfig.PortPairs[i].PrivatePort.SrcMACAddress = flow.GetPortMACAddress(Natconfig.PortPairs[i].PrivatePort.Index)
-	}
+// Reads MAC addresses for local interfaces into pair ports.
+func (pp *portPair) initLocalMACs() {
+	pp.PublicPort.SrcMACAddress = flow.GetPortMACAddress(pp.PublicPort.Index)
+	pp.PrivatePort.SrcMACAddress = flow.GetPortMACAddress(pp.PrivatePort.Index)
+}
+
+func (pp *portPair) allocatePortMap() {
+	pp.maxport = portEnd
+	pp.portmap = make([][]portMapEntry, common.UDPNumber+1)
+	pp.portmap[common.ICMPNumber] = make([]portMapEntry, pp.maxport)
+	pp.portmap[common.TCPNumber] = make([]portMapEntry, pp.maxport)
+	pp.portmap[common.UDPNumber] = make([]portMapEntry, pp.maxport)
+	pp.lastport = portStart
+}
+
+func (pp *portPair) allocateLookupMap() {
+	pp.pri2pubTable = make([]sync.Map, common.UDPNumber+1)
+	pp.pub2priTable = make([]sync.Map, common.UDPNumber+1)
 }
 
 // InitFlows initializes flow graph for all interface pairs.
 func InitFlows() {
 	for i := range Natconfig.PortPairs {
+		pp := &Natconfig.PortPairs[i]
+
+		// Init port pairs state
+		pp.initLocalMACs()
+		pp.allocatePortMap()
+		pp.allocateLookupMap()
+
 		// Handler context with handler index
 		context := new(pairIndex)
 		context.index = i
 
 		// Initialize public to private flow
-		publicToPrivate := flow.SetReceiver(Natconfig.PortPairs[i].PublicPort.Index)
+		publicToPrivate := flow.SetReceiver(pp.PublicPort.Index)
 		fromPublic := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
 			totalFlows, context)
 		flow.SetStopper(fromPublic[flowDrop])
 
 		// Initialize private to public flow
-		privateToPublic := flow.SetReceiver(Natconfig.PortPairs[i].PrivatePort.Index)
+		privateToPublic := flow.SetReceiver(pp.PrivatePort.Index)
 		fromPrivate := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
 			totalFlows, context)
 		flow.SetStopper(fromPrivate[flowDrop])
@@ -179,8 +217,8 @@ func InitFlows() {
 		// ARP packets from private go back to private
 		toPrivate := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
 
-		flow.SetSender(toPrivate, Natconfig.PortPairs[i].PrivatePort.Index)
-		flow.SetSender(toPublic, Natconfig.PortPairs[i].PublicPort.Index)
+		flow.SetSender(toPrivate, pp.PrivatePort.Index)
+		flow.SetSender(toPublic, pp.PublicPort.Index)
 	}
 
 	if debugDump {
