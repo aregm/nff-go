@@ -130,6 +130,15 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	} else if pktUDP != nil {
 		pub2priKey.port = packet.SwapBytesUint16(pktUDP.DstPort)
 	} else if pktICMP != nil {
+		// Check if this ICMP packet destination is NAT itself. If
+		// yes, reply back with ICMP and stop packet processing.
+		port := handleICMP(pkt, &Natconfig.PortPairs[pi.index].PublicPort)
+		if port != flowOut {
+			if port == flowBack {
+				dumpOutput(pkt, pi.index)
+			}
+			return port
+		}
 		pub2priKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		return flowDrop
@@ -219,6 +228,15 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	} else if pktUDP != nil {
 		pri2pubKey.port = packet.SwapBytesUint16(pktUDP.SrcPort)
 	} else if pktICMP != nil {
+		// Check if this ICMP packet destination is NAT itself. If
+		// yes, reply back with ICMP and stop packet processing.
+		port := handleICMP(pkt, &Natconfig.PortPairs[pi.index].PrivatePort)
+		if port != flowOut {
+			if port == flowBack {
+				dumpOutput(pkt, pi.index)
+			}
+			return port
+		}
 		pri2pubKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		return flowDrop
@@ -329,7 +347,7 @@ func handleARP(pkt *packet.Packet, port *ipv4Port) uint {
 	arp.SPA = myIP
 	arp.SHA = port.SrcMACAddress
 
-	return flowArp
+	return flowBack
 }
 
 func getMACForIP(port *ipv4Port, ip uint32) macAddress {
@@ -341,4 +359,37 @@ func getMACForIP(port *ipv4Port, ip uint32) macAddress {
 		byte(ip), ".", byte(ip>>8), ".", byte(ip>>16), ".", byte(ip>>24),
 		"not found in ARP cache on port", port.Index)
 	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+}
+
+func swapAddrIPv4(pkt *packet.Packet) {
+	ipv4 := pkt.GetIPv4()
+
+	pkt.Ether.SAddr, pkt.Ether.DAddr = pkt.Ether.DAddr, pkt.Ether.SAddr
+	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
+}
+
+func handleICMP(pkt *packet.Packet, port *ipv4Port) uint {
+	ipv4 := pkt.GetIPv4()
+
+	// Check that received ICMP packet is addressed at this host
+	if packet.SwapBytesUint32(ipv4.DstAddr) != port.Subnet.Addr {
+		return flowOut
+	}
+
+	icmp := pkt.GetICMPForIPv4()
+
+	// Check that received ICMP packet is echo request packet. We
+	// don't support any other messages yet, so process them in normal
+	// NAT way. Maybe these are packets which should be passed through
+	// translation.
+	if icmp.Type != common.ICMPTypeEchoRequest || icmp.Code != 0 {
+		return flowOut
+	}
+
+	// Return a packet back to sender
+	swapAddrIPv4(pkt)
+	icmp.Type = common.ICMPTypeEchoResponse
+	icmp.Cksum = 0
+	setIPv4ICMPChecksum(ipv4, icmp, CalculateChecksum, HWTXChecksum)
+	return flowBack
 }

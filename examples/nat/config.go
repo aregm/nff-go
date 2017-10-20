@@ -17,7 +17,7 @@ import (
 
 const (
 	flowDrop   = 0
-	flowArp    = 1
+	flowBack   = 1
 	flowOut    = 2
 	totalFlows = 3
 )
@@ -175,9 +175,9 @@ func InitFlows() {
 		flow.SetStopper(fromPrivate[flowDrop])
 
 		// ARP packets from public go back to public
-		toPublic := flow.SetMerger(fromPublic[flowArp], fromPrivate[flowOut])
+		toPublic := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
 		// ARP packets from private go back to private
-		toPrivate := flow.SetMerger(fromPrivate[flowArp], fromPublic[flowOut])
+		toPrivate := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
 
 		flow.SetSender(toPrivate, Natconfig.PortPairs[i].PrivatePort.Index)
 		flow.SetSender(toPublic, Natconfig.PortPairs[i].PublicPort.Index)
