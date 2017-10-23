@@ -10,12 +10,13 @@ import (
 	"unsafe"
 )
 
-func setIPv4UDPChecksum(l3 *packet.IPv4Hdr, l4 *packet.UDPHdr,
+func setIPv4UDPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.UDPHdr,
 	CalculateChecksum, HWTXChecksum bool) {
 	if CalculateChecksum {
 		if HWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(l3, l4))
+			pkt.SetTXIPv4UDPOLFlags(common.EtherLen, common.IPv4MinLen)
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(l3, l4,
@@ -24,12 +25,13 @@ func setIPv4UDPChecksum(l3 *packet.IPv4Hdr, l4 *packet.UDPHdr,
 	}
 }
 
-func setIPv4TCPChecksum(l3 *packet.IPv4Hdr, l4 *packet.TCPHdr,
+func setIPv4TCPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.TCPHdr,
 	CalculateChecksum, HWTXChecksum bool) {
 	if CalculateChecksum {
 		if HWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(l3))
+			pkt.SetTXIPv4TCPOLFlags(common.EtherLen, common.IPv4MinLen)
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 			l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(l3, l4,
@@ -38,9 +40,15 @@ func setIPv4TCPChecksum(l3 *packet.IPv4Hdr, l4 *packet.TCPHdr,
 	}
 }
 
-func setIPv4ICMPChecksum(l3 *packet.IPv4Hdr, l4 *packet.ICMPHdr, CalculateChecksum, HWTXChecksum bool) {
+func setIPv4ICMPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.ICMPHdr,
+	CalculateChecksum, HWTXChecksum bool) {
 	if CalculateChecksum {
-		l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
+		if HWTXChecksum {
+			l3.HdrChecksum = 0
+			pkt.SetTXIPv4OLFlags(common.EtherLen, common.IPv4MinLen)
+		} else {
+			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
+		}
 		l4.Cksum = 0
 		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4))
 	}

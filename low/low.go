@@ -137,7 +137,7 @@ func TrimMbuf(m *Mbuf, length uint) bool {
 }
 
 // SetTXIPv4OLFlags sets mbuf flags for IPv4 header
-// checksum calculation offloading.
+// checksum calculation hardware offloading.
 func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 54) | (1 << 55)
@@ -152,7 +152,7 @@ func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 }
 
 // SetTXIPv4UDPOLFlags sets mbuf flags for IPv4 and UDP
-// headers checksum calculation offloading.
+// headers checksum calculation hardware offloading.
 func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (3 << 52) | (1 << 54) | (1 << 55)
@@ -167,7 +167,7 @@ func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 }
 
 // SetTXIPv4TCPOLFlags sets mbuf flags for IPv4 and TCP
-// headers checksum calculation offloading.
+// headers checksum calculation hardware offloading.
 func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 54) | (1 << 55)
@@ -182,7 +182,7 @@ func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 }
 
 // SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header
-// checksum calculation offloading.
+// checksum calculation hardware offloading.
 func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IPV6
 	mb.ol_flags = (3 << 52) | (1 << 56)
@@ -197,7 +197,7 @@ func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 }
 
 // SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP
-// header checksum calculation offloading.
+// header checksum calculation hardware offloading.
 func SetTXIPv6TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 56)

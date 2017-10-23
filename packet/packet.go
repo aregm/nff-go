@@ -666,7 +666,7 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 }
 
 // SetHWCksumOLFlags sets hardware offloading flags to packet
-func SetHWCksumOLFlags(packet *Packet) {
+func (packet *Packet) SetHWCksumOLFlags() {
 	ipv4, ipv6 := packet.ParseAllKnownL3()
 	if ipv4 != nil {
 		packet.GetIPv4().HdrChecksum = 0
@@ -684,6 +684,36 @@ func SetHWCksumOLFlags(packet *Packet) {
 			low.SetTXIPv6UDPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
 		}
 	}
+}
+
+// SetTXIPv4OLFlags sets mbuf flags for IPv4 header checksum
+// calculation offloading.
+func (packet *Packet) SetTXIPv4OLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4OLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv4UDPOLFlags sets mbuf flags for IPv4 and UDP headers
+// checksum calculation hardware offloading.
+func (packet *Packet) SetTXIPv4UDPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4UDPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv4TCPOLFlags sets mbuf flags for IPv4 and TCP headers
+// checksum calculation hardware offloading.
+func (packet *Packet) SetTXIPv4TCPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4TCPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header checksum
+// calculation hardware offloading.
+func (packet *Packet) SetTXIPv6TCPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv6TCPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP header checksum
+// calculation hardware offloading.
+func (packet *Packet) SetTXIPv6UDPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv6UDPOLFlags(packet.CMbuf, l2len, l3len)
 }
 
 // SwapBytesUint16 swaps uint16 in Little Endian and Big Endian
