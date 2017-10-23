@@ -65,7 +65,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 
 	if hwol {
 		packet.SetPseudoHdrChecksum(pkt)
-		packet.SetHWCksumOLFlags(pkt)
+		pkt.SetHWCksumOLFlags()
 	} else {
 		testCommon.CalculateChecksum(pkt)
 	}

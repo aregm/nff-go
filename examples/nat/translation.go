@@ -177,13 +177,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
 	dumpOutput(pkt, pi.index)
@@ -272,13 +272,13 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
 	}
 
 	dumpOutput(pkt, pi.index)
@@ -381,6 +381,6 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 	swapAddrIPv4(pkt)
 	icmp.Type = common.ICMPTypeEchoResponse
 	icmp.Cksum = 0
-	setIPv4ICMPChecksum(ipv4, icmp, CalculateChecksum, HWTXChecksum)
+	setIPv4ICMPChecksum(pkt, ipv4, icmp, CalculateChecksum, HWTXChecksum)
 	return flowBack
 }
