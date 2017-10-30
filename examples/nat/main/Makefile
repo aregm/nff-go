@@ -6,6 +6,6 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-nat
 EXECUTABLES = nat
 
-nat: ../config.go ../translation.go ../portalloc.go
+nat: ../config.go ../translation.go ../portalloc.go ../cksum.go ../util.go
 
 include $(PATH_TO_MK)/leaf.mk

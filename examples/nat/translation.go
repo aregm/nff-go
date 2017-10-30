@@ -5,8 +5,6 @@
 package nat
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/intel-go/yanff/common"
@@ -20,29 +18,9 @@ type Tuple struct {
 	port uint16
 }
 
-func (t *Tuple) String() string {
-	return fmt.Sprintf("addr = %d.%d.%d.%d:%d",
-		(t.addr>>24)&0xff,
-		(t.addr>>16)&0xff,
-		(t.addr>>8)&0xff,
-		t.addr&0xff,
-		t.port)
-}
-
 var (
 	emptyEntry = Tuple{addr: 0, port: 0}
-
-	// Debug variables
-	debugDump = false
-	fdump     []*os.File
 )
-
-func swapAddrIPv4(pkt *packet.Packet) {
-	ipv4 := pkt.GetIPv4()
-
-	pkt.Ether.SAddr, pkt.Ether.DAddr = pkt.Ether.DAddr, pkt.Ether.SAddr
-	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
-}
 
 func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry Tuple) (Tuple, error) {
 	pp.mutex.Lock()
@@ -74,25 +52,6 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry Tuple)
 	return pubEntry, nil
 }
 
-func dumpInput(pkt *packet.Packet, index int) {
-	if debugDump {
-		// Dump input packet
-		if fdump[index] == nil {
-			fdump[index], _ = os.Create(fmt.Sprintf("%ddump.pcap", index))
-			packet.WritePcapGlobalHdr(fdump[index])
-			pkt.WritePcapOnePacket(fdump[index])
-		}
-
-		pkt.WritePcapOnePacket(fdump[index])
-	}
-}
-
-func dumpOutput(pkt *packet.Packet, index int) {
-	if debugDump {
-		pkt.WritePcapOnePacket(fdump[index])
-	}
-}
-
 // PublicToPrivateTranslation does ingress translation.
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pi := ctx.(pairIndex)
@@ -101,18 +60,21 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	dumpInput(pkt, pi.index)
 
 	// Parse packet type and address
-	pkt.ParseL3()
-	pktIPv4 := pkt.GetIPv4()
+	pktVLAN := pkt.ParseL3CheckVLAN()
+	pktIPv4 := pkt.GetIPv4CheckVLAN()
 	if pktIPv4 == nil {
-		arp := pkt.GetARP()
+		arp := pkt.GetARPCheckVLAN()
 		if arp != nil {
 			port := pp.PublicPort.handleARP(pkt)
 			if port != flowDrop {
 				dumpOutput(pkt, pi.index)
+			} else {
+				dumpDrop(pkt, pi.index)
 			}
 			return port
 		}
 		// We don't currently support anything except for IPv4 and ARP
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 
@@ -134,11 +96,14 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		if port != flowOut {
 			if port == flowBack {
 				dumpOutput(pkt, pi.index)
+			} else if port == flowDrop {
+				dumpDrop(pkt, pi.index)
 			}
 			return port
 		}
 		pub2priKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 
@@ -149,6 +114,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 	value := v.(Tuple)
@@ -162,6 +128,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		pp.mutex.Lock()
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 
@@ -173,17 +140,20 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Do packet translation
 	pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
 	pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
+	if pktVLAN != nil {
+		pktVLAN.SetTag(pp.PrivatePort.Vlan)
+	}
 	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {
 		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	}
 
 	dumpOutput(pkt, pi.index)
@@ -198,18 +168,21 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	dumpInput(pkt, pi.index)
 
 	// Parse packet type and address
-	pkt.ParseL3()
-	pktIPv4 := pkt.GetIPv4()
+	pktVLAN := pkt.ParseL3CheckVLAN()
+	pktIPv4 := pkt.GetIPv4CheckVLAN()
 	if pktIPv4 == nil {
-		arp := pkt.GetARP()
+		arp := pkt.GetARPCheckVLAN()
 		if arp != nil {
 			port := pp.PrivatePort.handleARP(pkt)
 			if port != flowDrop {
 				dumpOutput(pkt, pi.index)
+			} else {
+				dumpDrop(pkt, pi.index)
 			}
 			return port
 		}
 		// We don't currently support anything except for IPv4 and ARP
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 
@@ -233,11 +206,14 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		if port != flowOut {
 			if port == flowBack {
 				dumpOutput(pkt, pi.index)
+			} else if port == flowDrop {
+				dumpDrop(pkt, pi.index)
 			}
 			return port
 		}
 		pri2pubKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
+		dumpDrop(pkt, pi.index)
 		return flowDrop
 	}
 
@@ -253,6 +229,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
+			dumpDrop(pkt, pi.index)
 			return flowDrop
 		}
 	} else {
@@ -268,17 +245,20 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Do packet translation
 	pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
 	pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
+	if pktVLAN != nil {
+		pktVLAN.SetTag(pp.PublicPort.Vlan)
+	}
 	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
 	if pktTCP != nil {
 		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, pktIPv4, pktTCP, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, pktIPv4, pktUDP, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, pktIPv4, pktICMP, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	}
 
 	dumpOutput(pkt, pi.index)
@@ -321,7 +301,7 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 }
 
 func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
-	arp := pkt.GetARP()
+	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
 		// We don't care about replies so far
@@ -360,14 +340,14 @@ func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
 }
 
 func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
-	ipv4 := pkt.GetIPv4()
+	ipv4 := pkt.GetIPv4NoCheck()
 
 	// Check that received ICMP packet is addressed at this host
 	if packet.SwapBytesUint32(ipv4.DstAddr) != port.Subnet.Addr {
 		return flowOut
 	}
 
-	icmp := pkt.GetICMPForIPv4()
+	icmp := pkt.GetICMPForIPv4NoCheck()
 
 	// Check that received ICMP packet is echo request packet. We
 	// don't support any other messages yet, so process them in normal
@@ -380,7 +360,6 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 	// Return a packet back to sender
 	swapAddrIPv4(pkt)
 	icmp.Type = common.ICMPTypeEchoResponse
-	icmp.Cksum = 0
-	setIPv4ICMPChecksum(pkt, ipv4, icmp, CalculateChecksum, HWTXChecksum)
+	setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	return flowBack
 }

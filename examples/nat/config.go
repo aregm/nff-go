@@ -9,6 +9,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -21,6 +22,9 @@ const (
 	flowBack   = 1
 	flowOut    = 2
 	totalFlows = 3
+
+	debugDump = false
+	debugDrop = false
 )
 
 type ipv4Subnet struct {
@@ -40,8 +44,9 @@ type portMapEntry struct {
 // Type describing a network port
 type ipv4Port struct {
 	Index         uint8      `json:"index"`
-	DstMACAddress macAddress `json:"dst_mac"`
+	DstMACAddress macAddress `json:"dst-mac"`
 	Subnet        ipv4Subnet `json:"subnet"`
+	Vlan          uint16     `json:"vlan-tag"`
 	SrcMACAddress macAddress
 	// ARP lookup table
 	ArpTable      sync.Map
@@ -84,6 +89,10 @@ var (
 	// HWTXChecksum is a flag whether checksums calculation should be
 	// offloaded to HW.
 	HWTXChecksum bool
+
+	// Debug variables
+	fdump     []*os.File
+	fdrop     []*os.File
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -163,6 +172,23 @@ func ReadConfig(fileName string) error {
 		return err
 	}
 
+	for i := range Natconfig.PortPairs {
+		pp := &Natconfig.PortPairs[i]
+		if pp.PrivatePort.Vlan == 0 && pp.PublicPort.Vlan != 0 {
+			return errors.New("Private port with index " +
+				strconv.Itoa(int(pp.PrivatePort.Index)) +
+				" has zero vlan tag while public port with index " +
+				strconv.Itoa(int(pp.PublicPort.Index)) +
+				" has non-zero vlan tag. Transition between VLAN-enabled and VLAN-disabled networks is not supported yet.")
+		} else if pp.PrivatePort.Vlan != 0 && pp.PublicPort.Vlan == 0 {
+			return errors.New("Private port with index " +
+				strconv.Itoa(int(pp.PrivatePort.Index)) +
+				" has non-zero vlan tag while public port with index " +
+				strconv.Itoa(int(pp.PublicPort.Index)) +
+				" has zero vlan tag. Transition between VLAN-enabled and VLAN-disabled networks is not supported yet.")
+		}
+	}
+
 	return nil
 }
 
@@ -223,5 +249,8 @@ func InitFlows() {
 
 	if debugDump {
 		fdump = make([]*os.File, len(Natconfig.PortPairs))
+	}
+	if debugDrop {
+		fdrop = make([]*os.File, len(Natconfig.PortPairs))
 	}
 }

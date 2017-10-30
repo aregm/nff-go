@@ -10,13 +10,18 @@ import (
 	"unsafe"
 )
 
-func setIPv4UDPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.UDPHdr,
-	CalculateChecksum, HWTXChecksum bool) {
-	if CalculateChecksum {
-		if HWTXChecksum {
+func setIPv4UDPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
+	if calculateChecksum {
+		l3 := pkt.GetIPv4NoCheck()
+		l4 := pkt.GetUDPForIPv4NoCheck()
+		if hWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(l3, l4))
-			pkt.SetTXIPv4UDPOLFlags(common.EtherLen, common.IPv4MinLen)
+			l2len := uint32(common.EtherLen)
+			if pkt.Ether.EtherType == common.VLANNumber {
+				l2len += common.VLANLen
+			}
+			pkt.SetTXIPv4UDPOLFlags(l2len, common.IPv4MinLen)
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(l3, l4,
@@ -25,13 +30,18 @@ func setIPv4UDPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.UDPHd
 	}
 }
 
-func setIPv4TCPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.TCPHdr,
-	CalculateChecksum, HWTXChecksum bool) {
-	if CalculateChecksum {
-		if HWTXChecksum {
+func setIPv4TCPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
+	if calculateChecksum {
+		l3 := pkt.GetIPv4NoCheck()
+		l4 := pkt.GetTCPForIPv4NoCheck()
+		if hWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(l3))
-			pkt.SetTXIPv4TCPOLFlags(common.EtherLen, common.IPv4MinLen)
+			l2len := uint32(common.EtherLen)
+			if pkt.Ether.EtherType == common.VLANNumber {
+				l2len += common.VLANLen
+			}
+			pkt.SetTXIPv4TCPOLFlags(l2len, common.IPv4MinLen)
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 			l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(l3, l4,
@@ -40,15 +50,20 @@ func setIPv4TCPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.TCPHd
 	}
 }
 
-func setIPv4ICMPChecksum(pkt *packet.Packet, l3 *packet.IPv4Hdr, l4 *packet.ICMPHdr,
-	CalculateChecksum, HWTXChecksum bool) {
+func setIPv4ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
 	if CalculateChecksum {
+		l3 := pkt.GetIPv4NoCheck()
 		if HWTXChecksum {
 			l3.HdrChecksum = 0
-			pkt.SetTXIPv4OLFlags(common.EtherLen, common.IPv4MinLen)
+			l2len := uint32(common.EtherLen)
+			if pkt.Ether.EtherType == common.VLANNumber {
+				l2len += common.VLANLen
+			}
+			pkt.SetTXIPv4OLFlags(l2len, common.IPv4MinLen)
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 		}
+		l4 := pkt.GetICMPForIPv4NoCheck()
 		l4.Cksum = 0
 		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4))
 	}
