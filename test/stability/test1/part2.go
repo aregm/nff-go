@@ -11,6 +11,7 @@ import (
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 
+	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 	"github.com/intel-go/yanff/test/stability/test1/common"
 )
 
@@ -18,12 +19,16 @@ var (
 	cores   uint
 	outport uint
 	inport  uint
+
+	fixMACAddrs func(*packet.Packet, flow.UserContext)
 )
 
 // Main function for constructing packet processing graph.
 func main() {
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.UintVar(&outport, "outport", 1, "port for sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver (0 or 1)")
+	flag.UintVar(&outport, "outport", 1, "port for sender (0 or 1)")
+	configFile := flag.String("config", "config.json", "Specify config file name")
+	target := flag.String("target", "nntsat01g4", "Target host name from config file")
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.
@@ -31,6 +36,9 @@ func main() {
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
+
+	stabilityCommon.InitCommonState(*configFile, *target)
+	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
 
 	inputFlow := flow.SetReceiver(uint8(inport))
 	flow.SetHandler(inputFlow, fixPacket, nil)
@@ -41,9 +49,14 @@ func main() {
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseData()
-	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	fixMACAddrs(pkt, context)
+
+	res := pkt.ParseData()
+	if res < 0 {
+		println("ParseL4 returned negative value", res)
 		println("TEST FAILED")
 		return
 	}

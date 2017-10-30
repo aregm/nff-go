@@ -6,4 +6,7 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-merge
 EXECUTABLES = test-merge-part1 test-merge-part2
 
+all:
+	cp ../../main/config.json .
+
 include $(PATH_TO_MK)/leaf.mk

@@ -5,20 +5,20 @@
 package main
 
 import (
-	"crypto/md5"
 	"flag"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
 	"sync"
 	"sync/atomic"
-	"unsafe"
+	"time"
+
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 )
 
 // test-separate-part1: sends packets to 0 port, receives from 0 and 1 ports.
-// This part of test generates three packet flows (1st, 2nd and 3rd), merges them into one flow
-// and send it to 0 port. Packets in original 1st, 2nd and 3rd flows has UDP destination addresses
-// dstPort1, // dstPort2, // dstPort3 respectively. For each packet sender calculates md5 hash sum
-// from all headers, write it to packet.Data and check it on packet receive.
+// This part of test generates packets with UDP destination addresses
+// dstPort1, dstPort2, dstPort3. For each packet sender
+// calculates IPv4 and UDP checksums and verify it on packet receive.
 // This part of test receive packets on 0 and 1 ports. Expects to get ~33% of packets on 0 port
 // (accepted) and ~66% on 1 port (rejected)
 // Test also calculates number of broken packets and prints it when a predefined number
@@ -29,8 +29,6 @@ import (
 // in test-separate-l3rules.conf into 2 flows. Accepted flow sent to 0 port, rejected - to 1 port.
 
 const (
-	totalPackets = 100000000
-
 	// Test expects to receive 33% of packets on 0 port and 66% on 1 port
 	// Test is PASSSED, if p1 is in [low1;high1] and p2 in [low2;high2]
 	eps   = 2
@@ -41,9 +39,10 @@ const (
 )
 
 var (
+	totalPackets uint64 = 10000000
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 16
-	speed       uint64 = 1000
+	speed       uint64 = 1000000
 	passedLimit uint64 = 85
 
 	recvCount1 uint64
@@ -58,16 +57,29 @@ var (
 	dstPort3 uint16 = 333
 
 	testDoneEvent *sync.Cond
+	progStart     time.Time
+
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T = 10 * time.Second
 
 	outport uint
 	inport1 uint
 	inport2 uint
+
+	fixMACAddrs func(*packet.Packet, flow.UserContext)
 )
 
 func main() {
+	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
+	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
+	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
+	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
+	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
+	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores
@@ -75,6 +87,8 @@ func main() {
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
+	stabilityCommon.InitCommonState(*configFile, *target)
+	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
@@ -95,6 +109,7 @@ func main() {
 
 	// Start pipeline
 	go flow.SystemStart()
+	progStart = time.Now()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()
@@ -141,82 +156,89 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	atomic.AddUint64(&count, 1)
-
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
 
 	// Generate packets of 3 groups
 	if count%3 == 0 {
-		(*packet.UDPHdr)(pkt.L4).DstPort = packet.SwapBytesUint16(dstPort1)
+		udp.DstPort = packet.SwapBytesUint16(dstPort1)
 	} else if count%3 == 1 {
-		(*packet.UDPHdr)(pkt.L4).DstPort = packet.SwapBytesUint16(dstPort2)
+		udp.DstPort = packet.SwapBytesUint16(dstPort2)
 	} else {
-		(*packet.UDPHdr)(pkt.L4).DstPort = packet.SwapBytesUint16(dstPort3)
+		udp.DstPort = packet.SwapBytesUint16(dstPort3)
 	}
-	headerSize := uintptr(pkt.Data) - pkt.Start()
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*packetData)(pkt.Data)
-	ptr.HdrsMD5 = md5.Sum(hdrs)
+
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) < T {
+		return
+	}
+	fixMACAddrs(pkt, context)
+
+	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
+
+	atomic.AddUint64(&count, 1)
 }
 
 func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
+	if time.Since(progStart) < T {
+		return
+	}
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	pkt.ParseData()
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
-	offset := pkt.ParseData()
-	if offset < 0 {
-		println("ParseData returned negative value", offset)
-		// Some received packets are not generated by this example
-		// They cannot be parsed due to unknown protocols, skip them
-	} else {
-		ptr := (*packetData)(pkt.Data)
-
-		// Recompute hash to check how many packets are valid
-		headerSize := uintptr(pkt.Data) - pkt.Start()
-		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-		hash := md5.Sum(hdrs)
-
-		if hash != ptr.HdrsMD5 {
-			// Packet is broken
-			atomic.AddUint64(&brokenPackets, 1)
-			return
-		}
-		atomic.AddUint64(&recvCount1, 1)
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
+	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	recvUDPCksum := packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
+	if recvIPv4Cksum != ipv4.HdrChecksum || recvUDPCksum != udp.DgramCksum {
+		// Packet is broken
+		atomic.AddUint64(&brokenPackets, 1)
+		return
 	}
+	if udp.DstPort != packet.SwapBytesUint16(dstPort1) {
+		println("Unexpected packet in inputFlow1")
+		println("TEST FAILED")
+		return
+	}
+	atomic.AddUint64(&recvCount1, 1)
 	if recvCount >= totalPackets {
 		testDoneEvent.Signal()
 	}
 }
 
 func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
+	if time.Since(progStart) < T {
+		return
+	}
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	pkt.ParseData()
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
-	offset := pkt.ParseData()
-	if offset < 0 {
-		println("ParseData returned negative value", offset)
-		// Some received packets are not generated by this example
-		// They cannot be parsed due to unknown protocols, skip them
-	} else {
-		ptr := (*packetData)(pkt.Data)
-
-		// Recompute hash to check how many packets are valid
-		headerSize := uintptr(pkt.Data) - pkt.Start()
-		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-		hash := md5.Sum(hdrs)
-
-		if hash != ptr.HdrsMD5 {
-			// Packet is broken
-			atomic.AddUint64(&brokenPackets, 1)
-			return
-		}
-		atomic.AddUint64(&recvCount2, 1)
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
+	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	recvUDPCksum := packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
+	if recvIPv4Cksum != ipv4.HdrChecksum || recvUDPCksum != udp.DgramCksum {
+		// Packet is broken
+		atomic.AddUint64(&brokenPackets, 1)
+		return
 	}
+	if udp.DstPort != packet.SwapBytesUint16(dstPort2) && udp.DstPort != packet.SwapBytesUint16(dstPort3) {
+		println("Unexpected packet in inputFlow2")
+		println("TEST FAILED")
+		return
+	}
+	atomic.AddUint64(&recvCount2, 1)
 	if recvCount >= totalPackets {
 		testDoneEvent.Signal()
 	}
-}
-
-type packetData struct {
-	HdrsMD5 [16]byte
 }

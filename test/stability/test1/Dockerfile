@@ -9,3 +9,4 @@ LABEL RUN docker run -it --privileged -v /sys/bus/pci/drivers:/sys/bus/pci/drive
 WORKDIR /workdir
 COPY part1 .
 COPY part2 .
+COPY config.json .

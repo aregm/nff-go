@@ -6,4 +6,7 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-split
 EXECUTABLES = test-split-part1 test-split-part2
 
+all:
+	cp ../../main/config.json .
+
 include $(PATH_TO_MK)/leaf.mk

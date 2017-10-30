@@ -5,20 +5,21 @@
 package main
 
 import (
-	"crypto/md5"
 	"flag"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
 	"sync"
 	"sync/atomic"
-	"unsafe"
+	"time"
+
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 )
 
 // test-merge-part1:
 // This part of test generates packets on ports 0 and 1, receives packets
 // on 0 port. Packets generated on 0 port has IPv4 source addr ipv4addr1,
 // and those generated on 1 port has ipv4 source addr ipv4addr2. For each packet
-// sender calculates md5 hash sum from all headers and write it to packet.Data.
+// sender calculates IPv4 and UDP checksums and verify it on packet receive.
 // When packet is received, hash is recomputed and checked if it is equal to value
 // in the packet. Test also calculates sent/received ratios, number of broken
 // packets and prints it when a predefined number of packets is received.
@@ -27,14 +28,11 @@ import (
 // This part of test receives packets on 0 and 1 ports, merges flows
 // and send result flow to 0 port.
 
-const (
-	totalPackets = 100000000
-)
-
 var (
+	totalPackets uint64 = 10000000
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 16
-	speed       uint64 = 1000
+	speed       uint64 = 1000000
 	passedLimit uint64 = 85
 
 	sentPacketsGroup1 uint64
@@ -51,10 +49,18 @@ var (
 	ipv4addr2 uint32 = 0x05090980 // 128.9.9.5
 
 	testDoneEvent *sync.Cond
+	progStart     time.Time
+
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T = 10 * time.Second
 
 	outport1 uint
 	outport2 uint
 	inport   uint
+
+	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
+	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
 
 func main() {
@@ -63,12 +69,19 @@ func main() {
 	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
+	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
+	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
+	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	flag.Parse()
 
 	config := flow.Config{
 		CPUCoresNumber: 16,
 	}
 	flow.SystemInit(&config)
+	stabilityCommon.InitCommonState(*configFile, *target)
+	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
@@ -88,6 +101,7 @@ func main() {
 
 	// Start pipeline
 	go flow.SystemStart()
+	progStart = time.Now()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()
@@ -133,13 +147,18 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
-	pkt.GetIPv4().SrcAddr = ipv4addr1
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
+	ipv4.SrcAddr = ipv4addr1
+	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 
-	// Extract headers of packet
-	headerSize := uintptr(pkt.Data) - pkt.Start()
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*packetData)(pkt.Data)
-	ptr.HdrsMD5 = md5.Sum(hdrs)
+	fixMACAddrs1(pkt, context)
+
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) < T {
+		return
+	}
 
 	atomic.AddUint64(&sentPacketsGroup1, 1)
 }
@@ -151,53 +170,54 @@ func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		panic("Failed to init empty packet")
 	}
-	pkt.GetIPv4().SrcAddr = ipv4addr2
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
+	ipv4.SrcAddr = ipv4addr2
+	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 
-	// Extract headers of packet
-	headerSize := uintptr(pkt.Data) - pkt.Start()
-	hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-	ptr := (*packetData)(pkt.Data)
-	ptr.HdrsMD5 = md5.Sum(hdrs)
+	fixMACAddrs2(pkt, context)
+
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) < T {
+		return
+	}
 
 	atomic.AddUint64(&sentPacketsGroup2, 1)
 }
 
 // Count and check packets in received flow
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
+	if time.Since(progStart) < T {
+		return
+	}
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	pkt.ParseData()
+
 	recvCount := atomic.AddUint64(&recvPackets, 1)
 
-	offset := pkt.ParseData()
-	if offset < 0 {
-		println("ParseData returned negative value", offset)
-		// On 2nd port can be received packets, which are not generated by this example
-		// They cannot be parsed due to unknown protocols, skip them
+	ipv4 := pkt.GetIPv4()
+	udp := pkt.GetUDPForIPv4()
+	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
+	recvUDPCksum := packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
+
+	if recvIPv4Cksum != ipv4.HdrChecksum || recvUDPCksum != udp.DgramCksum {
+		// Packet is broken
+		atomic.AddUint64(&brokenPackets, 1)
+		return
+	}
+	if ipv4.SrcAddr == ipv4addr1 {
+		atomic.AddUint64(&recvPacketsGroup1, 1)
+	} else if ipv4.SrcAddr == ipv4addr2 {
+		atomic.AddUint64(&recvPacketsGroup2, 1)
 	} else {
-		ptr := (*packetData)(pkt.Data)
-
-		// Recompute hash to check how many packets are valid
-		headerSize := uintptr(pkt.Data) - pkt.Start()
-		hdrs := (*[1000]byte)(unsafe.Pointer(pkt.Start()))[0:headerSize]
-		hash := md5.Sum(hdrs)
-
-		if hash != ptr.HdrsMD5 {
-			// Packet is broken
-			atomic.AddUint64(&brokenPackets, 1)
-			return
-		}
-		if pkt.GetIPv4().SrcAddr == ipv4addr1 {
-			atomic.AddUint64(&recvPacketsGroup1, 1)
-		} else if pkt.GetIPv4().SrcAddr == ipv4addr2 {
-			atomic.AddUint64(&recvPacketsGroup2, 1)
-		} else {
-			println("Packet Ipv4 src addr does not match addr1 or addr2")
-		}
+		println("Packet Ipv4 src addr does not match addr1 or addr2")
+		println("TEST FAILED")
 	}
 
 	if recvCount >= totalPackets {
 		testDoneEvent.Signal()
 	}
-}
-
-type packetData struct {
-	HdrsMD5 [16]byte
 }

@@ -9,3 +9,4 @@ LABEL RUN docker run -it --privileged -v /sys/bus/pci/drivers:/sys/bus/pci/drive
 WORKDIR /workdir
 COPY test-partition-part1 .
 COPY test-partition-part2 .
+COPY config.json .

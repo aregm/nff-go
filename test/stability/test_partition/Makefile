@@ -6,4 +6,7 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-partition
 EXECUTABLES = test-partition-part1 test-partition-part2
 
+all:
+	cp ../../main/config.json .
+
 include $(PATH_TO_MK)/leaf.mk
