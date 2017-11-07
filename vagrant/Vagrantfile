@@ -1,0 +1,87 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+  if Vagrant.has_plugin?("vagrant-proxyconf")
+    config.proxy.http     = ENV.fetch('http_proxy', false)
+    config.proxy.https    = ENV.fetch('https_proxy', false)
+  end
+
+  config.vm.box = "ubuntu/xenial64"
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  config.vm.box_check_update = false
+
+  # Define one inter-VM virtual network link
+  config.vm.network "private_network",
+                    auto_config: false,
+                    virtualbox__intnet: "link1"
+
+  # Define two inter-VM virtual network link
+  config.vm.network "private_network",
+                    auto_config: false,
+                    virtualbox__intnet: "link2"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = false
+    vb.memory = "4096"
+    vb.cpus = 6
+    vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
+    vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+  end
+
+$provision = <<SHELL
+echo Installing system packages
+sudo apt-get update
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev
+
+echo Unpacking Go language into /opt
+(cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zvx')
+mkdir go
+echo export GOPATH=\\"'$HOME'\\"/go > .bash_login
+echo export GOROOT=/opt/go >> .bash_login
+echo export YANFF=\\"'$GOPATH'\\"/src/github.com/intel-go/yanff >> .bash_login
+echo export PATH=\\"'$GOPATH'\\"/bin:\\"'$GOROOT'\\"/bin:\\"'$PATH'\\" >> .bash_login
+. .bash_login
+
+echo Downloading and building YANFF
+go get -d -v github.com/intel-go/yanff
+(cd \"$GOPATH\"/src/github.com/intel-go/yanff; make)
+
+echo Setting up 1024 huge pages
+sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+sudo sh -c 'echo vm.nr_hugepages=1024 >> /etc/sysctl.conf'
+
+echo Binding ports to DPDK
+bindports()
+{
+    sudo modprobe uio
+    sudo insmod \"$YANFF\"/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo \"$YANFF\"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=igb_uio 00:08.0 00:09.0
+}
+bindports
+declare -f bindports >> .bash_login
+runpktgen()
+{
+    (cd \"$YANFF\"/dpdk; sudo ./pktgen -c 0x3f -n 4 -- -P -m \"[1:2].0, [3:4].1\" -T)
+    rc=$?; if [[ $rc == 0 ]]; then reset; fi
+}
+declare -f runpktgen >> .bash_login
+SHELL
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  config.vm.provision "shell",
+                      privileged: false,
+                      inline: $provision
+
+  # Define two YANFF VMs
+  (1..2).each do |i|
+    config.vm.define "yanff-#{i}" do |node|
+      config.vm.hostname = "yanff-#{i}"
+    end
+  end
+end
