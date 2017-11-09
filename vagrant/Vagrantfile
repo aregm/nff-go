@@ -14,16 +14,6 @@ Vagrant.configure(2) do |config|
   # `vagrant box outdated`. This is not recommended.
   config.vm.box_check_update = false
 
-  # Define one inter-VM virtual network link
-  config.vm.network "private_network",
-                    auto_config: false,
-                    virtualbox__intnet: "link1"
-
-  # Define two inter-VM virtual network link
-  config.vm.network "private_network",
-                    auto_config: false,
-                    virtualbox__intnet: "link2"
-
   config.vm.provider "virtualbox" do |vb|
     vb.gui = false
     vb.memory = "4096"
@@ -78,10 +68,20 @@ SHELL
                       privileged: false,
                       inline: $provision
 
-  # Define two YANFF VMs
-  (1..2).each do |i|
+  # Define six YANFF VMs
+  (0..5).each do |i|
     config.vm.define "yanff-#{i}" do |node|
-      config.vm.hostname = "yanff-#{i}"
+      node.vm.hostname = "yanff-#{i}"
+      # Define first inter-VM virtual network link
+      pair = i & (~1)
+      node.vm.network "private_network",
+                      auto_config: false,
+                      virtualbox__intnet: "link-#{pair}"
+
+      # Define second inter-VM virtual network link
+      node.vm.network "private_network",
+                      auto_config: false,
+                      virtualbox__intnet: "link-#{pair+1}"
     end
   end
 end
