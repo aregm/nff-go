@@ -23,8 +23,11 @@ func main() {
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
 	cur.ParseL3()
-	if cur.GetIPv4() != nil && cur.GetTCPForIPv4() != nil && packet.SwapBytesUint16(cur.GetTCPForIPv4().DstPort) == 53 {
-		return false
+	if cur.GetIPv4() != nil {
+		cur.ParseL4ForIPv4()
+		if cur.GetTCPForIPv4() != nil && packet.SwapBytesUint16(cur.GetTCPForIPv4().DstPort) == 53 {
+			return false
+		}
 	}
 	return true
 }
