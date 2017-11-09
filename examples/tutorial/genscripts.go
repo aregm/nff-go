@@ -58,18 +58,23 @@ range 1 dst ip inc 0.0.0.0
 range 1 dst port start 1024
 range 1 dst port inc 0
 enable 0 range
+enable 1 range
 `
 	jsonNat = `{
-    "private-port": {
-        "index": 0,
-        "dst_mac": "%s",
-        "subnet": "192.168.1.1/24"
-    },
-    "public-port": {
-        "index": 1,
-        "dst_mac": "%s",
-        "subnet": "10.1.1.1"
-    }
+    "port-pairs": [
+        {
+            "private-port": {
+                "index": 0,
+                "dst_mac": "%s",
+                "subnet": "192.168.1.1/24"
+            },
+            "public-port": {
+                "index": 1,
+                "dst_mac": "%s",
+                "subnet": "10.1.1.1"
+            }
+        }
+    ]
 }
 `
 	workaroundScript = `

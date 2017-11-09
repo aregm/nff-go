@@ -55,7 +55,7 @@ bindports
 declare -f bindports >> .bash_login
 runpktgen()
 {
-    (cd \"$YANFF\"/dpdk; sudo ./pktgen -c 0x3f -n 4 -- -P -m \"[1:2].0, [3:4].1\" -T)
+    (cd \"$YANFF\"/dpdk; sudo ./pktgen -c 0xff -n 4 -- -P -m \"[1:2].0, [3:4].1\" -T)
     rc=$?; if [[ $rc == 0 ]]; then reset; fi
 }
 declare -f runpktgen >> .bash_login
