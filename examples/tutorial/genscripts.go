@@ -85,7 +85,6 @@ var workaroundTargets = map[string]struct{}{
 	"dbdw16": {},
 	"dbdw17": {},
 }
-var direct = "direct"
 
 func genScript(hostdir string, hosts []string, format, mac0, mac1 string, workaround bool) {
 	for _, hostname := range hosts {
