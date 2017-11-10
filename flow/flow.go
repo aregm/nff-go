@@ -92,13 +92,20 @@ type VectorSeparateFunction func([]*packet.Packet, []bool, uint, UserContext)
 // set after "Split" function in it.
 type SplitFunction func(*packet.Packet, UserContext) uint
 
+// Kni is a high level struct of KNI device. The device itself is stored
+// in C memory in low.c and is defined by its port which is equal to port
+// in this structure
+type Kni struct {
+	port uint8
+}
+
 type receiveParameters struct {
 	out   *low.Queue
-	queue uint16
+	queue int16
 	port  uint8
 }
 
-func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunction {
+func makeReceiver(port uint8, queue int16, out *low.Queue) *scheduler.FlowFunction {
 	par := new(receiveParameters)
 	par.port = port
 	par.queue = queue
@@ -136,11 +143,11 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 
 type sendParameters struct {
 	in    *low.Queue
-	queue uint16
+	queue int16
 	port  uint8
 }
 
-func makeSender(port uint8, queue uint16, in *low.Queue) *scheduler.FlowFunction {
+func makeSender(port uint8, queue int16, in *low.Queue) *scheduler.FlowFunction {
 	par := new(sendParameters)
 	par.port = port
 	par.queue = queue
@@ -266,8 +273,8 @@ type port struct {
 	rxQueues       []bool
 	txQueues       []bool
 	config         int
-	rxQueuesNumber uint16
-	txQueuesNumber uint16
+	rxQueuesNumber int16
+	txQueuesNumber int16
 	port           uint8
 }
 
@@ -277,7 +284,6 @@ var schedState scheduler.Scheduler
 const (
 	inactivePort = iota
 	autoPort
-	manualPort
 )
 
 // Config is a struct with all parameters, which user can pass to YANFF library
@@ -327,6 +333,8 @@ type Config struct {
 	LogType common.LogType
 	// Command line arguments to pass to DPDK initialization.
 	DPDKArgs []string
+	// Is user going to use KNI
+	NeedKNI bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -379,6 +387,11 @@ func SystemInit(args *Config) {
 		debugTime = args.DebugTime
 	}
 
+	needKNI := 0
+	if args.NeedKNI != false {
+		needKNI = 1
+	}
+
 	logType := common.No | common.Initialization | common.Debug
 	if args.LogType != 0 {
 		logType = args.LogType
@@ -391,7 +404,7 @@ func SystemInit(args *Config) {
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize)
+	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI)
 	// Init Ports
 	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
@@ -417,7 +430,7 @@ func SystemStart() {
 	common.LogTitle(common.Initialization, "------------***---------- Creating ports ---------***------------")
 	for i := range createdPorts {
 		if createdPorts[i].config != inactivePort {
-			low.CreatePort(createdPorts[i].port, createdPorts[i].rxQueuesNumber, createdPorts[i].txQueuesNumber, hwtxchecksum)
+			low.CreatePort(createdPorts[i].port, uint16(createdPorts[i].rxQueuesNumber), uint16(createdPorts[i].txQueuesNumber), hwtxchecksum)
 		}
 	}
 	// Timeout is needed for ports to start up. This way is used in pktgen.
@@ -470,22 +483,27 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(port uint8) (OUT *Flow) {
-	if port >= uint8(len(createdPorts)) {
-		common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
-	}
-	if createdPorts[port].config == manualPort {
-		common.LogError(common.Initialization, "Requested receive port was previously configured as manual port. It can't be used as auto port.")
-	}
-	createdPorts[port].config = autoPort
-	createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
+func SetReceiver(par interface{}) (OUT *Flow) {
 	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	recv := makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
+	var recv *scheduler.FlowFunction
+	if port, t := par.(int); t {
+		if uint8(port) >= uint8(len(createdPorts)) {
+			common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+		}
+		createdPorts[port].config = autoPort
+		createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
+		recv = makeReceiver(uint8(port), createdPorts[port].rxQueuesNumber, ring)
+		createdPorts[port].rxQueuesNumber++
+	} else if tkni, t := par.(*Kni); t {
+		// Receive with "-1" queue will be from KNI device
+		recv = makeReceiver(tkni.port, -1, ring)
+	} else {
+		common.LogError(common.Initialization, "SetReceiver parameter should be ether number of port or created KNI device")
+	}
 	schedState.UnClonable = append(schedState.UnClonable, recv)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	createdPorts[port].rxQueuesNumber++
 	return OUT
 }
 
@@ -526,21 +544,26 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
-func SetSender(IN *Flow, port uint8) {
+func SetSender(IN *Flow, par interface{}) {
 	checkFlow(IN)
-	if port >= uint8(len(createdPorts)) {
-		common.LogError(common.Initialization, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+	var send *scheduler.FlowFunction
+	if port, t := par.(int); t {
+		if uint8(port) >= uint8(len(createdPorts)) {
+			common.LogError(common.Initialization, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+		}
+		createdPorts[port].config = autoPort
+		createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
+		send = makeSender(uint8(port), createdPorts[port].txQueuesNumber, IN.current)
+		createdPorts[port].txQueuesNumber++
+	} else if tkni, t := par.(*Kni); t {
+		// Send for "-1" queue will be to KNI device
+		send = makeSender(tkni.port, -1, IN.current)
+	} else {
+		common.LogError(common.Initialization, "SetReceiver parameter should be ether number of port or created KNI device")
 	}
-	if createdPorts[port].config == manualPort {
-		common.LogError(common.Initialization, "Requested send port was previously configured as manual port. It can't be used like auto port.")
-	}
-	createdPorts[port].config = autoPort
-	createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
-	send := makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
 	openFlowsNumber--
-	createdPorts[port].txQueuesNumber++
 }
 
 // SetPartitioner adds partition function to flow graph.
@@ -1236,4 +1259,15 @@ func checkSystem() {
 			}
 		}
 	}
+}
+
+// CreateKNIDevice creates KNI device for using in receive or send functions.
+// Gets port, core (not from YANFF list), and unique name of future KNI device.
+func CreateKniDevice(port uint8, core uint8, name string) *Kni {
+	low.CreateKni(port, core, name)
+	kni := new(Kni)
+	// Port will be identifier of this KNI
+	// KNI structure itself is stored inside low.c
+	kni.port = port
+	return kni
 }

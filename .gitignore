@@ -6,5 +6,6 @@ examples/Firewall
 examples/Forwarding
 examples/dump
 examples/clonable_pcap_dumper
+examples/kni
 test/stash/send_fixed_number
 doc

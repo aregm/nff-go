@@ -7,9 +7,9 @@ package low
 /*
 #include "yanff_queue.h"
 
-extern void eal_init(int argc, char **argv, uint32_t burstSize);
-extern void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
-extern void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
+extern void eal_init(int argc, char **argv, uint32_t burstSize, int32_t needKNI);
+extern void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *, uint8_t coreID);
+extern void yanff_send(uint8_t port, int16_t queue, struct rte_ring *, uint8_t coreID);
 extern void yanff_stop(struct rte_ring *);
 extern void initCPUSet(uint8_t coreID, cpu_set_t* cpuset);
 extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
@@ -21,6 +21,7 @@ extern void handleArgv(char **, char* s, int i);
 extern int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
 extern void statistics(float N);
 extern int getMempoolSpace(struct rte_mempool * m);
+extern void create_kni(uint8_t port, uint8_t core, char* name, struct rte_mempool *mbuf_pool);
 */
 import "C"
 
@@ -432,21 +433,21 @@ func (queue *Queue) GetQueueCount() uint32 {
 }
 
 // Receive - get packets and enqueue on a Queue.
-func Receive(port uint8, queue uint16, OUT *Queue, coreID uint8) {
+func Receive(port uint8, queue int16, OUT *Queue, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
 	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_recv(C.uint8_t(port), C.uint16_t(queue), OUT.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_recv(C.uint8_t(port), C.int16_t(queue), OUT.ring.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue uint16, IN *Queue, coreID uint8) {
+func Send(port uint8, queue int16, IN *Queue, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
 	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_send(C.uint8_t(port), C.uint16_t(queue), IN.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_send(C.uint8_t(port), C.int16_t(queue), IN.ring.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Stop - dequeue and free packets.
@@ -468,8 +469,8 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint) {
-	C.eal_init(argc, argv, C.uint32_t(burstSize))
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) {
+	C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
 
 	mbufNumberT = mbufNumber
 	mbufCacheSizeT = mbufCacheSize
@@ -565,4 +566,11 @@ func ReportMempoolsState() {
 			common.LogDrop(common.Debug, "Mempool N", i, "has less than 10% free space. This can lead to dropping packets while receive.")
 		}
 	}
+}
+
+// CreateKni creates a KNI device
+func CreateKni(port uint8, core uint8, name string) {
+	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
+	usedMempools = append(usedMempools, mempool)
+	C.create_kni(C.uint8_t(port), C.uint8_t(core), C.CString(name), mempool)
 }

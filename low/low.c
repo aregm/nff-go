@@ -15,6 +15,7 @@
 
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
+#include <rte_kni.h>
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
@@ -59,6 +60,9 @@ __m256 zero256 = {0, 0, 0, 0, 0, 0, 0, 0};
 // This is multiplier for conversion from PKT/s to Mbits/s for 64 (84 in total length) packets
 const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
+#define MAX_KNI 50
+struct rte_kni* kni[MAX_KNI];
+
 uint32_t BURST_SIZE;
 
 void initCPUSet(uint8_t coreId, cpu_set_t* cpuset) {
@@ -73,14 +77,32 @@ void setAffinity(uint8_t coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
+void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf_pool) {
+	struct rte_eth_dev_info dev_info;
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port, &dev_info);
+	struct rte_kni_conf port_conf_default = {
+	    .core_id = core, // Core ID to bind kernel thread on
+	    .group_id = (uint16_t)port,
+	    .mbuf_size = 2048,
+	    .addr = dev_info.pci_dev->addr,
+	    .id = dev_info.pci_dev->id,
+	    .force_bind = 1 // Flag to bind kernel thread
+	};
+	snprintf(port_conf_default.name, RTE_KNI_NAMESIZE, name);
+	// TODO this NULL is for ops structure which handles callbacks from kernels requests
+	// DPDK example has callbacks for "change mtu" and "config network interface"
+	kni[port] = rte_kni_alloc(mbuf_pool, &port_conf_default, NULL);
+	if (kni[port] == NULL) {
+		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
+	}
+}
+
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
 int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
-    struct ether_addr* addr, bool hwtxchecksum)
-{
-	//struct rte_eth_conf port_conf = port_conf_default;
+    struct ether_addr* addr, bool hwtxchecksum) {
 	const uint16_t rx_rings = receiveQueuesNumber, tx_rings = sendQueuesNumber;
-	//const uint16_t rx_rings = 1, tx_rings = 1;
 	int retval;
 	uint16_t q;
 
@@ -100,7 +122,7 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 	if (retval != 0)
 		return retval;
 
-	/* Allocate and set up 1 RX queue per Ethernet port. */
+	/* Allocate and set up RX queues per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE,
 				rte_eth_dev_socket_id(port), NULL, mbuf_pool);
@@ -108,14 +130,15 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 			return retval;
 	}
 
-    struct rte_eth_dev_info dev_info;
-    rte_eth_dev_info_get(port, &dev_info);
-    if (hwtxchecksum) {
-	/* Default TX settings are to disable offload operations, need to fix it */
-	dev_info.default_txconf.txq_flags = 0;
-    }
+	struct rte_eth_dev_info dev_info;
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port, &dev_info);
+	if (hwtxchecksum) {
+		/* Default TX settings are to disable offload operations, need to fix it */
+		dev_info.default_txconf.txq_flags = 0;
+	}
 
-	/* Allocate and set up 1 TX queue per Ethernet port. */
+	/* Allocate and set up TX queues per Ethernet port. */
 	for (q = 0; q < tx_rings; q++) {
 		retval = rte_eth_tx_queue_setup(port, q, TX_RING_SIZE,
 				rte_eth_dev_socket_id(port), &dev_info.default_txconf);
@@ -181,11 +204,12 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t i;
+	uint16_t rx_pkts_number;
 
 #ifdef REASSEMBLY
 	struct rte_ip_frag_tbl* tbl = create_reassemble_table();
@@ -196,7 +220,12 @@ void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t
 	// Run until the application is quit. Recv can't be stopped now.
 	for (;;) {
 		// Get RX packets from port
-		uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
+		if (queue != -1) {
+			rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
+		} else {
+			// If queue == "-1" is means that this receive is from KNI device
+			rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+		}
 #ifdef REASSEMBLY
 		uint16_t temp_number = 0;
 		uint64_t cur_tsc = rte_rdtsc();
@@ -246,11 +275,12 @@ void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *out_ring, uint8_t
 	}
 }
 
-void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void yanff_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
+	uint16_t tx_pkts_number;
 	// Run until the application is quit. Send can't be stopped now.
 	for (;;) {
 		// Get packets for TX from ring
@@ -259,7 +289,12 @@ void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *in_ring, uint8_t 
 		if (unlikely(pkts_for_tx_number == 0))
 			continue;
 
-		const uint16_t tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
+		if (queue != -1) {
+			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
+		} else {
+			// if queue == "-1" this means that this send is to KNI device
+			tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+		}
 		// Free any unsent packets.
 		if (unlikely(tx_pkts_number < pkts_for_tx_number)) {
 			for (buf = tx_pkts_number; buf < pkts_for_tx_number; buf++) {
@@ -335,7 +370,7 @@ void statistics(float N) {
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
-void eal_init(int argc, char *argv[], uint32_t burstSize)
+void eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
 {
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -348,6 +383,9 @@ void eal_init(int argc, char *argv[], uint32_t burstSize)
 	mbufStructSize = sizeof(struct rte_mbuf);
 	headroomSize = RTE_PKTMBUF_HEADROOM;
 	defaultStart = mbufStructSize + headroomSize;
+	if (needKNI != 0) {
+		rte_kni_init(MAX_KNI);
+	}
 }
 
 int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
