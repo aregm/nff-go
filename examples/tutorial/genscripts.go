@@ -13,7 +13,9 @@ set 1 dst mac %s
 set 0 size 1500
 set 1 size 1500
 `
-	script2 = `range 0 dst mac start %s
+	script2 = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
 range 0 size start 1500
 range 0 size min 1500
@@ -24,7 +26,9 @@ range 0 dst port max 60
 range 0 dst port inc 1
 enable 0 range
 `
-	script3 = `range 0 dst mac start %s
+	script3 = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
 range 0 size start 1500
 range 0 size min 1500
@@ -35,7 +39,9 @@ range 0 src ip max 111.2.0.3
 range 0 src ip inc 0.0.0.1
 enable 0 range
 `
-	scriptNat = `range 0 dst mac start %s
+	scriptNat = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
 range 0 size start 1500
 range 0 size min 1500
