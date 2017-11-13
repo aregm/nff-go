@@ -32,7 +32,7 @@ func (hdr *VLANHdr) GetTag() uint16 {
 
 // SetTag sets 12 bits of VLAN tag to specified value.
 func (hdr *VLANHdr) SetTag(tag uint16) {
-	hdr.TCI = (hdr.TCI & 0xf000) | SwapBytesUint16(tag & 0xfff)
+	hdr.TCI = (hdr.TCI & 0xf000) | SwapBytesUint16(tag&0xfff)
 }
 
 // GetVLAN returns VLAN header pointer if it is present in the packet.
@@ -99,6 +99,21 @@ func (packet *Packet) GetIPv6CheckVLAN() *IPv6Hdr {
 		return (*IPv6Hdr)(packet.L3)
 	}
 	return nil
+}
+
+// ParseAllKnownL3CheckVLAN parses L3 field and returns pointers to parsed
+// headers taking possible presence of VLAN header into account.
+func (packet *Packet) ParseAllKnownL3CheckVLAN() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
+	packet.ParseL3CheckVLAN()
+	if packet.GetIPv4CheckVLAN() != nil {
+		return packet.GetIPv4NoCheck(), nil, nil
+	} else if packet.GetIPv6CheckVLAN() != nil {
+		return nil, packet.GetIPv6NoCheck(), nil
+	} else if packet.GetARPCheckVLAN() != nil {
+		return nil, nil, packet.GetARPNoCheck()
+	} else {
+		return nil, nil, nil
+	}
 }
 
 // AddVLANTag increases size of packet on VLANLen and adds 802.1Q VLAN header

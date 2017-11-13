@@ -80,7 +80,7 @@ func CalculatePseudoHdrIPv6UDPCksum(hdr *IPv6Hdr, udp *UDPHdr) uint16 {
 // checksum for required pseudo-header and writes result to correct place. This
 // is required for checksum compute by hardware offload.
 func SetPseudoHdrChecksum(p *Packet) {
-	ipv4, ipv6 := p.ParseAllKnownL3()
+	ipv4, ipv6, _ := p.ParseAllKnownL3()
 	if ipv4 != nil {
 		p.GetIPv4().HdrChecksum = 0
 		tcp, udp, _ := p.ParseAllKnownL4ForIPv4()

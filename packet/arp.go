@@ -55,18 +55,6 @@ func (hdr *ARPHdr) String() string {
 		hdr.TPA[0], hdr.TPA[1], hdr.TPA[2], hdr.TPA[3])
 }
 
-// InitEmptyARPPacket initializes empty ARP packet
-func InitEmptyARPPacket(packet *Packet) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitEmptyARPPacket: Cannot append mbuf")
-		return false
-	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	return true
-}
-
 // initARPCommonData allocates ARP packet, fills ether header and
 // arp hrd, pro, hln, pln with values for ether and IPv4
 func initARPCommonData(packet *Packet) bool {

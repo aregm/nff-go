@@ -71,7 +71,7 @@ var mempool *low.Mempool
 func init() {
 	argc, argv := low.InitDPDKArguments([]string{})
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-	low.InitDPDK(argc, argv, 32, 8191, 250)
+	low.InitDPDK(argc, argv, 32, 8191, 250, 0)
 	mempool = low.CreateMempool()
 }
 
