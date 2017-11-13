@@ -64,13 +64,15 @@ func dumper(currentPacket *packet.Packet, context flow.UserContext) {
 	var icmp *packet.ICMPHdr
 
 	fmt.Printf("%v", currentPacket.Ether)
-	ipv4, ipv6 := currentPacket.ParseAllKnownL3()
+	ipv4, ipv6, arp := currentPacket.ParseAllKnownL3()
 	if ipv4 != nil {
 		fmt.Printf("%v", ipv4)
 		tcp, udp, icmp = currentPacket.ParseAllKnownL4ForIPv4()
 	} else if ipv6 != nil {
 		fmt.Printf("%v", ipv6)
 		tcp, udp, icmp = currentPacket.ParseAllKnownL4ForIPv6()
+	} else if arp != nil {
+		fmt.Printf("%v", arp)
 	} else {
 		fmt.Println("    Unknown L3 protocol")
 	}
