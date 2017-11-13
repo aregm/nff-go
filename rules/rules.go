@@ -441,7 +441,7 @@ func l4ACL(pkt *packet.Packet, L4 *l4Rules) bool {
 }
 
 func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
-	ipv4, ipv6 := pkt.ParseAllKnownL3()
+	ipv4, ipv6, _ := pkt.ParseAllKnownL3()
 	if ipv4 != nil {
 		for _, rule := range rules.ip4 {
 			if ((rule.SrcAddr ^ ipv4.SrcAddr) & rule.SrcMask) != 0 {

@@ -23,7 +23,7 @@ var mempool *low.Mempool
 func init() {
 	argc, argv := low.InitDPDKArguments([]string{})
 	// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-	low.InitDPDK(argc, argv, 32, 8191, 250)
+	low.InitDPDK(argc, argv, 32, 8191, 250, 0)
 	mempool = low.CreateMempool()
 }
 
@@ -285,7 +285,7 @@ func TestParseL3(t *testing.T) {
 			t.Fatal("Unable to construct mbuf")
 		}
 
-		_, _ = pkt.ParseAllKnownL3()
+		_, _, _ = pkt.ParseAllKnownL3()
 
 		if !reflect.DeepEqual(pkt.Ether, pkts[i].Ether) {
 			t.Errorf("Automatic parse all levels: packet %d: wrong Ether header:\ngot: %+v, \nwant: %+v\n\n", i, pkt.Ether, pkts[i].Ether)
@@ -310,7 +310,7 @@ func TestParseL4(t *testing.T) {
 		pkt := ExtractPacket(mb[0])
 		GeneratePacketFromByte(pkt, decoded)
 
-		ipv4, ipv6 := pkt.ParseAllKnownL3()
+		ipv4, ipv6, _ := pkt.ParseAllKnownL3()
 		if ipv4 != nil {
 			pkt.ParseAllKnownL4ForIPv4()
 		} else if ipv6 != nil {

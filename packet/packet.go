@@ -346,28 +346,45 @@ func (packet *Packet) GetICMPForIPv6NoCheck() *ICMPHdr {
 }
 
 // ParseAllKnownL3 parses L3 field and returns pointers to parsed headers.
-func (packet *Packet) ParseAllKnownL3() (*IPv4Hdr, *IPv6Hdr) {
+func (packet *Packet) ParseAllKnownL3() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
 	packet.ParseL3()
-	return packet.GetIPv4(), packet.GetIPv6()
-}
-
-// ParseAllKnownL3 parses L3 field and returns pointers to parsed
-// headers taking possible presence of VLAN header into account.
-func (packet *Packet) ParseAllKnownL3CheckVLAN() (*IPv4Hdr, *IPv6Hdr) {
-	packet.ParseL3CheckVLAN()
-	return packet.GetIPv4CheckVLAN(), packet.GetIPv6CheckVLAN()
+	if packet.GetIPv4() != nil {
+		return packet.GetIPv4NoCheck(), nil, nil
+	} else if packet.GetIPv6() != nil {
+		return nil, packet.GetIPv6NoCheck(), nil
+	} else if packet.GetARP() != nil {
+		return nil, nil, packet.GetARPNoCheck()
+	} else {
+		return nil, nil, nil
+	}
 }
 
 // ParseAllKnownL4ForIPv4 parses L4 field if L3 type is IPv4 and returns pointers to parsed headers.
 func (packet *Packet) ParseAllKnownL4ForIPv4() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv4()
-	return packet.GetTCPForIPv4(), packet.GetUDPForIPv4(), packet.GetICMPForIPv4()
+	if packet.GetTCPForIPv4() != nil {
+		return packet.GetTCPForIPv4NoCheck(), nil, nil
+	} else if packet.GetUDPForIPv4() != nil {
+		return nil, packet.GetUDPForIPv4NoCheck(), nil
+	} else if packet.GetICMPForIPv4() != nil {
+		return nil, nil, packet.GetICMPForIPv4NoCheck()
+	} else {
+		return nil, nil, nil
+	}
 }
 
 // ParseAllKnownL4ForIPv6 parses L4 field if L3 type is IPv6 and returns pointers to parsed headers.
 func (packet *Packet) ParseAllKnownL4ForIPv6() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv6()
-	return packet.GetTCPForIPv6(), packet.GetUDPForIPv6(), packet.GetICMPForIPv6()
+	if packet.GetTCPForIPv6() != nil {
+		return packet.GetTCPForIPv6NoCheck(), nil, nil
+	} else if packet.GetUDPForIPv6() != nil {
+		return nil, packet.GetUDPForIPv6NoCheck(), nil
+	} else if packet.GetICMPForIPv6() != nil {
+		return nil, nil, packet.GetICMPForIPv6NoCheck()
+	} else {
+		return nil, nil, nil
+	}
 }
 
 // ParseL7 fills pointers to all supported headers and data field.
@@ -390,7 +407,7 @@ func (packet *Packet) ParseData() int {
 	var pktUDP *UDPHdr
 	var pktICMP *ICMPHdr
 
-	pktIPv4, pktIPv6 := packet.ParseAllKnownL3()
+	pktIPv4, pktIPv6, _ := packet.ParseAllKnownL3()
 	if pktIPv4 != nil {
 		pktTCP, pktUDP, pktICMP = packet.ParseAllKnownL4ForIPv4()
 	} else if pktIPv6 != nil {
@@ -506,6 +523,18 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 	packet.GetIPv6().Proto = NoNextHeader
 
+	return true
+}
+
+// InitEmptyARPPacket initializes empty ARP packet
+func InitEmptyARPPacket(packet *Packet) bool {
+	var bufSize uint = EtherLen + ARPLen
+	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
+		LogWarning(Debug, "InitEmptyARPPacket: Cannot append mbuf")
+		return false
+	}
+
+	packet.Ether.EtherType = SwapBytesUint16(ARPNumber)
 	return true
 }
 
@@ -668,7 +697,7 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 
 // SetHWCksumOLFlags sets hardware offloading flags to packet
 func (packet *Packet) SetHWCksumOLFlags() {
-	ipv4, ipv6 := packet.ParseAllKnownL3()
+	ipv4, ipv6, _ := packet.ParseAllKnownL3()
 	if ipv4 != nil {
 		packet.GetIPv4().HdrChecksum = 0
 		tcp, udp, _ := packet.ParseAllKnownL4ForIPv4()
