@@ -10,39 +10,45 @@ import (
 const (
 	script1 = `set 0 dst mac %s
 set 1 dst mac %s
-set 0 size 500
-set 1 size 500
+set 0 size 1500
+set 1 size 1500
 `
-	script2 = `range 0 dst mac start %s
+	script2 = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
-range 0 size start 500
-range 0 size min 500
-range 0 size max 500
+range 0 size start 1500
+range 0 size min 1500
+range 0 size max 1500
 range 0 dst port start 50
 range 0 dst port min 50
 range 0 dst port max 60
 range 0 dst port inc 1
 enable 0 range
 `
-	script3 = `range 0 dst mac start %s
+	script3 = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
-range 0 size start 500
-range 0 size min 500
-range 0 size max 500
+range 0 size start 1500
+range 0 size min 1500
+range 0 size max 1500
 range 0 src ip start 111.2.0.0
 range 0 src ip min 111.2.0.0
 range 0 src ip max 111.2.0.3
 range 0 src ip inc 0.0.0.1
 enable 0 range
 `
-	scriptNat = `range 0 dst mac start %s
+	scriptNat = `set 0 size 1500
+set 1 size 1500
+range 0 dst mac start %s
 range 1 dst mac start %s
-range 0 size start 500
-range 0 size min 500
-range 0 size max 500
-range 1 size start 500
-range 1 size min 500
-range 1 size max 500
+range 0 size start 1500
+range 0 size min 1500
+range 0 size max 1500
+range 1 size start 1500
+range 1 size min 1500
+range 1 size max 1500
 range 0 src ip start 192.168.1.2
 range 0 src ip min 192.168.1.2
 range 0 src ip max 192.168.1.12
@@ -58,18 +64,23 @@ range 1 dst ip inc 0.0.0.0
 range 1 dst port start 1024
 range 1 dst port inc 0
 enable 0 range
+enable 1 range
 `
 	jsonNat = `{
-    "private-port": {
-        "index": 0,
-        "dst_mac": "%s",
-        "subnet": "192.168.1.1/24"
-    },
-    "public-port": {
-        "index": 1,
-        "dst_mac": "%s",
-        "subnet": "10.1.1.1"
-    }
+    "port-pairs": [
+        {
+            "private-port": {
+                "index": 0,
+                "dst_mac": "%s",
+                "subnet": "192.168.1.1/24"
+            },
+            "public-port": {
+                "index": 1,
+                "dst_mac": "%s",
+                "subnet": "10.1.1.1"
+            }
+        }
+    ]
 }
 `
 	workaroundScript = `
@@ -120,7 +131,8 @@ func main() {
 	}
 
 	if *target == "" && *pktgen == "" {
-		log.Fatal("You must specify either -target or -pktgen parameter")
+		target = &direct
+		println("Generating scripts for -target direct")
 	}
 
 	_, needWO := workaroundTargets[*target]

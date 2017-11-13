@@ -18,6 +18,7 @@ var srcMac0 [common.EtherAddrLen]uint8
 var dstMac1 [common.EtherAddrLen]uint8
 var srcMac1 [common.EtherAddrLen]uint8
 var modifyPacket = []interface{}{modifyPacket0, modifyPacket1}
+var direct = "direct"
 
 // readConfig function reads and parses config file
 func readConfig(fileName string) error {
@@ -55,6 +56,10 @@ func initCommonState() {
 	err := readConfig(*configFile)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if *target == "" {
+		target = &direct
 	}
 
 	// Get destination MAC addressess for port 0 and 1
