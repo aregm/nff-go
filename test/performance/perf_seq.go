@@ -32,7 +32,7 @@ func main() {
 
 	// Initialize YANFF library at 35 cores by default
 	config := flow.Config{
-		CPUCoresNumber:   35,
+		CPUList:          "0-34",
 		DisableScheduler: noscheduler,
 	}
 	flow.SystemInit(&config)

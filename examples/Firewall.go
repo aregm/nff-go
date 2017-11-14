@@ -26,7 +26,7 @@ func main() {
 
 	// Initialize YANFF library at 8 cores by default
 	config := flow.Config{
-		CPUCoresNumber: 8,
+		CPUList: "0-7",
 	}
 	flow.SystemInit(&config)
 
