@@ -13,8 +13,8 @@ import "github.com/intel-go/yanff/flow"
 func main() {
 	config := flow.Config{
 		// Is required for KNI
-		NeedKNI:        true,
-		CPUCoresNumber: 8,
+		NeedKNI: true,
+		CPUList: "0-7",
 	}
 
 	flow.SystemInit(&config)

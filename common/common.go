@@ -7,9 +7,12 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"strconv"
 )
 
 // Length of addresses.
@@ -153,4 +156,84 @@ func GetDPDKLogLevel() string {
 	default:
 		return "8"
 	}
+}
+
+// GetDefaultCPUs returns default core list {0, 1, ..., GOMAXPROCS-1}
+func GetDefaultCPUs(cpuNumber uint) []uint {
+	cpus := make([]uint, cpuNumber, cpuNumber)
+	for i := uint(0); i < cpuNumber; i++ {
+		cpus[i] = i
+	}
+	return cpus
+}
+
+var (
+	// ErrMaxCPUExceed is error in case requested CPU exceeds maximum cores number on machine
+	ErrMaxCPUExceed = errors.New("Requested cpu exceeds maximum cores number on machine")
+)
+
+// ParseCPUs parses cpu list string into array of cpu numbers
+// and truncate the list according to given coresNumber (GOMAXPROCS)
+func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
+	var startRange, k int
+	nums := make([]uint, 0, 256)
+	if s == "" {
+		return nums, nil
+	}
+	startRange = -1
+	var err error
+	for i, j := 0, 0; i <= len(s); i++ {
+		if i != len(s) && s[i] == '-' {
+			startRange, err = strconv.Atoi(s[j:i])
+			if err != nil {
+				return nums, err
+			}
+			j = i + 1
+		}
+
+		if i == len(s) || s[i] == ',' {
+			r, err := strconv.Atoi(s[j:i])
+			if err != nil {
+				return nums, err
+			}
+			if startRange != -1 {
+				for k = startRange; k <= r; k++ {
+					nums = append(nums, uint(k))
+				}
+				startRange = -1
+			} else {
+				nums = append(nums, uint(r))
+			}
+			if i == len(s) {
+				break
+			}
+			j = i + 1
+		}
+	}
+
+	nums = removeDuplicates(nums)
+
+	numCPU := uint(runtime.NumCPU())
+	for _, cpu := range nums {
+		if cpu >= numCPU {
+			return []uint{}, ErrMaxCPUExceed
+		}
+	}
+	if len(nums) > int(coresNumber) {
+		return nums[:coresNumber], nil
+	}
+
+	return nums, nil
+}
+
+func removeDuplicates(array []uint) []uint {
+	result := []uint{}
+	seen := map[uint]bool{}
+	for _, val := range array {
+		if _, ok := seen[val]; !ok {
+			result = append(result, val)
+			seen[val] = true
+		}
+	}
+	return result
 }

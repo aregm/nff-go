@@ -76,7 +76,7 @@ func main() {
 	flag.Parse()
 
 	config := flow.Config{
-		CPUCoresNumber: 16,
+		CPUList: "0-15",
 	}
 	flow.SystemInit(&config)
 	stabilityCommon.InitCommonState(*configFile, *target)
