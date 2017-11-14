@@ -288,9 +288,9 @@ const (
 
 // Config is a struct with all parameters, which user can pass to YANFF library
 type Config struct {
-	// Number of threads, each bound to a separate CPU core. Default
-	// value is GOMAXPROCS.
-	CPUCoresNumber uint
+	// Specifies cores which will be available for scheduler to place
+	// flow functions and their clones.
+	CPUList string
 	// If true, scheduler is disabled entirely. Default value is false.
 	DisableScheduler bool
 	// If true, scheduler does not stop any previously cloned flow
@@ -338,13 +338,18 @@ type Config struct {
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
-// defaultCPUCoresNumber is a default number of cores which will be available for scheduler
-// to place flow functions and their clones. This number can be always changed by cores-number option.
 // Function can panic during execution.
 func SystemInit(args *Config) {
 	CPUCoresNumber := uint(runtime.GOMAXPROCS(0))
-	if args.CPUCoresNumber != 0 {
-		CPUCoresNumber = args.CPUCoresNumber
+	var cpus []uint
+	var err error
+	if args.CPUList != "" {
+		cpus, err = common.ParseCPUs(args.CPUList, CPUCoresNumber)
+		if err != nil {
+			common.LogError(common.Initialization, "Parsing of CPU list:", err)
+		}
+	} else {
+		cpus = common.GetDefaultCPUs(CPUCoresNumber)
 	}
 
 	schedulerOff := args.DisableScheduler
@@ -415,7 +420,8 @@ func SystemInit(args *Config) {
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
+	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
+	schedState = scheduler.NewScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)

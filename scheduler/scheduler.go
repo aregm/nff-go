@@ -19,7 +19,7 @@ const generatePauseStep = 0.1
 // Clones of flow functions. They are determined
 // by their core and their stopper channel
 type clonePair struct {
-	core    int
+	index   int
 	channel chan int
 }
 
@@ -91,7 +91,7 @@ func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn clo
 	ff.Parameters = par
 	ff.checkPrintFunction = check
 	ff.report = report
-	ff.previousSpeed = make([]float64, len(scheduler.freeCores), len(scheduler.freeCores))
+	ff.previousSpeed = make([]float64, len(scheduler.cores), len(scheduler.cores))
 	ff.context = context
 	return ff
 }
@@ -115,7 +115,7 @@ type Scheduler struct {
 	Clonable          []*FlowFunction
 	UnClonable        []*FlowFunction
 	Generate          []*FlowFunction
-	freeCores         []bool
+	cores             []core
 	off               bool
 	offRemove         bool
 	stopDedicatedCore bool
@@ -126,14 +126,20 @@ type Scheduler struct {
 	Dropped           uint
 }
 
+type core struct {
+	id     uint
+	isfree bool
+}
+
 // NewScheduler is a function for creation new scheduler. Is used inside flow package
-func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
+func NewScheduler(cpus []uint, schedulerOff bool, schedulerOffRemove bool,
 	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint, debugTime uint) Scheduler {
+	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(Scheduler)
-	scheduler.freeCores = make([]bool, coresNumber, coresNumber)
-	for i := uint(0); i < coresNumber; i++ {
-		scheduler.freeCores[i] = true
+	scheduler.cores = make([]core, coresNumber, coresNumber)
+	for i, cpu := range cpus {
+		scheduler.cores[i] = core{id: cpu, isfree: true}
 	}
 	scheduler.off = schedulerOff
 	scheduler.offRemove = schedulerOff || schedulerOffRemove
@@ -149,11 +155,13 @@ func NewScheduler(coresNumber uint, schedulerOff bool, schedulerOffRemove bool,
 
 // SystemStart starts whole system. Is used inside flow package
 func (scheduler *Scheduler) SystemStart() {
-	core := scheduler.getCore(true)
+	index := scheduler.getCoreIndex(true)
+	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
 	low.SetAffinity(uint8(core))
 	if scheduler.stopDedicatedCore {
-		core = scheduler.getCore(true)
+		index = scheduler.getCoreIndex(true)
+		core := scheduler.cores[index].id
 		common.LogDebug(common.Initialization, "Start STOP at", core, "core")
 	} else {
 		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
@@ -164,7 +172,8 @@ func (scheduler *Scheduler) SystemStart() {
 	}()
 	for i := range scheduler.UnClonable {
 		ff := scheduler.UnClonable[i]
-		core := scheduler.getCore(true)
+		index := scheduler.getCoreIndex(true)
+		core := scheduler.cores[index].id
 		common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
 		go func() {
 			ff.uncloneFunction(ff.Parameters, uint8(core))
@@ -181,7 +190,8 @@ func (scheduler *Scheduler) SystemStart() {
 }
 
 func (scheduler *Scheduler) startClonable(ff *FlowFunction) {
-	core := scheduler.getCore(true)
+	index := scheduler.getCoreIndex(true)
+	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
 	go func() {
 		ff.channel = make(chan int)
@@ -208,7 +218,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 		case <-debugTick:
 			// Report current state of system
 			common.LogDebug(common.Debug, "---------------")
-			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.freeCores))-scheduler.usedCores, "cores are left available.")
+			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.cores))-scheduler.usedCores, "cores are left available.")
 			low.Statistics(float32(scheduler.debugTime) / 1000)
 			for i := range scheduler.Clonable {
 				scheduler.Clonable[i].printDebug(schedTime)
@@ -312,12 +322,13 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 }
 
 func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
-	core := scheduler.getCore(false)
-	if core != -1 {
+	index := scheduler.getCoreIndex(false)
+	if index != -1 {
+		core := scheduler.cores[index].id
 		quit := make(chan int)
 		cp := new(clonePair)
 		cp.channel = quit
-		cp.core = core
+		cp.index = index
 		ff.clone = append(ff.clone, cp)
 		ff.cloneNumber++
 		go func() {
@@ -337,7 +348,7 @@ func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 
 func (scheduler *Scheduler) removeClone(ff *FlowFunction) {
 	ff.clone[ff.cloneNumber-1].channel <- -1
-	scheduler.setCore(ff.clone[ff.cloneNumber-1].core)
+	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
 	ff.clone = ff.clone[:len(ff.clone)-1]
 	ff.cloneNumber--
 }
@@ -386,15 +397,15 @@ func (ff *FlowFunction) updateCurrentSpeed() {
 	ff.currentSpeed = float64(currentSpeed)
 }
 
-func (scheduler *Scheduler) setCore(i int) {
-	scheduler.freeCores[i] = true
+func (scheduler *Scheduler) setCoreByIndex(i int) {
+	scheduler.cores[i].isfree = true
 	scheduler.usedCores--
 }
 
-func (scheduler *Scheduler) getCore(startStage bool) int {
-	for i := range scheduler.freeCores {
-		if scheduler.freeCores[i] == true {
-			scheduler.freeCores[i] = false
+func (scheduler *Scheduler) getCoreIndex(startStage bool) int {
+	for i := range scheduler.cores {
+		if scheduler.cores[i].isfree == true {
+			scheduler.cores[i].isfree = false
 			scheduler.usedCores++
 			return i
 		}

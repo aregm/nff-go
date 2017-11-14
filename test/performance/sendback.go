@@ -8,19 +8,20 @@ import "github.com/intel-go/yanff/flow"
 
 import "flag"
 
-var inport, outport, cores uint
+var inport, outport uint
+var cores string
 
 // This is a test for pure send/receive performance measurements. No
 // other functions used here.
 func main() {
 	flag.UintVar(&inport, "inport", 0, "Input port number")
 	flag.UintVar(&outport, "outport", 0, "Output port number")
-	flag.UintVar(&cores, "cores", 16, "Specifies number of CPU cores to be used by YANFF library")
+	flag.StringVar(&cores, "cores", "0-15", "Specifies CPU cores to be used by YANFF library")
 	flag.Parse()
 
 	// Initialize YANFF library to use specified number of CPU cores
 	config := flow.Config{
-		CPUCoresNumber: cores,
+		CPUList: cores,
 	}
 	flow.SystemInit(&config)
 

@@ -95,7 +95,7 @@ func main() {
 
 	// Initialize YANFF library at 30 available cores
 	config := flow.Config{
-		CPUCoresNumber: 30,
+		CPUList: "0-29",
 	}
 	flow.SystemInit(&config)
 	payloadSize = packetSize - servDataSize

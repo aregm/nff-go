@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Parse arguments
-	cores := flag.Uint("cores", 44, "Specify number of CPU cores to use")
+	cores := flag.String("cores", "0-43", "Specify CPU cores to use")
 	configFile := flag.String("config", "config.json", "Specify config file name")
 	flag.BoolVar(&nat.CalculateChecksum, "csum", false, "Specify whether to calculate checksums in modified packets")
 	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
@@ -27,8 +27,8 @@ func main() {
 
 	// Init YANFF system at 16 available cores
 	yanffconfig := flow.Config{
-		CPUCoresNumber: *cores,
-		HWTXChecksum:   nat.HWTXChecksum,
+		CPUList:      *cores,
+		HWTXChecksum: nat.HWTXChecksum,
 	}
 
 	flow.SystemInit(&yanffconfig)

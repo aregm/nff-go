@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	config := flow.Config{
-		CPUCoresNumber:   32,
+		CPUList:          "0-31",
 		DisableScheduler: noscheduler,
 	}
 	flow.SystemInit(&config)

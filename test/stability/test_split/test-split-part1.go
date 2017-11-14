@@ -88,7 +88,7 @@ func main() {
 
 	// Init YANFF system at 20 available cores.
 	config := flow.Config{
-		CPUCoresNumber: 20,
+		CPUList: "0-19",
 	}
 	flow.SystemInit(&config)
 	stabilityCommon.InitCommonState(*configFile, *target)
