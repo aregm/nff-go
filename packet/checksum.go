@@ -6,29 +6,64 @@ package packet
 
 import (
 	. "github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
 	"unsafe"
 )
 
-// Calculates checksum of memory for a given pointer. Length and
-// offset are in bytes. Offset is signed, so negative offset is
-// possible. Checksum is calculated in uint16 words. Returned is
-// checksum with carry, so carry should be added and value negated for
-// use as network checksum.
-func calculateDataChecksum(ptr unsafe.Pointer, length, offset int) uint32 {
-	var sum uint32
-	uptr := uintptr(ptr) + uintptr(offset)
+// Setting up flags for hardware offloading for hardware calculation of checksums
 
-	slice := (*[1 << 30]uint16)(unsafe.Pointer(uptr))[0 : length/2]
-	for i := range slice {
-		sum += uint32(SwapBytesUint16(slice[i]))
+// SetHWCksumOLFlags sets hardware offloading flags to packet
+func (packet *Packet) SetHWCksumOLFlags() {
+	ipv4, ipv6, _ := packet.ParseAllKnownL3()
+	if ipv4 != nil {
+		packet.GetIPv4().HdrChecksum = 0
+		tcp, udp, _ := packet.ParseAllKnownL4ForIPv4()
+		if tcp != nil {
+			low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
+		} else if udp != nil {
+			low.SetTXIPv4UDPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
+		}
+	} else if ipv6 != nil {
+		tcp, udp, _ := packet.ParseAllKnownL4ForIPv6()
+		if tcp != nil {
+			low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
+		} else if udp != nil {
+			low.SetTXIPv6UDPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
+		}
 	}
-
-	if length&1 != 0 {
-		sum += uint32(*(*byte)(unsafe.Pointer(uptr + uintptr(length-1)))) << 8
-	}
-
-	return sum
 }
+
+// SetTXIPv4OLFlags sets mbuf flags for IPv4 header checksum
+// calculation offloading.
+func (packet *Packet) SetTXIPv4OLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4OLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv4UDPOLFlags sets mbuf flags for IPv4 and UDP headers
+// checksum calculation hardware offloading.
+func (packet *Packet) SetTXIPv4UDPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4UDPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv4TCPOLFlags sets mbuf flags for IPv4 and TCP headers
+// checksum calculation hardware offloading.
+func (packet *Packet) SetTXIPv4TCPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv4TCPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header checksum
+// calculation hardware offloading.
+func (packet *Packet) SetTXIPv6TCPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv6TCPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP header checksum
+// calculation hardware offloading.
+func (packet *Packet) SetTXIPv6UDPOLFlags(l2len, l3len uint32) {
+	low.SetTXIPv6UDPOLFlags(packet.CMbuf, l2len, l3len)
+}
+
+// Software calculation of protocol headers. It is required for hardware checksum calculation offload
 
 // CalculatePseudoHdrIPv4TCPCksum implements one step of TCP checksum calculation. Separately computes checksum
 // for TCP pseudo-header for case if L3 protocol is IPv4.
@@ -97,6 +132,29 @@ func SetPseudoHdrChecksum(p *Packet) {
 			p.GetUDPForIPv6().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv6UDPCksum(p.GetIPv6(), p.GetUDPForIPv6()))
 		}
 	}
+}
+
+// Software calculation of checksums
+
+// Calculates checksum of memory for a given pointer. Length and
+// offset are in bytes. Offset is signed, so negative offset is
+// possible. Checksum is calculated in uint16 words. Returned is
+// checksum with carry, so carry should be added and value negated for
+// use as network checksum.
+func calculateDataChecksum(ptr unsafe.Pointer, length, offset int) uint32 {
+	var sum uint32
+	uptr := uintptr(ptr) + uintptr(offset)
+
+	slice := (*[1 << 30]uint16)(unsafe.Pointer(uptr))[0 : length/2]
+	for i := range slice {
+		sum += uint32(SwapBytesUint16(slice[i]))
+	}
+
+	if length&1 != 0 {
+		sum += uint32(*(*byte)(unsafe.Pointer(uptr + uintptr(length-1)))) << 8
+	}
+
+	return sum
 }
 
 func reduceChecksum(sum uint32) uint16 {

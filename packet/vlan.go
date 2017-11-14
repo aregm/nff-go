@@ -25,13 +25,13 @@ TCI: 0x%02x (priority: %d, drop %d, ID: %d)\n
 EtherType: 0x%02x\n`, hdr.TCI, byte(hdr.TCI>>13), (hdr.TCI>>12)&1, hdr.TCI&0xfff, hdr.EtherType)
 }
 
-// GetTag returns 12 bits of VLAN tag from VLAN header.
-func (hdr *VLANHdr) GetTag() uint16 {
+// GetVLANTag returns 12 bits of VLAN tag from VLAN header.
+func (hdr *VLANHdr) GetVLANTag() uint16 {
 	return SwapBytesUint16(hdr.TCI) & 0xfff
 }
 
-// SetTag sets 12 bits of VLAN tag to specified value.
-func (hdr *VLANHdr) SetTag(tag uint16) {
+// SetVLANTag sets 12 bits of VLAN tag to specified value.
+func (hdr *VLANHdr) SetVLANTag(tag uint16) {
 	hdr.TCI = (hdr.TCI & 0xf000) | SwapBytesUint16(tag&0xfff)
 }
 
