@@ -8,11 +8,10 @@ import (
 	"flag"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
 var (
-	l3Rules *rules.L3Rules
+	l3Rules *packet.L3Rules
 
 	outport uint
 	inport  uint
@@ -31,7 +30,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get splitting rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG("test-handle2-l3rules.conf")
+	l3Rules = packet.GetL3ACLFromORIG("test-handle2-l3rules.conf")
 
 	// Receive packets from 0 port
 	flow1 := flow.SetReceiver(uint8(inport))
@@ -47,5 +46,5 @@ func main() {
 }
 
 func l3Handler(pkt *packet.Packet, context flow.UserContext) bool {
-	return rules.L3ACLPermit(pkt, l3Rules)
+	return pkt.L3ACLPermit(l3Rules)
 }

@@ -9,12 +9,11 @@ import (
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 )
 
 var (
-	l3Rules *rules.L3Rules
+	l3Rules *packet.L3Rules
 
 	inport   uint
 	outport1 uint
@@ -43,8 +42,7 @@ func main() {
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
 	// Get splitting rules from access control file.
-	//L2Rules = rules.GetL3RulesFromORIG("test-separate-l2rules.conf")
-	l3Rules = rules.GetL3RulesFromORIG("test-separate-l3rules.conf")
+	l3Rules = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
 
 	// Receive packets from 0 port
 	flow1 := flow.SetReceiver(uint8(inport))
@@ -64,7 +62,7 @@ func main() {
 }
 
 func l3Separator(pkt *packet.Packet, context flow.UserContext) bool {
-	return rules.L3ACLPermit(pkt, l3Rules)
+	return pkt.L3ACLPermit(l3Rules)
 }
 
 func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {

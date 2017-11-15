@@ -4,8 +4,8 @@
 
 PATH_TO_MK = mk
 SUBDIRS = yanff-base dpdk test examples
-DOC_TARGETS = flow rules packet
-TESTING_TARGETS = packet rules
+DOC_TARGETS = flow packet
+TESTING_TARGETS = packet
 
 all: $(SUBDIRS)
 

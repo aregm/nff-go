@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package rules implements functionality for checking and comparing packets.
+// Package packet provides functionality for checking and comparing packets.
 // Besides parsing packets user can request comparing packets. In some flow functions
 // user needs to compare packet with some rules, for example access control lists.
 // It can be done manually after packet parsing, however YANFF library provides more
@@ -12,9 +12,9 @@
 //
 // Rules should be constructed before their usage via "get" functions.
 // Three such functions are provided:
-// 		GetL2RulesFromJSON
-// 		GetL3RulesFromJSON
-// 		GetL3RulesFromORIG
+// 		GetL2ACLFromJSON
+// 		GetL3ACLFromJSON
+// 		GetL3ACLFromORIG
 // GetL2RulesFromORIG function for L2 level is not added yet. TODO
 // These functions should be used before any usage of rules, however they also can be
 // used dynamically in parallel which make a possibility of changing rules during execution.
@@ -24,14 +24,13 @@
 //		L2ACLPort
 //		L3ACLPermit
 // 		L3ACLPort
-package rules
+package packet
 
 import (
 	"bufio"
 	"encoding/binary"
 	"encoding/json"
 	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/packet"
 	"io/ioutil"
 	"net"
 	"os"
@@ -63,9 +62,9 @@ type rawL3Rules struct {
 	L3Rules []rawL3Rule
 }
 
-// GetL2RulesFromJSON gets name of JSON structed file with L2 rules,
+// GetL2ACLFromJSON gets name of JSON structed file with L2 rules,
 // returns L2Rules
-func GetL2RulesFromJSON(filename string) *L2Rules {
+func GetL2ACLFromJSON(filename string) *L2Rules {
 	var rawRules rawL2Rules
 	var rules L2Rules
 	// Load Rules
@@ -78,9 +77,9 @@ func GetL2RulesFromJSON(filename string) *L2Rules {
 	return &rules
 }
 
-// GetL3RulesFromJSON gets name of JSON structed file with combined L3 and L4 rules,
+// GetL3ACLFromJSON gets name of JSON structed file with combined L3 and L4 rules,
 // returns L2Rules
-func GetL3RulesFromJSON(filename string) *L3Rules {
+func GetL3ACLFromJSON(filename string) *L3Rules {
 	var rawRules rawL3Rules
 	var rules L3Rules
 	// Load Rules
@@ -103,9 +102,9 @@ func readFile(filename string) []byte {
 
 //TODO we need to construct raw structure as one after one without storing all them in memory
 
-// GetL3RulesFromORIG gets name of fields structed file with combined L3 and L4 rules,
+// GetL3ACLFromORIG gets name of fields structed file with combined L3 and L4 rules,
 // returns L3Rules
-func GetL3RulesFromORIG(filename string) *L3Rules {
+func GetL3ACLFromORIG(filename string) *L3Rules {
 	var rawRules rawL3Rules
 	var rules L3Rules
 	// Load Rules
@@ -382,8 +381,8 @@ type L2Rules struct {
 
 // L2ACLPermit gets packet (with parsed L2) and L2Rules.
 // Returns accept or reject for this packet
-func L2ACLPermit(pkt *packet.Packet, rules *L2Rules) bool {
-	if l2ACL(pkt, rules) > 0 {
+func (pkt *Packet) L2ACLPermit(rules *L2Rules) bool {
+	if pkt.l2ACL(rules) > 0 {
 		return true
 	}
 	return false
@@ -391,11 +390,11 @@ func L2ACLPermit(pkt *packet.Packet, rules *L2Rules) bool {
 
 // L2ACLPort gets packet (with parsed L2) and L2Rules.
 // Returns number of output for packet
-func L2ACLPort(pkt *packet.Packet, rules *L2Rules) uint {
-	return l2ACL(pkt, rules)
+func (pkt *Packet) L2ACLPort(rules *L2Rules) uint {
+	return pkt.l2ACL(rules)
 }
 
-func l2ACL(pkt *packet.Packet, rules *L2Rules) uint {
+func (pkt *Packet) l2ACL(rules *L2Rules) uint {
 	for _, rule := range rules.eth {
 		if rule.SAddrNotAny == true && rule.SAddr != pkt.Ether.SAddr {
 			continue
@@ -403,7 +402,7 @@ func l2ACL(pkt *packet.Packet, rules *L2Rules) uint {
 		if rule.DAddrNotAny == true && rule.DAddr != pkt.Ether.DAddr {
 			continue
 		}
-		if (rule.ID^packet.SwapBytesUint16(pkt.Ether.EtherType))&rule.IDMask != 0 {
+		if (rule.ID^SwapBytesUint16(pkt.Ether.EtherType))&rule.IDMask != 0 {
 			continue
 		}
 		return rule.OutputNumber
@@ -413,8 +412,8 @@ func l2ACL(pkt *packet.Packet, rules *L2Rules) uint {
 
 // L3ACLPermit gets packet (with parsed L3 or L3 with L4) and L3Rules.
 // Returns accept or reject for this packet
-func L3ACLPermit(pkt *packet.Packet, rules *L3Rules) bool {
-	if l3ACL(pkt, rules) > 0 {
+func (pkt *Packet) L3ACLPermit(rules *L3Rules) bool {
+	if pkt.l3ACL(rules) > 0 {
 		return true
 	}
 	return false
@@ -422,25 +421,25 @@ func L3ACLPermit(pkt *packet.Packet, rules *L3Rules) bool {
 
 // L3ACLPort gets packet (with parsed L3 or L3 with L4) and L3Rules.
 // Returns number of output for this packet
-func L3ACLPort(pkt *packet.Packet, rules *L3Rules) uint {
-	return l3ACL(pkt, rules)
+func (pkt *Packet) L3ACLPort(rules *L3Rules) uint {
+	return pkt.l3ACL(rules)
 }
 
-func l4ACL(pkt *packet.Packet, L4 *l4Rules) bool {
+func (pkt *Packet) l4ACL(L4 *l4Rules) bool {
 	// Src and Dst port numbers placed at the same offset from L4 start in both tcp and udp
-	l4 := (*packet.UDPHdr)(pkt.L4)
-	srcPort := packet.SwapBytesUint16(l4.SrcPort)
+	l4 := (*UDPHdr)(pkt.L4)
+	srcPort := SwapBytesUint16(l4.SrcPort)
 	if srcPort < L4.SrcPortMin || srcPort > L4.SrcPortMax {
 		return false
 	}
-	dstPort := packet.SwapBytesUint16(l4.DstPort)
+	dstPort := SwapBytesUint16(l4.DstPort)
 	if dstPort < L4.DstPortMin || dstPort > L4.DstPortMax {
 		return false
 	}
 	return true
 }
 
-func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
+func (pkt *Packet) l3ACL(rules *L3Rules) uint {
 	ipv4, ipv6, _ := pkt.ParseAllKnownL3()
 	if ipv4 != nil {
 		for _, rule := range rules.ip4 {
@@ -455,7 +454,7 @@ func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
 			}
 			if rule.L4.valid {
 				pkt.ParseL4ForIPv4()
-				if !l4ACL(pkt, &rule.L4) {
+				if !pkt.l4ACL(&rule.L4) {
 					continue
 				}
 			}
@@ -474,7 +473,7 @@ func l3ACL(pkt *packet.Packet, rules *L3Rules) uint {
 				continue
 			}
 			pkt.ParseL4ForIPv6()
-			if !l4ACL(pkt, &rule.L4) {
+			if !pkt.l4ACL(&rule.L4) {
 				continue
 			}
 			return rule.OutputNumber

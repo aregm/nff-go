@@ -9,11 +9,10 @@ import (
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
 var (
-	l3Rules *rules.L3Rules
+	l3Rules *packet.L3Rules
 	outport uint
 	inport  uint
 )
@@ -31,7 +30,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get filtering rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
+	l3Rules = packet.GetL3ACLFromORIG("Firewall.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(uint8(inport))
@@ -52,5 +51,5 @@ func main() {
 // User defined function for separating packets
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	// Return whether packet is accepted or not. Based on ACL rules.
-	return rules.L3ACLPermit(currentPacket, l3Rules)
+	return currentPacket.L3ACLPermit(l3Rules)
 }

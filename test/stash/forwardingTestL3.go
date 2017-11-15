@@ -6,7 +6,6 @@ package main
 
 import "github.com/intel-go/yanff/flow"
 import "github.com/intel-go/yanff/packet"
-import "github.com/intel-go/yanff/rules"
 import "flag"
 
 // L3ACL.json assumes that pktgen is configured the following way
@@ -26,7 +25,7 @@ import "flag"
 // 3 - 1/30 (if input speed 60GB -> 2GB)
 // Pktgen MBits: 13743/30462         28634/29442             13743/0              1955/0           58076/59905
 
-var l3Rules *rules.L3Rules
+var l3Rules *packet.L3Rules
 
 func main() {
 	var mode string
@@ -42,9 +41,9 @@ func main() {
 	// Start regular updating forwarding rules
 	switch mode {
 	case "json":
-		l3Rules = rules.GetL3RulesFromJSON("forwardingTestL3_ACL.json")
+		l3Rules = packet.GetL3ACLFromJSON("forwardingTestL3_ACL.json")
 	case "orig":
-		l3Rules = rules.GetL3RulesFromORIG("forwardingTestL3_ACL.orig")
+		l3Rules = packet.GetL3ACLFromORIG("forwardingTestL3_ACL.orig")
 	}
 
 	// Receive packets from zero port. One queue will be added automatically.
@@ -67,5 +66,5 @@ func main() {
 }
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
-	return rules.L3ACLPort(currentPacket, l3Rules)
+	return currentPacket.L3ACLPort(l3Rules)
 }
