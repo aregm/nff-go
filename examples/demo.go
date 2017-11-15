@@ -10,12 +10,11 @@ import (
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
 var (
-	l2Rules *rules.L2Rules
-	l3Rules *rules.L3Rules
+	l2Rules *packet.L2Rules
+	l3Rules *packet.L3Rules
 	load    uint
 
 	inport   uint
@@ -37,8 +36,8 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Start regular updating forwarding rules
-	l2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
-	l3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
+	l2Rules = packet.GetL2ACLFromJSON("demoL2_ACL.json")
+	l3Rules = packet.GetL3ACLFromJSON("demoL3_ACL.json")
 	go updateSeparateRules()
 
 	// Receive packets from zero port. One queue will be added automatically.
@@ -60,8 +59,8 @@ func main() {
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	localL2Rules := l2Rules
 	localL3Rules := l3Rules
-	return rules.L2ACLPermit(currentPacket, localL2Rules) &&
-		rules.L3ACLPermit(currentPacket, localL3Rules)
+	return currentPacket.L2ACLPermit(localL2Rules) &&
+		currentPacket.L3ACLPermit(localL3Rules)
 }
 
 func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
@@ -72,7 +71,7 @@ func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		l2Rules = rules.GetL2RulesFromJSON("demoL2_ACL.json")
-		l3Rules = rules.GetL3RulesFromJSON("demoL3_ACL.json")
+		l2Rules = packet.GetL2ACLFromJSON("demoL2_ACL.json")
+		l3Rules = packet.GetL3ACLFromJSON("demoL3_ACL.json")
 	}
 }

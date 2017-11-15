@@ -7,10 +7,9 @@ package main
 import (
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
-var l3Rules *rules.L3Rules
+var l3Rules *packet.L3Rules
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -21,7 +20,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get splitting rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")
+	l3Rules = packet.GetL3ACLFromORIG("Forwarding.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)
@@ -45,5 +44,5 @@ func main() {
 // User defined function for splitting packets
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3ACLPort(currentPacket, l3Rules)
+	return currentPacket.L3ACLPort(l3Rules)
 }

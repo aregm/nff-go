@@ -9,12 +9,11 @@ import (
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 )
 
 var (
-	l3Rules  *rules.L3Rules
+	l3Rules  *packet.L3Rules
 	inport   uint
 	outport1 uint
 	outport2 uint
@@ -44,7 +43,7 @@ func main() {
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
 	// Get splitting rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG(*filename)
+	l3Rules = packet.GetL3ACLFromORIG(*filename)
 
 	inputFlow := flow.SetReceiver(uint8(inport))
 
@@ -68,7 +67,7 @@ func main() {
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3ACLPort(currentPacket, l3Rules)
+	return currentPacket.L3ACLPort(l3Rules)
 }
 
 func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {

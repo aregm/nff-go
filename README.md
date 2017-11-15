@@ -31,7 +31,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Get filtering rules from access control file.
-	L3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
+	L3Rules = packet.GetL3ACLFromORIG("Firewall.conf")
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow := flow.SetReceiver(0)
@@ -53,7 +53,7 @@ func main() {
 func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	currentPacket.ParseL4()
 	// Return whether packet is accepted or not. Based on ACL rules.
-	return rules.L3ACLPermit(currentPacket, L3Rules)
+	return currentPacket.L3ACLPermit(L3Rules)
 }
 ```
 
@@ -149,7 +149,6 @@ to generate full documentation. Alternatively, you can do:
 and browse the following URLs:
 
 * http://localhost:6060/pkg/yanff/flow/
-* http://localhost:6060/pkg/yanff/rules/
 * http://localhost:6060/pkg/yanff/packet/
 
 ## Tests
