@@ -119,7 +119,7 @@ type Scheduler struct {
 	off               bool
 	offRemove         bool
 	stopDedicatedCore bool
-	StopRing          *low.Queue
+	StopRing          *low.Ring
 	usedCores         uint8
 	checkTime         uint
 	debugTime         uint
@@ -133,7 +133,7 @@ type core struct {
 
 // NewScheduler is a function for creation new scheduler. Is used inside flow package
 func NewScheduler(cpus []uint, schedulerOff bool, schedulerOffRemove bool,
-	stopDedicatedCore bool, stopRing *low.Queue, checkTime uint, debugTime uint) Scheduler {
+	stopDedicatedCore bool, stopRing *low.Ring, checkTime uint, debugTime uint) Scheduler {
 	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(Scheduler)
