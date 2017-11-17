@@ -106,6 +106,18 @@ func TestL2RulesReadingGen(t *testing.T) {
 			for _, dst := range rulesCtxt.dsts {
 				for _, id := range rulesCtxt.ids {
 
+					// Expected result of parsing
+					ruleWant := l2Rules{
+						OutputNumber: r.gtrule,
+						DAddrNotAny:  dst.addrNotAny,
+						SAddrNotAny:  src.addrNotAny,
+						DAddr:        dst.addr,
+						SAddr:        src.addr,
+						IDMask:       id.idmsk,
+						ID:           id.id,
+					}
+
+					/***** Test GetL2ACLFromJSON *****/
 					rule := rawL2Rules{
 						L2Rules: []rawL2Rule{
 							{
@@ -126,17 +138,6 @@ func TestL2RulesReadingGen(t *testing.T) {
 						log.Fatal(err)
 					}
 
-					// Expected result of parsing
-					ruleWant := l2Rules{
-						OutputNumber: r.gtrule,
-						DAddrNotAny:  dst.addrNotAny,
-						SAddrNotAny:  src.addrNotAny,
-						DAddr:        dst.addr,
-						SAddr:        src.addr,
-						IDMask:       id.idmsk,
-						ID:           id.id,
-					}
-
 					// Now we can read file, parse l2 rule and compare result with expected
 					ruleGot := GetL2ACLFromJSON(tmpfile.Name())
 
@@ -149,6 +150,35 @@ func TestL2RulesReadingGen(t *testing.T) {
 						log.Fatal(err)
 					}
 					os.Remove(tmpfile.Name()) // remove if test passed
+
+					/***** Test GetL2ACLFromORIG for IPv4 *****/
+					headerORIG := "# Source MAC, Destination MAC, L3 ID, Output port\n"
+					ruleORIG := fmt.Sprintf("%s %s %s %s",
+						src.rawaddr, dst.rawaddr, id.rawid, r.rawrule)
+
+					tmpfile, err = ioutil.TempFile(tmpdir, "tmp_test.orig")
+					if err != nil {
+						log.Fatal(err)
+					}
+					if _, err = tmpfile.WriteString(headerORIG + ruleORIG); err != nil {
+						log.Fatal(err)
+					}
+
+					// Now we can read file, parse l2 rule and compare result with expected.
+					ruleGot = GetL2ACLFromORIG(tmpfile.Name())
+
+					if !reflect.DeepEqual(ruleGot.eth[0], ruleWant) {
+						t.Errorf("Incorrect parse L2 rules from ORIG:\ngot: %+v \nwant: %+v\n\n",
+							ruleGot.eth[0], ruleWant)
+						t.Errorf("Test ORIG file %s\n\n", tmpfile.Name())
+						t.FailNow()
+					}
+
+					if err = tmpfile.Close(); err != nil {
+						log.Fatal(err)
+					}
+					os.Remove(tmpfile.Name()) // remove if test passed
+
 				}
 			}
 		}
