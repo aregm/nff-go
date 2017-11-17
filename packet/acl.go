@@ -77,6 +77,41 @@ func GetL2ACLFromJSON(filename string) *L2Rules {
 	return &rules
 }
 
+// GetL2ACLFromORIG gets name of fields structed file with combined L2 rules,
+// returns L2Rules
+func GetL2ACLFromORIG(filename string) *L2Rules {
+	var rawRules rawL2Rules
+	var rules L2Rules
+	// Load Rules
+	file, err := os.Open(filename)
+	if err != nil {
+		common.LogError(common.Debug, "File error during rules parsing: ", err)
+	}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		temp := scanner.Text()
+		if len(temp) == 0 || temp[0] == '#' {
+			continue
+		}
+		lines := strings.Fields(temp)
+		if len(lines) == 3 {
+			lines = append(lines, "false")
+		} else if len(lines) != 4 {
+			common.LogError(common.Debug, "Incomplete 3-tuple for rule parsing")
+		}
+		rawRules.L2Rules = append(rawRules.L2Rules, rawL2Rule{Source: lines[0],
+			Destination: lines[1], ID: lines[2], Rule: lines[3]})
+	}
+	if err := scanner.Err(); err != nil {
+		common.LogError(common.Debug, "File error during rules parsing: ", err)
+	}
+	file.Close()
+
+	// Parse Rules
+	rawL2Parse(&rawRules, &rules)
+	return &rules
+}
+
 // GetL3ACLFromJSON gets name of JSON structed file with combined L3 and L4 rules,
 // returns L2Rules
 func GetL3ACLFromJSON(filename string) *L3Rules {
@@ -146,7 +181,7 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) {
 			jp.eth[i].SAddrNotAny = true
 			t, err := net.ParseMAC(jup[i].Source)
 			if err != nil {
-				common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].Source)
+				common.LogError(common.Debug, "Incorrect source MAC: ", jup[i].Source)
 			}
 			copy(jp.eth[i].SAddr[:], t)
 		}
@@ -154,7 +189,7 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) {
 			jp.eth[i].DAddrNotAny = true
 			t, err := net.ParseMAC(jup[i].Destination)
 			if err != nil {
-				common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].Destination)
+				common.LogError(common.Debug, "Incorrect destination MAC: ", jup[i].Destination)
 			}
 			copy(jp.eth[i].DAddr[:], t)
 		}
@@ -169,7 +204,7 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) {
 			jp.eth[i].ID = common.IPV6Number
 			jp.eth[i].IDMask = 0xffff
 		default:
-			common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].ID)
+			common.LogError(common.Debug, "Incorrect L3 protocol ID: ", jup[i].ID)
 		}
 	}
 }
@@ -199,7 +234,7 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) {
 			l4temp.ID = common.UDPNumber
 			l4temp.IDMask = 0xff
 		default:
-			common.LogError(common.Debug, "Incorrect JSON request: ", jup[i].ID)
+			common.LogError(common.Debug, "Incorrect L4 protocol ID: ", jup[i].ID)
 		}
 
 		// Parse L4 ports
@@ -253,7 +288,7 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) {
 			} else if dstLen == 4 {
 				temp4.DstAddr, temp4.DstMask = parseAddr4(dstAddr)
 			} else if dstLen == 16 {
-				common.LogError(common.Debug, "Incorrect JSON request: IPv4 + IPv6 in one rule")
+				common.LogError(common.Debug, "Incorrect request: IPv4 + IPv6 in one rule")
 			}
 			temp4.OutputNumber = parseRuleResult(jup[i].OutputNumber)
 			temp4.L4 = l4temp
@@ -263,7 +298,7 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) {
 			if dstLen == 0 {
 				temp6.DstAddr, temp6.DstMask = parseAddr6(zero6)
 			} else if dstLen == 4 {
-				common.LogError(common.Debug, "Incorrect JSON request: IPv4 + IPv6 in one rule")
+				common.LogError(common.Debug, "Incorrect request: IPv4 + IPv6 in one rule")
 			} else if dstLen == 16 {
 				temp6.DstAddr, temp6.DstMask = parseAddr6(dstAddr)
 			}
@@ -289,15 +324,15 @@ func parseL4Port(port string) (uint16, uint16, bool) {
 	}
 	s := strings.SplitN(port, ":", 2)
 	if len(s) != 2 {
-		common.LogError(common.Debug, "Incorrect JSON request: ", port)
+		common.LogError(common.Debug, "Incorrect port: ", port)
 	}
 	tMin, errMin := strconv.ParseUint(s[0], 10, 16)
 	tMax, errMax := strconv.ParseUint(s[1], 10, 16)
 	if errMin != nil || errMax != nil {
-		common.LogError(common.Debug, "Incorrect JSON request: ", port)
+		common.LogError(common.Debug, "Incorrect request: cannot parse Min and Max port values in ", port)
 	}
 	if tMin > tMax {
-		common.LogError(common.Debug, "Incorrect JSON request: minPort > maxPort", port)
+		common.LogError(common.Debug, "Incorrect request: minPort > maxPort", port)
 	}
 	return uint16(tMin), uint16(tMax), valid
 }
@@ -311,7 +346,7 @@ func parseRuleResult(rule string) uint {
 	default:
 		port, err := strconv.ParseUint(rule, 10, 32)
 		if err != nil {
-			common.LogError(common.Debug, "Incorrect JSON request: ", rule)
+			common.LogError(common.Debug, "Incorrect rule: ", rule)
 		}
 		return uint(port)
 	}
