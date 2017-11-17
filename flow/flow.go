@@ -54,7 +54,7 @@ type UserContext scheduler.UserContext
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
 type Flow struct {
-	current *low.Queue
+	current *low.Ring
 }
 
 // GenerateFunction is a function type for user defined function which generates packets.
@@ -100,12 +100,12 @@ type Kni struct {
 }
 
 type receiveParameters struct {
-	out   *low.Queue
+	out   *low.Ring
 	queue int16
 	port  uint8
 }
 
-func makeReceiver(port uint8, queue int16, out *low.Queue) *scheduler.FlowFunction {
+func makeReceiver(port uint8, queue int16, out *low.Ring) *scheduler.FlowFunction {
 	par := new(receiveParameters)
 	par.port = port
 	par.queue = queue
@@ -115,13 +115,13 @@ func makeReceiver(port uint8, queue int16, out *low.Queue) *scheduler.FlowFuncti
 }
 
 type generateParameters struct {
-	out                    *low.Queue
+	out                    *low.Ring
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
 }
 
-func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *scheduler.FlowFunction {
+func makeGeneratorOne(out *low.Ring, generateFunction GenerateFunction) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
@@ -130,7 +130,7 @@ func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *schedu
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
 
-func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
+func makeGeneratorPerf(out *low.Ring, generateFunction GenerateFunction,
 	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
@@ -142,12 +142,12 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 }
 
 type sendParameters struct {
-	in    *low.Queue
+	in    *low.Ring
 	queue int16
 	port  uint8
 }
 
-func makeSender(port uint8, queue int16, in *low.Queue) *scheduler.FlowFunction {
+func makeSender(port uint8, queue int16, in *low.Ring) *scheduler.FlowFunction {
 	par := new(sendParameters)
 	par.port = port
 	par.queue = queue
@@ -157,14 +157,14 @@ func makeSender(port uint8, queue int16, in *low.Queue) *scheduler.FlowFunction 
 }
 
 type partitionParameters struct {
-	in        *low.Queue
-	outFirst  *low.Queue
-	outSecond *low.Queue
+	in        *low.Ring
+	outFirst  *low.Ring
+	outSecond *low.Ring
 	N         uint64
 	M         uint64
 }
 
-func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N uint64, M uint64) *scheduler.FlowFunction {
+func makePartitioner(in *low.Ring, outFirst *low.Ring, outSecond *low.Ring, N uint64, M uint64) *scheduler.FlowFunction {
 	par := new(partitionParameters)
 	par.in = in
 	par.outFirst = outFirst
@@ -176,14 +176,14 @@ func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N
 }
 
 type separateParameters struct {
-	in                     *low.Queue
-	outTrue                *low.Queue
-	outFalse               *low.Queue
+	in                     *low.Ring
+	outTrue                *low.Ring
+	outFalse               *low.Ring
 	separateFunction       SeparateFunction
 	vectorSeparateFunction VectorSeparateFunction
 }
 
-func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
+func makeSeparator(in *low.Ring, outTrue *low.Ring, outFalse *low.Ring,
 	separateFunction SeparateFunction, vectorSeparateFunction VectorSeparateFunction,
 	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(separateParameters)
@@ -197,13 +197,13 @@ func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
 }
 
 type splitParameters struct {
-	in            *low.Queue
-	outs          []*low.Queue
+	in            *low.Ring
+	outs          []*low.Ring
 	splitFunction SplitFunction
 	flowNumber    uint
 }
 
-func makeSplitter(in *low.Queue, outs []*low.Queue,
+func makeSplitter(in *low.Ring, outs []*low.Ring,
 	splitFunction SplitFunction, flowNumber uint, context UserContext) *scheduler.FlowFunction {
 	par := new(splitParameters)
 	par.in = in
@@ -215,13 +215,13 @@ func makeSplitter(in *low.Queue, outs []*low.Queue,
 }
 
 type handleParameters struct {
-	in                   *low.Queue
-	out                  *low.Queue
+	in                   *low.Ring
+	out                  *low.Ring
 	handleFunction       HandleFunction
 	vectorHandleFunction VectorHandleFunction
 }
 
-func makeHandler(in *low.Queue, out *low.Queue,
+func makeHandler(in *low.Ring, out *low.Ring,
 	handleFunction HandleFunction, vectorHandleFunction VectorHandleFunction,
 	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(handleParameters)
@@ -234,11 +234,11 @@ func makeHandler(in *low.Queue, out *low.Queue,
 }
 
 type writeParameters struct {
-	in       *low.Queue
+	in       *low.Ring
 	filename string
 }
 
-func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
+func makeWriter(filename string, in *low.Ring) *scheduler.FlowFunction {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
@@ -247,13 +247,13 @@ func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
 }
 
 type readParameters struct {
-	out      *low.Queue
+	out      *low.Ring
 	filename string
 	mempool  *low.Mempool
 	repcount int32
 }
 
-func makeReader(filename string, out *low.Queue, repcount int32) *scheduler.FlowFunction {
+func makeReader(filename string, out *low.Ring, repcount int32) *scheduler.FlowFunction {
 	par := new(readParameters)
 	par.out = out
 	par.filename = filename
@@ -419,7 +419,7 @@ func SystemInit(args *Config) {
 	}
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = scheduler.NewScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
@@ -475,7 +475,7 @@ func SetWriter(IN *Flow, filename string) {
 // Returns new opened flow with read packets.
 // Function can panic during execution.
 func SetReader(filename string, repcount int32) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	read := makeReader(filename, ring, repcount)
 	schedState.UnClonable = append(schedState.UnClonable, read)
 	OUT = new(Flow)
@@ -490,7 +490,7 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Returns new opened flow with received packets
 // Function can panic during execution.
 func SetReceiver(par interface{}) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var recv *scheduler.FlowFunction
 	if port, t := par.(int); t {
 		if uint8(port) >= uint8(len(createdPorts)) {
@@ -521,7 +521,7 @@ func SetReceiver(par interface{}) (OUT *Flow) {
 // tries to achieve this speed by cloning.
 // Function can panic during execution.
 func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
 		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
@@ -583,8 +583,8 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 	if N == 0 || M == 0 {
 		common.LogWarning(common.Initialization, "One of SetPartitioner function's arguments is zero.")
 	}
-	ringFirst := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	ringSecond := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
 	partition := makePartitioner(IN.current, ringFirst, ringSecond, N, M)
 	// We make partition function unclonable. The most complex task is (1,1).
@@ -604,8 +604,8 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow) {
 	checkFlow(IN)
 	OUT = new(Flow)
-	ringTrue := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	ringFalse := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
 	var separate *scheduler.FlowFunction
 	if f, t := separateFunction.(func(*packet.Packet, UserContext) bool); t {
@@ -630,11 +630,11 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow)) {
 	checkFlow(IN)
 	OutArray = make([](*Flow), flowNumber, flowNumber)
-	rings := make([](*low.Queue), flowNumber, flowNumber)
+	rings := make([](*low.Ring), flowNumber, flowNumber)
 	for i := range OutArray {
 		OutArray[i] = new(Flow)
 		openFlowsNumber++
-		rings[i] = low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+		rings[i] = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 		OutArray[i].current = rings[i]
 	}
 	split := makeSplitter(IN.current, rings, splitFunction, flowNumber, context)
@@ -663,7 +663,7 @@ func SetStopper(IN *Flow) {
 // Function can panic during execution.
 func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
 	checkFlow(IN)
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var handle *scheduler.FlowFunction
 	if f, t := handleFunction.(func(*packet.Packet, UserContext)); t {
 		handle = makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
@@ -685,7 +685,7 @@ func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
 func SetMerger(InArray ...*Flow) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	for i := range InArray {
 		checkFlow(InArray[i])
 		merge(InArray[i].current, ring)
@@ -788,7 +788,7 @@ func send(parameters interface{}, coreID uint8) {
 	low.Send(srp.port, srp.queue, srp.in, coreID)
 }
 
-func merge(from *low.Queue, to *low.Queue) {
+func merge(from *low.Ring, to *low.Ring) {
 	// We should change out rings in all flow functions which we added before
 	// and change them to one "after merge" ring.
 	// We don't proceed stop and send functions here because they don't have
@@ -845,9 +845,9 @@ func separateCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -998,9 +998,9 @@ func splitCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -1079,9 +1079,9 @@ func handleCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -1219,7 +1219,7 @@ func read(parameters interface{}, coreID uint8) {
 // This function tries to write elements to input ring. However
 // if this ring can't get these elements they will be placed
 // inside stop ring which is emptied in separate thread.
-func safeEnqueue(place *low.Queue, data []uintptr, number uint) {
+func safeEnqueue(place *low.Ring, data []uintptr, number uint) {
 	done := place.EnqueueBurst(data, number)
 	if done < number {
 		schedState.Dropped += number - uint(done)
