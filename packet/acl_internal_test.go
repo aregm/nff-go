@@ -93,6 +93,7 @@ func TestL2RulesReadingGen(t *testing.T) {
 			{"ANY", gtID{0, 0x0000}},
 			{"IPv4", gtID{0x0800, 0xffff}},
 			{"IPv6", gtID{0x86dd, 0xffff}},
+			{"arp", gtID{0x0806, 0xffff}},
 		},
 	}
 
@@ -249,6 +250,7 @@ func TestL3RulesReadingGen(t *testing.T) {
 			{"ANY", gtID{0, 0x0000}},
 			{"TCP", gtID{0x06, 0xff}},
 			{"UDP", gtID{0x11, 0xff}},
+			{"ICMP", gtID{0x01, 0xff}},
 		},
 		srcports: []portTest{
 			{"ANY", gtPort{0, 65535, false}},
@@ -275,6 +277,10 @@ func TestL3RulesReadingGen(t *testing.T) {
 		for _, id := range rulesCtxt.ids {
 			for _, sport := range rulesCtxt.srcports {
 				for _, dport := range rulesCtxt.dstports {
+					if id.rawid == "ICMP" && (sport.rawport != "ANY" || dport.rawport != "ANY") {
+						// Special case for ICMP rule: both source port and destination port should be ANY
+						continue
+					}
 					///////// Generate Ipv4 Rules /////////
 					for _, src4 := range rulesCtxt.srcs4 {
 						for _, dst4 := range rulesCtxt.dsts4 {
@@ -517,7 +523,7 @@ func TestInternal_l4_ACL_packetIPv4_TCP(t *testing.T) {
 }
 
 func (rule l4Rules) String() string {
-	return fmt.Sprintf("srcMin: %d, srcMax: %d, dstMin: %d, dstMax: %d, ID=%x, IDMaask=%x, valid=%t", rule.SrcPortMin, rule.SrcPortMax, rule.DstPortMin, rule.DstPortMax, rule.ID, rule.IDMask, rule.valid)
+	return fmt.Sprintf("srcMin: %d, srcMax: %d, dstMin: %d, dstMax: %d, ID=%x, IDMask=%x, valid=%t", rule.SrcPortMin, rule.SrcPortMax, rule.DstPortMin, rule.DstPortMax, rule.ID, rule.IDMask, rule.valid)
 }
 
 func (rule l3Rules4) String() string {
@@ -967,7 +973,7 @@ func TestInternal_l3_l4_ACL_packetIPv6_UDP(t *testing.T) {
 
 // Tests for l2ACL
 func TestInternal_l2_ACL(t *testing.T) {
-	// Packet 1
+	// Packet IPv4
 	buffer := "001122334455011121314151080045000028bffd00000406eec37f0000018009090504d2162e1234567812345690501020009b540000000000000000"
 	decoded, _ := hex.DecodeString(buffer)
 	mb := make([]uintptr, 1)
@@ -985,6 +991,7 @@ func TestInternal_l2_ACL(t *testing.T) {
 			{id: 0, mask: 0, ok: true},
 			{id: 0x0800, mask: 0xffff, ok: true},
 			{id: 0x86dd, mask: 0xffff, ok: false},
+			{id: 0x0806, mask: 0xffff, ok: false},
 		},
 		srcMac: []MacAddr{
 			{addr: [6]uint8{0, 0, 0, 0, 0, 0}, addrNotAny: false, ok: true},

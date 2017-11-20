@@ -203,6 +203,9 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) {
 		case "ipv6", "Ipv6", "IPv6", "IPV6", "0x86dd":
 			jp.eth[i].ID = common.IPV6Number
 			jp.eth[i].IDMask = 0xffff
+		case "arp", "Arp", "ARP", "0x0806":
+			jp.eth[i].ID = common.ARPNumber
+			jp.eth[i].IDMask = 0xffff
 		default:
 			common.LogError(common.Debug, "Incorrect L3 protocol ID: ", jup[i].ID)
 		}
@@ -233,6 +236,12 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) {
 		case "udp", "UDP", "Udp", "0x11", "17":
 			l4temp.ID = common.UDPNumber
 			l4temp.IDMask = 0xff
+		case "icmp", "ICMP", "Icmp", "0x01", "1":
+			l4temp.ID = common.ICMPNumber
+			l4temp.IDMask = 0xff
+			if jup[i].SrcPort != "ANY" || jup[i].DstPort != "ANY" {
+				common.LogError(common.Debug, "Incorrect request: for ICMP rule Source port and Destination port should be ANY")
+			}
 		default:
 			common.LogError(common.Debug, "Incorrect L4 protocol ID: ", jup[i].ID)
 		}
