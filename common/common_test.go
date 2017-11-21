@@ -3,6 +3,7 @@ package common_test
 import (
 	"github.com/intel-go/yanff/common"
 	"reflect"
+	"strconv"
 	"testing"
 )
 
@@ -31,6 +32,8 @@ var cpuParseTests = []struct {
 	{"1,10-13,9", SmallCPUNum, []uint{1, 10, 11}, nil},
 	{"10-14,13-15", SmallCPUNum, []uint{10, 11, 12}, nil},
 	{"10-14,11-12", SmallCPUNum, []uint{10, 11, 12}, nil},
+	{"1-3,6-", BigCPUNum, []uint{1, 2, 3}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
+	{"-1", BigCPUNum, []uint{}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
 }
 
 // TestParseCPUs require minumum 22 cores to pass without error.
@@ -38,12 +41,12 @@ var cpuParseTests = []struct {
 func TestParseCPUs(t *testing.T) {
 	for _, tt := range cpuParseTests {
 		actual, err := common.ParseCPUs(tt.line, tt.cpuNum)
-		if err != tt.expectedErr {
-			t.Errorf("ParseCpuList(\"%s\",%d): unexpected error: %v", tt.line, tt.cpuNum, err)
+		if !reflect.DeepEqual(err, tt.expectedErr) {
+			t.Errorf("ParseCpuList(\"%s\",%d): unexpected error:\ngot: %v,\nwant: %v\n", tt.line, tt.cpuNum, err, tt.expectedErr)
 			continue
 		}
 		if !reflect.DeepEqual(actual, tt.expected) {
-			t.Errorf("ParseCpuList(\"%s\",%d): expected %v, actual %v", tt.line, tt.cpuNum, tt.expected, actual)
+			t.Errorf("ParseCpuList(\"%s\",%d): got %v, want %v", tt.line, tt.cpuNum, actual, tt.expected)
 		}
 	}
 }
