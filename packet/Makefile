@@ -8,3 +8,7 @@ include $(PATH_TO_MK)/include.mk
 .PHONY: testing
 testing: check-pktgen
 	go test
+
+coverage:
+	go test -cover -coverprofile=c.out
+	go tool cover -html=c.out -o packet_coverage.html
