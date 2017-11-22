@@ -3,12 +3,11 @@
         {
             "private-port": {
                 "index": 0,
-                "dst_mac": "3c:fd:fe:a4:d3:b0",
                 "subnet": "192.168.1.1/24"
             },
             "public-port": {
                 "index": 1,
-                "dst_mac": "3c:fd:fe:a4:d3:b1",
+                "dst-mac": "3c:fd:fe:a4:d3:b1",
                 "subnet": "10.1.1.1"
             }
         }

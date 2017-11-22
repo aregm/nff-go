@@ -53,6 +53,11 @@ bindports()
 }
 bindports
 declare -f bindports >> .bash_login
+unbindports()
+{
+    sudo \"$YANFF\"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=e1000 00:08.0 00:09.0
+}
+declare -f unbindports >> .bash_login
 runpktgen()
 {
     (cd \"$YANFF\"/dpdk; sudo ./pktgen -c 0xff -n 4 -- -P -m \"[1:2].0, [3:4].1\" -T)
@@ -69,7 +74,7 @@ SHELL
                       inline: $provision
 
   # Define six YANFF VMs
-  (0..5).each do |i|
+  (0..1).each do |i|
     config.vm.define "yanff-#{i}" do |node|
       node.vm.hostname = "yanff-#{i}"
       # Define first inter-VM virtual network link
