@@ -492,8 +492,8 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 func SetReceiver(par interface{}) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var recv *scheduler.FlowFunction
-	if port, t := par.(int); t {
-		if uint8(port) >= uint8(len(createdPorts)) {
+	if port, t := par.(uint8); t {
+		if port >= uint8(len(createdPorts)) {
 			common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
 		}
 		createdPorts[port].config = autoPort
@@ -553,8 +553,8 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 func SetSender(IN *Flow, par interface{}) {
 	checkFlow(IN)
 	var send *scheduler.FlowFunction
-	if port, t := par.(int); t {
-		if uint8(port) >= uint8(len(createdPorts)) {
+	if port, t := par.(uint8); t {
+		if port >= uint8(len(createdPorts)) {
 			common.LogError(common.Initialization, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).")
 		}
 		createdPorts[port].config = autoPort
@@ -565,7 +565,7 @@ func SetSender(IN *Flow, par interface{}) {
 		// Send for "-1" queue will be to KNI device
 		send = makeSender(tkni.port, -1, IN.current)
 	} else {
-		common.LogError(common.Initialization, "SetReceiver parameter should be ether number of port or created KNI device")
+		common.LogError(common.Initialization, "SetSender parameter should be ether number of port or created KNI device")
 	}
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
