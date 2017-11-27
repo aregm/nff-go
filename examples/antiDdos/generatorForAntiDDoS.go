@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	speed        uint64 = 6000000 // 6000000 = for 512 pkt ~ 25Gb/s
+	speed        uint64 = 6000000 // 6000000 for 544 (average for range [64, 1024)]) bytes pkt ~ 26Gb/s
 	totalPackets uint64
 	payloadSize  uint
 	recvPackets  uint64
@@ -37,15 +37,19 @@ var (
 	sentNonFlood uint64
 	gotNonFlood  uint64
 
-	testDoneEvent *sync.Cond
+	// needed to finish work and print statistics after
+	// we received totalPackets number of pkts
+	exampleDoneEvent *sync.Cond
 
-	outport int
-	// addresses imitating "good" users
+	outPort int
+	inPort  int
+	// addresses imitating users sending non flood
+	// flooding user's addresses will be generated
 	goodAddresses = [goodDataListSize]uint32{packet.SwapBytesUint32(1235),
 		packet.SwapBytesUint32(980),
 		packet.SwapBytesUint32(2405),
 		packet.SwapBytesUint32(3540)}
-	// ports corresponding to addresses
+	// ports corresponding to addresses of users sending non flood
 	goodPorts = [goodDataListSize]uint16{packet.SwapBytesUint16(1),
 		packet.SwapBytesUint16(2),
 		packet.SwapBytesUint16(3),
@@ -54,32 +58,32 @@ var (
 
 func main() {
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
-	flag.IntVar(&outport, "outport", 0, "port for sender")
-	flag.Uint64Var(&totalPackets, "totalPackets", 100000000, "totalPackets ")
+	flag.IntVar(&outPort, "outPort", 0, "port to send")
+	flag.IntVar(&inPort, "inPort", 0, "port to receive")
+	flag.Uint64Var(&totalPackets, "totalPackets", 100000000, "finish work when total number of packets received")
 	flag.Parse()
-
+	// Init YANFF system at requested number of cores.
 	config := flow.Config{
 		CPUList: "0-15",
 	}
 	flow.SystemInit(&config)
 
-	var m sync.Mutex
-	testDoneEvent = sync.NewCond(&m)
+	exampleDoneEvent = sync.NewCond(&sync.Mutex{})
 
 	// Create first packet flow
 	outputFlow := flow.SetGenerator(generatePacket, speed, nil)
-	flow.SetSender(outputFlow, outport)
-	inputFlow1 := flow.SetReceiver(outport)
-	flow.SetHandler(inputFlow1, checkInputFlow, nil)
-	flow.SetStopper(inputFlow1)
+	flow.SetSender(outputFlow, outPort)
+	inputFlow := flow.SetReceiver(inPort)
+	flow.SetHandler(inputFlow, checkInputFlow, nil)
+	flow.SetStopper(inputFlow)
 	go randomizeSize()
 	// Start pipeline
 	go flow.SystemStart()
 
 	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
+	exampleDoneEvent.L.Lock()
+	exampleDoneEvent.Wait()
+	exampleDoneEvent.L.Unlock()
 
 	sent := atomic.LoadUint64(&sentPackets)
 	received := atomic.LoadUint64(&recvPackets)
@@ -160,7 +164,7 @@ func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
 		}
 	}
 	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
+		exampleDoneEvent.Signal()
 	}
 }
 
