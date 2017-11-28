@@ -95,7 +95,13 @@ func getIPv6UDPTestPacket() *Packet {
 	initEtherAddrs(pkt)
 	initIPv6Addrs(pkt)
 	initPorts(pkt)
+	return pkt
+}
 
+func getPacket() *Packet {
+	mb := make([]uintptr, 1)
+	low.AllocateMbufs(mb, testMempool)
+	pkt := ExtractPacket(mb[0])
 	return pkt
 }
 
