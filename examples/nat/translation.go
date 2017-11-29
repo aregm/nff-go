@@ -141,7 +141,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
 	pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
 	if pktVLAN != nil {
-		pktVLAN.SetVLANTag(pp.PrivatePort.Vlan)
+		pktVLAN.SetVLANTagIdentifier(pp.PrivatePort.Vlan)
 	}
 	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
@@ -246,7 +246,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
 	pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
 	if pktVLAN != nil {
-		pktVLAN.SetVLANTag(pp.PublicPort.Vlan)
+		pktVLAN.SetVLANTagIdentifier(pp.PublicPort.Vlan)
 	}
 	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 

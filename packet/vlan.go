@@ -25,14 +25,14 @@ TCI: 0x%02x (priority: %d, drop %d, ID: %d)\n
 EtherType: 0x%02x\n`, hdr.TCI, byte(hdr.TCI>>13), (hdr.TCI>>12)&1, hdr.TCI&0xfff, hdr.EtherType)
 }
 
-// GetVLANTag returns 12 bits of VLAN tag from VLAN header.
-func (hdr *VLANHdr) GetVLANTag() uint16 {
-	return SwapBytesUint16(hdr.TCI) & 0xfff
+// GetVLANTagIdentifier returns VID (12 bits of VLAN tag from VLAN header).
+func (hdr *VLANHdr) GetVLANTagIdentifier() uint16 {
+	return SwapBytesUint16(hdr.TCI) & 0x0fff
 }
 
-// SetVLANTag sets 12 bits of VLAN tag to specified value.
-func (hdr *VLANHdr) SetVLANTag(tag uint16) {
-	hdr.TCI = (hdr.TCI & 0xf000) | SwapBytesUint16(tag&0xfff)
+// SetVLANTagIdentifier sets VID (12 bits of VLAN tag to specified value).
+func (hdr *VLANHdr) SetVLANTagIdentifier(tag uint16) {
+	hdr.TCI = SwapBytesUint16((SwapBytesUint16(hdr.TCI) & 0xf000) | (tag & 0x0fff))
 }
 
 // GetVLAN returns VLAN header pointer if it is present in the packet.
@@ -55,9 +55,9 @@ func (packet *Packet) GetEtherType() uint16 {
 	if packet.Ether.EtherType == SwapBytesUint16(VLANNumber) {
 		vptr := packet.unparsed()
 		vhdr := (*VLANHdr)(unsafe.Pointer(vptr))
-		return vhdr.EtherType
+		return SwapBytesUint16(vhdr.EtherType)
 	} else {
-		return packet.Ether.EtherType
+		return SwapBytesUint16(packet.Ether.EtherType)
 	}
 }
 
@@ -77,7 +77,7 @@ func (packet *Packet) ParseL3CheckVLAN() *VLANHdr {
 // GetIPv4CheckVLAN ensures if EtherType is IPv4 and casts L3 pointer
 // to IPv4Hdr type. VLAN presence is checked if necessary.
 func (packet *Packet) GetIPv4CheckVLAN() *IPv4Hdr {
-	if packet.GetEtherType() == SwapBytesUint16(IPV4Number) {
+	if packet.GetEtherType() == IPV4Number {
 		return (*IPv4Hdr)(packet.L3)
 	}
 	return nil
@@ -86,7 +86,7 @@ func (packet *Packet) GetIPv4CheckVLAN() *IPv4Hdr {
 // GetARPCheckVLAN ensures if EtherType is ARP and casts L3 pointer to
 // ARPHdr type. VLAN presence is checked if necessary.
 func (packet *Packet) GetARPCheckVLAN() *ARPHdr {
-	if packet.GetEtherType() == SwapBytesUint16(ARPNumber) {
+	if packet.GetEtherType() == ARPNumber {
 		return (*ARPHdr)(packet.L3)
 	}
 	return nil
@@ -95,7 +95,7 @@ func (packet *Packet) GetARPCheckVLAN() *ARPHdr {
 // GetIPv6CheckVLAN ensures if EtherType is IPv6 and cast L3 pointer
 // to IPv6Hdr type. VLAN presence is checked if necessary.
 func (packet *Packet) GetIPv6CheckVLAN() *IPv6Hdr {
-	if packet.GetEtherType() == SwapBytesUint16(IPV6Number) {
+	if packet.GetEtherType() == IPV6Number {
 		return (*IPv6Hdr)(packet.L3)
 	}
 	return nil
