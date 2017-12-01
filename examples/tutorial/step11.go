@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/intel-go/yanff/common"
@@ -14,21 +16,34 @@ var (
 
 const flowN = 3
 
-func main() {
-	config := flow.Config{}
-	flow.SystemInit(&config)
-	initCommonState()
-	l3Rules = packet.GetL3ACLFromORIG("rules2.conf")
-	go updateSeparateRules()
-	firstFlow := flow.SetReceiver(0)
-	outputFlows := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
-	flow.SetStopper(outputFlows[0])
-	flow.SetHandler(outputFlows[1], myHandler, nil)
-	for i := 1; i < flowN; i++ {
-		flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil)
-		flow.SetSender(outputFlows[i], uint8(i-1))
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
 	}
-	flow.SystemStart()
+}
+func main() {
+	var err error
+	config := flow.Config{}
+	CheckFatal(flow.SystemInit(&config))
+
+	initCommonState()
+
+	l3Rules, err = packet.GetL3ACLFromORIG("rules2.conf")
+	CheckFatal(err)
+	go updateSeparateRules()
+	firstFlow, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	outputFlows, err := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetStopper(outputFlows[0]))
+	CheckFatal(flow.SetHandler(outputFlows[1], myHandler, nil))
+	for i := 1; i < flowN; i++ {
+		CheckFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
+		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
+	}
+	CheckFatal(flow.SystemStart())
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
@@ -58,6 +73,8 @@ func heavyCode() {
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		l3Rules = packet.GetL3ACLFromORIG("rules2.conf")
+		var err error
+		l3Rules, err = packet.GetL3ACLFromORIG("rules2.conf")
+		CheckFatal(err)
 	}
 }

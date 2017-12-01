@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/intel-go/yanff/flow"
@@ -20,6 +21,14 @@ var (
 	cloneNumber uint
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
@@ -29,18 +38,19 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-9",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue will be added automatically.
-	f1 := flow.SetReceiver(uint8(inport))
+	f1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	var pdp pcapdumperParameters
-	flow.SetHandler(f1, pcapdumper, &pdp)
+	CheckFatal(flow.SetHandler(f1, pcapdumper, &pdp))
 
 	// Send packets to control speed. One queue will be added automatically.
-	flow.SetSender(f1, uint8(outport))
+	CheckFatal(flow.SetSender(f1, uint8(outport)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 type pcapdumperParameters struct {
@@ -55,7 +65,9 @@ func (pd pcapdumperParameters) Copy() interface{} {
 		os.Exit(0)
 	}
 	cloneNumber++
-	packet.WritePcapGlobalHdr(f)
+	if err := packet.WritePcapGlobalHdr(f); err != nil {
+		log.Fatal(err)
+	}
 	pdp := pcapdumperParameters{f: f}
 	return pdp
 }
@@ -66,5 +78,7 @@ func (pd pcapdumperParameters) Delete() {
 
 func pcapdumper(currentPacket *packet.Packet, context flow.UserContext) {
 	pd := context.(pcapdumperParameters)
-	currentPacket.WritePcapOnePacket(pd.f)
+	if err := currentPacket.WritePcapOnePacket(pd.f); err != nil {
+		log.Fatal(err)
+	}
 }

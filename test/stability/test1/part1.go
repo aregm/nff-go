@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,6 +43,14 @@ var (
 	fixMACAddrs func(*packet.Packet, flow.UserContext)
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // This part of test generates packets on port 0 and receives them on
 // port 1. The test records packet's index inside of the first field
 // of the packet and sets the second field to zero. It expects the
@@ -64,7 +73,8 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+
+	CheckFatal(flow.SystemInit(&config))
 
 	stabilityCommon.InitCommonState(*configFile, *target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
@@ -72,18 +82,22 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	firstFlow := flow.SetGenerator(generatePacket, speed, nil)
+	firstFlow, err := flow.SetGenerator(generatePacket, speed, nil)
+	CheckFatal(err)
 
 	// Send all generated packets to the output
-	flow.SetSender(firstFlow, uint8(outport))
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport)))
 
 	// Create receiving flow and set a checking function for it
-	secondFlow := flow.SetReceiver(uint8(inport))
-	flow.SetHandler(secondFlow, checkPackets, nil)
-	flow.SetStopper(secondFlow)
+	secondFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(secondFlow, checkPackets, nil))
+	CheckFatal(flow.SetStopper(secondFlow))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 	progStart = time.Now()
 
 	// Wait for enough packets to arrive

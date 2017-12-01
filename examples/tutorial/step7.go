@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/intel-go/yanff/flow"
@@ -11,19 +13,34 @@ var (
 	l3Rules *packet.L3Rules
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
+	var err error
 	config := flow.Config{}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
+
 	initCommonState()
-	l3Rules = packet.GetL3ACLFromORIG("rules1.conf")
+
+	l3Rules, err = packet.GetL3ACLFromORIG("rules1.conf")
+	CheckFatal(err)
+
 	go updateSeparateRules()
-	firstFlow := flow.SetReceiver(0)
-	secondFlow := flow.SetSeparator(firstFlow, mySeparator, nil)
-	flow.SetHandler(firstFlow, modifyPacket[0], nil)
-	flow.SetHandler(secondFlow, modifyPacket[1], nil)
-	flow.SetSender(firstFlow, 0)
-	flow.SetStopper(secondFlow)
-	flow.SystemStart()
+	firstFlow, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	secondFlow, err := flow.SetSeparator(firstFlow, mySeparator, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	CheckFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
+	CheckFatal(flow.SetSender(firstFlow, uint8(0)))
+	CheckFatal(flow.SetStopper(secondFlow))
+	CheckFatal(flow.SystemStart())
 }
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
@@ -34,6 +51,8 @@ func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		l3Rules = packet.GetL3ACLFromORIG("rules1.conf")
+		var err error
+		l3Rules, err = packet.GetL3ACLFromORIG("rules1.conf")
+		CheckFatal(err)
 	}
 }

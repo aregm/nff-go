@@ -1,20 +1,31 @@
 // Only IPv4, Only tunnel, Only ESP, Only AES-128-CBC
 package main
 
-import "github.com/intel-go/yanff/common"
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
+	"crypto/sha1"
+	"flag"
+	"fmt"
+	"hash"
+	"math"
+	"os"
+	"unsafe"
 
-import "unsafe"
-import "math"
-import "bytes"
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+)
 
-import "crypto/aes"
-import "crypto/cipher"
-import "crypto/hmac"
-import "crypto/sha1"
-import "hash"
-import "flag"
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	var noscheduler bool
@@ -25,14 +36,15 @@ func main() {
 		CPUList:          "0-31",
 		DisableScheduler: noscheduler,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
-	input := flow.SetReceiver(0)
-	flow.SetHandler(input, encapsulation, *(new(context)))
-	flow.SetHandler(input, decapsulation, *(new(context)))
-	flow.SetSender(input, 1)
+	input, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(input, encapsulation, *(new(context))))
+	CheckFatal(flow.SetHandler(input, decapsulation, *(new(context))))
+	CheckFatal(flow.SetSender(input, uint8(1)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 type context struct {

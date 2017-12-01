@@ -4,10 +4,14 @@
 
 package main
 
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import (
+	"flag"
+	"fmt"
+	"os"
 
-import "flag"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+)
 
 var (
 	mode uint
@@ -18,6 +22,14 @@ var (
 	outport2    uint
 	noscheduler bool
 )
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
@@ -33,29 +45,34 @@ func main() {
 		CPUList:          "0-14",
 		DisableScheduler: noscheduler,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow0 := flow.SetReceiver(uint8(inport1))
-	firstFlow1 := flow.SetReceiver(uint8(inport2))
+	firstFlow0, err := flow.SetReceiver(uint8(inport1))
+	CheckFatal(err)
+	firstFlow1, err := flow.SetReceiver(uint8(inport2))
+	CheckFatal(err)
 
-	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
+	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
+	CheckFatal(err)
 
 	// Handle second flow via some heavy function
 	if mode == 0 {
-		flow.SetHandler(firstFlow, heavyFunc0, nil)
+		CheckFatal(flow.SetHandler(firstFlow, heavyFunc0, nil))
 	} else if mode == 1 {
-		flow.SetHandler(firstFlow, heavyFunc1, nil)
+		CheckFatal(flow.SetHandler(firstFlow, heavyFunc1, nil))
 	} else {
-		flow.SetHandler(firstFlow, heavyFunc2, nil)
+		CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
 	}
 
 	// Split for two senders and send
-	secondFlow := flow.SetPartitioner(firstFlow, 150, 150)
-	flow.SetSender(firstFlow, uint8(outport1))
-	flow.SetSender(secondFlow, uint8(outport2))
+	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
+	CheckFatal(err)
 
-	flow.SystemStart()
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
+	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+
+	CheckFatal(flow.SystemStart())
 }
 
 func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {

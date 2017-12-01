@@ -232,7 +232,10 @@ func TestGetL2ACLFromJSON(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL2ACLFromJSON(tmpfile.Name())
+		ruleGot, err := GetL2ACLFromJSON(tmpfile.Name())
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		if !reflect.DeepEqual(ruleGot.eth[0], rule.want) {
 			t.Errorf("Incorrect parse L2 rules from JSON:\ngot: %+v \nwant: %+v\n\n",
@@ -262,7 +265,11 @@ func TestGetL2ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL2ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL2ACLFromORIG(tmpfile.Name())
+		if err != nil {
+			t.Errorf("GetL2ACLFromORIG returned error %v\n\n", err)
+			t.FailNow()
+		}
 
 		if !reflect.DeepEqual(ruleGot.eth[0], rule.want) {
 			t.Errorf("Incorrect parse L2 rules from ORIG:\ngot: %+v \nwant: %+v\n\n",
@@ -386,7 +393,11 @@ func TestGetL3ACLFromJSON(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL3ACLFromJSON(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromJSON(tmpfile.Name())
+		if err != nil {
+			t.Errorf(" GetL3ACLFromJSON returned error %s\n\n", err)
+			t.FailNow()
+		}
 
 		if !reflect.DeepEqual(ruleGot.ip4[0], rule.want4) {
 			t.Errorf("Incorrect parse L3 ipv4 rules:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
@@ -408,7 +419,11 @@ func TestGetL3ACLFromJSON(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL3ACLFromJSON(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromJSON(tmpfile.Name())
+		if err != nil {
+			t.Errorf("GetL3ACLFromJSON returned error %s\n\n", err)
+			t.FailNow()
+		}
 
 		if !reflect.DeepEqual(ruleGot.ip6[0], rule.want6) {
 			t.Errorf("Incorrect parse L3 ipv6 rules:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
@@ -440,7 +455,11 @@ func TestGetL3ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL3ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromORIG(tmpfile.Name())
+		if err != nil {
+			t.Errorf("GetL3ACLFromORIG returned error %s\n\n", err)
+			t.FailNow()
+		}
 
 		if !reflect.DeepEqual(ruleGot.ip4[0], rule.want4) {
 			t.Errorf("Incorrect parse L3 ipv4 rules from ORIG:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",
@@ -466,7 +485,11 @@ func TestGetL3ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot := GetL3ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromORIG(tmpfile.Name())
+		if err != nil {
+			t.Errorf("GetL3ACLFromORIG returned error %s\n\n", err)
+			t.FailNow()
+		}
 
 		if !reflect.DeepEqual(ruleGot.ip6[0], rule.want6) {
 			t.Errorf("Incorrect parse L3 ipv6 rules from ORIG:\ngot: %+v \nwant: %+v\n L4 rules: \ngot: %+v \nwant: %+v\n\n",

@@ -7,12 +7,14 @@
 package common
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"runtime"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 // Length of addresses.
@@ -94,15 +96,153 @@ const (
 	TCPFlagCwr = 0x80
 )
 
+// ErrorCode type for codes of errors
+type ErrorCode int
+
+// constants with error codes
+const (
+	_ ErrorCode = iota
+	Fail
+	ParseCPUListErr
+	ReqTooManyPorts
+	BadArgument
+	UseNilFlowErr
+	UseClosedFlowErr
+	OpenedFlowAtTheEnd
+	PortHasNoQueues
+	NotAllQueuesUsed
+	FailToInitPort
+	ParseRuleJSONErr
+	FileErr
+	ParseRuleErr
+	IncorrectArgInRules
+	IncorrectRule
+	AllocMbufErr
+	PktMbufHeadRoomTooSmall
+	NotEnoughCores
+	CreatePortErr
+	MaxCPUExceedErr
+	PcapReadFail
+	PcapWriteFail
+	InvalidCPURangeErr
+)
+
+// NFError is error type returned by yanff functions
+type NFError struct {
+	Code     ErrorCode
+	Message  string
+	CauseErr error
+}
+
+type causer interface {
+	Cause() error
+}
+
+// Error method to implement error interface
+func (err NFError) Error() string {
+	return fmt.Sprintf("%s (%d)", err.Message, err.Code)
+}
+
+// GetNFErrorCode returns value of cCode field if err is
+// NFError or pointer to it and -1 otherwise.
+func GetNFErrorCode(err error) ErrorCode {
+	if nferr := GetNFError(err); nferr != nil {
+		return nferr.Code
+	}
+	return -1
+}
+
+func checkAndGetNFErrPointer(err error) *NFError {
+	if err != nil {
+		if nferr, ok := err.(NFError); ok {
+			return &nferr
+		} else if nferr, ok := err.(*NFError); ok {
+			return nferr
+		}
+	}
+	return nil
+}
+
+// GetNFError if error is NFerror or pointer to int
+// returns pointer to NFError, otherwise returns nil.
+func GetNFError(err error) (nferr *NFError) {
+	nferr = checkAndGetNFErrPointer(err)
+	if nferr == nil {
+		if cause, ok := err.(causer); ok {
+			nferr = checkAndGetNFErrPointer(cause.Cause())
+		}
+	}
+	return nferr
+}
+
+// Cause returns the underlying cause of error, if
+// possible. If not, returns err itself.
+func (err *NFError) Cause() error {
+	if err == nil {
+		return nil
+	}
+	if err.CauseErr != nil {
+		if cause, ok := err.CauseErr.(causer); ok {
+			return cause.Cause()
+		}
+		return err.CauseErr
+	}
+	return err
+}
+
+// Format makes formatted printing of errors,
+// the following verbs are supported:
+// %s, %v print the error. If the error has a
+// Cause it will be printed recursively
+// %+v - extended format. Each Frame of the error's
+// StackTrace will be printed in detail if possible.
+func (err *NFError) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			if cause := err.Cause(); cause != err && cause != nil {
+				fmt.Fprintf(s, "%+v\n", err.Cause())
+				io.WriteString(s, err.Message)
+				return
+			}
+		}
+		fallthrough
+	case 's', 'q':
+		io.WriteString(s, err.Error())
+	}
+}
+
+// WrapWithNFError returns an error annotating err with a stack trace
+// at the point WrapWithNFError is called, and the next our NFError.
+// If err is nil, Wrap returns nil.
+func WrapWithNFError(err error, message string, code ErrorCode) error {
+	err = &NFError{
+		CauseErr: err,
+		Message:  message,
+		Code:     code,
+	}
+	return errors.WithStack(err)
+}
+
 var currentLogType = No | Initialization | Debug
 
-// LogError internal, used in all packages
-func LogError(logType LogType, v ...interface{}) {
+// LogFatal internal, used in all packages
+func LogFatal(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
 		t := fmt.Sprintln(v...)
 		log.Fatal("ERROR: ", t)
 	}
 	os.Exit(1)
+}
+
+// LogError internal, used in all packages
+func LogError(logType LogType, v ...interface{}) string {
+	if logType&currentLogType != 0 {
+		t := fmt.Sprintln(v...)
+		log.Print("ERROR: ", t)
+		return t
+	}
+	return ""
 }
 
 // LogWarning internal, used in all packages
@@ -167,12 +307,6 @@ func GetDefaultCPUs(cpuNumber uint) []uint {
 	return cpus
 }
 
-var (
-	// ErrMaxCPUExceed is error in case requested CPU exceeds maximum cores number on machine
-	ErrMaxCPUExceed    = errors.New("Requested cpu exceeds maximum cores number on machine")
-	ErrInvalidCPURange = errors.New("CPU range is invalid, min should not exceed max")
-)
-
 // ParseCPUs parses cpu list string into array of cpu numbers
 // and truncate the list according to given coresNumber (GOMAXPROCS)
 func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
@@ -187,7 +321,7 @@ func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
 		if i != len(s) && s[i] == '-' {
 			startRange, err = strconv.Atoi(s[j:i])
 			if err != nil {
-				return nums, err
+				return nums, WrapWithNFError(err, "parsing of CPU list failed", ParseCPUListErr)
 			}
 			j = i + 1
 		}
@@ -195,11 +329,11 @@ func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
 		if i == len(s) || s[i] == ',' {
 			r, err := strconv.Atoi(s[j:i])
 			if err != nil {
-				return nums, err
+				return nums, WrapWithNFError(err, "parsing of CPU list failed", ParseCPUListErr)
 			}
 			if startRange != -1 {
 				if startRange > r {
-					return nums, ErrInvalidCPURange
+					return nums, WrapWithNFError(nil, "CPU range is invalid, min should not exceed max", InvalidCPURangeErr)
 				}
 				for k = startRange; k <= r; k++ {
 					nums = append(nums, uint(k))
@@ -220,7 +354,7 @@ func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
 	numCPU := uint(runtime.NumCPU())
 	for _, cpu := range nums {
 		if cpu >= numCPU {
-			return []uint{}, ErrMaxCPUExceed
+			return []uint{}, WrapWithNFError(nil, "requested cpu exceeds maximum cores number on machine", MaxCPUExceedErr)
 		}
 	}
 	if len(nums) > int(coresNumber) {

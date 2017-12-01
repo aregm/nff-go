@@ -57,7 +57,9 @@ func init() {
 	mbufStructSize = unsafe.Sizeof(t1)
 	var t2 Packet
 	packetStructSize := unsafe.Sizeof(t2)
-	low.SetPacketStructSize(int(packetStructSize))
+	if err := low.SetPacketStructSize(int(packetStructSize)); err != nil {
+		LogFatal(Debug, err)
+	}
 }
 
 // TODO Add function to write user data after headers and set "data" field

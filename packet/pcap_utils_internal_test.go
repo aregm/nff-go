@@ -7,9 +7,12 @@ package packet
 import (
 	"bytes"
 	"io"
+	"log"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/intel-go/yanff/common"
 )
 
 func init() {
@@ -48,7 +51,10 @@ func TestWritePcapGlobalHdr(t *testing.T) {
 	wantBuffer := bytes.NewBuffer(globHdrBuffer)
 	buffer := bytes.NewBuffer([]byte{})
 
-	WritePcapGlobalHdr(buffer)
+	err := WritePcapGlobalHdr(buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if !reflect.DeepEqual(buffer, wantBuffer) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buffer, wantBuffer)
@@ -59,7 +65,10 @@ func TestReadPcapGlobalHdr(t *testing.T) {
 	source := bytes.NewBuffer(globHdrBuffer)
 	var gotGlobHdr PcapGlobHdr
 
-	ReadPcapGlobalHdr(source, &gotGlobHdr)
+	err := ReadPcapGlobalHdr(source, &gotGlobHdr)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if gotGlobHdr != globHdr {
 		t.Errorf("Incorrect result:\ngot:  %+v, \nwant: %+v\n\n", gotGlobHdr, globHdr)
@@ -72,7 +81,10 @@ func TestWritePcapOnePacket(t *testing.T) {
 	wantBuffer := bytes.NewBuffer(append(recHdrBuffer, pktBuffer...))
 
 	buffer := bytes.NewBuffer([]byte{})
-	pkt.WritePcapOnePacket(buffer)
+	err := pkt.WritePcapOnePacket(buffer)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if !reflect.DeepEqual(buffer, wantBuffer) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buffer, wantBuffer)
@@ -94,7 +106,7 @@ func TestReadPcapRecHdr(t *testing.T) {
 	emptyBuffer := bytes.NewBuffer([]byte{})
 	err = readPcapRecHdr(emptyBuffer, &hdr)
 
-	if err != io.EOF {
+	if common.GetNFError(err).Cause() != io.EOF {
 		t.Errorf("Incorrect result:\ngot:  %+v, \nwant: %+v\n\n", err, io.EOF)
 	}
 }
@@ -106,7 +118,10 @@ func TestReadPcapOnePacket(t *testing.T) {
 	srcBytes := wantPkt.GetRawPacketBytes()
 	srcBuffer := bytes.NewBuffer(append(recHdrBuffer, srcBytes...))
 
-	pkt.ReadPcapOnePacket(srcBuffer)
+	_, err := pkt.ReadPcapOnePacket(srcBuffer)
+	if err != nil {
+		log.Fatal(err)
+	}
 	pkt.ParseData()
 
 	if !reflect.DeepEqual(pkt.Ether, wantPkt.Ether) {

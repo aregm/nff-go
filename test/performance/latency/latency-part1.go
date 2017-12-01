@@ -7,7 +7,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -72,6 +74,14 @@ var (
 	count uint64
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.IntVar(&latNumber, "latNumber", latNumber, "number of packets, for which latency should be reported")
 	flag.IntVar(&bins, "bins", bins, "number of bins")
@@ -97,31 +107,40 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-29",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	payloadSize = packetSize - servDataSize
 
 	// Create packet flow
-	outputFlow := flow.SetGenerator(generatePackets, speed, nil)
-	outputFlow2 := flow.SetPartitioner(outputFlow, 350, 350)
-	flow.SetSender(outputFlow, uint8(outport))
-	flow.SetSender(outputFlow2, uint8(outport))
+	outputFlow, err := flow.SetGenerator(generatePackets, speed, nil)
+	CheckFatal(err)
+	outputFlow2, err := flow.SetPartitioner(outputFlow, 350, 350)
+	CheckFatal(err)
+
+	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
+	CheckFatal(flow.SetSender(outputFlow2, uint8(outport)))
 
 	// Create receiving flow and set a checking function for it
-	inputFlow1 := flow.SetReceiver(uint8(inport))
-	inputFlow2 := flow.SetReceiver(uint8(inport))
-	inputFlow := flow.SetMerger(inputFlow1, inputFlow2)
+	inputFlow1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	inputFlow2, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	inputFlow, err := flow.SetMerger(inputFlow1, inputFlow2)
+	CheckFatal(err)
 
 	// Calculate latency only for 1 of skipNumber packets.
-	latFlow := flow.SetPartitioner(inputFlow, skipNumber, 1)
+	latFlow, err := flow.SetPartitioner(inputFlow, skipNumber, 1)
+	CheckFatal(err)
 
-	flow.SetHandler(latFlow, checkPackets, nil)
-	flow.SetHandler(inputFlow, countPackets, nil)
+	CheckFatal(flow.SetHandler(latFlow, checkPackets, nil))
+	CheckFatal(flow.SetHandler(inputFlow, countPackets, nil))
 
-	flow.SetStopper(inputFlow)
-	flow.SetStopper(latFlow)
+	CheckFatal(flow.SetStopper(inputFlow))
+	CheckFatal(flow.SetStopper(latFlow))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait until enough latencies calculated
 	testDoneEvent.L.Lock()
@@ -160,11 +179,11 @@ func generatePackets(pkt *packet.Packet, context flow.UserContext) {
 	atomic.AddUint64(&count, 1)
 	if pkt == nil {
 		fmt.Println("TEST FAILED")
-		panic("Failed to create new packet")
+		log.Fatal("Failed to create new packet")
 	}
 	if packet.InitEmptyIPv4UDPPacket(pkt, uint(payloadSize)) == false {
 		fmt.Println("TEST FAILED")
-		panic("Failed to init empty packet")
+		log.Fatal("Failed to init empty packet")
 	}
 
 	// We need different packets to gain from RSS

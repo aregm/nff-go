@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -70,6 +72,14 @@ var (
 	fixMACAddrs func(*packet.Packet, flow.UserContext)
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
@@ -86,7 +96,7 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(*configFile, *target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
 
@@ -94,21 +104,26 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create packet flow
-	outputFlow := flow.SetGenerator(generatePacket, speed, nil)
-	flow.SetSender(outputFlow, uint8(outport))
+	outputFlow, err := flow.SetGenerator(generatePacket, speed, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
 
 	// Create receiving flows and set a checking function for it
-	inputFlow1 := flow.SetReceiver(uint8(inport1))
-	flow.SetHandler(inputFlow1, checkInputFlow1, nil)
+	inputFlow1, err := flow.SetReceiver(uint8(inport1))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow1, checkInputFlow1, nil))
 
-	inputFlow2 := flow.SetReceiver(uint8(inport2))
-	flow.SetHandler(inputFlow2, checkInputFlow2, nil)
+	inputFlow2, err := flow.SetReceiver(uint8(inport2))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow2, checkInputFlow2, nil))
 
-	flow.SetStopper(inputFlow1)
-	flow.SetStopper(inputFlow2)
+	CheckFatal(flow.SetStopper(inputFlow1))
+	CheckFatal(flow.SetStopper(inputFlow2))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 	progStart = time.Now()
 
 	// Wait for enough packets to arrive

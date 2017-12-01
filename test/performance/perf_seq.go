@@ -4,10 +4,14 @@
 
 package main
 
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import (
+	"flag"
+	"fmt"
+	"os"
 
-import "flag"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+)
 
 var (
 	load uint
@@ -20,7 +24,16 @@ var (
 	noscheduler bool
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
+	var err error
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&mode, "mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
 	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
@@ -35,49 +48,56 @@ func main() {
 		CPUList:          "0-34",
 		DisableScheduler: noscheduler,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	var tempFlow *flow.Flow
 	var afterFlow *flow.Flow
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow0 := flow.SetReceiver(uint8(inport1))
-	firstFlow1 := flow.SetReceiver(uint8(inport2))
+	firstFlow0, err := flow.SetReceiver(uint8(inport1))
+	CheckFatal(err)
+	firstFlow1, err := flow.SetReceiver(uint8(inport2))
+	CheckFatal(err)
 
-	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
+	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
+	CheckFatal(err)
+
 	if mode > 10 {
-		tempFlow = flow.SetPartitioner(firstFlow, 150, 150)
+		tempFlow, err = flow.SetPartitioner(firstFlow, 150, 150)
+		CheckFatal(err)
 	}
 
 	// Handle second flow via some heavy function
-	flow.SetHandler(firstFlow, heavyFunc, nil)
-	flow.SetHandler(firstFlow, heavyFunc, nil)
+	CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
+	CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 	if mode%10 > 2 {
-		flow.SetHandler(firstFlow, heavyFunc, nil)
+		CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 	}
 	if mode%10 > 3 {
-		flow.SetHandler(firstFlow, heavyFunc, nil)
+		CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 	}
 	if mode > 10 {
-		flow.SetHandler(tempFlow, heavyFunc, nil)
-		flow.SetHandler(tempFlow, heavyFunc, nil)
+		CheckFatal(flow.SetHandler(tempFlow, heavyFunc, nil))
+		CheckFatal(flow.SetHandler(tempFlow, heavyFunc, nil))
 		if mode%10 > 2 {
-			flow.SetHandler(tempFlow, heavyFunc, nil)
+			CheckFatal(flow.SetHandler(tempFlow, heavyFunc, nil))
 		}
 		if mode%10 > 3 {
-			flow.SetHandler(tempFlow, heavyFunc, nil)
+			CheckFatal(flow.SetHandler(tempFlow, heavyFunc, nil))
 		}
-		afterFlow = flow.SetMerger(firstFlow, tempFlow)
+		afterFlow, err = flow.SetMerger(firstFlow, tempFlow)
+		CheckFatal(err)
 	} else {
 		afterFlow = firstFlow
 	}
-	secondFlow := flow.SetPartitioner(afterFlow, 150, 150)
+	secondFlow, err := flow.SetPartitioner(afterFlow, 150, 150)
+	CheckFatal(err)
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	flow.SetSender(afterFlow, uint8(outport1))
-	flow.SetSender(secondFlow, uint8(outport2))
+	CheckFatal(flow.SetSender(afterFlow, uint8(outport1)))
+	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {

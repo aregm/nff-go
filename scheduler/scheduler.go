@@ -5,10 +5,11 @@
 package scheduler
 
 import (
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
 	"runtime"
 	"time"
+
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/low"
 )
 
 // TODO: 1 is a delta of speeds. This delta should be
@@ -154,13 +155,21 @@ func NewScheduler(cpus []uint, schedulerOff bool, schedulerOffRemove bool,
 }
 
 // SystemStart starts whole system. Is used inside flow package
-func (scheduler *Scheduler) SystemStart() {
-	index := scheduler.getCoreIndex(true)
+func (scheduler *Scheduler) SystemStart() (err error) {
+	//msg := common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
+	err = common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
+	index := scheduler.getCoreIndex()
+	if index == -1 {
+		return err
+	}
 	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
 	low.SetAffinity(uint8(core))
 	if scheduler.stopDedicatedCore {
-		index = scheduler.getCoreIndex(true)
+		index = scheduler.getCoreIndex()
+		if index == -1 {
+			return err
+		}
 		core := scheduler.cores[index].id
 		common.LogDebug(common.Initialization, "Start STOP at", core, "core")
 	} else {
@@ -172,7 +181,10 @@ func (scheduler *Scheduler) SystemStart() {
 	}()
 	for i := range scheduler.UnClonable {
 		ff := scheduler.UnClonable[i]
-		index := scheduler.getCoreIndex(true)
+		index := scheduler.getCoreIndex()
+		if index == -1 {
+			return err
+		}
 		core := scheduler.cores[index].id
 		common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
 		go func() {
@@ -180,17 +192,28 @@ func (scheduler *Scheduler) SystemStart() {
 		}()
 	}
 	for i := range scheduler.Clonable {
-		scheduler.startClonable(scheduler.Clonable[i])
+		err = scheduler.startClonable(scheduler.Clonable[i])
+		if err != nil {
+			return err
+		}
 	}
 	for i := range scheduler.Generate {
-		scheduler.startClonable(scheduler.Generate[i])
+		err = scheduler.startClonable(scheduler.Generate[i])
+		if err != nil {
+			return err
+		}
 	}
 	// We need this to get a chance to all started goroutines to log their warnings.
 	time.Sleep(time.Millisecond)
+	return nil
 }
 
-func (scheduler *Scheduler) startClonable(ff *FlowFunction) {
-	index := scheduler.getCoreIndex(true)
+func (scheduler *Scheduler) startClonable(ff *FlowFunction) error {
+	index := scheduler.getCoreIndex()
+	if index == -1 {
+		//msg := common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
+		return common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
+	}
 	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
 	go func() {
@@ -203,6 +226,7 @@ func (scheduler *Scheduler) startClonable(ff *FlowFunction) {
 			ff.cloneFunction(ff.Parameters, ff.channel, ff.report, nil)
 		}
 	}()
+	return nil
 }
 
 // Schedule - main execution. Is used inside flow package
@@ -322,27 +346,27 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 }
 
 func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
-	index := scheduler.getCoreIndex(false)
-	if index != -1 {
-		core := scheduler.cores[index].id
-		quit := make(chan int)
-		cp := new(clonePair)
-		cp.channel = quit
-		cp.index = index
-		ff.clone = append(ff.clone, cp)
-		ff.cloneNumber++
-		go func() {
-			low.SetAffinity(uint8(core))
-			if ff.context != nil {
-				ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
-			} else {
-				ff.cloneFunction(ff.Parameters, quit, ff.report, nil)
-			}
-		}()
-		return true
+	index := scheduler.getCoreIndex()
+	if index == -1 {
+		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
+		return false
 	}
-	common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
-	return false
+	core := scheduler.cores[index].id
+	quit := make(chan int)
+	cp := new(clonePair)
+	cp.channel = quit
+	cp.index = index
+	ff.clone = append(ff.clone, cp)
+	ff.cloneNumber++
+	go func() {
+		low.SetAffinity(uint8(core))
+		if ff.context != nil {
+			ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
+		} else {
+			ff.cloneFunction(ff.Parameters, quit, ff.report, nil)
+		}
+	}()
+	return true
 }
 
 func (scheduler *Scheduler) removeClone(ff *FlowFunction) {
@@ -401,16 +425,13 @@ func (scheduler *Scheduler) setCoreByIndex(i int) {
 	scheduler.usedCores--
 }
 
-func (scheduler *Scheduler) getCoreIndex(startStage bool) int {
+func (scheduler *Scheduler) getCoreIndex() int {
 	for i := range scheduler.cores {
 		if scheduler.cores[i].isfree == true {
 			scheduler.cores[i].isfree = false
 			scheduler.usedCores++
 			return i
 		}
-	}
-	if startStage == true {
-		common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
 	}
 	return -1
 }

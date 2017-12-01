@@ -59,6 +59,14 @@ var (
 	packetLength int
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // This part of test generates packets on port 0 and receives them on
 // port 1. The test records packet's index inside of the first field
 // of the packet and sets the second field to zero. It expects the
@@ -87,7 +95,7 @@ func main() {
 		CPUList:      "0-15",
 		HWTXChecksum: hwol,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	if !useIPv4 && !useIPv6 {
 		println("No L3 IP mode selected. Enabling IPv4 by default")
@@ -136,17 +144,21 @@ func main() {
 	// High performance generator (enabled if speed != 0) is not used here, as it
 	// can send fully only number of packets N which is multiple of burst size (default 32),
 	// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
-	firstFlow := flow.SetGenerator(generatePacket, 0, nil)
+	firstFlow, err := flow.SetGenerator(generatePacket, 0, nil)
+	CheckFatal(err)
 	// Send all generated packets to the output
-	flow.SetSender(firstFlow, uint8(outport))
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport)))
 
 	// Create receiving flow and set a checking function for it
-	secondFlow := flow.SetReceiver(uint8(inport))
-	flow.SetHandler(secondFlow, checkPackets, nil)
-	flow.SetStopper(secondFlow)
+	secondFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(secondFlow, checkPackets, nil))
+	CheckFatal(flow.SetStopper(secondFlow))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()

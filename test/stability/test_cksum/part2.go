@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -15,6 +16,14 @@ import (
 )
 
 var hwol bool
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -30,15 +39,16 @@ func main() {
 		CPUList:      "0-15",
 		HWTXChecksum: hwol,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow := flow.SetReceiver(uint8(inport))
-	flow.SetHandler(inputFlow, fixPacket, nil)
-	flow.SetSender(inputFlow, uint8(outport))
+	inputFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow, fixPacket, nil))
+	CheckFatal(flow.SetSender(inputFlow, uint8(outport)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {

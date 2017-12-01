@@ -356,14 +356,13 @@ type Config struct {
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
 // Function can panic during execution.
-func SystemInit(args *Config) {
+func SystemInit(args *Config) error {
 	CPUCoresNumber := uint(runtime.GOMAXPROCS(0))
 	var cpus []uint
 	var err error
 	if args.CPUList != "" {
-		cpus, err = common.ParseCPUs(args.CPUList, CPUCoresNumber)
-		if err != nil {
-			common.LogError(common.Initialization, "Parsing of CPU list:", err)
+		if cpus, err = common.ParseCPUs(args.CPUList, CPUCoresNumber); err != nil {
+			return err
 		}
 	} else {
 		cpus = common.GetDefaultCPUs(CPUCoresNumber)
@@ -410,7 +409,7 @@ func SystemInit(args *Config) {
 	}
 
 	if debugTime < schedTime {
-		common.LogError(common.Initialization, "debugTime should be larger or equal to schedTime")
+		common.LogFatal(common.Initialization, "debugTime should be larger or equal to schedTime")
 	}
 
 	needKNI := 0
@@ -446,18 +445,24 @@ func SystemInit(args *Config) {
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
+	return nil
 }
 
 // SystemStart starts system - begin packet receiving and packet sending.
 // This functions should be always called after flow graph construction.
 // Function can panic during execution.
-func SystemStart() {
+func SystemStart() error {
 	common.LogTitle(common.Initialization, "------------***--------- Checking system ---------***------------")
-	checkSystem()
+	if err := checkSystem(); err != nil {
+		return err
+	}
 	common.LogTitle(common.Initialization, "------------***---------- Creating ports ---------***------------")
 	for i := range createdPorts {
 		if createdPorts[i].config != inactivePort {
-			low.CreatePort(createdPorts[i].port, uint16(createdPorts[i].rxQueuesNumber), uint16(createdPorts[i].txQueuesNumber), hwtxchecksum)
+			if err := low.CreatePort(createdPorts[i].port, uint16(createdPorts[i].rxQueuesNumber),
+				uint16(createdPorts[i].txQueuesNumber), hwtxchecksum); err != nil {
+				return err
+			}
 		}
 	}
 	// Timeout is needed for ports to start up. This way is used in pktgen.
@@ -467,9 +472,12 @@ func SystemStart() {
 	time.Sleep(time.Second * 2)
 
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
-	schedState.SystemStart()
+	if err := schedState.SystemStart(); err != nil {
+		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
+	}
 	common.LogTitle(common.Initialization, "------------***--------- YANFF-GO Started --------***------------")
 	schedState.Schedule(schedTime)
+	return nil
 }
 
 func generateRingName() string {
@@ -482,12 +490,15 @@ func generateRingName() string {
 // Gets flow which packets will be written to file and
 // target file name.
 // Function can panic during execution.
-func SetWriter(IN *Flow, filename string) {
-	checkFlow(IN)
+func SetWriter(IN *Flow, filename string) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	write := makeWriter(filename, IN.current)
 	schedState.UnClonable = append(schedState.UnClonable, write)
 	IN.current = nil
 	openFlowsNumber--
+	return nil
 }
 
 // SetReader adds read function to flow graph.
@@ -510,12 +521,12 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(par interface{}) (OUT *Flow) {
+func SetReceiver(par interface{}) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var recv *scheduler.FlowFunction
 	if port, t := par.(uint8); t {
 		if port >= uint8(len(createdPorts)) {
-			common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+			return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 		}
 		createdPorts[port].config = autoPort
 		createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
@@ -525,13 +536,13 @@ func SetReceiver(par interface{}) (OUT *Flow) {
 		// Receive with "-1" queue will be from KNI device
 		recv = makeReceiver(tkni.port, -1, ring)
 	} else {
-		common.LogError(common.Initialization, "SetReceiver parameter should be ether number of port or created KNI device")
+		return nil, common.WrapWithNFError(nil, "SetReceiver parameter should be ether number of port or created KNI device", common.BadArgument)
 	}
 	schedState.UnClonable = append(schedState.UnClonable, recv)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	return OUT
+	return OUT, nil
 }
 
 // SetGenerator adds generate function to flow graph.
@@ -541,7 +552,7 @@ func SetReceiver(par interface{}) (OUT *Flow) {
 // input user packets. If targetSpeed is more than zero clonable function is added which
 // tries to achieve this speed by cloning.
 // Function can panic during execution.
-func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow) {
+func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
@@ -550,33 +561,35 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 		} else if f, t := generateFunction.(func([]*packet.Packet, uint, UserContext)); t {
 			generate = makeGeneratorPerf(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
 		} else {
-			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
+			return nil, common.WrapWithNFError(nil, "Function argument of SetGenerator function doesn't match any applicable prototype", common.BadArgument)
 		}
 		schedState.Generate = append(schedState.Generate, generate)
 	} else {
 		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
 			generate = makeGeneratorOne(ring, GenerateFunction(f))
 		} else {
-			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
+			return nil, common.WrapWithNFError(nil, "Function argument of SetGenerator function doesn't match any applicable prototype", common.BadArgument)
 		}
 		schedState.UnClonable = append(schedState.UnClonable, generate)
 	}
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	return OUT
+	return OUT, nil
 }
 
 // SetSender adds send function to flow graph.
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
-func SetSender(IN *Flow, par interface{}) {
-	checkFlow(IN)
+func SetSender(IN *Flow, par interface{}) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	var send *scheduler.FlowFunction
 	if port, t := par.(uint8); t {
 		if port >= uint8(len(createdPorts)) {
-			common.LogError(common.Initialization, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+			return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 		}
 		createdPorts[port].config = autoPort
 		createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
@@ -586,18 +599,21 @@ func SetSender(IN *Flow, par interface{}) {
 		// Send for "-1" queue will be to KNI device
 		send = makeSender(tkni.port, -1, IN.current)
 	} else {
-		common.LogError(common.Initialization, "SetSender parameter should be ether number of port or created KNI device")
+		return common.WrapWithNFError(nil, "SetSender parameter should be ether number of port or created KNI device", common.BadArgument)
 	}
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
 	openFlowsNumber--
+	return nil
 }
 
 // SetCopier adds copy function to flow graph.
 // Gets flow which will be copied.
 // Function can panic during execution.
-func SetCopier(IN *Flow) (OUT *Flow) {
-	checkFlow(IN)
+func SetCopier(IN *Flow) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OUT = new(Flow)
 
 	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
@@ -608,7 +624,7 @@ func SetCopier(IN *Flow) (OUT *Flow) {
 	schedState.Clonable = append(schedState.Clonable, pcopy)
 	IN.current = ringFirst
 	OUT.current = ringSecond
-	return OUT
+	return OUT, nil
 }
 
 // SetPartitioner adds partition function to flow graph.
@@ -616,8 +632,10 @@ func SetCopier(IN *Flow) (OUT *Flow) {
 // Each loop N packets will be remained in input flow, next M packets will be sent to new flow.
 // It is advised not to use this function less then (75, 75) for performance reasons.
 // Function can panic during execution.
-func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
-	checkFlow(IN)
+func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OUT = new(Flow)
 	if N == 0 || M == 0 {
 		common.LogWarning(common.Initialization, "One of SetPartitioner function's arguments is zero.")
@@ -632,7 +650,7 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 	schedState.UnClonable = append(schedState.UnClonable, partition)
 	IN.current = ringFirst
 	OUT.current = ringSecond
-	return OUT
+	return OUT, nil
 }
 
 // SetSeparator adds separate function to flow graph.
@@ -640,8 +658,10 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
 // Function can panic during execution.
-func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow) {
-	checkFlow(IN)
+func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OUT = new(Flow)
 	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
@@ -652,12 +672,12 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 	} else if f, t := separateFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
 		separate = makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
 	} else {
-		common.LogError(common.Initialization, "Function argument of SetSeparator function doesn't match any applicable prototype")
+		return nil, common.WrapWithNFError(nil, "Function argument of SetSeparator function doesn't match any applicable prototype", common.BadArgument)
 	}
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
 	OUT.current = ringFalse
-	return OUT
+	return OUT, nil
 }
 
 // SetSplitter adds split function to flow graph.
@@ -666,8 +686,10 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
 // Function can panic during execution.
-func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow)) {
-	checkFlow(IN)
+func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow), err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OutArray = make([](*Flow), flowNumber, flowNumber)
 	rings := make([](*low.Ring), flowNumber, flowNumber)
 	for i := range OutArray {
@@ -680,17 +702,20 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 	schedState.Clonable = append(schedState.Clonable, split)
 	IN.current = nil
 	openFlowsNumber--
-	return OutArray
+	return OutArray, nil
 }
 
 // SetStopper adds stop function to flow graph.
 // Gets flow which will be closed and all packets from each will be dropped.
 // Function can panic during execution.
-func SetStopper(IN *Flow) {
-	checkFlow(IN)
+func SetStopper(IN *Flow) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	merge(IN.current, schedState.StopRing)
 	IN.current = nil
 	openFlowsNumber--
+	return nil
 }
 
 // SetHandler adds handle function to flow graph.
@@ -700,8 +725,10 @@ func SetStopper(IN *Flow) {
 // If input argument is SeparateFunction user defined function can return boolean value.
 // If user function returns false after handling a packet it is dropped automatically.
 // Function can panic during execution.
-func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
-	checkFlow(IN)
+func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var handle *scheduler.FlowFunction
 	if f, t := handleFunction.(func(*packet.Packet, UserContext)); t {
@@ -713,20 +740,23 @@ func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
 	} else if f, t := handleFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
 		handle = makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
 	} else {
-		common.LogError(common.Initialization, "Function argument of SetHandler function doesn't match any applicable prototype")
+		return common.WrapWithNFError(nil, "Function argument of SetHandler function doesn't match any applicable prototype", common.BadArgument)
 	}
 	schedState.Clonable = append(schedState.Clonable, handle)
 	IN.current = ring
+	return nil
 }
 
 // SetMerger adds merge function to flow graph.
 // Gets any number of flows. Returns new opened flow.
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
-func SetMerger(InArray ...*Flow) (OUT *Flow) {
+func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	for i := range InArray {
-		checkFlow(InArray[i])
+		if err := checkFlow(OUT); err != nil {
+			return nil, err
+		}
 		merge(InArray[i].current, ring)
 		InArray[i].current = nil
 		openFlowsNumber--
@@ -734,7 +764,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow) {
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	return OUT
+	return OUT, nil
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
@@ -758,7 +788,10 @@ func generateOne(parameters interface{}, core uint8) {
 	var tempPacket *packet.Packet
 
 	for {
-		low.AllocateMbufs(buf, mempool, 1)
+		err := low.AllocateMbufs(buf, mempool, 1)
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		tempPacket = packet.ExtractPacket(buf[0])
 		generateFunction(tempPacket, nil)
 		safeEnqueue(OUT, buf, 1)
@@ -797,7 +830,10 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			report <- currentSpeed
 			currentSpeed = 0
 		default:
-			low.AllocateMbufs(bufs, mempool, burstSize)
+			err := low.AllocateMbufs(bufs, mempool, burstSize)
+			if err != nil {
+				common.LogFatal(common.Debug, err)
+			}
 			if vector == false {
 				for i := range bufs {
 					// TODO Maybe we need to prefetcht here?
@@ -1278,18 +1314,24 @@ func write(parameters interface{}, coreID uint8) {
 
 	f, err := os.Create(filename)
 	if err != nil {
-		common.LogError(common.Debug, err)
+		common.LogFatal(common.Debug, err)
 	}
 	defer f.Close()
 
-	packet.WritePcapGlobalHdr(f)
+	err = packet.WritePcapGlobalHdr(f)
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
 	for {
 		n := IN.DequeueBurst(bufIn, 1)
 		if n == 0 {
 			continue
 		}
 		tempPacket = packet.ExtractPacket(bufIn[0])
-		tempPacket.WritePcapOnePacket(f)
+		err := tempPacket.WritePcapOnePacket(f)
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		low.DirectStop(1, bufIn)
 	}
 }
@@ -1306,30 +1348,38 @@ func read(parameters interface{}, coreID uint8) {
 
 	f, err := os.Open(filename)
 	if err != nil {
-		common.LogError(common.Debug, err)
+		common.LogFatal(common.Debug, err)
 	}
 	defer f.Close()
 
 	// Read pcap global header once
 	var glHdr packet.PcapGlobHdr
-	packet.ReadPcapGlobalHdr(f, &glHdr)
+	if err := packet.ReadPcapGlobalHdr(f, &glHdr); err != nil {
+		common.LogFatal(common.Debug, err)
+	}
 
 	count := int32(0)
 
 	for {
-		low.AllocateMbufs(buf, mempool, 1)
+		if err := low.AllocateMbufs(buf, mempool, 1); err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		tempPacket = packet.ExtractPacket(buf[0])
-		isEOF := tempPacket.ReadPcapOnePacket(f)
+		isEOF, err := tempPacket.ReadPcapOnePacket(f)
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		if isEOF {
 			atomic.AddInt32(&count, 1)
 			if count == repcount {
 				break
 			}
-			_, err := f.Seek(packet.PcapGlobHdrSize, 0)
-			if err != nil {
-				common.LogError(common.Debug, err)
+			if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+				common.LogFatal(common.Debug, err)
 			}
-			tempPacket.ReadPcapOnePacket(f)
+			if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
+				common.LogFatal(common.Debug, err)
+			}
 		}
 		// TODO we need packet reassembly here. However we don't
 		// use mbuf packet_type here, so it is impossible.
@@ -1358,34 +1408,39 @@ func safeEnqueue(place *low.Ring, data []uintptr, number uint) {
 	// to use actual number or to use simply number of packets processed by a function like now.
 }
 
-func checkFlow(f *Flow) {
-	if f.current == nil {
-		common.LogError(common.Initialization, "One of the flows is used after it was closed!")
+func checkFlow(f *Flow) error {
+	if f == nil {
+		return common.WrapWithNFError(nil, "One of the flows is nil!", common.UseNilFlowErr)
 	}
+	if f.current == nil {
+		return common.WrapWithNFError(nil, "One of the flows is used after it was closed!", common.UseClosedFlowErr)
+	}
+	return nil
 }
 
-func checkSystem() {
+func checkSystem() error {
 	if openFlowsNumber != 0 {
-		common.LogError(common.Initialization, "Some flows are left open at the end of configuration!")
+		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
 	}
 	for i := range createdPorts {
 		if createdPorts[i].config == inactivePort {
 			continue
 		}
 		if createdPorts[i].rxQueuesNumber == 0 && createdPorts[i].txQueuesNumber == 0 {
-			common.LogError(common.Initialization, "Port", createdPorts[i].port, "has no send and receive queues. It is an error in DPDK.")
+			return common.WrapWithNFError(nil, "port has no send and receive queues. It is an error in DPDK.", common.PortHasNoQueues)
 		}
 		for j := range createdPorts[i].rxQueues {
 			if createdPorts[i].rxQueues[j] != true {
-				common.LogError(common.Initialization, "Port", createdPorts[i].port, "doesn't use all receive queues, packets can be missed due to RSS!")
+				return common.WrapWithNFError(nil, "port doesn't use all receive queues, packets can be missed due to RSS!", common.NotAllQueuesUsed)
 			}
 		}
 		for j := range createdPorts[i].txQueues {
 			if createdPorts[i].txQueues[j] != true {
-				common.LogWarning(common.Initialization, "Port", createdPorts[i].port, "has unused send queue. Performance can be lower than it is expected!")
+				return common.WrapWithNFError(nil, "port has unused send queue. Performance can be lower than it is expected!", common.NotAllQueuesUsed)
 			}
 		}
 	}
+	return nil
 }
 
 // CreateKniDevice creates KNI device for using in receive or send functions.
