@@ -372,7 +372,7 @@ func SystemInit(args *Config) {
 		sizeMultiplier = args.RingSize
 	}
 
-	schedTime = 1500
+	schedTime = 500
 	if args.ScaleTime != 0 {
 		schedTime = args.ScaleTime
 	}
@@ -390,6 +390,10 @@ func SystemInit(args *Config) {
 	debugTime := uint(1000)
 	if args.DebugTime != 0 {
 		debugTime = args.DebugTime
+	}
+
+	if debugTime < schedTime {
+		common.LogError(common.Initialization, "debugTime should be larger or equal to schedTime")
 	}
 
 	needKNI := 0
