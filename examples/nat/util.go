@@ -29,6 +29,7 @@ func swapAddrIPv4(pkt *packet.Packet) {
 
 func dumpInput(pkt *packet.Packet, index int) {
 	if debugDump {
+		dumpsync[index].Lock()
 		// Dump input packet
 		if fdump[index] == nil {
 			fdump[index], _ = os.Create(fmt.Sprintf("%ddump.pcap", index))
@@ -37,17 +38,21 @@ func dumpInput(pkt *packet.Packet, index int) {
 		}
 
 		pkt.WritePcapOnePacket(fdump[index])
+		dumpsync[index].Unlock()
 	}
 }
 
 func dumpOutput(pkt *packet.Packet, index int) {
 	if debugDump {
+		dumpsync[index].Lock()
 		pkt.WritePcapOnePacket(fdump[index])
+		dumpsync[index].Unlock()
 	}
 }
 
 func dumpDrop(pkt *packet.Packet, index int) {
 	if debugDrop {
+		dropsync[index].Lock()
 		// Dump droped input packet
 		if fdrop[index] == nil {
 			fdrop[index], _ = os.Create(fmt.Sprintf("%ddrop.pcap", index))
@@ -56,5 +61,19 @@ func dumpDrop(pkt *packet.Packet, index int) {
 		}
 
 		pkt.WritePcapOnePacket(fdrop[index])
+		dropsync[index].Unlock()
+	}
+}
+
+func CloseAllDumpFiles() {
+	for i := range fdump {
+		if fdump[i] != nil {
+			fdump[i].Close()
+		}
+	}
+	for i := range fdrop {
+		if fdump[i] != nil {
+			fdump[i].Close()
+		}
 	}
 }

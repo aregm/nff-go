@@ -6,9 +6,12 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/intel-go/yanff/examples/nat"
 	"github.com/intel-go/yanff/flow"
 	"log"
+	"os"
+	"os/signal"
 )
 
 func main() {
@@ -18,6 +21,10 @@ func main() {
 	flag.BoolVar(&nat.CalculateChecksum, "csum", false, "Specify whether to calculate checksums in modified packets")
 	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
 	flag.Parse()
+
+	// Set up reaction to SIGINT (Ctrl-C)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 
 	// Read config
 	err := nat.ReadConfig(*configFile)
@@ -36,5 +43,11 @@ func main() {
 	// Initialize flows and necessary state
 	nat.InitFlows()
 
-	flow.SystemStart()
+	// Start flow scheduler
+	go flow.SystemStart()
+
+	// Wait for interrupt
+	sig := <-c
+	fmt.Printf("Received signal %v\n", sig)
+	nat.CloseAllDumpFiles()
 }

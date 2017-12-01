@@ -92,7 +92,9 @@ var (
 
 	// Debug variables
 	fdump     []*os.File
+	dumpsync []sync.Mutex
 	fdrop     []*os.File
+	dropsync []sync.Mutex
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -249,8 +251,10 @@ func InitFlows() {
 
 	if debugDump {
 		fdump = make([]*os.File, len(Natconfig.PortPairs))
+		dumpsync = make([]sync.Mutex, len(Natconfig.PortPairs))
 	}
 	if debugDrop {
 		fdrop = make([]*os.File, len(Natconfig.PortPairs))
+		dropsync = make([]sync.Mutex, len(Natconfig.PortPairs))
 	}
 }
