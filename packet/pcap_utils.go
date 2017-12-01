@@ -42,7 +42,7 @@ type PcapRecHdr struct {
 // WritePcapGlobalHdr writes global pcap header into file.
 func WritePcapGlobalHdr(f io.Writer) {
 	glHdr := PcapGlobHdr{
-		MagicNumber:  0xa1b2c3d4,
+		MagicNumber:  0xa1b23c4d, // magic number for nanosecond-resolution pcap file
 		VersionMajor: 2,
 		VersionMinor: 4,
 		Snaplen:      65535,
@@ -66,7 +66,7 @@ func writePcapRecHdr(f io.Writer, pktBytes []byte) error {
 	t := now()
 	hdr := PcapRecHdr{
 		TsSec:   uint32(t.Unix()),
-		TsUsec:  uint32(t.UnixNano() - t.Unix()*1e9),
+		TsUsec:  uint32(t.UnixNano() % 1e9),
 		InclLen: uint32(len(pktBytes)),
 		OrigLen: uint32(len(pktBytes)),
 	}
