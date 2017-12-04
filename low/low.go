@@ -502,9 +502,9 @@ func SetAffinity(coreID uint8) {
 	syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
 }
 
-// AllocateMbufs allocates a bulk of mbufs.
-func AllocateMbufs(mb []uintptr, mempool *Mempool) {
-	err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
+// AllocateMbufs allocates n mbufs.
+func AllocateMbufs(mb []uintptr, mempool *Mempool, n uint) {
+	err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(n))
 	if err != 0 {
 		common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf")
 	}

@@ -13,5 +13,6 @@ COPY Forwarding .
 COPY Forwarding.conf .
 COPY clonable_pcap_dumper .
 COPY kni .
+COPY copy .
 
 CMD ["./demo"]

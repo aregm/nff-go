@@ -49,7 +49,7 @@ type ipv4Port struct {
 	Vlan          uint16     `json:"vlan-tag"`
 	SrcMACAddress macAddress
 	// ARP lookup table
-	ArpTable      sync.Map
+	ArpTable sync.Map
 }
 
 // Config for one port pair.
@@ -61,13 +61,13 @@ type portPair struct {
 	// Main lookup table which contains entries for public to private translation
 	pub2priTable []sync.Map
 	// Synchronization point for lookup table modifications
-	mutex        sync.Mutex
+	mutex sync.Mutex
 	// Map of allocated IP ports on public interface
-	portmap      [][]portMapEntry
+	portmap [][]portMapEntry
 	// Port that was allocated last
-	lastport     int
+	lastport int
 	// Maximum allowed port number
-	maxport      int
+	maxport int
 }
 
 // Config for NAT.
@@ -91,9 +91,9 @@ var (
 	HWTXChecksum bool
 
 	// Debug variables
-	fdump     []*os.File
+	fdump    []*os.File
 	dumpsync []sync.Mutex
-	fdrop     []*os.File
+	fdrop    []*os.File
 	dropsync []sync.Mutex
 )
 
