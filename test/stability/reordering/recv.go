@@ -19,7 +19,7 @@ const (
 
 type stats struct {
 	count, reordered uint64
-	duration time.Duration
+	duration         time.Duration
 }
 
 func main() {

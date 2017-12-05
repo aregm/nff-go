@@ -37,7 +37,7 @@ func GetMempoolForTest() *low.Mempool {
 
 func getIPv4TCPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4TCPPacket(pkt, payloadSize)
 
@@ -50,7 +50,7 @@ func getIPv4TCPTestPacket() *Packet {
 
 func getIPv4UDPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4UDPPacket(pkt, payloadSize)
 
@@ -63,7 +63,7 @@ func getIPv4UDPTestPacket() *Packet {
 
 func getIPv4ICMPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4ICMPPacket(pkt, payloadSize)
 
@@ -75,7 +75,7 @@ func getIPv4ICMPTestPacket() *Packet {
 
 func getIPv6TCPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6TCPPacket(pkt, payloadSize)
 
@@ -88,7 +88,7 @@ func getIPv6TCPTestPacket() *Packet {
 
 func getIPv6UDPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6UDPPacket(pkt, payloadSize)
 
@@ -100,14 +100,14 @@ func getIPv6UDPTestPacket() *Packet {
 
 func getPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	return pkt
 }
 
 func getIPv6ICMPTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6ICMPPacket(pkt, payloadSize)
 	initEtherAddrs(pkt)
@@ -118,7 +118,7 @@ func getIPv6ICMPTestPacket() *Packet {
 
 func getARPRequestTestPacket() *Packet {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, testMempool)
+	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
 
 	sha := [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
