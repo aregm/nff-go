@@ -17,14 +17,20 @@ import (
 	"github.com/intel-go/yanff/flow"
 )
 
+type terminationDirection uint8
+type interfaceType int
+
 const (
 	flowDrop   = 0
 	flowBack   = 1
 	flowOut    = 2
 	totalFlows = 3
 
-	debugDump = false
-	debugDrop = false
+	pri2pub terminationDirection = 0x0f
+	pub2pri terminationDirection = 0xf0
+
+	iPUBLIC  interfaceType = 0
+	iPRIVATE interfaceType = 1
 )
 
 type ipv4Subnet struct {
@@ -91,10 +97,15 @@ var (
 	HWTXChecksum bool
 
 	// Debug variables
-	fdump    []*os.File
-	dumpsync []sync.Mutex
-	fdrop    []*os.File
-	dropsync []sync.Mutex
+	debugDump = true
+	debugDrop = true
+	// Controls whether debug dump files are separate for private and
+	// public interface or both traces are dumped in the same file.
+	dumptogether = false
+	fdump        []*os.File
+	dumpsync     []sync.Mutex
+	fdrop        []*os.File
+	dropsync     []sync.Mutex
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -249,12 +260,16 @@ func InitFlows() {
 		flow.SetSender(toPublic, pp.PublicPort.Index)
 	}
 
+	asize := len(Natconfig.PortPairs)
+	if !dumptogether {
+		asize *= 2
+	}
 	if debugDump {
-		fdump = make([]*os.File, len(Natconfig.PortPairs))
-		dumpsync = make([]sync.Mutex, len(Natconfig.PortPairs))
+		fdump = make([]*os.File, asize)
+		dumpsync = make([]sync.Mutex, asize)
 	}
 	if debugDrop {
-		fdrop = make([]*os.File, len(Natconfig.PortPairs))
-		dropsync = make([]sync.Mutex, len(Natconfig.PortPairs))
+		fdrop = make([]*os.File, asize)
+		dropsync = make([]sync.Mutex, asize)
 	}
 }

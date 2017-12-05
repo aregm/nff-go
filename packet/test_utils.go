@@ -98,7 +98,7 @@ func getIPv6UDPTestPacket() *Packet {
 	return pkt
 }
 
-func getPacket() *Packet {
+func GetPacket() *Packet {
 	mb := make([]uintptr, 1)
 	low.AllocateMbufs(mb, testMempool, 1)
 	pkt := ExtractPacket(mb[0])
