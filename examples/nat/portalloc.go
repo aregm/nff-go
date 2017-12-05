@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-type terminationDirection uint8
-
 const (
 	numPubAddr = 1
 
@@ -20,9 +18,6 @@ const (
 	numPorts  = portEnd - portStart
 
 	connectionTimeout time.Duration = 1 * time.Minute
-
-	pri2pub terminationDirection = 0x0f
-	pub2pri terminationDirection = 0xf0
 )
 
 func (dir terminationDirection) String() string {
