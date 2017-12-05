@@ -30,7 +30,7 @@
 // 16 offset is a data offset and shouldn't be cleared
 // 24 offset is L2 offset and is always begining of packet
 // 32 offset is CMbuf offset and is initilized when mempool is created
-// 40 offset is Next field. SHould be nil. Will be filled later if required
+// 40 offset is Next field. Should be 0. Will be filled later if required
 #define mbufInit(buf) \
 *(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart; \
 *(char **)((char *)(buf) + mbufStructSize + 40) = 0;
@@ -320,8 +320,9 @@ void yanff_stop(struct rte_ring *in_ring) {
 			continue;
 
 		// Free all this packets
-		for (buf = 0; buf < pkts_for_free_number; buf++)
+		for (buf = 0; buf < pkts_for_free_number; buf++) {
 			rte_pktmbuf_free(bufs[buf]);
+		}
 
 #ifdef DEBUG
 		stop_freed += pkts_for_free_number;
@@ -407,7 +408,7 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	temp = malloc(sizeof(struct rte_mbuf *) * num_mbufs);
 	allocateMbufs(mbuf_pool, temp, num_mbufs);
 	// This initializes CMbuf field of packet structure stored in mbuf
-	// All CMbuf pointers is set to point to starting of cerresponding mbufs
+	// All CMbuf pointers is set to point to starting of corresponding mbufs
 	for (int i = 0; i < num_mbufs; i++) {
 		*(char**)((char*)(temp[i]) + mbufStructSize + 32) = (char*)(temp[i]);
 	}
