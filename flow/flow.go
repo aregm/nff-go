@@ -156,6 +156,23 @@ func makeSender(port uint8, queue int16, in *low.Ring) *scheduler.FlowFunction {
 	return schedState.NewUnclonableFlowFunction("sender", ffCount, send, par)
 }
 
+type copyParameters struct {
+	in      *low.Ring
+	out     *low.Ring
+	outCopy *low.Ring
+	mempool *low.Mempool
+}
+
+func makeCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) *scheduler.FlowFunction {
+	par := new(copyParameters)
+	par.in = in
+	par.out = out
+	par.outCopy = outCopy
+	par.mempool = low.CreateMempool()
+	ffCount++
+	return schedState.NewClonableFlowFunction("copy", ffCount, pcopy, par, copyCheck, make(chan uint64, 50), nil)
+}
+
 type partitionParameters struct {
 	in        *low.Ring
 	outFirst  *low.Ring
@@ -502,7 +519,7 @@ func SetReceiver(par interface{}) (OUT *Flow) {
 		}
 		createdPorts[port].config = autoPort
 		createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
-		recv = makeReceiver(uint8(port), createdPorts[port].rxQueuesNumber, ring)
+		recv = makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
 		createdPorts[port].rxQueuesNumber++
 	} else if tkni, t := par.(*Kni); t {
 		// Receive with "-1" queue will be from KNI device
@@ -563,7 +580,7 @@ func SetSender(IN *Flow, par interface{}) {
 		}
 		createdPorts[port].config = autoPort
 		createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
-		send = makeSender(uint8(port), createdPorts[port].txQueuesNumber, IN.current)
+		send = makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
 		createdPorts[port].txQueuesNumber++
 	} else if tkni, t := par.(*Kni); t {
 		// Send for "-1" queue will be to KNI device
@@ -574,6 +591,24 @@ func SetSender(IN *Flow, par interface{}) {
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
 	openFlowsNumber--
+}
+
+// SetCopier adds copy function to flow graph.
+// Gets flow which will be copied.
+// Function can panic during execution.
+func SetCopier(IN *Flow) (OUT *Flow) {
+	checkFlow(IN)
+	OUT = new(Flow)
+
+	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	openFlowsNumber++
+	pcopy := makeCopier(IN.current, ringFirst, ringSecond)
+
+	schedState.Clonable = append(schedState.Clonable, pcopy)
+	IN.current = ringFirst
+	OUT.current = ringSecond
+	return OUT
 }
 
 // SetPartitioner adds partition function to flow graph.
@@ -723,7 +758,7 @@ func generateOne(parameters interface{}, core uint8) {
 	var tempPacket *packet.Packet
 
 	for {
-		low.AllocateMbufs(buf, mempool)
+		low.AllocateMbufs(buf, mempool, 1)
 		tempPacket = packet.ExtractPacket(buf[0])
 		generateFunction(tempPacket, nil)
 		safeEnqueue(OUT, buf, 1)
@@ -762,7 +797,7 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			report <- currentSpeed
 			currentSpeed = 0
 		default:
-			low.AllocateMbufs(bufs, mempool)
+			low.AllocateMbufs(bufs, mempool, burstSize)
 			if vector == false {
 				for i := range bufs {
 					// TODO Maybe we need to prefetcht here?
@@ -775,6 +810,73 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			}
 			safeEnqueue(OUT, bufs, burstSize)
 			currentSpeed = currentSpeed + uint64(burstSize)
+			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
+			// we just want to slow goroutine down without parking, so loop is OK for this.
+			// time.Now lasts approximately 70ns and this satisfies us
+			if pause != 0 {
+				a := time.Now()
+				for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
+				}
+			}
+		}
+	}
+}
+
+func copyCheck(parameters interface{}, debug bool) bool {
+	cp := parameters.(*copyParameters)
+	IN := cp.in
+	if debug == true {
+		common.LogDebug(common.Debug, "Number of packets in queue for copy: ", IN.GetRingCount())
+	}
+	if IN.GetRingCount() > maxPacketsToClone {
+		return true
+	}
+	return false
+}
+
+// TODO reassembled packets are not supported
+func pcopy(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+	cp := parameters.(*copyParameters)
+	IN := cp.in
+	OUT := cp.out
+	OUTCopy := cp.outCopy
+	mempool := cp.mempool
+
+	bufs1 := make([]uintptr, burstSize)
+	bufs2 := make([]uintptr, burstSize)
+	var tempPacket1 *packet.Packet
+	var tempPacket2 *packet.Packet
+	var currentSpeed uint64
+	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
+	var pause int
+
+	for {
+		select {
+		case pause = <-stopper:
+			if pause == -1 {
+				// It is time to close this clone
+				close(stopper)
+				// We don't close report channel because all clones of one function use it.
+				// As one function entity will be working endlessly we don't close it anywhere.
+				return
+			}
+		case <-tick:
+			report <- currentSpeed
+			currentSpeed = 0
+		default:
+			n := IN.DequeueBurst(bufs1, burstSize)
+			if n != 0 {
+				low.AllocateMbufs(bufs2, mempool, n)
+				for i := range bufs1 {
+					// TODO Maybe we need to prefetcht here?
+					tempPacket1 = packet.ExtractPacket(bufs1[i])
+					tempPacket2 = packet.ExtractPacket(bufs2[i])
+					packet.GeneratePacketFromByte(tempPacket2, tempPacket1.GetRawPacketBytes())
+				}
+				safeEnqueue(OUT, bufs1, uint(n))
+				safeEnqueue(OUTCopy, bufs2, uint(n))
+				currentSpeed = currentSpeed + uint64(n)
+			}
 			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 			// we just want to slow goroutine down without parking, so loop is OK for this.
 			// time.Now lasts approximately 70ns and this satisfies us
@@ -816,6 +918,17 @@ func merge(from *low.Ring, to *low.Ring) {
 			if schedState.UnClonable[i].Parameters.(*generateParameters).out == from {
 				schedState.UnClonable[i].Parameters.(*generateParameters).out = to
 			}
+		case *readParameters:
+			if schedState.UnClonable[i].Parameters.(*readParameters).out == from {
+				schedState.UnClonable[i].Parameters.(*readParameters).out = to
+			}
+		case *copyParameters:
+			if schedState.UnClonable[i].Parameters.(*copyParameters).out == from {
+				schedState.UnClonable[i].Parameters.(*copyParameters).out = to
+			}
+			if schedState.UnClonable[i].Parameters.(*copyParameters).outCopy == from {
+				schedState.UnClonable[i].Parameters.(*copyParameters).outCopy = to
+			}
 		}
 	}
 	for i := range schedState.Clonable {
@@ -837,9 +950,13 @@ func merge(from *low.Ring, to *low.Ring) {
 			if schedState.Clonable[i].Parameters.(*handleParameters).out == from {
 				schedState.Clonable[i].Parameters.(*handleParameters).out = to
 			}
+		}
+	}
+	for i := range schedState.Generate {
+		switch schedState.Generate[i].Parameters.(type) {
 		case *generateParameters:
-			if schedState.Clonable[i].Parameters.(*generateParameters).out == from {
-				schedState.Clonable[i].Parameters.(*generateParameters).out = to
+			if schedState.Generate[i].Parameters.(*generateParameters).out == from {
+				schedState.Generate[i].Parameters.(*generateParameters).out = to
 			}
 		}
 	}
@@ -1200,7 +1317,7 @@ func read(parameters interface{}, coreID uint8) {
 	count := int32(0)
 
 	for {
-		low.AllocateMbufs(buf, mempool)
+		low.AllocateMbufs(buf, mempool, 1)
 		tempPacket = packet.ExtractPacket(buf[0])
 		isEOF := tempPacket.ReadPcapOnePacket(f)
 		if isEOF {

@@ -7,5 +7,6 @@ examples/Forwarding
 examples/dump
 examples/clonable_pcap_dumper
 examples/kni
+examples/copy
 test/stash/send_fixed_number
 doc
