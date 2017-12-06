@@ -23,9 +23,9 @@ func resetClockImplementation() {
 }
 
 var (
-	globHdrBuffer = []byte{0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0, 0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0, 0, 0x01, 0, 0, 0}
+	globHdrBuffer = []byte{0x4d, 0x3c, 0xb2, 0xa1, 0x02, 0, 0x04, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0, 0, 0x01, 0, 0, 0}
 	globHdr       = PcapGlobHdr{
-		MagicNumber:  0xa1b2c3d4,
+		MagicNumber:  0xa1b23c4d,
 		VersionMajor: 2,
 		VersionMinor: 4,
 		Snaplen:      65535,
