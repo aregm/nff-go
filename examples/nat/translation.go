@@ -120,7 +120,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	value := v.(Tuple)
 
 	// Check whether connection is too old
-	if pp.portmap[protocol][pub2priKey.port].lastused.Add(connectionTimeout).After(time.Now()) {
+	if time.Since(pp.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
 		pp.portmap[protocol][pub2priKey.port].lastused = time.Now()
 	} else {
 		// There was no transfer on this port for too long
@@ -294,6 +294,9 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 		pme := &pp.portmap[common.TCPNumber][port]
 		if pme.finCount == 2 {
 			pp.deleteOldConnection(common.TCPNumber, port)
+			// Set some time while port cannot be used before
+			// connection timeout is reached
+			pme.lastused = time.Now().Add(time.Duration(portReuseTimeout - connectionTimeout))
 		}
 
 		pp.mutex.Unlock()

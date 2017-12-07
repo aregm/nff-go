@@ -31,6 +31,9 @@ const (
 
 	iPUBLIC  interfaceType = 0
 	iPRIVATE interfaceType = 1
+
+	connectionTimeout time.Duration = 1 * time.Minute
+	portReuseTimeout  time.Duration = 1 * time.Second
 )
 
 type ipv4Subnet struct {
@@ -97,8 +100,8 @@ var (
 	HWTXChecksum bool
 
 	// Debug variables
-	debugDump = true
-	debugDrop = true
+	debugDump = false
+	debugDrop = false
 	// Controls whether debug dump files are separate for private and
 	// public interface or both traces are dumped in the same file.
 	dumptogether = false
