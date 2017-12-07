@@ -33,6 +33,7 @@ const (
 	iPRIVATE interfaceType = 1
 
 	connectionTimeout time.Duration = 1 * time.Minute
+	portReuseTimeout  time.Duration = 1 * time.Second
 )
 
 type ipv4Subnet struct {
