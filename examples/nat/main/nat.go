@@ -18,8 +18,8 @@ func main() {
 	// Parse arguments
 	cores := flag.String("cores", "0-43", "Specify CPU cores to use")
 	configFile := flag.String("config", "config.json", "Specify config file name")
-	flag.BoolVar(&nat.CalculateChecksum, "csum", false, "Specify whether to calculate checksums in modified packets")
-	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
+	flag.BoolVar(&nat.CalculateChecksum, "csum", true, "Specify whether to calculate checksums in modified packets")
+	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", true, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
 	flag.Parse()
 
 	// Set up reaction to SIGINT (Ctrl-C)
