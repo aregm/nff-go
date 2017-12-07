@@ -31,6 +31,8 @@ const (
 
 	iPUBLIC  interfaceType = 0
 	iPRIVATE interfaceType = 1
+
+	connectionTimeout time.Duration = 1 * time.Minute
 )
 
 type ipv4Subnet struct {
