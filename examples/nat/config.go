@@ -100,8 +100,8 @@ var (
 	HWTXChecksum bool
 
 	// Debug variables
-	debugDump = true
-	debugDrop = true
+	debugDump = false
+	debugDrop = false
 	// Controls whether debug dump files are separate for private and
 	// public interface or both traces are dumped in the same file.
 	dumptogether = false
