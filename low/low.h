@@ -89,7 +89,7 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	    .id = dev_info.pci_dev->id,
 	    .force_bind = 1 // Flag to bind kernel thread
 	};
-	snprintf(port_conf_default.name, RTE_KNI_NAMESIZE, name);
+	snprintf(port_conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
 	// TODO this NULL is for ops structure which handles callbacks from kernels requests
 	// DPDK example has callbacks for "change mtu" and "config network interface"
 	kni[port] = rte_kni_alloc(mbuf_pool, &port_conf_default, NULL);
