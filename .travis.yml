@@ -17,11 +17,6 @@ sudo:
 go: 
  - 1.9.x
 
-branches:
-  only:
-    - develop
-    - dkolistr/yml_file
-
 before_script:
   - sudo apt-get -qq update
   - sudo apt-get install -y libnuma-dev
