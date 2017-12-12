@@ -33,5 +33,6 @@ before_script:
 script:
   - ./scripts/get-depends.sh
   - make
-  - sudo sysctl -w vm.nr_hugepages=1024
+#  - sudo sysctl -w vm.nr_hugepages=1024
+  - sudo echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
   - sudo -E env "PATH=$PATH GOROOT=$GOROOT GOPATH=$GOPATH" make testing
