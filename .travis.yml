@@ -34,5 +34,5 @@ script:
   - ./scripts/get-depends.sh
   - make
 #  - sudo sysctl -w vm.nr_hugepages=1024
-  - sudo echo 1024 > /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages
+  - sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
   - sudo -E env "PATH=$PATH GOROOT=$GOROOT GOPATH=$GOPATH" make testing
