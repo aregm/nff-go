@@ -25,10 +25,10 @@ Vagrant.configure(2) do |config|
 $provision = <<SHELL
 echo Installing system packages
 sudo apt-get update
-sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev
 
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zvx')
+(cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zx')
 mkdir go
 echo export GOPATH=\\"'$HOME'\\"/go > .bash_login
 echo export GOROOT=/opt/go >> .bash_login
@@ -74,6 +74,7 @@ SHELL
                       inline: $provision
 
   # Define six YANFF VMs
+  user = ENV.fetch('USER', "nouser")
   (0..1).each do |i|
     config.vm.define "yanff-#{i}" do |node|
       node.vm.hostname = "yanff-#{i}"
@@ -81,12 +82,12 @@ SHELL
       pair = i & (~1)
       node.vm.network "private_network",
                       auto_config: false,
-                      virtualbox__intnet: "link-#{pair}"
+                      virtualbox__intnet: "link-#{user}-#{pair}"
 
       # Define second inter-VM virtual network link
       node.vm.network "private_network",
                       auto_config: false,
-                      virtualbox__intnet: "link-#{pair+1}"
+                      virtualbox__intnet: "link-#{user}-#{pair+1}"
     end
   end
 end
