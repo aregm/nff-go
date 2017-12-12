@@ -1,0 +1,36 @@
+language:
+  - go
+
+os:
+  - linux
+
+env:
+  global:
+    - MAKEFLAGS="-j2"
+
+dist:
+  - trusty
+
+sudo:
+  - required 
+
+go: 
+ - 1.9.x
+
+branches:
+  only:
+    - develop
+    - dkolistr/yml_file
+
+before_script:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libnuma-dev
+  - sudo apt-get install -y libpcap-dev
+  - sudo apt-get install -y linux-headers-$(uname -r)
+  - sudo apt-get install hugepages 
+  - export PATH=$GOROOT/bin:$PATH
+
+script:
+  - ./scripts/get-depends.sh
+  - make
+  - sudo -E env "PATH=$PATH GOROOT=$GOROOT GOPATH=$GOPATH" make testing
