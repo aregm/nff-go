@@ -18,7 +18,7 @@ func main() {
 	config := flow.Config{}
 	flow.SystemInit(&config)
 	initCommonState()
-	l3Rules = packet.GetL3ACLFromORIG("packet..conf")
+	l3Rules = packet.GetL3ACLFromORIG("rules2.conf")
 	go updateSeparateRules()
 	firstFlow := flow.SetReceiver(0)
 	outputFlows := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
