@@ -1,0 +1,36 @@
+language:
+  - go
+
+os:
+  - linux
+
+env:
+  global:
+    - MAKEFLAGS="-j2"
+
+dist:
+  - trusty
+
+sudo:
+  - required 
+
+go: 
+ - 1.9.x
+
+before_script:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libnuma-dev
+  - sudo apt-get install -y libpcap-dev
+  - sudo apt-get install -y linux-headers-$(uname -r)
+  - sudo apt-get install -y hugepages 
+  - sudo apt-get install -y libelf-dev
+  - export PATH=$GOROOT/bin:$PATH
+
+script:
+  - ./scripts/get-depends.sh
+  - make
+  - sudo sysctl -w vm.nr_hugepages=1024
+  - sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+  - sudo mkdir /mnt/huge
+  - sudo mount -t hugetlbfs nodev /mnt/huge
+  - sudo -E env "PATH=$PATH GOROOT=$GOROOT GOPATH=$GOPATH" make testing
