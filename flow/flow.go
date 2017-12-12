@@ -1388,7 +1388,7 @@ func checkSystem() {
 	}
 }
 
-// CreateKNIDevice creates KNI device for using in receive or send functions.
+// CreateKniDevice creates KNI device for using in receive or send functions.
 // Gets port, core (not from YANFF list), and unique name of future KNI device.
 func CreateKniDevice(port uint8, core uint8, name string) *Kni {
 	low.CreateKni(port, core, name)

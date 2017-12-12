@@ -127,7 +127,7 @@ func TestAddVLANTag(t *testing.T) {
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + VLANLen + IPv4MinLen + TCPMinLen
-	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.Start()))[:size]
+	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
 		t.FailNow()
