@@ -20,4 +20,10 @@ tutorial:
 antiddos:
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
+gopacket:
+	go get -v github.com/google/gopacket
+
+gopacket_parser_example: gopacket
+	go build gopacket_parser_example.go
+
 include $(PATH_TO_MK)/leaf.mk
