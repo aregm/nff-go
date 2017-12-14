@@ -419,7 +419,7 @@ func (ring *Ring) GetRingCount() uint32 {
 // Receive - get packets and enqueue on a Ring.
 func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
-	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.yanff_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
@@ -428,7 +428,7 @@ func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
 // Send - dequeue packets and send.
 func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
-	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.yanff_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
