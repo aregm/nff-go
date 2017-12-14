@@ -41,12 +41,12 @@ func main() {
 		flow.SetHandler(secondFlow, hexdumper, nil)
 	case 2:
 		// Writer closes flow
-		flow.SetWriter(secondFlow, "out.pcap")
+		flow.SetSender(secondFlow, "out.pcap")
 	default:
 		flow.SetHandler(secondFlow, dumper, nil)
 	}
 
-	// All cases except SetWriter require to merge partitioned packets to original flow
+	// All cases except writing to file require to merge partitioned packets to original flow
 	var output *flow.Flow
 	if *dumptype == 2 {
 		output = firstFlow

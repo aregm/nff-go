@@ -478,54 +478,42 @@ func generateRingName() string {
 	return s
 }
 
-// SetWriter adds write function to flow graph.
-// Gets flow which packets will be written to file and
-// target file name.
-// Function can panic during execution.
-func SetWriter(IN *Flow, filename string) {
-	checkFlow(IN)
-	write := makeWriter(filename, IN.current)
-	schedState.UnClonable = append(schedState.UnClonable, write)
-	IN.current = nil
-	openFlowsNumber--
-}
-
-// SetReader adds read function to flow graph.
-// Gets name of pcap formatted file and number of reads. If repcount = -1,
-// file is read infinitely in circle.
-// Returns new opened flow with read packets.
-// Function can panic during execution.
-func SetReader(filename string, repcount int32) (OUT *Flow) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	read := makeReader(filename, ring, repcount)
-	schedState.UnClonable = append(schedState.UnClonable, read)
-	OUT = new(Flow)
-	OUT.current = ring
-	openFlowsNumber++
-	return OUT
-}
-
 // SetReceiver adds receive function to flow graph.
-// Gets port number from which packets will be received.
-// Receive queue will be added to port automatically.
-// Returns new opened flow with received packets
+// This function can get 1 or 2 arguments.
+// If argument is port number, function receive packets from this port. Receive queue added to port automatically.
+// If argument is KNI device, function receive packets from the kernel network interface.
+// If two arguments passed - it supposed to be filename (pcap formatted file) and number of readings (repcount),
+// packets are read from file. If repcount = -1, file is read infinitely in circle.
+// Returns new opened flow with received packets.
 // Function can panic during execution.
-func SetReceiver(par interface{}) (OUT *Flow) {
+func SetReceiver(par ...interface{}) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var recv *scheduler.FlowFunction
-	if port, t := par.(uint8); t {
-		if port >= uint8(len(createdPorts)) {
-			common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+	if len(par) == 1 {
+		if port, t := par[0].(uint8); t {
+			if port >= uint8(len(createdPorts)) {
+				common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+			}
+			createdPorts[port].config = autoPort
+			createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
+			recv = makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
+			createdPorts[port].rxQueuesNumber++
+		} else if tkni, t := par[0].(*Kni); t {
+			// Receive with "-1" queue will be from KNI device
+			recv = makeReceiver(tkni.port, -1, ring)
+		} else {
+			common.LogError(common.Initialization, "SetReceiver cannot match argument type. SetReceiver in case of one argument gets either number of port(uint8), or created KNI device.")
 		}
-		createdPorts[port].config = autoPort
-		createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
-		recv = makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
-		createdPorts[port].rxQueuesNumber++
-	} else if tkni, t := par.(*Kni); t {
-		// Receive with "-1" queue will be from KNI device
-		recv = makeReceiver(tkni.port, -1, ring)
+	} else if len(par) == 2 {
+		filename, t1 := par[0].(string)
+		repcount, t2 := par[1].(int32)
+		if t1 && t2 {
+			recv = makeReader(filename, ring, repcount)
+		} else {
+			common.LogError(common.Initialization, "SetReceiver cannot match argument type. SetReceiver in case of two arguments gets filename(string) and repcount(int32).")
+		}
 	} else {
-		common.LogError(common.Initialization, "SetReceiver parameter should be ether number of port or created KNI device")
+		common.LogError(common.Initialization, "SetReceiver invalid number of arguments.")
 	}
 	schedState.UnClonable = append(schedState.UnClonable, recv)
 	OUT = new(Flow)
@@ -568,8 +556,13 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 }
 
 // SetSender adds send function to flow graph.
-// Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
-// Send queue will be added to port automatically.
+// The behaviour is defined by the argument types.
+// If arguments are flow and port number, then all packets from the flow are sent to given
+// port, and flow is closed. Send queue will be added to port automatically.
+// If arguments are flow and KNI device, then all packets from the flow are passed into
+// kernel network interface, and flow is closed.
+// If arguments are flow and target file name, then file is created, all packets
+// from the flow are written into file, and flow is closed.
 // Function can panic during execution.
 func SetSender(IN *Flow, par interface{}) {
 	checkFlow(IN)
@@ -585,8 +578,10 @@ func SetSender(IN *Flow, par interface{}) {
 	} else if tkni, t := par.(*Kni); t {
 		// Send for "-1" queue will be to KNI device
 		send = makeSender(tkni.port, -1, IN.current)
+	} else if filename, t := par.(string); t {
+		send = makeWriter(filename, IN.current)
 	} else {
-		common.LogError(common.Initialization, "SetSender parameter should be ether number of port or created KNI device")
+		common.LogError(common.Initialization, "SetSender parameter should be either number of port, or created KNI device, or output file name.")
 	}
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
