@@ -313,7 +313,7 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 		pIPv4 := emptyPacket.GetIPv4()
 		pICMP := emptyPacket.GetICMPForIPv4()
 		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
-		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP))
+		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP, emptyPacket.Data))
 	}
 }
 
@@ -362,7 +362,7 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 	if !hwol {
 		pIPv6 := emptyPacket.GetIPv6()
 		pICMP := emptyPacket.GetICMPForIPv6()
-		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP))
+		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP, emptyPacket.Data))
 	}
 }
 
