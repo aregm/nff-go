@@ -282,23 +282,27 @@ func CalculateIPv6TCPChecksum(hdr *IPv6Hdr, tcp *TCPHdr, data unsafe.Pointer) ui
 }
 
 // CalculateIPv4ICMPChecksum calculates ICMP checksum in case if L3
-// protocol is IPv4. Before calling this function make sure that ICMP
-// L4 checksum is set to zero, otherwise you get a wrong calculation.
-func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr) uint16 {
-	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen
+// protocol is IPv4.
+func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr, data unsafe.Pointer) uint16 {
+	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen - ICMPLen
 
-	sum := calculateDataChecksum(unsafe.Pointer(icmp), int(dataLength), 0)
+	sum := uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
+		uint32(icmp.Identifier) +
+		uint32(icmp.SeqNum) +
+		calculateDataChecksum(unsafe.Pointer(data), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
 }
 
 // CalculateIPv6ICMPChecksum calculates ICMP checksum in case if L3
-// protocol is IPv6. Before calling this function make sure that ICMP
-// L4 checksum is set to zero, otherwise you get a wrong calculation.
-func CalculateIPv6ICMPChecksum(hdr *IPv6Hdr, icmp *ICMPHdr) uint16 {
-	dataLength := SwapBytesUint16(hdr.PayloadLen)
+// protocol is IPv6.
+func CalculateIPv6ICMPChecksum(hdr *IPv6Hdr, icmp *ICMPHdr, data unsafe.Pointer) uint16 {
+	dataLength := SwapBytesUint16(hdr.PayloadLen) - ICMPLen
 
-	sum := calculateDataChecksum(unsafe.Pointer(icmp), int(dataLength), 0)
+	sum := uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
+		uint32(icmp.Identifier) +
+		uint32(icmp.SeqNum) +
+		calculateDataChecksum(unsafe.Pointer(data), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
 }
