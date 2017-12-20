@@ -65,6 +65,7 @@ func setIPv4ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum boo
 		}
 		l4 := pkt.GetICMPForIPv4NoCheck()
 		l4.Cksum = 0
-		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4, pkt.Data))
+		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4,
+			unsafe.Pointer(uintptr(unsafe.Pointer(l4))+common.ICMPLen)))
 	}
 }
