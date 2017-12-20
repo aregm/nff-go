@@ -62,7 +62,7 @@ func main() {
 	}
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generator, 0, nil)
-	flow.SetWriter(outputFlow, outFile)
+	flow.SetSender(outputFlow, outFile)
 	// Start pipeline
 	go flow.SystemStart()
 

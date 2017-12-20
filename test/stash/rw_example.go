@@ -41,7 +41,7 @@ func main() {
 	var f1 *flow.Flow
 	if useReader {
 		print("Enabled Read from file ", inFile, " and ")
-		f1 = flow.SetReader(inFile, int32(repcount))
+		f1 = flow.SetReceiver(inFile, int32(repcount))
 	} else {
 		print("Enabled Generate and ")
 		f1 = flow.SetGenerator(generatePacket, 0, nil)
@@ -49,7 +49,7 @@ func main() {
 
 	if useWriter {
 		println("Write to file", outFile)
-		flow.SetWriter(f1, outFile)
+		flow.SetSender(f1, outFile)
 	} else {
 		println("Send to port", outport)
 		flow.SetSender(f1, uint8(outport))
