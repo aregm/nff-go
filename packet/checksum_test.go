@@ -26,8 +26,8 @@ var (
 	wantIPv6TCP  uint16 = 0x7abd
 	wantIPv4UDP  uint16 = 0xddd8
 	wantIPv6UDP  uint16 = 0xca16
-	wantIPv4ICMP uint16 = 0x41ff
-	wantIPv6ICMP uint16 = 0x41ff
+	wantIPv4ICMP uint16 = 0x61e4
+	wantIPv6ICMP uint16 = 0x61e4
 )
 
 /*
@@ -117,12 +117,14 @@ func TestCalculateIPv4ICMPChecksum(t *testing.T) {
 	packet.InitEmptyIPv4ICMPPacket(pkt, payloadSize)
 	initIPv4Addrs(pkt)
 	initData(pkt)
+	initICMP(pkt.GetICMPForIPv4())
 
 	ipcksum := packet.CalculateIPv4Checksum(pkt.GetIPv4())
 	pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(ipcksum)
 
 	want := wantIPv4ICMP
 	got := packet.CalculateIPv4ICMPChecksum(pkt.GetIPv4(), pkt.GetICMPForIPv4(), pkt.Data)
+
 	if got != want {
 		t.Errorf("Incorrect result:\ngot: %x, \nwant: %x\n\n", got, want)
 	}
@@ -133,9 +135,11 @@ func TestCalculateIPv6ICMPChecksum(t *testing.T) {
 	packet.InitEmptyIPv6ICMPPacket(pkt, payloadSize)
 	initIPv6Addrs(pkt)
 	initData(pkt)
+	initICMP(pkt.GetICMPForIPv6())
 
 	want := wantIPv6ICMP
 	got := packet.CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPForIPv6(), pkt.Data)
+
 	if got != want {
 		t.Errorf("Incorrect result:\ngot: %x, \nwant: %x\n\n", got, want)
 	}
@@ -170,4 +174,11 @@ func initData(pkt *packet.Packet) {
 	for i := uint(0); i < N; i++ {
 		(*ptr).array[i] = uint64(i)
 	}
+}
+
+func initICMP(icmp *packet.ICMPHdr) {
+	icmp.Type = 0xde
+	icmp.Code = 0xad
+	icmp.Identifier = packet.SwapBytesUint16(0xbe)
+	icmp.SeqNum = packet.SwapBytesUint16(0xaf)
 }
