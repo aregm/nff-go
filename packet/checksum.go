@@ -287,8 +287,8 @@ func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr, data unsafe.Pointer)
 	dataLength := SwapBytesUint16(hdr.TotalLength) - IPv4MinLen - ICMPLen
 
 	sum := uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
-		uint32(icmp.Identifier) +
-		uint32(icmp.SeqNum) +
+		uint32(SwapBytesUint16(icmp.Identifier)) +
+		uint32(SwapBytesUint16(icmp.SeqNum)) +
 		calculateDataChecksum(unsafe.Pointer(data), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
@@ -300,8 +300,8 @@ func CalculateIPv6ICMPChecksum(hdr *IPv6Hdr, icmp *ICMPHdr, data unsafe.Pointer)
 	dataLength := SwapBytesUint16(hdr.PayloadLen) - ICMPLen
 
 	sum := uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
-		uint32(icmp.Identifier) +
-		uint32(icmp.SeqNum) +
+		uint32(SwapBytesUint16(icmp.Identifier)) +
+		uint32(SwapBytesUint16(icmp.SeqNum)) +
 		calculateDataChecksum(unsafe.Pointer(data), int(dataLength), 0)
 
 	return ^reduceChecksum(sum)
