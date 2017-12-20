@@ -169,7 +169,8 @@ func GetDefaultCPUs(cpuNumber uint) []uint {
 
 var (
 	// ErrMaxCPUExceed is error in case requested CPU exceeds maximum cores number on machine
-	ErrMaxCPUExceed = errors.New("Requested cpu exceeds maximum cores number on machine")
+	ErrMaxCPUExceed    = errors.New("Requested cpu exceeds maximum cores number on machine")
+	ErrInvalidCPURange = errors.New("CPU range is invalid, min should not exceed max")
 )
 
 // ParseCPUs parses cpu list string into array of cpu numbers
@@ -197,6 +198,9 @@ func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
 				return nums, err
 			}
 			if startRange != -1 {
+				if startRange > r {
+					return nums, ErrInvalidCPURange
+				}
 				for k = startRange; k <= r; k++ {
 					nums = append(nums, uint(k))
 				}

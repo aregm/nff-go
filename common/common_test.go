@@ -34,6 +34,8 @@ var cpuParseTests = []struct {
 	{"10-14,11-12", SmallCPUNum, []uint{10, 11, 12}, nil},
 	{"1-3,6-", BigCPUNum, []uint{1, 2, 3}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
 	{"-1", BigCPUNum, []uint{}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
+	{"10-6", SmallCPUNum, []uint{}, common.ErrInvalidCPURange},
+	{"1-3,10-6", SmallCPUNum, []uint{1, 2, 3}, common.ErrInvalidCPURange},
 }
 
 // TestParseCPUs require minumum 22 cores to pass without error.
