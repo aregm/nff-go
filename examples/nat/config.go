@@ -7,6 +7,7 @@ package nat
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -243,24 +244,54 @@ func InitFlows() {
 		context.index = i
 
 		// Initialize public to private flow
-		publicToPrivate := flow.SetReceiver(pp.PublicPort.Index)
-		fromPublic := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
+		publicToPrivate, err := flow.SetReceiver(pp.PublicPort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fromPublic, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
 			totalFlows, context)
-		flow.SetStopper(fromPublic[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetStopper(fromPublic[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// Initialize private to public flow
-		privateToPublic := flow.SetReceiver(pp.PrivatePort.Index)
-		fromPrivate := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
+		privateToPublic, err := flow.SetReceiver(pp.PrivatePort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fromPrivate, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
 			totalFlows, context)
-		flow.SetStopper(fromPrivate[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetStopper(fromPrivate[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// ARP packets from public go back to public
-		toPublic := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
+		toPublic, err := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
+		if err != nil {
+			log.Fatal(err)
+		}
 		// ARP packets from private go back to private
-		toPrivate := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
+		toPrivate, err := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		flow.SetSender(toPrivate, pp.PrivatePort.Index)
-		flow.SetSender(toPublic, pp.PublicPort.Index)
+		err = flow.SetSender(toPrivate, pp.PrivatePort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetSender(toPublic, pp.PublicPort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	asize := len(Natconfig.PortPairs)

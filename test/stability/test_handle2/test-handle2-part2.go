@@ -6,6 +6,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 )
@@ -17,8 +20,17 @@ var (
 	inport  uint
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Main function for constructing packet processing graph.
 func main() {
+	var err error
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
@@ -27,22 +39,25 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Get splitting rules from access control file.
-	l3Rules = packet.GetL3ACLFromORIG("test-handle2-l3rules.conf")
+	l3Rules, err = packet.GetL3ACLFromORIG("test-handle2-l3rules.conf")
+	CheckFatal(err)
 
 	// Receive packets from 0 port
-	flow1 := flow.SetReceiver(uint8(inport))
+	flow1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	// Handle packet flow
-	flow.SetHandler(flow1, l3Handler, nil) // ~33% of packets should left in flow1
+	// ~33% of packets should left in flow1
+	CheckFatal(flow.SetHandler(flow1, l3Handler, nil))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
-	flow.SetSender(flow1, uint8(outport))
+	CheckFatal(flow.SetSender(flow1, uint8(outport)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func l3Handler(pkt *packet.Packet, context flow.UserContext) bool {

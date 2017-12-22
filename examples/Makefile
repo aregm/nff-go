@@ -4,7 +4,7 @@
 
 PATH_TO_MK = ../mk
 IMAGENAME = yanff-examples
-EXECUTABLES = demo dump Forwarding Firewall clonable_pcap_dumper kni copy
+EXECUTABLES = demo dump Forwarding Firewall clonable_pcap_dumper kni copy ErrorHandling
 
 all: nat tutorial antiddos
 

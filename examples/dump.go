@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -16,6 +17,14 @@ var (
 	outport uint
 	inport  uint
 )
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	dumptype := flag.Uint("dumptype", 0, "dumping format type (0 - dumper function, 1 - hex, 2 - pcap file)")
@@ -27,23 +36,25 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-9",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	// Separate each 50000000th packet for dumping
-	secondFlow := flow.SetPartitioner(firstFlow, 50000000, 1)
+	secondFlow, err := flow.SetPartitioner(firstFlow, 50000000, 1)
+	CheckFatal(err)
 
 	// Dump separated packet. By default function dumper() is used.
 	switch *dumptype {
 	case 1:
-		flow.SetHandler(secondFlow, hexdumper, nil)
+		CheckFatal(flow.SetHandler(secondFlow, hexdumper, nil))
 	case 2:
 		// Writer closes flow
-		flow.SetWriter(secondFlow, "out.pcap")
+		CheckFatal(flow.SetWriter(secondFlow, "out.pcap"))
 	default:
-		flow.SetHandler(secondFlow, dumper, nil)
+		CheckFatal(flow.SetHandler(secondFlow, dumper, nil))
 	}
 
 	// All cases except SetWriter require to merge partitioned packets to original flow
@@ -51,11 +62,12 @@ func main() {
 	if *dumptype == 2 {
 		output = firstFlow
 	} else {
-		output = flow.SetMerger(firstFlow, secondFlow)
+		output, err = flow.SetMerger(firstFlow, secondFlow)
+		CheckFatal(err)
 	}
-	flow.SetSender(output, uint8(outport))
+	CheckFatal(flow.SetSender(output, uint8(outport)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func dumper(currentPacket *packet.Packet, context flow.UserContext) {

@@ -60,7 +60,10 @@ func dumpPacket(pkt *packet.Packet, index int, isPrivate interfaceType) {
 			fdump[aindex] = startTrace("dump", aindex, index, isPrivate)
 		}
 
-		pkt.WritePcapOnePacket(fdump[aindex])
+		err := pkt.WritePcapOnePacket(fdump[aindex])
+		if err != nil {
+			log.Fatal(err)
+		}
 		dumpsync[aindex].Unlock()
 	}
 }
@@ -75,7 +78,10 @@ func dumpDrop(pkt *packet.Packet, index int, isPrivate interfaceType) {
 		if fdrop[aindex] == nil {
 			fdrop[aindex] = startTrace("drop", aindex, index, isPrivate)
 		}
-		pkt.WritePcapOnePacket(fdrop[aindex])
+		err := pkt.WritePcapOnePacket(fdrop[aindex])
+		if err != nil {
+			log.Fatal(err)
+		}
 		dropsync[aindex].Unlock()
 	}
 }

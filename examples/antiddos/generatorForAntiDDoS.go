@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -56,6 +57,14 @@ var (
 		packet.SwapBytesUint16(4)}
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
 	flag.IntVar(&outPort, "outPort", 0, "port to send")
@@ -66,19 +75,23 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	exampleDoneEvent = sync.NewCond(&sync.Mutex{})
 
 	// Create first packet flow
-	outputFlow := flow.SetGenerator(generatePacket, speed, nil)
-	flow.SetSender(outputFlow, outPort)
-	inputFlow := flow.SetReceiver(inPort)
-	flow.SetHandler(inputFlow, checkInputFlow, nil)
-	flow.SetStopper(inputFlow)
+	outputFlow, err := flow.SetGenerator(generatePacket, speed, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetSender(outputFlow, uint8(outPort)))
+	inputFlow, err := flow.SetReceiver(uint8(inPort))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow, checkInputFlow, nil))
+	CheckFatal(flow.SetStopper(inputFlow))
 	go randomizeSize()
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait for enough packets to arrive
 	exampleDoneEvent.L.Lock()

@@ -61,10 +61,11 @@ func GetPacketDataStartPointer(mb *Mbuf) uintptr {
 var packetStructSize int
 
 // SetPacketStructSize sets the size of the packet.
-func SetPacketStructSize(t int) {
+func SetPacketStructSize(t int) error {
 	if t > C.RTE_PKTMBUF_HEADROOM {
-		common.LogError(common.Initialization, "Packet structure can't be placed inside mbuf.",
+		msg := common.LogError(common.Initialization, "Packet structure can't be placed inside mbuf.",
 			"Increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
+		return common.WrapWithNFError(nil, msg, common.PktMbufHeadRoomTooSmall)
 	}
 	minPacketHeadroom := 64
 	if C.RTE_PKTMBUF_HEADROOM-t < minPacketHeadroom {
@@ -72,6 +73,7 @@ func SetPacketStructSize(t int) {
 			"bytes for prepend something, increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
 	}
 	packetStructSize = t
+	return nil
 }
 
 // PrependMbuf prepends length bytes to mbuf data area.
@@ -466,7 +468,7 @@ func GetPortsNumber() int {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) {
+func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) error {
 	addr := make([]byte, C.ETHER_ADDR_LEN)
 	var mempool *C.struct_rte_mempool
 	if receiveQueuesNumber != 0 {
@@ -477,10 +479,12 @@ func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16,
 	}
 	if C.port_init(C.uint8_t(port), C.uint16_t(receiveQueuesNumber), C.uint16_t(sendQueuesNumber),
 		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
-		common.LogError(common.Initialization, "Cannot init port ", port, "!")
+		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
+		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
 	t := hex.Dump(addr)
 	common.LogDebug(common.Initialization, "Port", port, "MAC address:", t[10:27])
+	return nil
 }
 
 // CreateMempool creates and returns a new memory pool.
@@ -503,11 +507,12 @@ func SetAffinity(coreID uint8) {
 }
 
 // AllocateMbufs allocates n mbufs.
-func AllocateMbufs(mb []uintptr, mempool *Mempool, n uint) {
-	err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(n))
-	if err != 0 {
-		common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf")
+func AllocateMbufs(mb []uintptr, mempool *Mempool, n uint) error {
+	if err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(n)); err != 0 {
+		msg := common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf, dpdk returned: ", err)
+		return common.WrapWithNFError(nil, msg, common.AllocMbufErr)
 	}
+	return nil
 }
 
 // WriteDataToMbuf copies data to mbuf.

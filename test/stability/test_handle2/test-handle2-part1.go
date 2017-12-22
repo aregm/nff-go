@@ -6,11 +6,15 @@ package main
 
 import (
 	"flag"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"fmt"
+	"log"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 )
 
 // test-handle2-part1: sends packets to 0 port, receives from 0 and 1 ports.
@@ -59,6 +63,14 @@ var (
 	inport  uint
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
@@ -68,23 +80,27 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create first packet flow
-	outputFlow := flow.SetGenerator(generatePacket, 0, nil)
+	outputFlow, err := flow.SetGenerator(generatePacket, 0, nil)
+	CheckFatal(err)
 
-	flow.SetSender(outputFlow, uint8(outport))
+	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
 
 	// Create receiving flows and set a checking function for it
-	inputFlow1 := flow.SetReceiver(uint8(outport))
-	flow.SetHandler(inputFlow1, checkInputFlow, nil)
-	flow.SetStopper(inputFlow1)
+	inputFlow1, err := flow.SetReceiver(uint8(outport))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow1, checkInputFlow, nil))
+	CheckFatal(flow.SetStopper(inputFlow1))
 
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()
@@ -122,10 +138,10 @@ func main() {
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	if pkt == nil {
-		panic("Failed to create new packet")
+		log.Fatal("Failed to create new packet")
 	}
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
-		panic("Failed to init empty packet")
+		log.Fatal("Failed to init empty packet")
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()

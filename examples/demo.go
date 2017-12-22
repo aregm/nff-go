@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/intel-go/yanff/flow"
@@ -22,7 +24,16 @@ var (
 	outport2 uint
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
+	var err error
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
@@ -33,27 +44,31 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Start regular updating forwarding rules
-	l2Rules = packet.GetL2ACLFromJSON("demoL2_ACL.json")
-	l3Rules = packet.GetL3ACLFromJSON("demoL3_ACL.json")
+	l2Rules, err = packet.GetL2ACLFromJSON("demoL2_ACL.json")
+	CheckFatal(err)
+	l3Rules, err = packet.GetL3ACLFromJSON("demoL3_ACL.json")
+	CheckFatal(err)
 	go updateSeparateRules()
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	// Separate packets for additional flow due to some rules
-	secondFlow := flow.SetSeparator(firstFlow, l3Separator, nil)
+	secondFlow, err := flow.SetSeparator(firstFlow, l3Separator, nil)
+	CheckFatal(err)
 
 	// Handle second flow via some heavy function
-	flow.SetHandler(firstFlow, heavyFunc, nil)
+	CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	flow.SetSender(firstFlow, uint8(outport1))
-	flow.SetSender(secondFlow, uint8(outport2))
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
+	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
@@ -71,7 +86,10 @@ func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		l2Rules = packet.GetL2ACLFromJSON("demoL2_ACL.json")
-		l3Rules = packet.GetL3ACLFromJSON("demoL3_ACL.json")
+		var err error
+		l2Rules, err = packet.GetL2ACLFromJSON("demoL2_ACL.json")
+		CheckFatal(err)
+		l3Rules, err = packet.GetL3ACLFromJSON("demoL3_ACL.json")
+		CheckFatal(err)
 	}
 }

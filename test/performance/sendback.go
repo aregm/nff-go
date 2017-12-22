@@ -4,12 +4,24 @@
 
 package main
 
-import "github.com/intel-go/yanff/flow"
+import (
+	"flag"
+	"fmt"
+	"os"
 
-import "flag"
+	"github.com/intel-go/yanff/flow"
+)
 
 var inport, outport uint
 var cores string
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 // This is a test for pure send/receive performance measurements. No
 // other functions used here.
@@ -23,12 +35,13 @@ func main() {
 	config := flow.Config{
 		CPUList: cores,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from input port. One queue will be added automatically.
-	f := flow.SetReceiver(uint8(inport))
+	f, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
-	flow.SetSender(f, uint8(outport))
+	CheckFatal(flow.SetSender(f, uint8(outport)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
