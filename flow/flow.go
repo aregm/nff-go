@@ -754,7 +754,7 @@ func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) error
 func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	for i := range InArray {
-		if err := checkFlow(OUT); err != nil {
+		if err := checkFlow(InArray[i]); err != nil {
 			return nil, err
 		}
 		merge(InArray[i].current, ring)
