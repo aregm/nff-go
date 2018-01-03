@@ -7,6 +7,10 @@ Vagrant.configure(2) do |config|
     config.proxy.https    = ENV.fetch('https_proxy', false)
   end
 
+  vm_group_size = ENV.fetch('VM_GROUP_SIZE', 2).to_i
+  vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 2).to_i
+  vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
+
   config.vm.box = "ubuntu/xenial64"
 
   # Disable automatic box update checking. If you disable this, then
@@ -18,8 +22,9 @@ Vagrant.configure(2) do |config|
     vb.gui = false
     vb.memory = "4096"
     vb.cpus = 8
-    vb.customize ["modifyvm", :id, "--nicpromisc2", "allow-all"]
-    vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+    (1..vm_links_number * 2).each do |j|
+      vb.customize ["modifyvm", :id, "--nicpromisc#{j + 1}", "allow-all"]
+    end
   end
 
 $provision = <<SHELL
@@ -75,19 +80,28 @@ SHELL
 
   # Define six YANFF VMs
   user = ENV.fetch('USER', "nouser")
-  (0..1).each do |i|
+  (0..vm_total_number - 1).each do |i|
     config.vm.define "yanff-#{i}" do |node|
       node.vm.hostname = "yanff-#{i}"
-      # Define first inter-VM virtual network link
-      pair = i & (~1)
-      node.vm.network "private_network",
-                      auto_config: false,
-                      virtualbox__intnet: "link-#{user}-#{pair}"
 
-      # Define second inter-VM virtual network link
-      node.vm.network "private_network",
-                      auto_config: false,
-                      virtualbox__intnet: "link-#{user}-#{pair+1}"
+      # Create inter-VM connections only for VMs inside of one VM group
+      if i + 1 < vm_total_number && (i + 1) % vm_group_size != 0
+        # Define forward inter-VM virtual network links
+        (1..vm_links_number).each do |j|
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "link-#{user}-#{i + 1}-#{j}"
+        end
+      end
+
+      if i % vm_group_size != 0
+        # Define backward inter-VM virtual network links
+        (1..vm_links_number).each do |j|
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "link-#{user}-#{i}-#{j}"
+        end
+      end
     end
   end
 end
