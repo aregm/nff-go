@@ -40,3 +40,7 @@ so the following command creates two groups of VMs connected with
 single link: VM-VM-VM VM-VM.
 
        VM_GROUP_SIZE=3 VM_LINKS_NUMBER=1 VM_TOTAL_NUMBER=5 vagrant up
+
+See wiki page https://github.com/intel-go/yanff/wiki/NAT-example for
+instructions on how to configure virtual machines to run YANFF NAT
+example.

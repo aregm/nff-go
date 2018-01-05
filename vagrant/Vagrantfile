@@ -30,47 +30,28 @@ Vagrant.configure(2) do |config|
 $provision = <<SHELL
 echo Installing system packages
 sudo apt-get update
-sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager
+sudo systemctl enable network-manager
+sudo systemctl start network-manager
 
 echo Unpacking Go language into /opt
 (cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zx')
 mkdir go
-echo export GOPATH=\\"'$HOME'\\"/go > .bash_login
-echo export GOROOT=/opt/go >> .bash_login
-echo export YANFF=\\"'$GOPATH'\\"/src/github.com/intel-go/yanff >> .bash_login
-echo export PATH=\\"'$GOPATH'\\"/bin:\\"'$GOROOT'\\"/bin:\\"'$PATH'\\" >> .bash_login
-. .bash_login
+chmod +x ~/scripts.sh
+. ~/scripts.sh
+echo . ~/scripts.sh >> .bashrc
 
 echo Downloading and building YANFF
+go get github.com/pkg/errors
 go get -d -v github.com/intel-go/yanff
-(cd \"$GOPATH\"/src/github.com/intel-go/yanff; make)
+(cd \"$GOPATH\"/src/github.com/intel-go/yanff; git checkout develop; make)
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 sudo sh -c 'echo vm.nr_hugepages=1024 >> /etc/sysctl.conf'
-
-echo Binding ports to DPDK
-bindports()
-{
-    sudo modprobe uio
-    sudo insmod \"$YANFF\"/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    sudo \"$YANFF\"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=igb_uio 00:08.0 00:09.0
-}
-bindports
-declare -f bindports >> .bash_login
-unbindports()
-{
-    sudo \"$YANFF\"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=e1000 00:08.0 00:09.0
-}
-declare -f unbindports >> .bash_login
-runpktgen()
-{
-    (cd \"$YANFF\"/dpdk; sudo ./pktgen -c 0xff -n 4 -- -P -m \"[1:2].0, [3:4].1\" -T)
-    rc=$?; if [[ $rc == 0 ]]; then reset; fi
-}
-declare -f runpktgen >> .bash_login
 SHELL
 
+  config.vm.provision "file", source: "scripts.sh", destination: "scripts.sh"
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
