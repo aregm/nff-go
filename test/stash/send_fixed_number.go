@@ -6,10 +6,12 @@ package main
 
 import (
 	"flag"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"fmt"
 	"os"
 	"sync/atomic"
+
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
 )
 
 var totalPackets int64
@@ -20,6 +22,14 @@ var count int64
 // Total packet size is 14+20+20+payload_size+4(crc)
 var payloadSize uint
 var hdrsSize uint = 14 + 20 + 20 + 4
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	flag.Int64Var(&totalPackets, "totalPackets", 1234, "Number of packets to send")
@@ -33,19 +43,21 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// With generateOne all packets are sent.
-	f1 := flow.SetGenerator(generatePacket, 0, nil)
+	f1, err := flow.SetGenerator(generatePacket, 0, nil)
+	CheckFatal(err)
 	// With generatePerf sent only multiple of burst-size.
 	// f1 := flow.SetGenerator(generatePacket, 100, nil)
-	f2 := flow.SetPartitioner(f1, 350, 350)
+	f2, err := flow.SetPartitioner(f1, 350, 350)
+	CheckFatal(err)
 
 	// Send all generated packets to the output
-	flow.SetSender(f1, uint8(outport))
-	flow.SetSender(f2, uint8(outport))
+	CheckFatal(flow.SetSender(f1, uint8(outport)))
+	CheckFatal(flow.SetSender(f2, uint8(outport)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {

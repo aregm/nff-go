@@ -7,6 +7,7 @@ package packet
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"log"
 	"net"
 	"reflect"
 	"testing"
@@ -114,7 +115,9 @@ func initTestIPv6Packet(pkt *Packet) {
 
 func TestAddVLANTag(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempoolVALNTest, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	initTestIPv4Packet(pkt)
 	pkt.AddVLANTag(32)
@@ -122,7 +125,9 @@ func TestAddVLANTag(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4TCPVLAN)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempoolVALNTest, 1)
+	if err := low.AllocateMbufs(gtMb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -136,7 +141,9 @@ func TestAddVLANTag(t *testing.T) {
 
 func TestGetSetVLANTagIdentifier(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempoolVALNTest, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 
 	InitEmptyPacket(pkt, 0)
@@ -172,7 +179,9 @@ func TestGetSetVLANTagIdentifier(t *testing.T) {
 
 func TestGetEtherType(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempoolVALNTest, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4Packet(pkt, 0)
 
@@ -201,7 +210,9 @@ func TestGetEtherType(t *testing.T) {
 
 func TestGetVLAN(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempoolVALNTest, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4Packet(pkt, 0)
 
@@ -232,7 +243,9 @@ func TestGetVLAN(t *testing.T) {
 func TestParseL3CheckVLAN(t *testing.T) {
 	decoded, _ := hex.DecodeString(gtLineIPv4TCPVLAN)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	GeneratePacketFromByte(pkt, decoded)
 	if pkt == nil {
@@ -256,7 +269,9 @@ func TestParseL3CheckVLAN(t *testing.T) {
 func TestParseAllKnownL3CheckVLAN(t *testing.T) {
 	decoded, _ := hex.DecodeString(gtLineIPv4TCPVLAN)
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	GeneratePacketFromByte(pkt, decoded)
 	if pkt == nil {
@@ -290,7 +305,9 @@ func TestParseAllKnownL3CheckVLAN(t *testing.T) {
 
 func TestGetIPv4CheckVLAN(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	initTestIPv4Packet(pkt)
 
@@ -313,7 +330,9 @@ func TestGetIPv4CheckVLAN(t *testing.T) {
 
 func TestGetIPv6CheckVLAN(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	initTestIPv6Packet(pkt)
 
@@ -336,7 +355,9 @@ func TestGetIPv6CheckVLAN(t *testing.T) {
 
 func TestGetARPCheckVLAN(t *testing.T) {
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempoolVALNTest, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitARPRequestPacket(pkt, MacHeaderVLAN.SAddr, IPv4HeaderVLAN.SrcAddr, IPv4HeaderVLAN.DstAddr)
 

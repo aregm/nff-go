@@ -40,7 +40,7 @@ type PcapRecHdr struct {
 }
 
 // WritePcapGlobalHdr writes global pcap header into file.
-func WritePcapGlobalHdr(f io.Writer) {
+func WritePcapGlobalHdr(f io.Writer) error {
 	glHdr := PcapGlobHdr{
 		MagicNumber:  0xa1b23c4d, // magic number for nanosecond-resolution pcap file
 		VersionMajor: 2,
@@ -48,18 +48,20 @@ func WritePcapGlobalHdr(f io.Writer) {
 		Snaplen:      65535,
 		Network:      1,
 	}
-	err := binary.Write(f, binary.LittleEndian, &glHdr)
-	if err != nil {
-		common.LogError(common.Debug, "WritePcapGlobalHdr:", err)
+	if err := binary.Write(f, binary.LittleEndian, &glHdr); err != nil {
+		return common.WrapWithNFError(err, "write pcap global header failed", common.PcapWriteFail)
 	}
+	return nil
 }
 
 // WritePcapOnePacket writes one packet with pcap header in file.
 // Assumes global pcap header is already present in file. Packet timestamps have nanosecond resolution.
-func (pkt *Packet) WritePcapOnePacket(f io.Writer) {
+func (pkt *Packet) WritePcapOnePacket(f io.Writer) error {
 	bytes := low.GetRawPacketBytesMbuf(pkt.CMbuf)
-	writePcapRecHdr(f, bytes)
-	writePacketBytes(f, bytes)
+	if err := writePcapRecHdr(f, bytes); err != nil {
+		return err
+	}
+	return writePacketBytes(f, bytes)
 }
 
 func writePcapRecHdr(f io.Writer, pktBytes []byte) error {
@@ -70,52 +72,55 @@ func writePcapRecHdr(f io.Writer, pktBytes []byte) error {
 		InclLen: uint32(len(pktBytes)),
 		OrigLen: uint32(len(pktBytes)),
 	}
-	err := binary.Write(f, binary.LittleEndian, &hdr)
-	if err != nil {
-		return err
+	if err := binary.Write(f, binary.LittleEndian, &hdr); err != nil {
+		return common.WrapWithNFError(err, "write pcap header failed", common.PcapWriteFail)
 	}
 	return nil
 }
 
-func writePacketBytes(f io.Writer, pktBytes []byte) {
-	err := binary.Write(f, binary.LittleEndian, pktBytes)
-	if err != nil {
-		common.LogError(common.Debug, "WritePcapOnePacket internal error:", err)
+func writePacketBytes(f io.Writer, pktBytes []byte) error {
+	if err := binary.Write(f, binary.LittleEndian, pktBytes); err != nil {
+		return common.WrapWithNFError(err, "internal error in write pcap one packet", common.PcapWriteFail)
 	}
+	return nil
 }
 
 // ReadPcapGlobalHdr read global pcap header into file.
-func ReadPcapGlobalHdr(f io.Reader, glHdr *PcapGlobHdr) {
-	err := binary.Read(f, binary.LittleEndian, glHdr)
-	if err != nil {
-		common.LogError(common.Debug, "ReadPcapGlobalHdr:", err)
+func ReadPcapGlobalHdr(f io.Reader, glHdr *PcapGlobHdr) error {
+	if err := binary.Read(f, binary.LittleEndian, glHdr); err != nil {
+		return common.WrapWithNFError(err, "read pcap one packet failed", common.PcapReadFail)
 	}
+	return nil
 }
 
 func readPcapRecHdr(f io.Reader, hdr *PcapRecHdr) error {
-	return binary.Read(f, binary.LittleEndian, hdr)
+	if err := binary.Read(f, binary.LittleEndian, hdr); err != nil {
+		return common.WrapWithNFError(err, "read pcap rec header failed", common.PcapReadFail)
+	}
+	return nil
 }
 
-func readPacketBytes(f io.Reader, inclLen uint32) []byte {
+func readPacketBytes(f io.Reader, inclLen uint32) ([]byte, error) {
 	pkt := make([]byte, inclLen)
-	err := binary.Read(f, binary.LittleEndian, pkt)
-	if err != nil {
-		common.LogError(common.Debug, "ReadPcapOnePacket internal error:", err)
+	if err := binary.Read(f, binary.LittleEndian, pkt); err != nil {
+		return nil, common.WrapWithNFError(err, "internal error in read pcap one packet", common.PcapReadFail)
 	}
-	return pkt
+	return pkt, nil
 }
 
 // ReadPcapOnePacket read one packet with pcap header from file.
 // Assumes that global pcap header is already read.
-func (pkt *Packet) ReadPcapOnePacket(f io.Reader) bool {
+func (pkt *Packet) ReadPcapOnePacket(f io.Reader) (bool, error) {
 	var hdr PcapRecHdr
-	err := readPcapRecHdr(f, &hdr)
-	if err == io.EOF {
-		return true
+	if err := readPcapRecHdr(f, &hdr); err == io.EOF {
+		return true, nil
 	} else if err != nil {
-		common.LogError(common.Debug, "ReadPcapOnePacket:", err)
+		return false, common.WrapWithNFError(err, "read pcap one packet failed", common.PcapReadFail)
 	}
-	bytes := readPacketBytes(f, hdr.InclLen)
+	bytes, err := readPacketBytes(f, hdr.InclLen)
+	if err != nil {
+		return false, common.WrapWithNFError(err, "read packet bytes failed", common.PcapReadFail)
+	}
 	GeneratePacketFromByte(pkt, bytes)
-	return false
+	return false, nil
 }

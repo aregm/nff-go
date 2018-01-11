@@ -7,16 +7,24 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/intel-go/yanff/examples/nat"
-	"github.com/intel-go/yanff/flow"
-	"log"
 	"os"
 	"os/signal"
+
+	"github.com/intel-go/yanff/examples/nat"
+	"github.com/intel-go/yanff/flow"
 )
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	// Parse arguments
-	cores := flag.String("cores", "0-43", "Specify CPU cores to use")
+	cores := flag.String("cores", "", "Specify CPU cores to use")
 	configFile := flag.String("config", "config.json", "Specify config file name")
 	flag.BoolVar(&nat.CalculateChecksum, "csum", true, "Specify whether to calculate checksums in modified packets")
 	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", true, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
@@ -27,10 +35,7 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	// Read config
-	err := nat.ReadConfig(*configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckFatal(nat.ReadConfig(*configFile))
 
 	// Init YANFF system at 16 available cores
 	yanffconfig := flow.Config{
@@ -38,13 +43,15 @@ func main() {
 		HWTXChecksum: nat.HWTXChecksum,
 	}
 
-	flow.SystemInit(&yanffconfig)
+	CheckFatal(flow.SystemInit(&yanffconfig))
 
 	// Initialize flows and necessary state
 	nat.InitFlows()
 
 	// Start flow scheduler
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait for interrupt
 	sig := <-c

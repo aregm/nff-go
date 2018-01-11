@@ -35,6 +35,14 @@ var (
 	totalPackets uint64
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.StringVar(&outFile, "outfile", "pkts_generated.pcap", "file to write output to")
 	flag.StringVar(&inFile, "infile", "config.json", "file with configurations for generator")
@@ -51,20 +59,21 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
 	generator, err := getGenerator()
-	if err != nil {
-		panic(fmt.Sprintf("determining generator type failed: %v", err))
-	}
+	CheckFatal(err)
 	// Create packet flow
-	outputFlow := flow.SetGenerator(generator, 0, nil)
-	flow.SetWriter(outputFlow, outFile)
+	outputFlow, err := flow.SetGenerator(generator, 0, nil)
+	CheckFatal(err)
+	CheckFatal(flow.SetWriter(outputFlow, outFile))
 	// Start pipeline
-	go flow.SystemStart()
+	go func() {
+		CheckFatal(flow.SystemStart())
+	}()
 
 	// Wait for enough packets to arrive
 	testDoneEvent.L.Lock()
@@ -302,7 +311,7 @@ func generateIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt))
+		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
 	}
 }
 
@@ -395,10 +404,10 @@ func generateTCPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt))
-		pkt.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pkt))
+		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
+		pkt.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pkt.GetIPv4(), pkt.GetTCPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pkt))
+		pkt.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pkt.GetIPv6(), pkt.GetTCPForIPv6(), pkt.Data))
 	}
 }
 
@@ -442,10 +451,10 @@ func generateUDPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt))
-		pkt.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pkt))
+		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
+		pkt.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pkt.GetIPv4(), pkt.GetUDPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pkt))
+		pkt.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pkt.GetIPv6(), pkt.GetUDPForIPv6(), pkt.Data))
 	}
 }
 
@@ -489,10 +498,10 @@ func generateICMPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt))
-		pkt.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pkt))
+		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
+		pkt.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pkt.GetIPv4(), pkt.GetICMPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pkt))
+		pkt.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPForIPv6(), pkt.Data))
 	}
 }
 

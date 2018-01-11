@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -21,6 +23,14 @@ var (
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Main function for constructing packet processing graph.
 func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
@@ -34,23 +44,25 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(*configFile, *target)
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
 	// Receive packets from 0 port
-	flow1 := flow.SetReceiver(uint8(inport))
-	flow2 := flow.SetPartitioner(flow1, 1000, 100)
+	flow1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
+	flow2, err := flow.SetPartitioner(flow1, 1000, 100)
+	CheckFatal(err)
 
-	flow.SetHandler(flow1, fixPackets1, nil)
-	flow.SetHandler(flow2, fixPackets2, nil)
+	CheckFatal(flow.SetHandler(flow1, fixPackets1, nil))
+	CheckFatal(flow.SetHandler(flow2, fixPackets2, nil))
 
-	flow.SetSender(flow1, uint8(outport1))
-	flow.SetSender(flow2, uint8(outport2))
+	CheckFatal(flow.SetSender(flow1, uint8(outport1)))
+	CheckFatal(flow.SetSender(flow2, uint8(outport2)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {

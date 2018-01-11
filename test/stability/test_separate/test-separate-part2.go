@@ -6,6 +6,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -23,8 +25,17 @@ var (
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Main function for constructing packet processing graph.
 func main() {
+	var err error
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
@@ -36,29 +47,32 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(*configFile, *target)
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
 	// Get splitting rules from access control file.
-	l3Rules = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
+	l3Rules, err = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
+	CheckFatal(err)
 
 	// Receive packets from 0 port
-	flow1 := flow.SetReceiver(uint8(inport))
+	flow1, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	// Separate packet flow based on ACL.
-	flow2 := flow.SetSeparator(flow1, l3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
+	flow2, err := flow.SetSeparator(flow1, l3Separator, nil) // ~66% of packets should go to flow2, ~33% left in flow1
+	CheckFatal(err)
 
-	flow.SetHandler(flow1, fixPackets1, nil)
-	flow.SetHandler(flow2, fixPackets2, nil)
+	CheckFatal(flow.SetHandler(flow1, fixPackets1, nil))
+	CheckFatal(flow.SetHandler(flow2, fixPackets2, nil))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
-	flow.SetSender(flow1, uint8(outport1))
-	flow.SetSender(flow2, uint8(outport2))
+	CheckFatal(flow.SetSender(flow1, uint8(outport1)))
+	CheckFatal(flow.SetSender(flow2, uint8(outport2)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func l3Separator(pkt *packet.Packet, context flow.UserContext) bool {

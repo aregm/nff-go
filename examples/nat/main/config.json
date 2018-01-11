@@ -2,12 +2,12 @@
     "port-pairs": [
         {
             "private-port": {
-                "index": 2,
+                "index": 1,
                 "subnet": "192.168.14.1/24"
             },
             "public-port": {
-                "index": 3,
-                "dst-mac": "3c:fd:fe:a5:4d:68",
+                "index": 0,
+                "dst-mac": "08:00:27:19:e5:97",
                 "subnet": "192.168.16.1"
             }
         }

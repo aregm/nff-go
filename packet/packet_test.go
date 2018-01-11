@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"log"
 	"net"
 	"reflect"
 	"testing"
@@ -275,7 +276,9 @@ func TestParseL3(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb, mempool, 1)
+		if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+			log.Fatal(err)
+		}
 		pkt := ExtractPacket(mb[0])
 		GeneratePacketFromByte(pkt, decoded)
 		if pkt == nil {
@@ -303,7 +306,9 @@ func TestParseL4(t *testing.T) {
 	for i := 0; i < len(lines); i++ {
 		decoded, _ := hex.DecodeString(lines[i])
 		mb := make([]uintptr, 1)
-		low.AllocateMbufs(mb, mempool, 1)
+		if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+			log.Fatal(err)
+		}
 		pkt := ExtractPacket(mb[0])
 		GeneratePacketFromByte(pkt, decoded)
 
@@ -360,7 +365,9 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
-			low.AllocateMbufs(mb, mempool, 1)
+			if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+				log.Fatal(err)
+			}
 			pkt := ExtractPacket(mb[0])
 			GeneratePacketFromByte(pkt, init)
 
@@ -377,7 +384,9 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 11; i++ {
 		for j := uint(1); j < 21; j++ {
-			low.AllocateMbufs(mb, mempool, 1)
+			if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+				log.Fatal(err)
+			}
 			pkt := ExtractPacket(mb[0])
 			GeneratePacketFromByte(pkt, init)
 
@@ -394,7 +403,9 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
-			low.AllocateMbufs(mb, mempool, 1)
+			if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+				log.Fatal(err)
+			}
 			pkt := ExtractPacket(mb[0])
 			GeneratePacketFromByte(pkt, add)
 
@@ -410,7 +421,9 @@ func TestEncapsulationDecapsulationFunctions(t *testing.T) {
 	}
 	for i := uint(0); i < 20; i++ {
 		for j := uint(1); j < 20-i+1; j++ {
-			low.AllocateMbufs(mb, mempool, 1)
+			if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+				log.Fatal(err)
+			}
 			pkt := ExtractPacket(mb[0])
 			GeneratePacketFromByte(pkt, add)
 
@@ -449,7 +462,9 @@ var (
 func TestInitEmptyPacket(t *testing.T) {
 	// Create empty packet, set Ether header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyPacket(pkt, 0)
 	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
@@ -459,7 +474,9 @@ func TestInitEmptyPacket(t *testing.T) {
 	gtBuf, _ := hex.DecodeString(gtLineEther)
 
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -473,7 +490,9 @@ func TestInitEmptyPacket(t *testing.T) {
 func TestInitEmptyIPv4Packet(t *testing.T) {
 	// Create empty packet, set IPv4 header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4Packet(pkt, testPlSize)
 	dst := net.ParseIP("128.9.9.5").To4()
@@ -488,7 +507,9 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 	gtBuf, _ := hex.DecodeString(gtLineIPv4)
 
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -502,7 +523,9 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 func TestInitEmptyIPv6Packet(t *testing.T) {
 	// Create empty packet, set IPv6 header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6Packet(pkt, testPlSize)
 	pkt.GetIPv6().SrcAddr = [16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xaf}
@@ -513,7 +536,9 @@ func TestInitEmptyIPv6Packet(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -527,7 +552,9 @@ func TestInitEmptyIPv6Packet(t *testing.T) {
 func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4TCPPacket(pkt, testPlSize)
 	pkt.GetTCPForIPv4().DstPort = SwapBytesUint16(5678)
@@ -539,7 +566,9 @@ func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4TCP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -553,7 +582,9 @@ func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv4UDPPacket(pkt, testPlSize)
 	pkt.GetUDPForIPv4().DstPort = SwapBytesUint16(5678)
@@ -565,7 +596,9 @@ func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv4UDP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -579,7 +612,9 @@ func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 	// Create empty packet, set TCP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6TCPPacket(pkt, 0)
 	pkt.GetTCPForIPv6().DstPort = SwapBytesUint16(5678)
@@ -591,7 +626,9 @@ func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6TCP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
@@ -605,7 +642,9 @@ func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	mb := make([]uintptr, 1)
-	low.AllocateMbufs(mb, mempool, 1)
+	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	pkt := ExtractPacket(mb[0])
 	InitEmptyIPv6UDPPacket(pkt, testPlSize)
 	pkt.GetUDPForIPv6().DstPort = SwapBytesUint16(5678)
@@ -617,7 +656,9 @@ func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineIPv6UDP)
 	gtMb := make([]uintptr, 1)
-	low.AllocateMbufs(gtMb, mempool, 1)
+	if err := low.AllocateMbufs(gtMb, mempool, 1); err != nil {
+		log.Fatal(err)
+	}
 	gtPkt := ExtractPacket(gtMb[0])
 	GeneratePacketFromByte(gtPkt, gtBuf)
 

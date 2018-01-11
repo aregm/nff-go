@@ -19,7 +19,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"hash/fnv"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -71,6 +73,14 @@ func flowHash(srcAddr []byte, srcAddrLen int, srcPort uint32) uint32 {
 	return (h.Sum32() + srcPort) & (size - 1)
 }
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Main function for constructing packet processing graph.
 func main() {
 	flag.IntVar(&outPort, "outPort", 0, "port to send")
@@ -81,15 +91,17 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
 
-	inputFlow := flow.SetReceiver(inPort)
-	flow.SetHandler(inputFlow, handle, nil)
-	flow.SetSender(inputFlow, outPort)
+	CheckFatal(flow.SystemInit(&config))
+
+	inputFlow, err := flow.SetReceiver(uint8(inPort))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandler(inputFlow, handle, nil))
+	CheckFatal(flow.SetSender(inputFlow, uint8(outPort)))
 	// Var isDdos is calculated in separate goroutine.
 	go calculateMetrics()
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func getPacketHash(pkt *packet.Packet) uint32 {
