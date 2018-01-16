@@ -20,9 +20,10 @@ type VLANHdr struct {
 }
 
 func (hdr *VLANHdr) String() string {
-	return fmt.Sprintf(`L2 VLAN:\n
-TCI: 0x%02x (priority: %d, drop %d, ID: %d)\n
-EtherType: 0x%02x\n`, hdr.TCI, byte(hdr.TCI>>13), (hdr.TCI>>12)&1, hdr.TCI&0xfff, hdr.EtherType)
+	return fmt.Sprintf(`L2 VLAN:
+TCI: 0x%02x (priority: %d, drop %d, ID: %d)
+EtherType: 0x%02x`, SwapBytesUint16(hdr.TCI), byte(SwapBytesUint16(hdr.TCI)>>13),
+		(SwapBytesUint16(hdr.TCI)>>12)&1, SwapBytesUint16(hdr.TCI)&0xfff, SwapBytesUint16(hdr.EtherType))
 }
 
 // GetVLANTagIdentifier returns VID (12 bits of VLAN tag from VLAN header).
@@ -116,14 +117,25 @@ func (packet *Packet) ParseAllKnownL3CheckVLAN() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
 // AddVLANTag increases size of packet on VLANLen and adds 802.1Q VLAN header
 // after Ether header, tag is a tag control information. Returns false if error.
 func (packet *Packet) AddVLANTag(tag uint16) bool {
-	if !packet.EncapsulateHead(EtherLen, VLANLen) {
+	// We add vlanTag place two bytes before ending of ethernet.
+	// VLANhdr.EtherType will automatically be correct and equal to previous ether.etherType
+	if !packet.EncapsulateHead(EtherLen-2, VLANLen) {
 		return false
 	}
 	vhdr := (*VLANHdr)(unsafe.Pointer(packet.unparsed()))
 	// EncapsulateHead function has moved pointer to EtherType,
 	// so the following line is correct. L3 stayed at the same place.
-	vhdr.EtherType = packet.Ether.EtherType
 	packet.Ether.EtherType = SwapBytesUint16(VLANNumber)
 	vhdr.TCI = SwapBytesUint16(tag)
+	return true
+}
+
+// RemoveVLANTag decreases size of packet on VLANLen
+func (packet *Packet) RemoveVLANTag() bool {
+	// We want to remove 8100 etherType and remain actual "next" Exther type
+	// so we need to remove 4 bytes starting 2 bytes earlier than VLANtag
+	if !packet.DecapsulateHead(EtherLen-2, VLANLen) {
+		return false
+	}
 	return true
 }
