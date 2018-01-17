@@ -29,6 +29,7 @@ const (
 	IPV4Number = 0x0800
 	ARPNumber  = 0x0806
 	VLANNumber = 0x8100
+	MPLSNumber = 0x8847
 	IPV6Number = 0x86dd
 )
 
@@ -59,6 +60,7 @@ const (
 const (
 	EtherLen   = 14
 	VLANLen    = 4
+	MPLSLen    = 4
 	IPv4MinLen = 20
 	IPv6Len    = 40
 	ICMPLen    = 8
