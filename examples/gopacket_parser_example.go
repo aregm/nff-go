@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
+	"os"
 )
 
 var (
@@ -22,6 +23,14 @@ var (
 	outport2    uint
 	noscheduler bool
 )
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	flag.BoolVar(&printOn, "print", false, "enable print of parsed layers")
@@ -40,18 +49,23 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow0 := flow.SetReceiver(uint8(inport1))
-	firstFlow1 := flow.SetReceiver(uint8(inport2))
+	firstFlow0, err := flow.SetReceiver(uint8(inport1))
+	CheckFatal(err)
+	firstFlow1, err := flow.SetReceiver(uint8(inport2))
+	CheckFatal(err)
 
-	firstFlow := flow.SetMerger(firstFlow0, firstFlow1)
+	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
+	CheckFatal(err)
 
 	var ctx gopacketContext
-	flow.SetHandler(firstFlow, gopacketHandleFunc, ctx)
+	CheckFatal(flow.SetHandler(firstFlow, gopacketHandleFunc, ctx))
 
 	// Split for two senders and send
-	secondFlow := flow.SetPartitioner(firstFlow, 150, 150)
-	flow.SetSender(firstFlow, uint8(outport1))
-	flow.SetSender(secondFlow, uint8(outport2))
+	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
+	CheckFatal(err)
+
+	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
+	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
 	flow.SystemStart()
 }
