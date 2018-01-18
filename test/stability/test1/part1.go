@@ -82,7 +82,7 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	firstFlow, err := flow.SetGenerator(generatePacket, speed, nil)
+	firstFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
 	CheckFatal(err)
 
 	// Send all generated packets to the output

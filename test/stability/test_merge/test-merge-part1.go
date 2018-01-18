@@ -97,12 +97,12 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	firstFlow, err := flow.SetGenerator(generatePacketGroup1, speed, nil)
+	firstFlow, err := flow.SetFastGenerator(generatePacketGroup1, speed, nil)
 	CheckFatal(err)
 	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
 
 	// Create second packet flow
-	secondFlow, err := flow.SetGenerator(generatePacketGroup2, speed, nil)
+	secondFlow, err := flow.SetFastGenerator(generatePacketGroup2, speed, nil)
 	CheckFatal(err)
 	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 

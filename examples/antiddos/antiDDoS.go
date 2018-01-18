@@ -96,7 +96,7 @@ func main() {
 
 	inputFlow, err := flow.SetReceiver(uint8(inPort))
 	CheckFatal(err)
-	CheckFatal(flow.SetHandler(inputFlow, handle, nil))
+	CheckFatal(flow.SetHandlerDrop(inputFlow, handle, nil))
 	CheckFatal(flow.SetSender(inputFlow, uint8(outPort)))
 	// Var isDdos is calculated in separate goroutine.
 	go calculateMetrics()

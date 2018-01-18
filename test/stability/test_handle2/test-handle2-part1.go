@@ -86,8 +86,7 @@ func main() {
 	testDoneEvent = sync.NewCond(&m)
 
 	// Create first packet flow
-	outputFlow, err := flow.SetGenerator(generatePacket, 0, nil)
-	CheckFatal(err)
+	outputFlow := flow.SetGenerator(generatePacket, nil)
 
 	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
 

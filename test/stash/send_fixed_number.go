@@ -45,11 +45,11 @@ func main() {
 	}
 	CheckFatal(flow.SystemInit(&config))
 
-	// With generateOne all packets are sent.
-	f1, err := flow.SetGenerator(generatePacket, 0, nil)
-	CheckFatal(err)
-	// With generatePerf sent only multiple of burst-size.
-	// f1 := flow.SetGenerator(generatePacket, 100, nil)
+	// With generator all packets are sent.
+	f1 := flow.SetGenerator(generatePacket, nil)
+
+	// With fast generator sent only multiple of burst-size.
+	// f1 := flow.SetFastGenerator(generatePacket, 100, nil)
 	f2, err := flow.SetPartitioner(f1, 350, 350)
 	CheckFatal(err)
 

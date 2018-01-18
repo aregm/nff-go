@@ -40,7 +40,7 @@ func main() {
 	CheckFatal(err)
 
 	CheckFatal(flow.SetStopper(outputFlows[0]))
-	CheckFatal(flow.SetHandler(outputFlows[1], myHandler, nil))
+	CheckFatal(flow.SetVectorHandler(outputFlows[1], myHandler, nil))
 	for i := 1; i < flowN; i++ {
 		CheckFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
 		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))

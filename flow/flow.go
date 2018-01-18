@@ -121,7 +121,7 @@ type generateParameters struct {
 	mempool                *low.Mempool
 }
 
-func makeGeneratorOne(out *low.Ring, generateFunction GenerateFunction) *scheduler.FlowFunction {
+func makeGenerator(out *low.Ring, generateFunction GenerateFunction) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
@@ -130,7 +130,7 @@ func makeGeneratorOne(out *low.Ring, generateFunction GenerateFunction) *schedul
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
 
-func makeGeneratorPerf(out *low.Ring, generateFunction GenerateFunction,
+func makeFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
@@ -486,11 +486,11 @@ func generateRingName() string {
 	return s
 }
 
-// SetWriter adds write function to flow graph.
+// SetSenderFile adds write function to flow graph.
 // Gets flow which packets will be written to file and
 // target file name.
 // Function can panic during execution.
-func SetWriter(IN *Flow, filename string) error {
+func SetSenderFile(IN *Flow, filename string) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
@@ -501,12 +501,12 @@ func SetWriter(IN *Flow, filename string) error {
 	return nil
 }
 
-// SetReader adds read function to flow graph.
+// SetReceiverFile adds read function to flow graph.
 // Gets name of pcap formatted file and number of reads. If repcount = -1,
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 // Function can panic during execution.
-func SetReader(filename string, repcount int32) (OUT *Flow) {
+func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	read := makeReader(filename, ring, repcount)
 	schedState.UnClonable = append(schedState.UnClonable, read)
@@ -521,87 +521,124 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(par interface{}) (OUT *Flow, err error) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	var recv *scheduler.FlowFunction
-	if port, t := par.(uint8); t {
-		if port >= uint8(len(createdPorts)) {
-			return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
-		}
-		createdPorts[port].config = autoPort
-		createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
-		recv = makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
-		createdPorts[port].rxQueuesNumber++
-	} else if tkni, t := par.(*Kni); t {
-		// Receive with "-1" queue will be from KNI device
-		recv = makeReceiver(tkni.port, -1, ring)
-	} else {
-		return nil, common.WrapWithNFError(nil, "SetReceiver parameter should be ether number of port or created KNI device", common.BadArgument)
+func SetReceiver(port uint8) (OUT *Flow, err error) {
+	if port >= uint8(len(createdPorts)) {
+		return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
+	createdPorts[port].config = autoPort
+	createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	recv := makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
 	schedState.UnClonable = append(schedState.UnClonable, recv)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	createdPorts[port].rxQueuesNumber++
+	return OUT, nil
+}
+
+// SetReceiverKNI adds function receive from KNI to flow graph.
+// Gets KNI device from which packets will be received.
+// Receive queue will be added to port automatically.
+// Returns new opened flow with received packets
+// Function can panic during execution.
+func SetReceiverKNI(kni *Kni) (OUT *Flow) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	recvKni := makeReceiver(kni.port, -1, ring)
+	schedState.UnClonable = append(schedState.UnClonable, recvKni)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT
+}
+
+// SetFastGenerator adds clonable generate function to flow graph.
+// Gets user-defined generate function, target speed of generation user wants to achieve and context.
+// Returns new open flow with generated packets.
+// Function tries to achieve target speed by cloning.
+// Function can panic during execution.
+func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	var generate *scheduler.FlowFunction
+	if targetSpeed > 0 {
+		generate = makeFastGenerator(ring, GenerateFunction(f), nil, targetSpeed, context)
+	} else {
+		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
+	}
+	schedState.Generate = append(schedState.Generate, generate)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
 	return OUT, nil
 }
 
-// SetGenerator adds generate function to flow graph.
-// Gets user-defined generate function and target speed of generation user wants to achieve
-// Returns new open flow with generated packets. If targetSpeed equal to zero
-// single packet non-clonable flow function will be added. It can be used for waiting of
-// input user packets. If targetSpeed is more than zero clonable function is added which
-// tries to achieve this speed by cloning.
+// SetVectorFastGenerator adds clonable vector generate function to flow graph.
+// Gets user-defined vector generate function, target speed of generation user wants to achieve and context.
+// Returns new open flow with generated packets.
+// Function tries to achieve target speed by cloning.
 // Function can panic during execution.
-func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
-		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
-			generate = makeGeneratorPerf(ring, GenerateFunction(f), nil, targetSpeed, context)
-		} else if f, t := generateFunction.(func([]*packet.Packet, uint, UserContext)); t {
-			generate = makeGeneratorPerf(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
-		} else {
-			return nil, common.WrapWithNFError(nil, "Function argument of SetGenerator function doesn't match any applicable prototype", common.BadArgument)
-		}
-		schedState.Generate = append(schedState.Generate, generate)
+		generate = makeFastGenerator(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
 	} else {
-		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
-			generate = makeGeneratorOne(ring, GenerateFunction(f))
-		} else {
-			return nil, common.WrapWithNFError(nil, "Function argument of SetGenerator function doesn't match any applicable prototype", common.BadArgument)
-		}
-		schedState.UnClonable = append(schedState.UnClonable, generate)
+		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
+	schedState.Generate = append(schedState.Generate, generate)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
 	return OUT, nil
+}
+
+// SetGenerator adds non-clonable generate flow function to flow graph.
+// Gets user-defined generate function and context.
+// Returns new open flow with generated packets.
+// Single packet non-clonable flow function will be added. It can be used for waiting of
+// input user packets.
+// Function can panic during execution.
+func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT *Flow) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	generate := makeGenerator(ring, GenerateFunction(f))
+	schedState.UnClonable = append(schedState.UnClonable, generate)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT
 }
 
 // SetSender adds send function to flow graph.
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
-func SetSender(IN *Flow, par interface{}) error {
+func SetSender(IN *Flow, port uint8) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	var send *scheduler.FlowFunction
-	if port, t := par.(uint8); t {
-		if port >= uint8(len(createdPorts)) {
-			return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
-		}
-		createdPorts[port].config = autoPort
-		createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
-		send = makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
-		createdPorts[port].txQueuesNumber++
-	} else if tkni, t := par.(*Kni); t {
-		// Send for "-1" queue will be to KNI device
-		send = makeSender(tkni.port, -1, IN.current)
-	} else {
-		return common.WrapWithNFError(nil, "SetSender parameter should be ether number of port or created KNI device", common.BadArgument)
+	if port >= uint8(len(createdPorts)) {
+		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
+	createdPorts[port].config = autoPort
+	createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
+	send := makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
+	createdPorts[port].txQueuesNumber++
 	schedState.UnClonable = append(schedState.UnClonable, send)
+	IN.current = nil
+	openFlowsNumber--
+	return nil
+}
+
+// SetSenderKNI adds function sending to KNI to flow graph.
+// Gets flow which will be closed and its packets will be send to given KNI device.
+// Send queue will be added to port automatically.
+// Function can panic during execution.
+func SetSenderKNI(IN *Flow, kni *Kni) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	sendKni := makeSender(kni.port, -1, IN.current)
+	schedState.UnClonable = append(schedState.UnClonable, sendKni)
 	IN.current = nil
 	openFlowsNumber--
 	return nil
@@ -654,11 +691,11 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 }
 
 // SetSeparator adds separate function to flow graph.
-// Gets flow and user defined separate function. Returns new opened flow.
+// Gets flow, user defined separate function and context. Returns new opened flow.
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
 // Function can panic during execution.
-func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow, err error) {
+func SetSeparator(IN *Flow, f func(*packet.Packet, UserContext) bool, context UserContext) (OUT *Flow, err error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
@@ -666,14 +703,29 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-	var separate *scheduler.FlowFunction
-	if f, t := separateFunction.(func(*packet.Packet, UserContext) bool); t {
-		separate = makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
-	} else if f, t := separateFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
-		separate = makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
-	} else {
-		return nil, common.WrapWithNFError(nil, "Function argument of SetSeparator function doesn't match any applicable prototype", common.BadArgument)
+
+	separate := makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
+	schedState.Clonable = append(schedState.Clonable, separate)
+	IN.current = ringTrue
+	OUT.current = ringFalse
+	return OUT, nil
+}
+
+// SetVectorSeparator adds vector separate function to flow graph.
+// Gets flow, user defined vector separate function and context. Returns new opened flow.
+// Each packet from input flow will be remain inside input packet if
+// user defined function returns "true" and is sent to new flow otherwise.
+// Function can panic during execution.
+func SetVectorSeparator(IN *Flow, f func([]*packet.Packet, []bool, uint, UserContext), context UserContext) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
 	}
+	OUT = new(Flow)
+	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	openFlowsNumber++
+
+	separate := makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
 	OUT.current = ringFalse
@@ -681,7 +733,7 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 }
 
 // SetSplitter adds split function to flow graph.
-// Gets flow, user defined split function and flowNumber of new flows.
+// Gets flow, user defined split function, flowNumber of new flows and context.
 // Returns array of new opened flows with corresponding length.
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
@@ -719,29 +771,64 @@ func SetStopper(IN *Flow) error {
 }
 
 // SetHandler adds handle function to flow graph.
-// Gets flow and user defined handle function. Function can receive either HandleFunction
-// or SeparateFunction. If input argument is HandleFunction then each packet from
-// input flow will be handle inside user defined function and sent further in the same flow.
-// If input argument is SeparateFunction user defined function can return boolean value.
-// If user function returns false after handling a packet it is dropped automatically.
+// Gets flow, user defined handle function and context.
+// Each packet from input flow will be handle inside user defined function
+// and sent further in the same flow.
 // Function can panic during execution.
-func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) error {
+func SetHandler(IN *Flow, f func(*packet.Packet, UserContext), context UserContext) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	var handle *scheduler.FlowFunction
-	if f, t := handleFunction.(func(*packet.Packet, UserContext)); t {
-		handle = makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
-	} else if f, t := handleFunction.(func([]*packet.Packet, uint, UserContext)); t {
-		handle = makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
-	} else if f, t := handleFunction.(func(*packet.Packet, UserContext) bool); t {
-		handle = makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
-	} else if f, t := handleFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
-		handle = makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
-	} else {
-		return common.WrapWithNFError(nil, "Function argument of SetHandler function doesn't match any applicable prototype", common.BadArgument)
+	handle := makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
+}
+
+// SetVectorHandler adds vector handle function to flow graph.
+// Gets flow, user defined vector handle function and context.
+// Each packet from input flow will be handle inside user defined function
+// and sent further in the same flow.
+// Function can panic during execution.
+func SetVectorHandler(IN *Flow, f func([]*packet.Packet, uint, UserContext), context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
 	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
+}
+
+// SetHandlerDrop adds vector handle function to flow graph.
+// Gets flow, user defined handle function and context.
+// User defined function can return boolean value.
+// If user function returns false after handling a packet it is dropped automatically.
+// Function can panic during execution.
+func SetHandlerDrop(IN *Flow, f func(*packet.Packet, UserContext) bool, context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
+}
+
+// SetVectorHandlerDrop adds vector handle function to flow graph.
+// Gets flow, user defined vector handle function and context.
+// User defined function can return boolean value.
+// If user function returns false after handling a packet it is dropped automatically.
+// Function can panic during execution.
+func SetVectorHandlerDrop(IN *Flow, f func([]*packet.Packet, []bool, uint, UserContext), context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
 	schedState.Clonable = append(schedState.Clonable, handle)
 	IN.current = ring
 	return nil

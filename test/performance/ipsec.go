@@ -40,8 +40,8 @@ func main() {
 
 	input, err := flow.SetReceiver(uint8(0))
 	CheckFatal(err)
-	CheckFatal(flow.SetHandler(input, encapsulation, *(new(context))))
-	CheckFatal(flow.SetHandler(input, decapsulation, *(new(context))))
+	CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
+	CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
 	CheckFatal(flow.SetSender(input, uint8(1)))
 
 	CheckFatal(flow.SystemStart())

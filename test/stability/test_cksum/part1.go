@@ -144,8 +144,8 @@ func main() {
 	// High performance generator (enabled if speed != 0) is not used here, as it
 	// can send fully only number of packets N which is multiple of burst size (default 32),
 	// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
-	firstFlow, err := flow.SetGenerator(generatePacket, 0, nil)
-	CheckFatal(err)
+	firstFlow := flow.SetGenerator(generatePacket, nil)
+
 	// Send all generated packets to the output
 	CheckFatal(flow.SetSender(firstFlow, uint8(outport)))
 
