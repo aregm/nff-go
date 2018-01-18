@@ -67,6 +67,7 @@ const (
 	TCPMinLen  = 20
 	UDPLen     = 8
 	ARPLen     = 28
+	GTPMinLen  = 8
 )
 
 // LogType - type of logging, used in flow package
