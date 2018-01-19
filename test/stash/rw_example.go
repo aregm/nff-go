@@ -33,7 +33,6 @@ func CheckFatal(err error) {
 }
 
 func main() {
-	var err error
 	flag.StringVar(&inFile, "infile", "rw_example_in.pcap", "Input pcap file")
 	flag.StringVar(&outFile, "outfile", "rw_example_out.pcap", "Output pcap file")
 
@@ -53,16 +52,15 @@ func main() {
 	var f1 *flow.Flow
 	if useReader {
 		print("Enabled Read from file ", inFile, " and ")
-		f1 = flow.SetReader(inFile, int32(repcount))
+		f1 = flow.SetReceiverFile(inFile, int32(repcount))
 	} else {
 		print("Enabled Generate and ")
-		f1, err = flow.SetGenerator(generatePacket, 0, nil)
-		CheckFatal(err)
+		f1 = flow.SetGenerator(generatePacket, nil)
 	}
 
 	if useWriter {
 		println("Write to file", outFile)
-		CheckFatal(flow.SetWriter(f1, outFile))
+		CheckFatal(flow.SetSenderFile(f1, outFile))
 	} else {
 		println("Send to port", outport)
 		CheckFatal(flow.SetSender(f1, uint8(outport)))

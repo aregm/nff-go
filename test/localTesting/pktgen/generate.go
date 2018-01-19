@@ -67,9 +67,9 @@ func main() {
 	generator, err := getGenerator()
 	CheckFatal(err)
 	// Create packet flow
-	outputFlow, err := flow.SetGenerator(generator, 0, nil)
-	CheckFatal(err)
-	CheckFatal(flow.SetWriter(outputFlow, outFile))
+	outputFlow := flow.SetGenerator(generator, nil)
+
+	CheckFatal(flow.SetSenderFile(outputFlow, outFile))
 	// Start pipeline
 	go func() {
 		CheckFatal(flow.SystemStart())
@@ -215,7 +215,7 @@ func generateData(configuration interface{}) ([]uint8, error) {
 	return nil, fmt.Errorf("unknown data type")
 }
 
-func getGenerator() (interface{}, error) {
+func getGenerator() (func(*packet.Packet, flow.UserContext), error) {
 	switch l2 := (configuration.Data).(type) {
 	case parseConfig.EtherConfig:
 		switch l3 := l2.Data.(type) {

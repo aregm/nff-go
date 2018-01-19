@@ -51,7 +51,7 @@ func main() {
 
 	// Handle packet flow
 	// ~33% of packets should left in flow1
-	CheckFatal(flow.SetHandler(flow1, l3Handler, nil))
+	CheckFatal(flow.SetHandlerDrop(flow1, l3Handler, nil))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	CheckFatal(flow.SetSender(flow1, uint8(outport)))

@@ -36,10 +36,9 @@ func main() {
 
 	fromEthFlow, err := flow.SetReceiver(uint8(0))
 	CheckFatal(err)
-	CheckFatal(flow.SetSender(fromEthFlow, kni))
+	CheckFatal(flow.SetSenderKNI(fromEthFlow, kni))
 
-	fromKNIFlow, err := flow.SetReceiver(kni)
-	CheckFatal(err)
+	fromKNIFlow := flow.SetReceiverKNI(kni)
 	CheckFatal(flow.SetSender(fromKNIFlow, uint8(1)))
 
 	CheckFatal(flow.SystemStart())
