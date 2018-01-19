@@ -29,6 +29,8 @@ before_script:
 script:
   - ./scripts/get-depends.sh
   - make
+  - cd examples && make gopacket_parser_example && cd ..
+  - cd test/localTesting && make && cd -
   - sudo sysctl -w vm.nr_hugepages=1024
   - sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
   - sudo mkdir /mnt/huge
