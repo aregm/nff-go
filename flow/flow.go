@@ -506,14 +506,13 @@ func SetWriter(IN *Flow, filename string) error {
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 // Function can panic during execution.
-func SetReader(filename string, repcount int32) (OUT *Flow) {
+func SetReader(filename string, repcount int32) *Flow {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	read := makeReader(filename, ring, repcount)
 	schedState.UnClonable = append(schedState.UnClonable, read)
-	OUT = new(Flow)
-	OUT.current = ring
+	flow := &Flow{current: ring}
 	openFlowsNumber++
-	return OUT
+	return flow
 }
 
 // SetReceiver adds receive function to flow graph.
@@ -521,7 +520,7 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(par interface{}) (OUT *Flow, err error) {
+func SetReceiver(par interface{}) (*Flow, error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var recv *scheduler.FlowFunction
 	if port, t := par.(uint8); t {
@@ -539,10 +538,9 @@ func SetReceiver(par interface{}) (OUT *Flow, err error) {
 		return nil, common.WrapWithNFError(nil, "SetReceiver parameter should be ether number of port or created KNI device", common.BadArgument)
 	}
 	schedState.UnClonable = append(schedState.UnClonable, recv)
-	OUT = new(Flow)
-	OUT.current = ring
+	flow := &Flow{current: ring}
 	openFlowsNumber++
-	return OUT, nil
+	return flow, nil
 }
 
 // SetGenerator adds generate function to flow graph.
@@ -552,7 +550,7 @@ func SetReceiver(par interface{}) (OUT *Flow, err error) {
 // input user packets. If targetSpeed is more than zero clonable function is added which
 // tries to achieve this speed by cloning.
 // Function can panic during execution.
-func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (*Flow, error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
@@ -572,10 +570,9 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 		}
 		schedState.UnClonable = append(schedState.UnClonable, generate)
 	}
-	OUT = new(Flow)
-	OUT.current = ring
+	flow := &Flow{current: ring}
 	openFlowsNumber++
-	return OUT, nil
+	return flow, nil
 }
 
 // SetSender adds send function to flow graph.
@@ -610,11 +607,10 @@ func SetSender(IN *Flow, par interface{}) error {
 // SetCopier adds copy function to flow graph.
 // Gets flow which will be copied.
 // Function can panic during execution.
-func SetCopier(IN *Flow) (OUT *Flow, err error) {
+func SetCopier(IN *Flow) (*Flow, error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	OUT = new(Flow)
 
 	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
@@ -623,8 +619,7 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 
 	schedState.Clonable = append(schedState.Clonable, pcopy)
 	IN.current = ringFirst
-	OUT.current = ringSecond
-	return OUT, nil
+	return &Flow{current: ringSecond}, nil
 }
 
 // SetPartitioner adds partition function to flow graph.
@@ -632,11 +627,11 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 // Each loop N packets will be remained in input flow, next M packets will be sent to new flow.
 // It is advised not to use this function less then (75, 75) for performance reasons.
 // Function can panic during execution.
-func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
+func SetPartitioner(IN *Flow, N uint64, M uint64) (*Flow, error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	OUT = new(Flow)
+
 	if N == 0 || M == 0 {
 		common.LogWarning(common.Initialization, "One of SetPartitioner function's arguments is zero.")
 	}
@@ -649,8 +644,7 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 	// it is recommended to use (75,75) instead of (1,1) for performance reasons.
 	schedState.UnClonable = append(schedState.UnClonable, partition)
 	IN.current = ringFirst
-	OUT.current = ringSecond
-	return OUT, nil
+	return &Flow{current: ringSecond}, nil
 }
 
 // SetSeparator adds separate function to flow graph.
@@ -658,11 +652,11 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
 // Function can panic during execution.
-func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow, err error) {
+func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (*Flow, error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	OUT = new(Flow)
+
 	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
@@ -676,8 +670,7 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 	}
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
-	OUT.current = ringFalse
-	return OUT, nil
+	return &Flow{current: ringFalse}, nil
 }
 
 // SetSplitter adds split function to flow graph.
@@ -686,23 +679,23 @@ func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
 // Function can panic during execution.
-func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow), err error) {
+func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) ([]*Flow, error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	OutArray = make([](*Flow), flowNumber, flowNumber)
+	out := make([](*Flow), flowNumber, flowNumber)
 	rings := make([](*low.Ring), flowNumber, flowNumber)
-	for i := range OutArray {
-		OutArray[i] = new(Flow)
+	for i := range out {
+		out[i] = new(Flow)
 		openFlowsNumber++
 		rings[i] = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-		OutArray[i].current = rings[i]
+		out[i].current = rings[i]
 	}
 	split := makeSplitter(IN.current, rings, splitFunction, flowNumber, context)
 	schedState.Clonable = append(schedState.Clonable, split)
 	IN.current = nil
 	openFlowsNumber--
-	return OutArray, nil
+	return out, nil
 }
 
 // SetStopper adds stop function to flow graph.
@@ -751,7 +744,7 @@ func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) error
 // Gets any number of flows. Returns new opened flow.
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
-func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
+func SetMerger(InArray ...*Flow) (*Flow, error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	for i := range InArray {
 		if err := checkFlow(InArray[i]); err != nil {
@@ -761,10 +754,9 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 		InArray[i].current = nil
 		openFlowsNumber--
 	}
-	OUT = new(Flow)
-	OUT.current = ring
+	flow := &Flow{current: ring}
 	openFlowsNumber++
-	return OUT, nil
+	return flow, nil
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
