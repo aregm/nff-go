@@ -51,6 +51,7 @@ import (
 
 var mbufStructSize uintptr
 var hwtxchecksum bool
+var nonPerfMempool *low.Mempool
 
 func init() {
 	var t1 low.Mbuf
@@ -453,6 +454,11 @@ func ExtractPackets(packet []*Packet, IN []uintptr, n uint) {
 	}
 }
 
+// ToUintptr returns start of mbuf for current packet
+func (p *Packet) ToUintptr() uintptr {
+	return uintptr(unsafe.Pointer(p.CMbuf))
+}
+
 // GeneratePacketFromByte function gets non-initialized packet and slice of bytes of any size.
 // Initializes input packet and fills it with these bytes.
 func GeneratePacketFromByte(packet *Packet, data []byte) bool {
@@ -800,4 +806,33 @@ func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
 // IPv4ToBytes converts four element address to uint32 representation
 func IPv4ToBytes(v uint32) [IPv4AddrLen]byte {
 	return [IPv4AddrLen]uint8{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
+}
+
+// NewPacket shouldn't be used for performance critical allocations.
+// Allocate mbufs one by one is very inefficient.
+// FastGenerate or copy functions give developer a packet from previously bulk allocated set
+// Should be used only for testing or single events like ARP or ICMP answers
+func NewPacket() (*Packet, error) {
+	var mb uintptr
+	if err := low.AllocateMbuf(&mb, nonPerfMempool); err != nil {
+		return nil, err
+	}
+	pkt := ExtractPacket(mb)
+	return pkt, nil
+}
+
+// SendPacket immidiately sends packet to specified port via calling C function.
+// Packet is freed. Function return true if packet was actually sent.
+// Port should be initialized. Packet is sent to zero queue (is always present).
+// Sending simultaneously to one port is permitted in DPDK.
+// Is very inefficient.
+// Should be used only for testing or single events like ARP or ICMP answers
+func (p *Packet) SendPacket(port uint8) bool {
+	return low.DirectSend(p.CMbuf, port)
+}
+
+// SetNonPerfMempool sets default mempool for non performance critical allocations.
+// Shouldn't be called by user
+func SetNonPerfMempool(m *low.Mempool) {
+	nonPerfMempool = m
 }

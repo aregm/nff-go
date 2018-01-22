@@ -125,7 +125,6 @@ func makeGenerator(out *low.Ring, generateFunction GenerateFunction) *scheduler.
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	par.mempool = low.CreateMempool()
 	ffCount++
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
@@ -266,7 +265,6 @@ func makeWriter(filename string, in *low.Ring) *scheduler.FlowFunction {
 type readParameters struct {
 	out      *low.Ring
 	filename string
-	mempool  *low.Mempool
 	repcount int32
 }
 
@@ -274,7 +272,6 @@ func makeReader(filename string, out *low.Ring, repcount int32) *scheduler.FlowF
 	par := new(readParameters)
 	par.out = out
 	par.filename = filename
-	par.mempool = low.CreateMempool()
 	par.repcount = repcount
 	ffCount++
 	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
@@ -445,6 +442,8 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
+	// Init low performance mempool
+	packet.SetNonPerfMempool(low.CreateMempool())
 	return nil
 }
 
@@ -868,20 +867,15 @@ func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
-	mempool := gp.mempool
 	low.SetAffinity(core)
 
-	buf := make([]uintptr, 1)
-	var tempPacket *packet.Packet
-
 	for {
-		err := low.AllocateMbufs(buf, mempool, 1)
+		tempPacket, err := packet.NewPacket()
 		if err != nil {
 			common.LogFatal(common.Debug, err)
 		}
-		tempPacket = packet.ExtractPacket(buf[0])
 		generateFunction(tempPacket, nil)
-		safeEnqueue(OUT, buf, 1)
+		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 
@@ -989,7 +983,9 @@ func pcopy(parameters interface{}, stopper chan int, report chan uint64, context
 		default:
 			n := IN.DequeueBurst(bufs1, burstSize)
 			if n != 0 {
-				low.AllocateMbufs(bufs2, mempool, n)
+				if err := low.AllocateMbufs(bufs2, mempool, n); err != nil {
+					common.LogFatal(common.Debug, err)
+				}
 				for i := range bufs1 {
 					// TODO Maybe we need to prefetcht here?
 					tempPacket1 = packet.ExtractPacket(bufs1[i])
@@ -1427,11 +1423,7 @@ func read(parameters interface{}, coreID uint8) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
-	mempool := rp.mempool
 	repcount := rp.repcount
-
-	buf := make([]uintptr, 1)
-	var tempPacket *packet.Packet
 
 	f, err := os.Open(filename)
 	if err != nil {
@@ -1448,10 +1440,10 @@ func read(parameters interface{}, coreID uint8) {
 	count := int32(0)
 
 	for {
-		if err := low.AllocateMbufs(buf, mempool, 1); err != nil {
+		tempPacket, err := packet.NewPacket()
+		if err != nil {
 			common.LogFatal(common.Debug, err)
 		}
-		tempPacket = packet.ExtractPacket(buf[0])
 		isEOF, err := tempPacket.ReadPcapOnePacket(f)
 		if err != nil {
 			common.LogFatal(common.Debug, err)
@@ -1470,7 +1462,7 @@ func read(parameters interface{}, coreID uint8) {
 		}
 		// TODO we need packet reassembly here. However we don't
 		// use mbuf packet_type here, so it is impossible.
-		safeEnqueue(OUT, buf, 1)
+		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 
@@ -1493,6 +1485,13 @@ func safeEnqueue(place *low.Ring, data []uintptr, number uint) {
 	// TODO we need to investigate whether we need to return actual number of enqueued packets.
 	// We can use this number if controlling speed, however it is not clear what is better:
 	// to use actual number or to use simply number of packets processed by a function like now.
+}
+
+// This function makes []uintptr and is inefficient. Only for non-performance critical tasks
+func safeEnqueueOne(place *low.Ring, data uintptr) {
+	slice := make([]uintptr, 1, 1)
+	slice[0] = data
+	safeEnqueue(place, slice, 1)
 }
 
 func checkFlow(f *Flow) error {

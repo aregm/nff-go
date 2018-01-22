@@ -337,6 +337,16 @@ void directStop(int pkts_for_free_number, struct rte_mbuf **bufs) {
 	}
 }
 
+bool directSend(struct rte_mbuf *mbuf, uint8_t port) {
+	// try to send one packet to specified port, zero queue
+	if (rte_eth_tx_burst(port, 0, &mbuf, 1) == 1) {
+		return true;
+	} else {
+		rte_pktmbuf_free(mbuf);
+		return false;
+	}
+}
+
 char ** makeArgv(int n) {
 	return (char**) malloc(n * sizeof(char**));
 }

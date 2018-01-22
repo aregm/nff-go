@@ -27,6 +27,11 @@ func DirectStop(pktsForFreeNumber int, buf []uintptr) {
 	C.directStop(C.int(pktsForFreeNumber), (**C.struct_rte_mbuf)(unsafe.Pointer(&(buf[0]))))
 }
 
+// DirectSend sends one mbuf.
+func DirectSend(m *Mbuf, port uint8) bool {
+	return bool(C.directSend((*C.struct_rte_mbuf)(m), C.uint8_t(port)))
+}
+
 // Ring is a ring buffer for pointers
 type Ring C.struct_yanff_ring
 
@@ -510,6 +515,15 @@ func SetAffinity(coreID uint8) {
 func AllocateMbufs(mb []uintptr, mempool *Mempool, n uint) error {
 	if err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(n)); err != 0 {
 		msg := common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf, dpdk returned: ", err)
+		return common.WrapWithNFError(nil, msg, common.AllocMbufErr)
+	}
+	return nil
+}
+
+// AllocateMbuf allocates one mbuf.
+func AllocateMbuf(mb *uintptr, mempool *Mempool) error {
+	if err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(mb)), 1); err != 0 {
+		msg := common.LogError(common.Debug, "AllocateMbuf cannot allocate mbuf, dpdk returned: ", err)
 		return common.WrapWithNFError(nil, msg, common.AllocMbufErr)
 	}
 	return nil
