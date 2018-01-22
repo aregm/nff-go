@@ -59,15 +59,7 @@ import (
 	"os"
 	"reflect"
 	"testing"
-
-	"github.com/intel-go/yanff/low"
 )
-
-var mempool *low.Mempool
-
-func init() {
-	mempool = GetMempoolForTest()
-}
 
 // Data to generate L2 rules
 var rulesL2Ctxt = rawL2RuleTestCtxt{

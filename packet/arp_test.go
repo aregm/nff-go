@@ -6,20 +6,16 @@ package packet
 
 import (
 	"encoding/hex"
-	"log"
 	"net"
 	"reflect"
 	"testing"
 	"unsafe"
 
 	. "github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
 )
 
-var mempoolARPTest *low.Mempool
-
 func init() {
-	mempoolARPTest = GetMempoolForTest()
+	tInitDPDK()
 }
 
 // These strings were created with gopacket library.
@@ -33,11 +29,7 @@ var (
 
 func TestInitARPCommonDataPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 
 	initARPCommonData(pkt)
 	pkt.Ether.DAddr = [6]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
@@ -51,11 +43,7 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineARPRequest)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
@@ -67,11 +55,7 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 
 func TestInitARPRequestPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	sha := [6]uint8{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
 	srcIP := net.ParseIP("24.166.172.1").To4()
 	dstIP := net.ParseIP("24.166.173.159").To4()
@@ -81,11 +65,7 @@ func TestInitARPRequestPacket(t *testing.T) {
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineARPRequest)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
@@ -97,11 +77,7 @@ func TestInitARPRequestPacket(t *testing.T) {
 
 func TestInitARPReplyPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	tha := [6]uint8{0xc4, 0x01, 0x32, 0x58, 0x00, 0x00}
 	sha := [6]uint8{0xc4, 0x02, 0x32, 0x6b, 0x00, 0x00}
 	srcIP := net.ParseIP("10.0.0.2").To4()
@@ -112,11 +88,7 @@ func TestInitARPReplyPacket(t *testing.T) {
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineARPReply)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
@@ -128,11 +100,7 @@ func TestInitARPReplyPacket(t *testing.T) {
 
 func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	sha := [6]uint8{0x02, 0x02, 0x02, 0x02, 0x02, 0x02}
 	srcIP := net.ParseIP("192.168.1.1").To4()
 	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
@@ -141,11 +109,7 @@ func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineGratARPRequest)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
@@ -157,11 +121,7 @@ func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 
 func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	sha := [6]uint8{0x00, 0x00, 0x0c, 0x07, 0xac, 0x01}
 	srcIP := net.ParseIP("10.0.0.6").To4()
 	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
@@ -170,11 +130,7 @@ func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineGratARPReply)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
@@ -186,19 +142,11 @@ func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 
 func TestInitEmptyARPPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyARPPacket(pkt)
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineEmptyARP)
-	gtMb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(gtMb, mempoolARPTest, 1); err != nil {
-		log.Fatal(err)
-	}
-	gtPkt := ExtractPacket(gtMb[0])
+	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
 	size := EtherLen + ARPLen
