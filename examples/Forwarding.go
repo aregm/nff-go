@@ -5,45 +5,59 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
-var l3Rules *rules.L3Rules
+var l3Rules *packet.L3Rules
+
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 // Main function for constructing packet processing graph.
 func main() {
+	var err error
 	// Initialize YANFF library at 16 cores by default
 	config := flow.Config{
-		CPUCoresNumber: 16,
+		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Get splitting rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG("Forwarding.conf")
+	l3Rules, err = packet.GetL3ACLFromORIG("Forwarding.conf")
+	CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow := flow.SetReceiver(0)
+	inputFlow, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
 
 	// Split packet flow based on ACL.
 	flowsNumber := 5
-	outputFlows := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
+	outputFlows, err := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
+	CheckFatal(err)
 
 	// "0" flow is used for dropping packets without sending them.
-	flow.SetStopper(outputFlows[0])
+	CheckFatal(flow.SetStopper(outputFlows[0]))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	for i := 1; i < flowsNumber; i++ {
-		flow.SetSender(outputFlows[i], uint8(i-1))
+		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
 	}
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 // User defined function for splitting packets
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return rules.L3ACLPort(currentPacket, l3Rules)
+	return currentPacket.L3ACLPort(l3Rules)
 }

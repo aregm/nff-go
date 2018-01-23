@@ -1,20 +1,31 @@
 // Only IPv4, Only tunnel, Only ESP, Only AES-128-CBC
 package main
 
-import "github.com/intel-go/yanff/common"
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
+	"crypto/sha1"
+	"flag"
+	"fmt"
+	"hash"
+	"math"
+	"os"
+	"unsafe"
 
-import "unsafe"
-import "math"
-import "bytes"
+	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/yanff/packet"
+)
 
-import "crypto/aes"
-import "crypto/cipher"
-import "crypto/hmac"
-import "crypto/sha1"
-import "hash"
-import "flag"
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 func main() {
 	var noscheduler bool
@@ -22,17 +33,18 @@ func main() {
 	flag.Parse()
 
 	config := flow.Config{
-		CPUCoresNumber:   32,
+		CPUList:          "0-31",
 		DisableScheduler: noscheduler,
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
-	input := flow.SetReceiver(0)
-	flow.SetHandler(input, encapsulation, *(new(context)))
-	flow.SetHandler(input, decapsulation, *(new(context)))
-	flow.SetSender(input, 1)
+	input, err := flow.SetReceiver(uint8(0))
+	CheckFatal(err)
+	CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
+	CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
+	CheckFatal(flow.SetSender(input, uint8(1)))
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 type context struct {
@@ -80,13 +92,13 @@ type espTail struct {
 // General decapsulation
 func decapsulation(currentPacket *packet.Packet, context flow.UserContext) bool {
 	length := currentPacket.GetPacketLen()
-	currentESPHeader := (*espHeader)(unsafe.Pointer(currentPacket.Start() + etherLen + outerIPLen))
-	currentESPTail := (*espTail)(unsafe.Pointer(currentPacket.Start() + uintptr(length) - espTailLen))
+	currentESPHeader := (*espHeader)(currentPacket.StartAtOffset(etherLen + outerIPLen))
+	currentESPTail := (*espTail)(unsafe.Pointer(currentPacket.StartAtOffset(uintptr(length) - espTailLen)))
 	// Security Association
 	switch packet.SwapBytesUint32(currentESPHeader.SPI) {
 	case mode1230:
-		encryptionPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.Start()))[etherLen+outerIPLen+espHeadLen : length-authLen]
-		authPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.Start()))[etherLen+outerIPLen : length-authLen]
+		encryptionPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen+espHeadLen : length-authLen]
+		authPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen : length-authLen]
 		if decapsulationSPI123(authPart, currentESPTail.Auth, currentESPHeader.IV, encryptionPart, context) == false {
 			return false
 		}
@@ -145,23 +157,23 @@ func encapsulationSPI123(currentPacket *packet.Packet, context0 flow.UserContext
 	newLength := length + uint(paddingLength) + espTailLen
 	currentPacket.EncapsulateTail(length, uint(paddingLength)+espTailLen)
 
-	currentESPHeader := (*espHeader)(unsafe.Pointer(currentPacket.Start() + etherLen + outerIPLen))
+	currentESPHeader := (*espHeader)(currentPacket.StartAtOffset(etherLen + outerIPLen))
 	currentESPHeader.SPI = packet.SwapBytesUint32(mode1230)
 	// Limitation: should be random
 	currentESPHeader.IV = [16]byte{0x90, 0x9d, 0x78, 0xa8, 0x72, 0x70, 0x68, 0x00, 0x8f, 0xdc, 0x55, 0x73, 0xa3, 0x75, 0xb5, 0xa7}
 
-	currentESPTail := (*espTail)(unsafe.Pointer(currentPacket.Start() + uintptr(newLength) - espTailLen))
+	currentESPTail := (*espTail)(currentPacket.StartAtOffset(uintptr(newLength) - espTailLen))
 	currentESPTail.paddingLen = paddingLength
 	currentESPTail.nextIP = common.IPNumber
 
 	// Encryption
-	EncryptionPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.Start()))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
+	EncryptionPart := (*[math.MaxInt32]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
 	context.modeEnc.(setIVer).SetIV(currentESPHeader.IV[:])
 	context.modeEnc.CryptBlocks(EncryptionPart, EncryptionPart)
 
 	// Authentication
 	context.mac123.Reset()
-	AuthPart := (*[math.MaxInt32]byte)(unsafe.Pointer(currentPacket.Start()))[etherLen+outerIPLen : newLength-authLen]
+	AuthPart := (*[math.MaxInt32]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen : newLength-authLen]
 	context.mac123.Write(AuthPart)
 	copy(currentESPTail.Auth[:], context.mac123.Sum(nil))
 }

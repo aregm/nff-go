@@ -54,7 +54,7 @@ type UserContext scheduler.UserContext
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
 type Flow struct {
-	current *low.Queue
+	current *low.Ring
 }
 
 // GenerateFunction is a function type for user defined function which generates packets.
@@ -92,13 +92,20 @@ type VectorSeparateFunction func([]*packet.Packet, []bool, uint, UserContext)
 // set after "Split" function in it.
 type SplitFunction func(*packet.Packet, UserContext) uint
 
+// Kni is a high level struct of KNI device. The device itself is stored
+// in C memory in low.c and is defined by its port which is equal to port
+// in this structure
+type Kni struct {
+	port uint8
+}
+
 type receiveParameters struct {
-	out   *low.Queue
-	queue uint16
+	out   *low.Ring
+	queue int16
 	port  uint8
 }
 
-func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunction {
+func makeReceiver(port uint8, queue int16, out *low.Ring) *scheduler.FlowFunction {
 	par := new(receiveParameters)
 	par.port = port
 	par.queue = queue
@@ -108,22 +115,21 @@ func makeReceiver(port uint8, queue uint16, out *low.Queue) *scheduler.FlowFunct
 }
 
 type generateParameters struct {
-	out                    *low.Queue
+	out                    *low.Ring
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
 }
 
-func makeGeneratorOne(out *low.Queue, generateFunction GenerateFunction) *scheduler.FlowFunction {
+func makeGenerator(out *low.Ring, generateFunction GenerateFunction) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	par.mempool = low.CreateMempool()
 	ffCount++
 	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
 }
 
-func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
+func makeFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
 	par := new(generateParameters)
 	par.out = out
@@ -135,12 +141,12 @@ func makeGeneratorPerf(out *low.Queue, generateFunction GenerateFunction,
 }
 
 type sendParameters struct {
-	in    *low.Queue
-	queue uint16
+	in    *low.Ring
+	queue int16
 	port  uint8
 }
 
-func makeSender(port uint8, queue uint16, in *low.Queue) *scheduler.FlowFunction {
+func makeSender(port uint8, queue int16, in *low.Ring) *scheduler.FlowFunction {
 	par := new(sendParameters)
 	par.port = port
 	par.queue = queue
@@ -149,15 +155,32 @@ func makeSender(port uint8, queue uint16, in *low.Queue) *scheduler.FlowFunction
 	return schedState.NewUnclonableFlowFunction("sender", ffCount, send, par)
 }
 
+type copyParameters struct {
+	in      *low.Ring
+	out     *low.Ring
+	outCopy *low.Ring
+	mempool *low.Mempool
+}
+
+func makeCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) *scheduler.FlowFunction {
+	par := new(copyParameters)
+	par.in = in
+	par.out = out
+	par.outCopy = outCopy
+	par.mempool = low.CreateMempool()
+	ffCount++
+	return schedState.NewClonableFlowFunction("copy", ffCount, pcopy, par, copyCheck, make(chan uint64, 50), nil)
+}
+
 type partitionParameters struct {
-	in        *low.Queue
-	outFirst  *low.Queue
-	outSecond *low.Queue
+	in        *low.Ring
+	outFirst  *low.Ring
+	outSecond *low.Ring
 	N         uint64
 	M         uint64
 }
 
-func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N uint64, M uint64) *scheduler.FlowFunction {
+func makePartitioner(in *low.Ring, outFirst *low.Ring, outSecond *low.Ring, N uint64, M uint64) *scheduler.FlowFunction {
 	par := new(partitionParameters)
 	par.in = in
 	par.outFirst = outFirst
@@ -169,14 +192,14 @@ func makePartitioner(in *low.Queue, outFirst *low.Queue, outSecond *low.Queue, N
 }
 
 type separateParameters struct {
-	in                     *low.Queue
-	outTrue                *low.Queue
-	outFalse               *low.Queue
+	in                     *low.Ring
+	outTrue                *low.Ring
+	outFalse               *low.Ring
 	separateFunction       SeparateFunction
 	vectorSeparateFunction VectorSeparateFunction
 }
 
-func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
+func makeSeparator(in *low.Ring, outTrue *low.Ring, outFalse *low.Ring,
 	separateFunction SeparateFunction, vectorSeparateFunction VectorSeparateFunction,
 	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(separateParameters)
@@ -190,13 +213,13 @@ func makeSeparator(in *low.Queue, outTrue *low.Queue, outFalse *low.Queue,
 }
 
 type splitParameters struct {
-	in            *low.Queue
-	outs          []*low.Queue
+	in            *low.Ring
+	outs          []*low.Ring
 	splitFunction SplitFunction
 	flowNumber    uint
 }
 
-func makeSplitter(in *low.Queue, outs []*low.Queue,
+func makeSplitter(in *low.Ring, outs []*low.Ring,
 	splitFunction SplitFunction, flowNumber uint, context UserContext) *scheduler.FlowFunction {
 	par := new(splitParameters)
 	par.in = in
@@ -208,13 +231,13 @@ func makeSplitter(in *low.Queue, outs []*low.Queue,
 }
 
 type handleParameters struct {
-	in                   *low.Queue
-	out                  *low.Queue
+	in                   *low.Ring
+	out                  *low.Ring
 	handleFunction       HandleFunction
 	vectorHandleFunction VectorHandleFunction
 }
 
-func makeHandler(in *low.Queue, out *low.Queue,
+func makeHandler(in *low.Ring, out *low.Ring,
 	handleFunction HandleFunction, vectorHandleFunction VectorHandleFunction,
 	name string, context UserContext) *scheduler.FlowFunction {
 	par := new(handleParameters)
@@ -227,11 +250,11 @@ func makeHandler(in *low.Queue, out *low.Queue,
 }
 
 type writeParameters struct {
-	in       *low.Queue
+	in       *low.Ring
 	filename string
 }
 
-func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
+func makeWriter(filename string, in *low.Ring) *scheduler.FlowFunction {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
@@ -240,17 +263,15 @@ func makeWriter(filename string, in *low.Queue) *scheduler.FlowFunction {
 }
 
 type readParameters struct {
-	out      *low.Queue
+	out      *low.Ring
 	filename string
-	mempool  *low.Mempool
 	repcount int32
 }
 
-func makeReader(filename string, out *low.Queue, repcount int32) *scheduler.FlowFunction {
+func makeReader(filename string, out *low.Ring, repcount int32) *scheduler.FlowFunction {
 	par := new(readParameters)
 	par.out = out
 	par.filename = filename
-	par.mempool = low.CreateMempool()
 	par.repcount = repcount
 	ffCount++
 	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
@@ -266,8 +287,8 @@ type port struct {
 	rxQueues       []bool
 	txQueues       []bool
 	config         int
-	rxQueuesNumber uint16
-	txQueuesNumber uint16
+	rxQueuesNumber int16
+	txQueuesNumber int16
 	port           uint8
 }
 
@@ -277,14 +298,13 @@ var schedState scheduler.Scheduler
 const (
 	inactivePort = iota
 	autoPort
-	manualPort
 )
 
 // Config is a struct with all parameters, which user can pass to YANFF library
 type Config struct {
-	// Number of threads, each bound to a separate CPU core. Default
-	// value is GOMAXPROCS.
-	CPUCoresNumber uint
+	// Specifies cores which will be available for scheduler to place
+	// flow functions and their clones.
+	CPUList string
 	// If true, scheduler is disabled entirely. Default value is false.
 	DisableScheduler bool
 	// If true, scheduler does not stop any previously cloned flow
@@ -327,16 +347,22 @@ type Config struct {
 	LogType common.LogType
 	// Command line arguments to pass to DPDK initialization.
 	DPDKArgs []string
+	// Is user going to use KNI
+	NeedKNI bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
-// defaultCPUCoresNumber is a default number of cores which will be available for scheduler
-// to place flow functions and their clones. This number can be always changed by cores-number option.
 // Function can panic during execution.
-func SystemInit(args *Config) {
+func SystemInit(args *Config) error {
 	CPUCoresNumber := uint(runtime.GOMAXPROCS(0))
-	if args.CPUCoresNumber != 0 {
-		CPUCoresNumber = args.CPUCoresNumber
+	var cpus []uint
+	var err error
+	if args.CPUList != "" {
+		if cpus, err = common.ParseCPUs(args.CPUList, CPUCoresNumber); err != nil {
+			return err
+		}
+	} else {
+		cpus = common.GetDefaultCPUs(CPUCoresNumber)
 	}
 
 	schedulerOff := args.DisableScheduler
@@ -359,7 +385,7 @@ func SystemInit(args *Config) {
 		sizeMultiplier = args.RingSize
 	}
 
-	schedTime = 1500
+	schedTime = 500
 	if args.ScaleTime != 0 {
 		schedTime = args.ScaleTime
 	}
@@ -379,6 +405,15 @@ func SystemInit(args *Config) {
 		debugTime = args.DebugTime
 	}
 
+	if debugTime < schedTime {
+		common.LogFatal(common.Initialization, "debugTime should be larger or equal to schedTime")
+	}
+
+	needKNI := 0
+	if args.NeedKNI != false {
+		needKNI = 1
+	}
+
 	logType := common.No | common.Initialization | common.Debug
 	if args.LogType != 0 {
 		logType = args.LogType
@@ -391,7 +426,7 @@ func SystemInit(args *Config) {
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize)
+	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI)
 	// Init Ports
 	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
@@ -401,23 +436,32 @@ func SystemInit(args *Config) {
 	}
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	schedState = scheduler.NewScheduler(CPUCoresNumber, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
+	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
+	schedState = scheduler.NewScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
+	// Init low performance mempool
+	packet.SetNonPerfMempool(low.CreateMempool())
+	return nil
 }
 
 // SystemStart starts system - begin packet receiving and packet sending.
 // This functions should be always called after flow graph construction.
 // Function can panic during execution.
-func SystemStart() {
+func SystemStart() error {
 	common.LogTitle(common.Initialization, "------------***--------- Checking system ---------***------------")
-	checkSystem()
+	if err := checkSystem(); err != nil {
+		return err
+	}
 	common.LogTitle(common.Initialization, "------------***---------- Creating ports ---------***------------")
 	for i := range createdPorts {
 		if createdPorts[i].config != inactivePort {
-			low.CreatePort(createdPorts[i].port, createdPorts[i].rxQueuesNumber, createdPorts[i].txQueuesNumber, hwtxchecksum)
+			if err := low.CreatePort(createdPorts[i].port, uint16(createdPorts[i].rxQueuesNumber),
+				uint16(createdPorts[i].txQueuesNumber), hwtxchecksum); err != nil {
+				return err
+			}
 		}
 	}
 	// Timeout is needed for ports to start up. This way is used in pktgen.
@@ -427,9 +471,12 @@ func SystemStart() {
 	time.Sleep(time.Second * 2)
 
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
-	schedState.SystemStart()
+	if err := schedState.SystemStart(); err != nil {
+		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
+	}
 	common.LogTitle(common.Initialization, "------------***--------- YANFF-GO Started --------***------------")
 	schedState.Schedule(schedTime)
+	return nil
 }
 
 func generateRingName() string {
@@ -438,25 +485,28 @@ func generateRingName() string {
 	return s
 }
 
-// SetWriter adds write function to flow graph.
+// SetSenderFile adds write function to flow graph.
 // Gets flow which packets will be written to file and
 // target file name.
 // Function can panic during execution.
-func SetWriter(IN *Flow, filename string) {
-	checkFlow(IN)
+func SetSenderFile(IN *Flow, filename string) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	write := makeWriter(filename, IN.current)
 	schedState.UnClonable = append(schedState.UnClonable, write)
 	IN.current = nil
 	openFlowsNumber--
+	return nil
 }
 
-// SetReader adds read function to flow graph.
+// SetReceiverFile adds read function to flow graph.
 // Gets name of pcap formatted file and number of reads. If repcount = -1,
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 // Function can panic during execution.
-func SetReader(filename string, repcount int32) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	read := makeReader(filename, ring, repcount)
 	schedState.UnClonable = append(schedState.UnClonable, read)
 	OUT = new(Flow)
@@ -470,52 +520,87 @@ func SetReader(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(port uint8) (OUT *Flow) {
+func SetReceiver(port uint8) (OUT *Flow, err error) {
 	if port >= uint8(len(createdPorts)) {
-		common.LogError(common.Initialization, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).")
-	}
-	if createdPorts[port].config == manualPort {
-		common.LogError(common.Initialization, "Requested receive port was previously configured as manual port. It can't be used as auto port.")
+		return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
 	createdPorts[port].config = autoPort
 	createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	recv := makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
 	schedState.UnClonable = append(schedState.UnClonable, recv)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
 	createdPorts[port].rxQueuesNumber++
+	return OUT, nil
+}
+
+// SetReceiverKNI adds function receive from KNI to flow graph.
+// Gets KNI device from which packets will be received.
+// Receive queue will be added to port automatically.
+// Returns new opened flow with received packets
+// Function can panic during execution.
+func SetReceiverKNI(kni *Kni) (OUT *Flow) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	recvKni := makeReceiver(kni.port, -1, ring)
+	schedState.UnClonable = append(schedState.UnClonable, recvKni)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
 	return OUT
 }
 
-// SetGenerator adds generate function to flow graph.
-// Gets user-defined generate function and target speed of generation user wants to achieve
-// Returns new open flow with generated packets. If targetSpeed equal to zero
-// single packet non-clonable flow function will be added. It can be used for waiting of
-// input user packets. If targetSpeed is more than zero clonable function is added which
-// tries to achieve this speed by cloning.
+// SetFastGenerator adds clonable generate function to flow graph.
+// Gets user-defined generate function, target speed of generation user wants to achieve and context.
+// Returns new open flow with generated packets.
+// Function tries to achieve target speed by cloning.
 // Function can panic during execution.
-func SetGenerator(generateFunction interface{}, targetSpeed uint64, context UserContext) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
-		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
-			generate = makeGeneratorPerf(ring, GenerateFunction(f), nil, targetSpeed, context)
-		} else if f, t := generateFunction.(func([]*packet.Packet, uint, UserContext)); t {
-			generate = makeGeneratorPerf(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
-		} else {
-			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
-		}
-		schedState.Generate = append(schedState.Generate, generate)
+		generate = makeFastGenerator(ring, GenerateFunction(f), nil, targetSpeed, context)
 	} else {
-		if f, t := generateFunction.(func(*packet.Packet, UserContext)); t {
-			generate = makeGeneratorOne(ring, GenerateFunction(f))
-		} else {
-			common.LogError(common.Initialization, "Function argument of SetGenerator function doesn't match any applicable prototype")
-		}
-		schedState.UnClonable = append(schedState.UnClonable, generate)
+		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
+	schedState.Generate = append(schedState.Generate, generate)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT, nil
+}
+
+// SetVectorFastGenerator adds clonable vector generate function to flow graph.
+// Gets user-defined vector generate function, target speed of generation user wants to achieve and context.
+// Returns new open flow with generated packets.
+// Function tries to achieve target speed by cloning.
+// Function can panic during execution.
+func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	var generate *scheduler.FlowFunction
+	if targetSpeed > 0 {
+		generate = makeFastGenerator(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
+	} else {
+		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
+	}
+	schedState.Generate = append(schedState.Generate, generate)
+	OUT = new(Flow)
+	OUT.current = ring
+	openFlowsNumber++
+	return OUT, nil
+}
+
+// SetGenerator adds non-clonable generate flow function to flow graph.
+// Gets user-defined generate function and context.
+// Returns new open flow with generated packets.
+// Single packet non-clonable flow function will be added. It can be used for waiting of
+// input user packets.
+// Function can panic during execution.
+func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT *Flow) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	generate := makeGenerator(ring, GenerateFunction(f))
+	schedState.UnClonable = append(schedState.UnClonable, generate)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -526,21 +611,56 @@ func SetGenerator(generateFunction interface{}, targetSpeed uint64, context User
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
-func SetSender(IN *Flow, port uint8) {
-	checkFlow(IN)
-	if port >= uint8(len(createdPorts)) {
-		common.LogError(common.Initialization, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).")
+func SetSender(IN *Flow, port uint8) error {
+	if err := checkFlow(IN); err != nil {
+		return err
 	}
-	if createdPorts[port].config == manualPort {
-		common.LogError(common.Initialization, "Requested send port was previously configured as manual port. It can't be used like auto port.")
+	if port >= uint8(len(createdPorts)) {
+		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
 	createdPorts[port].config = autoPort
 	createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
 	send := makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
+	createdPorts[port].txQueuesNumber++
 	schedState.UnClonable = append(schedState.UnClonable, send)
 	IN.current = nil
 	openFlowsNumber--
-	createdPorts[port].txQueuesNumber++
+	return nil
+}
+
+// SetSenderKNI adds function sending to KNI to flow graph.
+// Gets flow which will be closed and its packets will be send to given KNI device.
+// Send queue will be added to port automatically.
+// Function can panic during execution.
+func SetSenderKNI(IN *Flow, kni *Kni) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	sendKni := makeSender(kni.port, -1, IN.current)
+	schedState.UnClonable = append(schedState.UnClonable, sendKni)
+	IN.current = nil
+	openFlowsNumber--
+	return nil
+}
+
+// SetCopier adds copy function to flow graph.
+// Gets flow which will be copied.
+// Function can panic during execution.
+func SetCopier(IN *Flow) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
+	OUT = new(Flow)
+
+	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	openFlowsNumber++
+	pcopy := makeCopier(IN.current, ringFirst, ringSecond)
+
+	schedState.Clonable = append(schedState.Clonable, pcopy)
+	IN.current = ringFirst
+	OUT.current = ringSecond
+	return OUT, nil
 }
 
 // SetPartitioner adds partition function to flow graph.
@@ -548,14 +668,16 @@ func SetSender(IN *Flow, port uint8) {
 // Each loop N packets will be remained in input flow, next M packets will be sent to new flow.
 // It is advised not to use this function less then (75, 75) for performance reasons.
 // Function can panic during execution.
-func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
-	checkFlow(IN)
+func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OUT = new(Flow)
 	if N == 0 || M == 0 {
 		common.LogWarning(common.Initialization, "One of SetPartitioner function's arguments is zero.")
 	}
-	ringFirst := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	ringSecond := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
 	partition := makePartitioner(IN.current, ringFirst, ringSecond, N, M)
 	// We make partition function unclonable. The most complex task is (1,1).
@@ -564,101 +686,163 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow) {
 	schedState.UnClonable = append(schedState.UnClonable, partition)
 	IN.current = ringFirst
 	OUT.current = ringSecond
-	return OUT
+	return OUT, nil
 }
 
 // SetSeparator adds separate function to flow graph.
-// Gets flow and user defined separate function. Returns new opened flow.
+// Gets flow, user defined separate function and context. Returns new opened flow.
 // Each packet from input flow will be remain inside input packet if
 // user defined function returns "true" and is sent to new flow otherwise.
 // Function can panic during execution.
-func SetSeparator(IN *Flow, separateFunction interface{}, context UserContext) (OUT *Flow) {
-	checkFlow(IN)
-	OUT = new(Flow)
-	ringTrue := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	ringFalse := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	openFlowsNumber++
-	var separate *scheduler.FlowFunction
-	if f, t := separateFunction.(func(*packet.Packet, UserContext) bool); t {
-		separate = makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
-	} else if f, t := separateFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
-		separate = makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
-	} else {
-		common.LogError(common.Initialization, "Function argument of SetSeparator function doesn't match any applicable prototype")
+func SetSeparator(IN *Flow, f func(*packet.Packet, UserContext) bool, context UserContext) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
 	}
+	OUT = new(Flow)
+	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	openFlowsNumber++
+
+	separate := makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
 	schedState.Clonable = append(schedState.Clonable, separate)
 	IN.current = ringTrue
 	OUT.current = ringFalse
-	return OUT
+	return OUT, nil
+}
+
+// SetVectorSeparator adds vector separate function to flow graph.
+// Gets flow, user defined vector separate function and context. Returns new opened flow.
+// Each packet from input flow will be remain inside input packet if
+// user defined function returns "true" and is sent to new flow otherwise.
+// Function can panic during execution.
+func SetVectorSeparator(IN *Flow, f func([]*packet.Packet, []bool, uint, UserContext), context UserContext) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
+	OUT = new(Flow)
+	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	openFlowsNumber++
+
+	separate := makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
+	schedState.Clonable = append(schedState.Clonable, separate)
+	IN.current = ringTrue
+	OUT.current = ringFalse
+	return OUT, nil
 }
 
 // SetSplitter adds split function to flow graph.
-// Gets flow, user defined split function and flowNumber of new flows.
+// Gets flow, user defined split function, flowNumber of new flows and context.
 // Returns array of new opened flows with corresponding length.
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
 // Function can panic during execution.
-func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow)) {
-	checkFlow(IN)
+func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow), err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
 	OutArray = make([](*Flow), flowNumber, flowNumber)
-	rings := make([](*low.Queue), flowNumber, flowNumber)
+	rings := make([](*low.Ring), flowNumber, flowNumber)
 	for i := range OutArray {
 		OutArray[i] = new(Flow)
 		openFlowsNumber++
-		rings[i] = low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+		rings[i] = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 		OutArray[i].current = rings[i]
 	}
 	split := makeSplitter(IN.current, rings, splitFunction, flowNumber, context)
 	schedState.Clonable = append(schedState.Clonable, split)
 	IN.current = nil
 	openFlowsNumber--
-	return OutArray
+	return OutArray, nil
 }
 
 // SetStopper adds stop function to flow graph.
 // Gets flow which will be closed and all packets from each will be dropped.
 // Function can panic during execution.
-func SetStopper(IN *Flow) {
-	checkFlow(IN)
+func SetStopper(IN *Flow) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
 	merge(IN.current, schedState.StopRing)
 	IN.current = nil
 	openFlowsNumber--
+	return nil
 }
 
 // SetHandler adds handle function to flow graph.
-// Gets flow and user defined handle function. Function can receive either HandleFunction
-// or SeparateFunction. If input argument is HandleFunction then each packet from
-// input flow will be handle inside user defined function and sent further in the same flow.
-// If input argument is SeparateFunction user defined function can return boolean value.
-// If user function returns false after handling a packet it is dropped automatically.
+// Gets flow, user defined handle function and context.
+// Each packet from input flow will be handle inside user defined function
+// and sent further in the same flow.
 // Function can panic during execution.
-func SetHandler(IN *Flow, handleFunction interface{}, context UserContext) {
-	checkFlow(IN)
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
-	var handle *scheduler.FlowFunction
-	if f, t := handleFunction.(func(*packet.Packet, UserContext)); t {
-		handle = makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
-	} else if f, t := handleFunction.(func([]*packet.Packet, uint, UserContext)); t {
-		handle = makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
-	} else if f, t := handleFunction.(func(*packet.Packet, UserContext) bool); t {
-		handle = makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
-	} else if f, t := handleFunction.(func([]*packet.Packet, []bool, uint, UserContext)); t {
-		handle = makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
-	} else {
-		common.LogError(common.Initialization, "Function argument of SetHandler function doesn't match any applicable prototype")
+func SetHandler(IN *Flow, f func(*packet.Packet, UserContext), context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
 	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
 	schedState.Clonable = append(schedState.Clonable, handle)
 	IN.current = ring
+	return nil
+}
+
+// SetVectorHandler adds vector handle function to flow graph.
+// Gets flow, user defined vector handle function and context.
+// Each packet from input flow will be handle inside user defined function
+// and sent further in the same flow.
+// Function can panic during execution.
+func SetVectorHandler(IN *Flow, f func([]*packet.Packet, uint, UserContext), context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
+}
+
+// SetHandlerDrop adds vector handle function to flow graph.
+// Gets flow, user defined handle function and context.
+// User defined function can return boolean value.
+// If user function returns false after handling a packet it is dropped automatically.
+// Function can panic during execution.
+func SetHandlerDrop(IN *Flow, f func(*packet.Packet, UserContext) bool, context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
+}
+
+// SetVectorHandlerDrop adds vector handle function to flow graph.
+// Gets flow, user defined vector handle function and context.
+// User defined function can return boolean value.
+// If user function returns false after handling a packet it is dropped automatically.
+// Function can panic during execution.
+func SetVectorHandlerDrop(IN *Flow, f func([]*packet.Packet, []bool, uint, UserContext), context UserContext) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	handle := makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
+	schedState.Clonable = append(schedState.Clonable, handle)
+	IN.current = ring
+	return nil
 }
 
 // SetMerger adds merge function to flow graph.
 // Gets any number of flows. Returns new opened flow.
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
-func SetMerger(InArray ...*Flow) (OUT *Flow) {
-	ring := low.CreateQueue(generateRingName(), burstSize*sizeMultiplier)
+func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
+	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	for i := range InArray {
-		checkFlow(InArray[i])
+		if err := checkFlow(InArray[i]); err != nil {
+			return nil, err
+		}
 		merge(InArray[i].current, ring)
 		InArray[i].current = nil
 		openFlowsNumber--
@@ -666,7 +850,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow) {
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	return OUT
+	return OUT, nil
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
@@ -683,17 +867,15 @@ func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
-	mempool := gp.mempool
 	low.SetAffinity(core)
 
-	buf := make([]uintptr, 1)
-	var tempPacket *packet.Packet
-
 	for {
-		low.AllocateMbufs(buf, mempool)
-		tempPacket = packet.ExtractPacket(buf[0])
+		tempPacket, err := packet.NewPacket()
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		generateFunction(tempPacket, nil)
-		safeEnqueue(OUT, buf, 1)
+		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 
@@ -729,7 +911,10 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 			report <- currentSpeed
 			currentSpeed = 0
 		default:
-			low.AllocateMbufs(bufs, mempool)
+			err := low.AllocateMbufs(bufs, mempool, burstSize)
+			if err != nil {
+				common.LogFatal(common.Debug, err)
+			}
 			if vector == false {
 				for i := range bufs {
 					// TODO Maybe we need to prefetcht here?
@@ -754,12 +939,81 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	}
 }
 
+func copyCheck(parameters interface{}, debug bool) bool {
+	cp := parameters.(*copyParameters)
+	IN := cp.in
+	if debug == true {
+		common.LogDebug(common.Debug, "Number of packets in queue for copy: ", IN.GetRingCount())
+	}
+	if IN.GetRingCount() > maxPacketsToClone {
+		return true
+	}
+	return false
+}
+
+// TODO reassembled packets are not supported
+func pcopy(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+	cp := parameters.(*copyParameters)
+	IN := cp.in
+	OUT := cp.out
+	OUTCopy := cp.outCopy
+	mempool := cp.mempool
+
+	bufs1 := make([]uintptr, burstSize)
+	bufs2 := make([]uintptr, burstSize)
+	var tempPacket1 *packet.Packet
+	var tempPacket2 *packet.Packet
+	var currentSpeed uint64
+	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
+	var pause int
+
+	for {
+		select {
+		case pause = <-stopper:
+			if pause == -1 {
+				// It is time to close this clone
+				close(stopper)
+				// We don't close report channel because all clones of one function use it.
+				// As one function entity will be working endlessly we don't close it anywhere.
+				return
+			}
+		case <-tick:
+			report <- currentSpeed
+			currentSpeed = 0
+		default:
+			n := IN.DequeueBurst(bufs1, burstSize)
+			if n != 0 {
+				if err := low.AllocateMbufs(bufs2, mempool, n); err != nil {
+					common.LogFatal(common.Debug, err)
+				}
+				for i := range bufs1 {
+					// TODO Maybe we need to prefetcht here?
+					tempPacket1 = packet.ExtractPacket(bufs1[i])
+					tempPacket2 = packet.ExtractPacket(bufs2[i])
+					packet.GeneratePacketFromByte(tempPacket2, tempPacket1.GetRawPacketBytes())
+				}
+				safeEnqueue(OUT, bufs1, uint(n))
+				safeEnqueue(OUTCopy, bufs2, uint(n))
+				currentSpeed = currentSpeed + uint64(n)
+			}
+			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
+			// we just want to slow goroutine down without parking, so loop is OK for this.
+			// time.Now lasts approximately 70ns and this satisfies us
+			if pause != 0 {
+				a := time.Now()
+				for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
+				}
+			}
+		}
+	}
+}
+
 func send(parameters interface{}, coreID uint8) {
 	srp := parameters.(*sendParameters)
 	low.Send(srp.port, srp.queue, srp.in, coreID)
 }
 
-func merge(from *low.Queue, to *low.Queue) {
+func merge(from *low.Ring, to *low.Ring) {
 	// We should change out rings in all flow functions which we added before
 	// and change them to one "after merge" ring.
 	// We don't proceed stop and send functions here because they don't have
@@ -783,6 +1037,17 @@ func merge(from *low.Queue, to *low.Queue) {
 			if schedState.UnClonable[i].Parameters.(*generateParameters).out == from {
 				schedState.UnClonable[i].Parameters.(*generateParameters).out = to
 			}
+		case *readParameters:
+			if schedState.UnClonable[i].Parameters.(*readParameters).out == from {
+				schedState.UnClonable[i].Parameters.(*readParameters).out = to
+			}
+		case *copyParameters:
+			if schedState.UnClonable[i].Parameters.(*copyParameters).out == from {
+				schedState.UnClonable[i].Parameters.(*copyParameters).out = to
+			}
+			if schedState.UnClonable[i].Parameters.(*copyParameters).outCopy == from {
+				schedState.UnClonable[i].Parameters.(*copyParameters).outCopy = to
+			}
 		}
 	}
 	for i := range schedState.Clonable {
@@ -804,9 +1069,13 @@ func merge(from *low.Queue, to *low.Queue) {
 			if schedState.Clonable[i].Parameters.(*handleParameters).out == from {
 				schedState.Clonable[i].Parameters.(*handleParameters).out = to
 			}
+		}
+	}
+	for i := range schedState.Generate {
+		switch schedState.Generate[i].Parameters.(type) {
 		case *generateParameters:
-			if schedState.Clonable[i].Parameters.(*generateParameters).out == from {
-				schedState.Clonable[i].Parameters.(*generateParameters).out = to
+			if schedState.Generate[i].Parameters.(*generateParameters).out == from {
+				schedState.Generate[i].Parameters.(*generateParameters).out = to
 			}
 		}
 	}
@@ -816,9 +1085,9 @@ func separateCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -969,9 +1238,9 @@ func splitCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -1050,9 +1319,9 @@ func handleCheck(parameters interface{}, debug bool) bool {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetQueueCount())
+		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetRingCount())
 	}
-	if IN.GetQueueCount() > maxPacketsToClone {
+	if IN.GetRingCount() > maxPacketsToClone {
 		return true
 	}
 	return false
@@ -1128,18 +1397,24 @@ func write(parameters interface{}, coreID uint8) {
 
 	f, err := os.Create(filename)
 	if err != nil {
-		common.LogError(common.Debug, err)
+		common.LogFatal(common.Debug, err)
 	}
 	defer f.Close()
 
-	packet.WritePcapGlobalHdr(f)
+	err = packet.WritePcapGlobalHdr(f)
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
 	for {
 		n := IN.DequeueBurst(bufIn, 1)
 		if n == 0 {
 			continue
 		}
 		tempPacket = packet.ExtractPacket(bufIn[0])
-		tempPacket.WritePcapOnePacket(f)
+		err := tempPacket.WritePcapOnePacket(f)
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		low.DirectStop(1, bufIn)
 	}
 }
@@ -1148,49 +1423,53 @@ func read(parameters interface{}, coreID uint8) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
-	mempool := rp.mempool
 	repcount := rp.repcount
-
-	buf := make([]uintptr, 1)
-	var tempPacket *packet.Packet
 
 	f, err := os.Open(filename)
 	if err != nil {
-		common.LogError(common.Debug, err)
+		common.LogFatal(common.Debug, err)
 	}
 	defer f.Close()
 
 	// Read pcap global header once
 	var glHdr packet.PcapGlobHdr
-	packet.ReadPcapGlobalHdr(f, &glHdr)
+	if err := packet.ReadPcapGlobalHdr(f, &glHdr); err != nil {
+		common.LogFatal(common.Debug, err)
+	}
 
 	count := int32(0)
 
 	for {
-		low.AllocateMbufs(buf, mempool)
-		tempPacket = packet.ExtractPacket(buf[0])
-		isEOF := tempPacket.ReadPcapOnePacket(f)
+		tempPacket, err := packet.NewPacket()
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
+		isEOF, err := tempPacket.ReadPcapOnePacket(f)
+		if err != nil {
+			common.LogFatal(common.Debug, err)
+		}
 		if isEOF {
 			atomic.AddInt32(&count, 1)
 			if count == repcount {
 				break
 			}
-			_, err := f.Seek(packet.PcapGlobHdrSize, 0)
-			if err != nil {
-				common.LogError(common.Debug, err)
+			if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+				common.LogFatal(common.Debug, err)
 			}
-			tempPacket.ReadPcapOnePacket(f)
+			if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
+				common.LogFatal(common.Debug, err)
+			}
 		}
 		// TODO we need packet reassembly here. However we don't
 		// use mbuf packet_type here, so it is impossible.
-		safeEnqueue(OUT, buf, 1)
+		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 
 // This function tries to write elements to input ring. However
 // if this ring can't get these elements they will be placed
 // inside stop ring which is emptied in separate thread.
-func safeEnqueue(place *low.Queue, data []uintptr, number uint) {
+func safeEnqueue(place *low.Ring, data []uintptr, number uint) {
 	done := place.EnqueueBurst(data, number)
 	if done < number {
 		schedState.Dropped += number - uint(done)
@@ -1208,32 +1487,55 @@ func safeEnqueue(place *low.Queue, data []uintptr, number uint) {
 	// to use actual number or to use simply number of packets processed by a function like now.
 }
 
-func checkFlow(f *Flow) {
-	if f.current == nil {
-		common.LogError(common.Initialization, "One of the flows is used after it was closed!")
-	}
+// This function makes []uintptr and is inefficient. Only for non-performance critical tasks
+func safeEnqueueOne(place *low.Ring, data uintptr) {
+	slice := make([]uintptr, 1, 1)
+	slice[0] = data
+	safeEnqueue(place, slice, 1)
 }
 
-func checkSystem() {
+func checkFlow(f *Flow) error {
+	if f == nil {
+		return common.WrapWithNFError(nil, "One of the flows is nil!", common.UseNilFlowErr)
+	}
+	if f.current == nil {
+		return common.WrapWithNFError(nil, "One of the flows is used after it was closed!", common.UseClosedFlowErr)
+	}
+	return nil
+}
+
+func checkSystem() error {
 	if openFlowsNumber != 0 {
-		common.LogError(common.Initialization, "Some flows are left open at the end of configuration!")
+		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
 	}
 	for i := range createdPorts {
 		if createdPorts[i].config == inactivePort {
 			continue
 		}
 		if createdPorts[i].rxQueuesNumber == 0 && createdPorts[i].txQueuesNumber == 0 {
-			common.LogError(common.Initialization, "Port", createdPorts[i].port, "has no send and receive queues. It is an error in DPDK.")
+			return common.WrapWithNFError(nil, "port has no send and receive queues. It is an error in DPDK.", common.PortHasNoQueues)
 		}
 		for j := range createdPorts[i].rxQueues {
 			if createdPorts[i].rxQueues[j] != true {
-				common.LogError(common.Initialization, "Port", createdPorts[i].port, "doesn't use all receive queues, packets can be missed due to RSS!")
+				return common.WrapWithNFError(nil, "port doesn't use all receive queues, packets can be missed due to RSS!", common.NotAllQueuesUsed)
 			}
 		}
 		for j := range createdPorts[i].txQueues {
 			if createdPorts[i].txQueues[j] != true {
-				common.LogWarning(common.Initialization, "Port", createdPorts[i].port, "has unused send queue. Performance can be lower than it is expected!")
+				return common.WrapWithNFError(nil, "port has unused send queue. Performance can be lower than it is expected!", common.NotAllQueuesUsed)
 			}
 		}
 	}
+	return nil
+}
+
+// CreateKniDevice creates KNI device for using in receive or send functions.
+// Gets port, core (not from YANFF list), and unique name of future KNI device.
+func CreateKniDevice(port uint8, core uint8, name string) *Kni {
+	low.CreateKni(port, core, name)
+	kni := new(Kni)
+	// Port will be identifier of this KNI
+	// KNI structure itself is stored inside low.c
+	kni.port = port
+	return kni
 }

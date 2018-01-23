@@ -15,12 +15,20 @@ func main() {
 	test.SetLogLevel(test.LogDebugLvl)
 	// Read config
 	configFile := "config.json"
+	var directory string
 	if len(os.Args) > 1 {
 		index := 1
 
 		if os.Args[1] == "-nodelete" {
 			test.DeleteContainersOnExit = false
 			index++
+		}
+
+		if len(os.Args) > 2 {
+			if os.Args[1] == "-directory" {
+				directory = os.Args[2]
+				index += 2
+			}
 		}
 
 		if len(os.Args) > index {
@@ -34,10 +42,13 @@ func main() {
 	test.LogDebug(config)
 
 	timestr := time.Now().Format(time.RFC3339)
-	err = os.Mkdir(timestr, os.ModeDir|os.ModePerm)
+	if directory == "" {
+		directory = timestr
+	}
+	err = os.Mkdir(directory, os.ModeDir|os.ModePerm)
 	if err != nil {
 		test.LogPanic(err)
 	}
 
-	config.RunAllTests(timestr)
+	config.RunAllTests(directory)
 }

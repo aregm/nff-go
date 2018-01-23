@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-PATH_TO_MK = ../mk
-include $(PATH_TO_MK)/include.mk
+PATH_TO_MK = ../../../mk
+IMAGENAME = yanff-reordering
+EXECUTABLES = send recv
 
-.PHONY: testing
-testing: check-pktgen
-	go test
+include $(PATH_TO_MK)/leaf.mk

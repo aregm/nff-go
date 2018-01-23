@@ -6,6 +6,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
+
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 )
@@ -21,6 +24,14 @@ var (
 	useWriter bool
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 func main() {
 	flag.StringVar(&inFile, "infile", "rw_example_in.pcap", "Input pcap file")
 	flag.StringVar(&outFile, "outfile", "rw_example_out.pcap", "Output pcap file")
@@ -34,28 +45,28 @@ func main() {
 
 	// Initialize YANFF library at 16 cores by default
 	config := flow.Config{
-		CPUCoresNumber: 16,
+		CPUList: "0-15",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	var f1 *flow.Flow
 	if useReader {
 		print("Enabled Read from file ", inFile, " and ")
-		f1 = flow.SetReader(inFile, int32(repcount))
+		f1 = flow.SetReceiverFile(inFile, int32(repcount))
 	} else {
 		print("Enabled Generate and ")
-		f1 = flow.SetGenerator(generatePacket, 0, nil)
+		f1 = flow.SetGenerator(generatePacket, nil)
 	}
 
 	if useWriter {
 		println("Write to file", outFile)
-		flow.SetWriter(f1, outFile)
+		CheckFatal(flow.SetSenderFile(f1, outFile))
 	} else {
 		println("Send to port", outport)
-		flow.SetSender(f1, uint8(outport))
+		CheckFatal(flow.SetSender(f1, uint8(outport)))
 	}
 
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {

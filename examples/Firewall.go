@@ -6,51 +6,64 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/rules"
 )
 
 var (
-	l3Rules *rules.L3Rules
+	l3Rules *packet.L3Rules
 	outport uint
 	inport  uint
 )
 
+// CheckFatal is an error handling function
+func CheckFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
+
 // Main function for constructing packet processing graph.
 func main() {
+	var err error
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
 
 	// Initialize YANFF library at 8 cores by default
 	config := flow.Config{
-		CPUCoresNumber: 8,
+		CPUList: "0-7",
 	}
-	flow.SystemInit(&config)
+	CheckFatal(flow.SystemInit(&config))
 
 	// Get filtering rules from access control file.
-	l3Rules = rules.GetL3RulesFromORIG("Firewall.conf")
+	l3Rules, err = packet.GetL3ACLFromORIG("Firewall.conf")
+	CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow := flow.SetReceiver(uint8(inport))
+	inputFlow, err := flow.SetReceiver(uint8(inport))
+	CheckFatal(err)
 
 	// Separate packet flow based on ACL.
-	rejectFlow := flow.SetSeparator(inputFlow, l3Separator, nil)
+	rejectFlow, err := flow.SetSeparator(inputFlow, l3Separator, nil)
+	CheckFatal(err)
 
 	// Drop rejected packets.
-	flow.SetStopper(rejectFlow)
+	CheckFatal(flow.SetStopper(rejectFlow))
 
 	// Send accepted packets to first port. Send queue will be added automatically.
-	flow.SetSender(inputFlow, uint8(outport))
+	CheckFatal(flow.SetSender(inputFlow, uint8(outport)))
 
 	// Begin to process packets.
-	flow.SystemStart()
+	CheckFatal(flow.SystemStart())
 }
 
 // User defined function for separating packets
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	// Return whether packet is accepted or not. Based on ACL rules.
-	return rules.L3ACLPermit(currentPacket, l3Rules)
+	return currentPacket.L3ACLPermit(l3Rules)
 }

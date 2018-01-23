@@ -7,6 +7,7 @@ package nat
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -17,14 +18,23 @@ import (
 	"github.com/intel-go/yanff/flow"
 )
 
+type terminationDirection uint8
+type interfaceType int
+
 const (
 	flowDrop   = 0
 	flowBack   = 1
 	flowOut    = 2
 	totalFlows = 3
 
-	debugDump = false
-	debugDrop = false
+	pri2pub terminationDirection = 0x0f
+	pub2pri terminationDirection = 0xf0
+
+	iPUBLIC  interfaceType = 0
+	iPRIVATE interfaceType = 1
+
+	connectionTimeout time.Duration = 1 * time.Minute
+	portReuseTimeout  time.Duration = 1 * time.Second
 )
 
 type ipv4Subnet struct {
@@ -49,7 +59,7 @@ type ipv4Port struct {
 	Vlan          uint16     `json:"vlan-tag"`
 	SrcMACAddress macAddress
 	// ARP lookup table
-	ArpTable      sync.Map
+	ArpTable sync.Map
 }
 
 // Config for one port pair.
@@ -61,13 +71,13 @@ type portPair struct {
 	// Main lookup table which contains entries for public to private translation
 	pub2priTable []sync.Map
 	// Synchronization point for lookup table modifications
-	mutex        sync.Mutex
+	mutex sync.Mutex
 	// Map of allocated IP ports on public interface
-	portmap      [][]portMapEntry
+	portmap [][]portMapEntry
 	// Port that was allocated last
-	lastport     int
+	lastport int
 	// Maximum allowed port number
-	maxport      int
+	maxport int
 }
 
 // Config for NAT.
@@ -91,8 +101,15 @@ var (
 	HWTXChecksum bool
 
 	// Debug variables
-	fdump     []*os.File
-	fdrop     []*os.File
+	debugDump = false
+	debugDrop = false
+	// Controls whether debug dump files are separate for private and
+	// public interface or both traces are dumped in the same file.
+	dumptogether = false
+	fdump        []*os.File
+	dumpsync     []sync.Mutex
+	fdrop        []*os.File
+	dropsync     []sync.Mutex
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -227,30 +244,66 @@ func InitFlows() {
 		context.index = i
 
 		// Initialize public to private flow
-		publicToPrivate := flow.SetReceiver(pp.PublicPort.Index)
-		fromPublic := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
+		publicToPrivate, err := flow.SetReceiver(pp.PublicPort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fromPublic, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
 			totalFlows, context)
-		flow.SetStopper(fromPublic[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetStopper(fromPublic[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// Initialize private to public flow
-		privateToPublic := flow.SetReceiver(pp.PrivatePort.Index)
-		fromPrivate := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
+		privateToPublic, err := flow.SetReceiver(pp.PrivatePort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fromPrivate, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
 			totalFlows, context)
-		flow.SetStopper(fromPrivate[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetStopper(fromPrivate[flowDrop])
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		// ARP packets from public go back to public
-		toPublic := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
+		toPublic, err := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
+		if err != nil {
+			log.Fatal(err)
+		}
 		// ARP packets from private go back to private
-		toPrivate := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
+		toPrivate, err := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
+		if err != nil {
+			log.Fatal(err)
+		}
 
-		flow.SetSender(toPrivate, pp.PrivatePort.Index)
-		flow.SetSender(toPublic, pp.PublicPort.Index)
+		err = flow.SetSender(toPrivate, pp.PrivatePort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = flow.SetSender(toPublic, pp.PublicPort.Index)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
+	asize := len(Natconfig.PortPairs)
+	if !dumptogether {
+		asize *= 2
+	}
 	if debugDump {
-		fdump = make([]*os.File, len(Natconfig.PortPairs))
+		fdump = make([]*os.File, asize)
+		dumpsync = make([]sync.Mutex, asize)
 	}
 	if debugDrop {
-		fdrop = make([]*os.File, len(Natconfig.PortPairs))
+		fdrop = make([]*os.File, asize)
+		dropsync = make([]sync.Mutex, asize)
 	}
 }

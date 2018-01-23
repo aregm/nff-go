@@ -57,7 +57,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 
-	dumpInput(pkt, pi.index)
+	dumpPacket(pkt, pi.index, iPUBLIC)
 
 	// Parse packet type and address
 	pktVLAN := pkt.ParseL3CheckVLAN()
@@ -67,14 +67,14 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		if arp != nil {
 			port := pp.PublicPort.handleARP(pkt)
 			if port != flowDrop {
-				dumpOutput(pkt, pi.index)
+				dumpPacket(pkt, pi.index, iPUBLIC)
 			} else {
-				dumpDrop(pkt, pi.index)
+				dumpDrop(pkt, pi.index, iPUBLIC)
 			}
 			return port
 		}
 		// We don't currently support anything except for IPv4 and ARP
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPUBLIC)
 		return flowDrop
 	}
 
@@ -95,15 +95,15 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		port := pp.PublicPort.handleICMP(pkt)
 		if port != flowOut {
 			if port == flowBack {
-				dumpOutput(pkt, pi.index)
+				dumpPacket(pkt, pi.index, iPUBLIC)
 			} else if port == flowDrop {
-				dumpDrop(pkt, pi.index)
+				dumpDrop(pkt, pi.index, iPUBLIC)
 			}
 			return port
 		}
 		pub2priKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPUBLIC)
 		return flowDrop
 	}
 
@@ -114,13 +114,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPUBLIC)
 		return flowDrop
 	}
 	value := v.(Tuple)
 
 	// Check whether connection is too old
-	if pp.portmap[protocol][pub2priKey.port].lastused.Add(connectionTimeout).After(time.Now()) {
+	if time.Since(pp.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
 		pp.portmap[protocol][pub2priKey.port].lastused = time.Now()
 	} else {
 		// There was no transfer on this port for too long
@@ -128,7 +128,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		pp.mutex.Lock()
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPUBLIC)
 		return flowDrop
 	}
 
@@ -141,7 +141,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
 	pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
 	if pktVLAN != nil {
-		pktVLAN.SetTag(pp.PrivatePort.Vlan)
+		pktVLAN.SetVLANTagIdentifier(pp.PrivatePort.Vlan)
 	}
 	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 
@@ -156,7 +156,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	}
 
-	dumpOutput(pkt, pi.index)
+	dumpPacket(pkt, pi.index, iPRIVATE)
 	return flowOut
 }
 
@@ -165,7 +165,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 
-	dumpInput(pkt, pi.index)
+	dumpPacket(pkt, pi.index, iPRIVATE)
 
 	// Parse packet type and address
 	pktVLAN := pkt.ParseL3CheckVLAN()
@@ -175,14 +175,14 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		if arp != nil {
 			port := pp.PrivatePort.handleARP(pkt)
 			if port != flowDrop {
-				dumpOutput(pkt, pi.index)
+				dumpPacket(pkt, pi.index, iPRIVATE)
 			} else {
-				dumpDrop(pkt, pi.index)
+				dumpDrop(pkt, pi.index, iPRIVATE)
 			}
 			return port
 		}
 		// We don't currently support anything except for IPv4 and ARP
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPRIVATE)
 		return flowDrop
 	}
 
@@ -205,15 +205,15 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		port := pp.PrivatePort.handleICMP(pkt)
 		if port != flowOut {
 			if port == flowBack {
-				dumpOutput(pkt, pi.index)
+				dumpPacket(pkt, pi.index, iPRIVATE)
 			} else if port == flowDrop {
-				dumpDrop(pkt, pi.index)
+				dumpDrop(pkt, pi.index, iPRIVATE)
 			}
 			return port
 		}
 		pri2pubKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		dumpDrop(pkt, pi.index)
+		dumpDrop(pkt, pi.index, iPRIVATE)
 		return flowDrop
 	}
 
@@ -229,7 +229,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
-			dumpDrop(pkt, pi.index)
+			dumpDrop(pkt, pi.index, iPRIVATE)
 			return flowDrop
 		}
 	} else {
@@ -246,7 +246,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
 	pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
 	if pktVLAN != nil {
-		pktVLAN.SetTag(pp.PublicPort.Vlan)
+		pktVLAN.SetVLANTagIdentifier(pp.PublicPort.Vlan)
 	}
 	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 
@@ -261,7 +261,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
 	}
 
-	dumpOutput(pkt, pi.index)
+	dumpPacket(pkt, pi.index, iPUBLIC)
 	return flowOut
 }
 
@@ -294,6 +294,9 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 		pme := &pp.portmap[common.TCPNumber][port]
 		if pme.finCount == 2 {
 			pp.deleteOldConnection(common.TCPNumber, port)
+			// Set some time while port cannot be used before
+			// connection timeout is reached
+			pme.lastused = time.Now().Add(time.Duration(portReuseTimeout - connectionTimeout))
 		}
 
 		pp.mutex.Unlock()

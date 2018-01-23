@@ -10,19 +10,12 @@ import (
 	"time"
 )
 
-type terminationDirection uint8
-
 const (
 	numPubAddr = 1
 
 	portStart = 1024
 	portEnd   = 65500
 	numPorts  = portEnd - portStart
-
-	connectionTimeout time.Duration = 1 * time.Minute
-
-	pri2pub terminationDirection = 0x0f
-	pub2pri terminationDirection = 0xf0
 )
 
 func (dir terminationDirection) String() string {
@@ -57,9 +50,8 @@ func (pp *portPair) deleteOldConnection(protocol uint8, port int) {
 func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
 	pm := pp.portmap[protocol]
 	for {
-		now := time.Now()
 		for p := pp.lastport; p < portEnd; p++ {
-			if pm[p].lastused.Add(connectionTimeout).Before(now) {
+			if time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil
@@ -67,7 +59,7 @@ func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
 		}
 
 		for p := portStart; p < pp.lastport; p++ {
-			if pm[p].lastused.Add(connectionTimeout).Before(now) {
+			if time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil

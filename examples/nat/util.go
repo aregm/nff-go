@@ -6,6 +6,7 @@ package nat
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/intel-go/yanff/packet"
@@ -27,34 +28,80 @@ func swapAddrIPv4(pkt *packet.Packet) {
 	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
 }
 
-func dumpInput(pkt *packet.Packet, index int) {
+func startTrace(name string, aindex, index int, isPrivate interfaceType) *os.File {
+	var fname string
+	if !dumptogether {
+		if isPrivate != 0 {
+			fname = fmt.Sprintf("%dpriv%s.pcap", index, name)
+		} else {
+			fname = fmt.Sprintf("%dpub%s.pcap", index, name)
+		}
+	} else {
+		fname = fmt.Sprintf("%d%s.pcap", index, name)
+	}
+
+	file, err := os.Create(fname)
+	if err != nil {
+		log.Fatal(err)
+	}
+	packet.WritePcapGlobalHdr(file)
+	return file
+}
+
+func dumpPacket(pkt *packet.Packet, index int, isPrivate interfaceType) {
 	if debugDump {
-		// Dump input packet
-		if fdump[index] == nil {
-			fdump[index], _ = os.Create(fmt.Sprintf("%ddump.pcap", index))
-			packet.WritePcapGlobalHdr(fdump[index])
-			pkt.WritePcapOnePacket(fdump[index])
+		aindex := index
+		if !dumptogether {
+			aindex = index*2 + int(isPrivate)
 		}
 
-		pkt.WritePcapOnePacket(fdump[index])
+		dumpsync[aindex].Lock()
+		if fdump[aindex] == nil {
+			fdump[aindex] = startTrace("dump", aindex, index, isPrivate)
+		}
+
+		err := pkt.WritePcapOnePacket(fdump[aindex])
+		if err != nil {
+			log.Fatal(err)
+		}
+		dumpsync[aindex].Unlock()
 	}
 }
 
-func dumpOutput(pkt *packet.Packet, index int) {
-	if debugDump {
-		pkt.WritePcapOnePacket(fdump[index])
-	}
-}
-
-func dumpDrop(pkt *packet.Packet, index int) {
+func dumpDrop(pkt *packet.Packet, index int, isPrivate interfaceType) {
 	if debugDrop {
-		// Dump droped input packet
-		if fdrop[index] == nil {
-			fdrop[index], _ = os.Create(fmt.Sprintf("%ddrop.pcap", index))
-			packet.WritePcapGlobalHdr(fdrop[index])
-			pkt.WritePcapOnePacket(fdrop[index])
+		aindex := index
+		if !dumptogether {
+			aindex = index*2 + int(isPrivate)
 		}
+		dropsync[aindex].Lock()
+		if fdrop[aindex] == nil {
+			fdrop[aindex] = startTrace("drop", aindex, index, isPrivate)
+		}
+		err := pkt.WritePcapOnePacket(fdrop[aindex])
+		if err != nil {
+			log.Fatal(err)
+		}
+		dropsync[aindex].Unlock()
+	}
+}
 
-		pkt.WritePcapOnePacket(fdrop[index])
+// CloseAllDumpFiles closes all debug dump files.
+func CloseAllDumpFiles() {
+	if debugDump {
+		debugDump = false
+		for i := range fdump {
+			if fdump[i] != nil {
+				fdump[i].Close()
+			}
+		}
+	}
+	if debugDrop {
+		debugDrop = false
+		for i := range fdrop {
+			if fdump[i] != nil {
+				fdump[i].Close()
+			}
+		}
 	}
 }

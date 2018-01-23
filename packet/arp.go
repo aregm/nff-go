@@ -55,18 +55,6 @@ func (hdr *ARPHdr) String() string {
 		hdr.TPA[0], hdr.TPA[1], hdr.TPA[2], hdr.TPA[3])
 }
 
-// InitEmptyARPPacket initializes empty ARP packet
-func InitEmptyARPPacket(packet *Packet) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "InitEmptyARPPacket: Cannot append mbuf")
-		return false
-	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-	return true
-}
-
 // initARPCommonData allocates ARP packet, fills ether header and
 // arp hrd, pro, hln, pln with values for ether and IPv4
 func initARPCommonData(packet *Packet) bool {
@@ -91,7 +79,7 @@ func initARPCommonData(packet *Packet) bool {
 // protocol request with broadcast (zero) for THA (Target HW
 // address). SHA and SPA specify sender MAC and IP addresses, TPA
 // specifies IP address for host which request is sent
-// for. Destionation MAC address is L2 Ethernet header is set to
+// for. Destination MAC address in L2 Ethernet header is set to
 // FF:FF:FF:FF:FF:FF (broadcast) and source address is set to SHA.
 func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, TPA uint32) bool {
 	if !initARPCommonData(packet) {
@@ -111,8 +99,8 @@ func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, T
 
 // InitARPReplyPacket initialize ARP reply packet for IPv4
 // protocol. SHA and SPA specify sender MAC and IP addresses, THA and
-// TPA specify target MAC and IP addresses. Destionation MAC address
-// is L2 Ethernet header is set to THA and source address is set to
+// TPA specify target MAC and IP addresses. Destination MAC address
+// in L2 Ethernet header is set to THA and source address is set to
 // SHA.
 func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA, TPA uint32) bool {
 	if !initARPCommonData(packet) {
@@ -120,7 +108,7 @@ func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA
 		return false
 	}
 	packet.Ether.SAddr = SHA
-	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	packet.Ether.DAddr = THA
 	arp := packet.GetARP()
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
@@ -134,7 +122,7 @@ func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA
 // (preferred over reply) packet (ARP announcement) for IPv4 protocol
 // request with broadcast (zero) for THA (Target HW address). SHA and
 // SPA specify sender MAC and IP addresses, TPA is set to the value of
-// SPA. Destionation MAC address is L2 Ethernet header is set to
+// SPA. Destination MAC address in L2 Ethernet header is set to
 // FF:FF:FF:FF:FF:FF (broadcast) and source address is set to SHA.
 func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA uint32) bool {
 	if !initARPCommonData(packet) {
@@ -155,8 +143,8 @@ func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]
 // InitGARPAnnouncementReplyPacket initialize gratuitous ARP reply
 // packet (ARP announcement) for IPv4 protocol. SHA and SPA specify
 // sender MAC and IP addresses, TPA is set to the value of SPA and THA
-// to the value of SHA. Destionation MAC address is L2 Ethernet header
-// is set to FF:FF:FF:FF:FF:FF (broadcast) and source address is set
+// to zeroes (according to RFC 5227). Destination MAC address in L2 Ethernet header is set
+// to FF:FF:FF:FF:FF:FF (broadcast) and source address is set
 // to SHA.
 func InitGARPAnnouncementReplyPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA uint32) bool {
 	if !initARPCommonData(packet) {
@@ -169,7 +157,7 @@ func InitGARPAnnouncementReplyPacket(packet *Packet, SHA [common.EtherAddrLen]ui
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
-	arp.THA = SHA
+	arp.THA = [common.EtherAddrLen]uint8{}
 	arp.TPA = IPv4ToBytes(SPA)
 	return true
 }

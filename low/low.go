@@ -5,22 +5,7 @@
 package low
 
 /*
-#include "yanff_queue.h"
-
-extern void eal_init(int argc, char **argv, uint32_t burstSize);
-extern void yanff_recv(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
-extern void yanff_send(uint8_t port, uint16_t queue, struct rte_ring *, uint8_t coreID);
-extern void yanff_stop(struct rte_ring *);
-extern void initCPUSet(uint8_t coreID, cpu_set_t* cpuset);
-extern int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
-    struct ether_addr *addr, bool hwtxchecksum);
-extern struct rte_mempool * createMempool(uint32_t num_mbuf, uint32_t mbuf_cache_size);
-extern int directStop(int pktsForFreeNumber, struct rte_mbuf ** buf);
-extern char ** makeArgv(int n);
-extern void handleArgv(char **, char* s, int i);
-extern int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
-extern void statistics(float N);
-extern int getMempoolSpace(struct rte_mempool * m);
+#include "low.h"
 */
 import "C"
 
@@ -42,8 +27,13 @@ func DirectStop(pktsForFreeNumber int, buf []uintptr) {
 	C.directStop(C.int(pktsForFreeNumber), (**C.struct_rte_mbuf)(unsafe.Pointer(&(buf[0]))))
 }
 
-// Queue is a ring buffer queue.
-type Queue C.struct_yanff_queue
+// DirectSend sends one mbuf.
+func DirectSend(m *Mbuf, port uint8) bool {
+	return bool(C.directSend((*C.struct_rte_mbuf)(m), C.uint8_t(port)))
+}
+
+// Ring is a ring buffer for pointers
+type Ring C.struct_yanff_ring
 
 // Mbuf is a message buffer.
 type Mbuf C.struct_rte_mbuf
@@ -76,10 +66,11 @@ func GetPacketDataStartPointer(mb *Mbuf) uintptr {
 var packetStructSize int
 
 // SetPacketStructSize sets the size of the packet.
-func SetPacketStructSize(t int) {
+func SetPacketStructSize(t int) error {
 	if t > C.RTE_PKTMBUF_HEADROOM {
-		common.LogError(common.Initialization, "Packet structure can't be placed inside mbuf.",
+		msg := common.LogError(common.Initialization, "Packet structure can't be placed inside mbuf.",
 			"Increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
+		return common.WrapWithNFError(nil, msg, common.PktMbufHeadRoomTooSmall)
 	}
 	minPacketHeadroom := 64
 	if C.RTE_PKTMBUF_HEADROOM-t < minPacketHeadroom {
@@ -87,6 +78,7 @@ func SetPacketStructSize(t int) {
 			"bytes for prepend something, increase CONFIG_RTE_PKTMBUF_HEADROOM in dpdk/config/common_base and rebuild dpdk.")
 	}
 	packetStructSize = t
+	return nil
 }
 
 // PrependMbuf prepends length bytes to mbuf data area.
@@ -220,23 +212,23 @@ const (
 	RtePtypeL4Udp   = C.RTE_PTYPE_L4_UDP
 )
 
-// CreateQueue creates queue with given name and count.
-func CreateQueue(name string, count uint) *Queue {
-	var queue *Queue
+// CreateRing creates ring with given name and count.
+func CreateRing(name string, count uint) *Ring {
+	var ring *Ring
 	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
-	queue = (*Queue)(unsafe.Pointer(C.yanff_queue_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+	ring = (*Ring)(unsafe.Pointer(C.yanff_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 
-	return queue
+	return ring
 }
 
 // EnqueueBurst enqueues data to ring buffer.
-func (queue *Queue) EnqueueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMpEnqueueBurst(queue.ring, buffer, count)
+func (ring *Ring) EnqueueBurst(buffer []uintptr, count uint) uint {
+	return yanffRingMpEnqueueBurst((*C.struct_yanff_ring)(ring), buffer, count)
 }
 
 // DequeueBurst dequeues data from ring buffer.
-func (queue *Queue) DequeueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMcDequeueBurst(queue.ring, buffer, count)
+func (ring *Ring) DequeueBurst(buffer []uintptr, count uint) uint {
+	return yanffRingMcDequeueBurst((*C.struct_yanff_ring)(ring), buffer, count)
 }
 
 // Heavily based on DPDK ENQUEUE_PTRS
@@ -426,32 +418,32 @@ func yanffRingMcDequeueBurst(r *C.struct_yanff_ring, objTable []uintptr, n uint)
 	return yanffRingMcDoDequeue(r, objTable, n)
 }
 
-// GetQueueCount gets number of objects in queue.
-func (queue *Queue) GetQueueCount() uint32 {
-	return uint32((queue.ring.DPDK_ring.prod.tail - queue.ring.DPDK_ring.cons.tail) & queue.ring.DPDK_ring.mask)
+// GetRingCount gets number of objects in ring.
+func (ring *Ring) GetRingCount() uint32 {
+	return uint32((ring.DPDK_ring.prod.tail - ring.DPDK_ring.cons.tail) & ring.DPDK_ring.mask)
 }
 
-// Receive - get packets and enqueue on a Queue.
-func Receive(port uint8, queue uint16, OUT *Queue, coreID uint8) {
+// Receive - get packets and enqueue on a Ring.
+func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
-	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_recv(C.uint8_t(port), C.uint16_t(queue), OUT.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue uint16, IN *Queue, coreID uint8) {
+func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
-	if t > 0 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_send(C.uint8_t(port), C.uint16_t(queue), IN.ring.DPDK_ring, C.uint8_t(coreID))
+	C.yanff_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Queue) {
-	C.yanff_stop(IN.ring.DPDK_ring)
+func Stop(IN *Ring) {
+	C.yanff_stop(IN.DPDK_ring)
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -468,8 +460,8 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint) {
-	C.eal_init(argc, argv, C.uint32_t(burstSize))
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) {
+	C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
 
 	mbufNumberT = mbufNumber
 	mbufCacheSizeT = mbufCacheSize
@@ -481,7 +473,7 @@ func GetPortsNumber() int {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) {
+func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) error {
 	addr := make([]byte, C.ETHER_ADDR_LEN)
 	var mempool *C.struct_rte_mempool
 	if receiveQueuesNumber != 0 {
@@ -492,10 +484,12 @@ func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16,
 	}
 	if C.port_init(C.uint8_t(port), C.uint16_t(receiveQueuesNumber), C.uint16_t(sendQueuesNumber),
 		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
-		common.LogError(common.Initialization, "Cannot init port ", port, "!")
+		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
+		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
 	t := hex.Dump(addr)
 	common.LogDebug(common.Initialization, "Port", port, "MAC address:", t[10:27])
+	return nil
 }
 
 // CreateMempool creates and returns a new memory pool.
@@ -517,12 +511,22 @@ func SetAffinity(coreID uint8) {
 	syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
 }
 
-// AllocateMbufs allocates a bulk of mbufs.
-func AllocateMbufs(mb []uintptr, mempool *Mempool) {
-	err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(len(mb)))
-	if err != 0 {
-		common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf")
+// AllocateMbufs allocates n mbufs.
+func AllocateMbufs(mb []uintptr, mempool *Mempool, n uint) error {
+	if err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(&mb[0])), C.unsigned(n)); err != 0 {
+		msg := common.LogError(common.Debug, "AllocateMbufs cannot allocate mbuf, dpdk returned: ", err)
+		return common.WrapWithNFError(nil, msg, common.AllocMbufErr)
 	}
+	return nil
+}
+
+// AllocateMbuf allocates one mbuf.
+func AllocateMbuf(mb *uintptr, mempool *Mempool) error {
+	if err := C.allocateMbufs((*C.struct_rte_mempool)(mempool), (**C.struct_rte_mbuf)(unsafe.Pointer(mb)), 1); err != 0 {
+		msg := common.LogError(common.Debug, "AllocateMbuf cannot allocate mbuf, dpdk returned: ", err)
+		return common.WrapWithNFError(nil, msg, common.AllocMbufErr)
+	}
+	return nil
 }
 
 // WriteDataToMbuf copies data to mbuf.
@@ -565,4 +569,11 @@ func ReportMempoolsState() {
 			common.LogDrop(common.Debug, "Mempool N", i, "has less than 10% free space. This can lead to dropping packets while receive.")
 		}
 	}
+}
+
+// CreateKni creates a KNI device
+func CreateKni(port uint8, core uint8, name string) {
+	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
+	usedMempools = append(usedMempools, mempool)
+	C.create_kni(C.uint8_t(port), C.uint8_t(core), C.CString(name), mempool)
 }

@@ -17,7 +17,7 @@ var dstMac0 [common.EtherAddrLen]uint8
 var srcMac0 [common.EtherAddrLen]uint8
 var dstMac1 [common.EtherAddrLen]uint8
 var srcMac1 [common.EtherAddrLen]uint8
-var modifyPacket = []interface{}{modifyPacket0, modifyPacket1}
+var modifyPacket = []func(pkt *packet.Packet, ctx flow.UserContext){modifyPacket0, modifyPacket1}
 var direct = "direct"
 
 // readConfig function reads and parses config file
@@ -62,7 +62,7 @@ func initCommonState() {
 		target = &direct
 	}
 
-	// Get destination MAC addressess for port 0 and 1
+	// Get destination MAC addresses for port 0 and 1
 	if hw, err := net.ParseMAC(config[*target][0]); err == nil {
 		copy(dstMac0[:], hw)
 	} else {
