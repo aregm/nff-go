@@ -6,24 +6,17 @@ package packet
 
 import (
 	"encoding/hex"
-	"log"
 	"testing"
-
-	"github.com/intel-go/yanff/low"
 )
 
 func init() {
-	mempool = GetMempoolForTest()
+	tInitDPDK()
 }
 
 func TestAllMpls(t *testing.T) {
 	// From pktgen
 	buf, _ := hex.DecodeString("6805ca3331386805ca3332688847fffffb394500002a6bf500000406c886c0a80001c0a8010104d2162e123456781234569050102000f0dd00003031")
-	mb := make([]uintptr, 1)
-	if err := low.AllocateMbufs(mb, mempool, 1); err != nil {
-		log.Fatal(err)
-	}
-	current := ExtractPacket(mb[0])
+	current := getPacket()
 	GeneratePacketFromByte(current, buf)
 
 	m := current.GetMPLSNoCheck()

@@ -113,7 +113,7 @@ func TestReadPcapRecHdr(t *testing.T) {
 
 func TestReadPcapOnePacket(t *testing.T) {
 	wantPkt := getIPv6ICMPTestPacket()
-	pkt := GetPacket()
+	pkt := getPacket()
 
 	srcBytes := wantPkt.GetRawPacketBytes()
 	srcBuffer := bytes.NewBuffer(append(recHdrBuffer, srcBytes...))

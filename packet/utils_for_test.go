@@ -11,38 +11,23 @@ import (
 	"github.com/intel-go/yanff/low"
 )
 
-// testMempool is common for all tests
-var testMempool *low.Mempool
+// isInit is common for all tests
+var isInit bool
 
-const (
-	payloadSize = 100
-)
+const payloadSize = 100
 
-func init() {
-	if testMempool != nil {
-		GetMempoolForTest()
-	}
-}
-
-// GetMempoolForTest initialize DPDK and testMempool.
-// Calling this function guarantee initialization is done once during all tests in package.
-func GetMempoolForTest() *low.Mempool {
-	if testMempool == nil {
+func tInitDPDK() {
+	if isInit != true {
 		argc, argv := low.InitDPDKArguments([]string{})
 		// burstSize=32, mbufNumber=8191, mbufCacheSize=250
 		low.InitDPDK(argc, argv, 32, 8191, 250, 0)
-		testMempool = low.CreateMempool()
+		nonPerfMempool = low.CreateMempool()
+		isInit = true
 	}
-	return testMempool
 }
 
 func getIPv4TCPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv4TCPPacket(pkt, payloadSize)
 
 	initEtherAddrs(pkt)
@@ -53,12 +38,7 @@ func getIPv4TCPTestPacket() *Packet {
 }
 
 func getIPv4UDPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv4UDPPacket(pkt, payloadSize)
 
 	initEtherAddrs(pkt)
@@ -69,12 +49,7 @@ func getIPv4UDPTestPacket() *Packet {
 }
 
 func getIPv4ICMPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv4ICMPPacket(pkt, payloadSize)
 
 	initEtherAddrs(pkt)
@@ -84,12 +59,7 @@ func getIPv4ICMPTestPacket() *Packet {
 }
 
 func getIPv6TCPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv6TCPPacket(pkt, payloadSize)
 
 	initEtherAddrs(pkt)
@@ -100,12 +70,7 @@ func getIPv6TCPTestPacket() *Packet {
 }
 
 func getIPv6UDPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv6UDPPacket(pkt, payloadSize)
 
 	initEtherAddrs(pkt)
@@ -114,23 +79,8 @@ func getIPv6UDPTestPacket() *Packet {
 	return pkt
 }
 
-func GetPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
-	return pkt
-}
-
 func getIPv6ICMPTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 	InitEmptyIPv6ICMPPacket(pkt, payloadSize)
 	initEtherAddrs(pkt)
 	initIPv6Addrs(pkt)
@@ -139,12 +89,7 @@ func getIPv6ICMPTestPacket() *Packet {
 }
 
 func getARPRequestTestPacket() *Packet {
-	mb := make([]uintptr, 1)
-	err := low.AllocateMbufs(mb, testMempool, 1)
-	if err != nil {
-		log.Fatal(err)
-	}
-	pkt := ExtractPacket(mb[0])
+	pkt := getPacket()
 
 	sha := [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
 	spa := binary.LittleEndian.Uint32(net.ParseIP("127.0.0.1").To4())
@@ -174,4 +119,12 @@ func initPorts(pkt *Packet) {
 	l4 := (*UDPHdr)(pkt.L4)
 	l4.SrcPort = SwapBytesUint16(1234)
 	l4.DstPort = SwapBytesUint16(5678)
+}
+
+func getPacket() *Packet {
+	pkt, err := NewPacket()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return pkt
 }
