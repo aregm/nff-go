@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -19,6 +20,16 @@ var dstMac1 [common.EtherAddrLen]uint8
 var srcMac1 [common.EtherAddrLen]uint8
 var modifyPacket = []func(pkt *packet.Packet, ctx flow.UserContext){modifyPacket0, modifyPacket1}
 var direct = "direct"
+
+const flowN = 3
+
+// checkFatal is an error handling function
+func checkFatal(err error) {
+	if err != nil {
+		fmt.Printf("checkfail: %+v\n", err)
+		os.Exit(1)
+	}
+}
 
 // readConfig function reads and parses config file
 func readConfig(fileName string) error {
@@ -43,7 +54,7 @@ func printMAC(prompt string, mac [common.EtherAddrLen]uint8) {
 func initCommonState() {
 	// Parse arguments
 	configFile := flag.String("config", "config.json", "Specify config file name")
-	target := flag.String("target", "dcomp01", "Target host name from config file")
+	target := flag.String("target", "direct", "Target host name from config file or \"direct\" reserved word")
 	flag.Parse()
 
 	// Get source MAC addresses for port 0 and 1
@@ -56,10 +67,6 @@ func initCommonState() {
 	err := readConfig(*configFile)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if *target == "" {
-		target = &direct
 	}
 
 	// Get destination MAC addresses for port 0 and 1

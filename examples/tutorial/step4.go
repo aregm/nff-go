@@ -1,36 +1,24 @@
 package main
 
-import (
-	"fmt"
-	"os"
+import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/yanff/packet"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
-)
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 func main() {
 	config := flow.Config{}
-	CheckFatal(flow.SystemInit(&config))
+	checkFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
-	firstFlow, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+	firstFlow, err := flow.SetReceiver(0)
+	checkFatal(err)
 	secondFlow, err := flow.SetSeparator(firstFlow, mySeparator, nil)
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
-	CheckFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
-	CheckFatal(flow.SetSender(firstFlow, uint8(0)))
-	CheckFatal(flow.SetSender(secondFlow, uint8(1)))
+	checkFatal(err)
+	checkFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	checkFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
+	checkFatal(flow.SetSender(firstFlow, 0))
+	checkFatal(flow.SetSender(secondFlow, 1))
 
-	CheckFatal(flow.SystemStart())
+	checkFatal(flow.SystemStart())
 }
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {

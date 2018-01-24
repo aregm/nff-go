@@ -1,71 +1,57 @@
 package main
 
-import (
-	"fmt"
-	"os"
-	"time"
+import "sync/atomic"
+import "time"
+import "unsafe"
+import "github.com/intel-go/yanff/common"
+import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/yanff/packet"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
-)
-
-var (
-	l3Rules *packet.L3Rules
-)
-
-const flowN = 3
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
+var rulesp unsafe.Pointer
 
 func main() {
-	var err error
 	config := flow.Config{}
-	CheckFatal(flow.SystemInit(&config))
+	checkFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
-	l3Rules, err = packet.GetL3ACLFromORIG("rules2.conf")
-	CheckFatal(err)
+	l3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
+	checkFatal(err)
+	rulesp = unsafe.Pointer(&l3Rules)
 	go updateSeparateRules()
-	firstFlow, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+
+	firstFlow, err := flow.SetReceiver(0)
+	checkFatal(err)
 	outputFlows, err := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
-	CheckFatal(err)
-	CheckFatal(flow.SetStopper(outputFlows[0]))
-	CheckFatal(flow.SetHandler(outputFlows[1], myHandler, nil))
-	for i := 1; i < flowN; i++ {
-		CheckFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
-		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
+	checkFatal(err)
+	checkFatal(flow.SetStopper(outputFlows[0]))
+	checkFatal(flow.SetHandler(outputFlows[1], myHandler, nil))
+	for i := uint8(1); i < flowN; i++ {
+		checkFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
+		checkFatal(flow.SetSender(outputFlows[i], i-1))
 	}
-	CheckFatal(flow.SystemStart())
+	checkFatal(flow.SystemStart())
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
-	localL3Rules := l3Rules
+	localL3Rules := (*packet.L3Rules)(atomic.LoadPointer(&rulesp))
 	return cur.L3ACLPort(localL3Rules)
 }
 
 func myHandler(cur *packet.Packet, ctx flow.UserContext) {
 	cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
 	cur.ParseL3()
-	cur.GetIPv4().SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
-	cur.GetIPv4().DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
-	cur.GetIPv4().VersionIhl = 0x45
-	cur.GetIPv4().NextProtoID = 0x04
+	cur.GetIPv4NoCheck().SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
+	cur.GetIPv4NoCheck().DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
+	cur.GetIPv4NoCheck().VersionIhl = 0x45
+	cur.GetIPv4NoCheck().NextProtoID = 0x04
 }
 
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		var err error
-		l3Rules, err = packet.GetL3ACLFromORIG("rules2.conf")
-		CheckFatal(err)
+		locall3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
+		checkFatal(err)
+		atomic.StorePointer(&rulesp, unsafe.Pointer(locall3Rules))
 	}
 }
