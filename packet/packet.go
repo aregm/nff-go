@@ -836,3 +836,60 @@ func (p *Packet) SendPacket(port uint8) bool {
 func SetNonPerfMempool(m *low.Mempool) {
 	nonPerfMempool = m
 }
+
+type LPM struct {
+	tbl24 *([MaxLength]uint32)
+	tbl8  *([MaxLength]uint32)
+	lpm   unsafe.Pointer //C.struct_rte_lpm
+}
+
+// CreateLPM creates longest prefix match structure with given name at given socket
+// maxRules - maximum number of LPM rules inside table, numberTbl8 - maximum number
+// of rules with mask length more than 24 bits
+// LPM is stored in C management memory - no garbage collectors there. You should use
+// Free function after working with it.
+func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32) *LPM {
+	lpm := new(LPM)
+	lpm.lpm = low.CreateLPM(name, socket, maxRules, numberTbl8, unsafe.Pointer(&lpm.tbl24), unsafe.Pointer(&lpm.tbl8))
+	return lpm
+}
+
+// Lookup looks for given ip inside LPM table. If ip was
+// matched with LPM rule true is returned and nextHop contains
+// next hop identifier for this rule. Else false is returned.
+// Heavily based on DPDK rte_lpm_lookup with constants from there
+// No error checking (lpm == NULL or nextHop == NULL) due to performance
+// User should check it manually
+func (lpm *LPM) Lookup(ip uint32, nextHop *uint32) bool {
+	tbl24_index := ip >> 8
+	tbl_entry := (*lpm.tbl24)[tbl24_index] // Copy tbl24 entry
+
+	if tbl_entry&low.RteLpmValidExtEntryBitmask == low.RteLpmValidExtEntryBitmask {
+		// Copy tbl8 entry (only if needed)
+		tbl8_index := (ip & 0x000000FF) + ((tbl_entry & 0x00FFFFFF) * low.RteLpmTbl8GroupNumEntries)
+		tbl_entry = (*lpm.tbl8)[tbl8_index]
+	}
+
+	*nextHop = tbl_entry & 0x00FFFFFF
+	if tbl_entry&low.RteLpmLookupSuccess != 0 {
+		return true
+	}
+	return false
+}
+
+// Add adds longest prefix match rule with specified ip, depth and nextHop
+// inside LPM table. Returns 0 if success and negative value otherwise
+func (lpm *LPM) Add(ip uint32, depth uint8, nextHop uint32) int {
+	return low.AddLPMRule(lpm.lpm, ip, depth, nextHop)
+}
+
+// Delete removes longest prefix match rule with diven ip and depth from
+// LPM table. Returns 0 if success and negative value otherwise
+func (lpm *LPM) Delete(ip uint32, depth uint8) int {
+	return low.DeleteLPMRule(lpm.lpm, ip, depth)
+}
+
+// Free frees LPM C management memory
+func (lpm *LPM) Free() {
+	low.FreeLPM(lpm.lpm)
+}
