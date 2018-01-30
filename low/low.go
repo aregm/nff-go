@@ -11,7 +11,6 @@ import "C"
 
 import (
 	"encoding/hex"
-	"math"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -210,6 +209,13 @@ const (
 	RtePtypeL3Ipv6  = C.RTE_PTYPE_L3_IPV6
 	RtePtypeL4Tcp   = C.RTE_PTYPE_L4_TCP
 	RtePtypeL4Udp   = C.RTE_PTYPE_L4_UDP
+)
+
+// These constants are used by packet package for longest prefix match lookup
+const (
+	RteLpmValidExtEntryBitmask = C.RTE_LPM_VALID_EXT_ENTRY_BITMASK
+	RteLpmTbl8GroupNumEntries  = C.RTE_LPM_TBL8_GROUP_NUM_ENTRIES
+	RteLpmLookupSuccess        = C.RTE_LPM_LOOKUP_SUCCESS
 )
 
 // CreateRing creates ring with given name and count.
@@ -532,7 +538,7 @@ func AllocateMbuf(mb *uintptr, mempool *Mempool) error {
 // WriteDataToMbuf copies data to mbuf.
 func WriteDataToMbuf(mb *Mbuf, data []byte) {
 	d := unsafe.Pointer(GetPacketDataStartPointer(mb))
-	slice := (*[math.MaxInt32]byte)(d)[:len(data)] // copy requires slice
+	slice := (*[common.MaxLength]byte)(d)[:len(data)] // copy requires slice
 	//TODO need to investigate maybe we need to use C function C.rte_memcpy here
 	copy(slice, data)
 }
@@ -576,4 +582,31 @@ func CreateKni(port uint8, core uint8, name string) {
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempool)
 	C.create_kni(C.uint8_t(port), C.uint8_t(core), C.CString(name), mempool)
+}
+
+// CreateLPM creates LPM table
+// We can't reuse any structures like rte_lpm or rte_lpm_tbl_entry due to
+// CGO problems with bitfields (uint24 compile time error).
+// We we pass pointers via "unsafe.Pointer" and "void*"
+// C function will return pointers to correct rte_lpm fields to tbl24 and tbl8,
+// so we shouldn't worry about rte_lpm changings. However we use indexing
+// while lookup, so we will need to check our sizes if DPDK changes rte_lpm_tbl_entry struct size
+func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32, tbl24 unsafe.Pointer, tbl8 unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.lpm_create(C.CString(name), C.int(socket), C.uint32_t(maxRules), C.uint32_t(numberTbl8),
+		(**[1]C.uint32_t)(tbl24), (**[1]C.uint32_t)(tbl8)))
+}
+
+// AddLPMRule adds one rule to LPM table
+func AddLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8, nextHop uint32) int {
+	return int(C.lpm_add(lpm, C.uint32_t(ip), C.uint8_t(depth), C.uint32_t(nextHop)))
+}
+
+// DeleteLPMRule removes one rule from LPM table
+func DeleteLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8) int {
+	return int(C.lpm_delete(lpm, C.uint32_t(ip), C.uint8_t(depth)))
+}
+
+// FreeLPM frees lpm structure
+func FreeLPM(lpm unsafe.Pointer) {
+	C.lpm_free(lpm)
 }

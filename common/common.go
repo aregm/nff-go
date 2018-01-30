@@ -10,12 +10,16 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"runtime"
 	"strconv"
 
 	"github.com/pkg/errors"
 )
+
+// Max array length for type conversions
+const MaxLength = math.MaxInt32
 
 // Length of addresses.
 const (

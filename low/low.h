@@ -16,6 +16,7 @@
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
 #include <rte_kni.h>
+#include <rte_lpm.h>
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
@@ -462,4 +463,27 @@ yanff_ring_create(const char *name, unsigned count, int socket_id, unsigned flag
         r->internal_DPDK_ring = &(r->DPDK_ring)[1];
         r->offset = sizeof(void*);
         return r;
+}
+
+void *
+lpm_create(const char *name, int socket_id, uint32_t maxRules, uint32_t numberTbl8, uint32_t (**tbl24)[1], uint32_t (**tbl8)[1]) {
+	struct rte_lpm_config config;
+	config.max_rules = maxRules;
+	config.number_tbl8s = numberTbl8;
+	struct rte_lpm *lpm = rte_lpm_create(name, socket_id, &config);
+	*tbl24 = (uint32_t(*)[1])lpm->tbl24;
+	*tbl8 = (uint32_t(*)[1])lpm->tbl8;
+	return (void*)lpm;
+}
+
+int lpm_add(void *lpm, uint32_t ip, uint8_t depth, uint32_t next_hop) {
+	return rte_lpm_add((struct rte_lpm*)lpm, ip, depth, next_hop);
+}
+
+int lpm_delete(void *lpm, uint32_t ip, uint8_t depth) {
+	return rte_lpm_delete((struct rte_lpm *)lpm, ip, depth);
+}
+
+void lpm_free(void *lpm) {
+	rte_lpm_free((struct rte_lpm *)lpm);
 }
