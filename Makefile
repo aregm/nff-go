@@ -21,6 +21,7 @@ perf_testing:
 .PHONY: testing $(TESTING_TARGETS)
 .NOTPARALLEL: testing $(TESTING_TARGETS)
 testing $(TESTING_TARGETS)
+
 $(TESTING_TARGETS):
 	$(MAKE) -C $@ testing
 
