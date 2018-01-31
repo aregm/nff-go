@@ -156,7 +156,6 @@ func NewScheduler(cpus []uint, schedulerOff bool, schedulerOffRemove bool,
 
 // SystemStart starts whole system. Is used inside flow package
 func (scheduler *Scheduler) SystemStart() (err error) {
-	//msg := common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
 	err = common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
 	index := scheduler.getCoreIndex()
 	if index == -1 {
@@ -164,7 +163,9 @@ func (scheduler *Scheduler) SystemStart() (err error) {
 	}
 	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
-	low.SetAffinity(uint8(core))
+	if err := low.SetAffinity(uint8(core)); err != nil {
+		return common.WrapWithNFError(err, "cannot set affinity for scheduler thread", common.SetAffinityErr)
+	}
 	if scheduler.stopDedicatedCore {
 		index = scheduler.getCoreIndex()
 		if index == -1 {
@@ -176,7 +177,10 @@ func (scheduler *Scheduler) SystemStart() (err error) {
 		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
 	}
 	go func() {
-		low.SetAffinity(uint8(core))
+		err := low.SetAffinity(uint8(core))
+		if err != nil {
+			common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
+		}
 		low.Stop(scheduler.StopRing)
 	}()
 	for i := range scheduler.UnClonable {
@@ -211,14 +215,16 @@ func (scheduler *Scheduler) SystemStart() (err error) {
 func (scheduler *Scheduler) startClonable(ff *FlowFunction) error {
 	index := scheduler.getCoreIndex()
 	if index == -1 {
-		//msg := common.LogError(common.Initialization, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.")
 		return common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
 	}
 	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
 	go func() {
 		ff.channel = make(chan int)
-		low.SetAffinity(uint8(core))
+		err := low.SetAffinity(uint8(core))
+		if err != nil {
+			common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
+		}
 		ff.cloneNumber = 0
 		if ff.context != nil {
 			ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
@@ -359,7 +365,10 @@ func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 	ff.clone = append(ff.clone, cp)
 	ff.cloneNumber++
 	go func() {
-		low.SetAffinity(uint8(core))
+		err := low.SetAffinity(uint8(core))
+		if err != nil {
+			common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
+		}
 		if ff.context != nil {
 			ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
 		} else {

@@ -354,11 +354,11 @@ type Config struct {
 // SystemInit is initialization of system. This function should be always called before graph construction.
 // Function can panic during execution.
 func SystemInit(args *Config) error {
-	CPUCoresNumber := uint(runtime.GOMAXPROCS(0))
+	CPUCoresNumber := uint(runtime.NumCPU())
 	var cpus []uint
 	var err error
 	if args.CPUList != "" {
-		if cpus, err = common.ParseCPUs(args.CPUList, CPUCoresNumber); err != nil {
+		if cpus, err = common.HandleCPUList(args.CPUList, CPUCoresNumber); err != nil {
 			return err
 		}
 	} else {
@@ -867,7 +867,9 @@ func generateOne(parameters interface{}, core uint8) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
-	low.SetAffinity(core)
+	if err := low.SetAffinity(core); err != nil {
+		common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
+	}
 
 	for {
 		tempPacket, err := packet.NewPacket()
@@ -1193,7 +1195,9 @@ func partition(parameters interface{}, core uint8) {
 	N := cp.N
 	M := cp.M
 
-	low.SetAffinity(core)
+	if err := low.SetAffinity(core); err != nil {
+		common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
+	}
 
 	bufsIn := make([]uintptr, burstSize)
 	bufsFirst := make([]uintptr, burstSize)

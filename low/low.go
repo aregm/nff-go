@@ -507,14 +507,18 @@ func CreateMempool() *Mempool {
 }
 
 // SetAffinity sets cpu affinity mask.
-func SetAffinity(coreID uint8) {
+func SetAffinity(coreID uint8) error {
 	// go tool trace shows that each proc executes different goroutine. However it is expected behavior
 	// (golang issue #20853) and each goroutine is locked to one OS thread.
 	runtime.LockOSThread()
 
 	var cpuset C.cpu_set_t
 	C.initCPUSet(C.uint8_t(coreID), &cpuset)
-	syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
+	_, _, errno := syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
+	if errno != 0 {
+		return common.WrapWithNFError(nil, errno.Error(), common.SetAffinityErr)
+	}
+	return nil
 }
 
 // AllocateMbufs allocates n mbufs.
