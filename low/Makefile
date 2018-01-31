@@ -6,10 +6,5 @@ PATH_TO_MK = ../mk
 include $(PATH_TO_MK)/include.mk
 
 .PHONY: testing
-testing: check-pktgen
+testing:
 	go test
-
-.PHONY: coverage
-coverage:
-	go test -cover -coverprofile=c.out
-	go tool cover -html=c.out -o packet_coverage.html

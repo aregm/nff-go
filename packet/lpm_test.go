@@ -8,10 +8,12 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func init() {
 	tInitDPDK()
+	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 var zero uint32 = 0

@@ -9,6 +9,7 @@ include $(PATH_TO_MK)/include.mk
 testing:
 	go test
 
+.PHONY: coverage
 coverage:
 	go test -cover -coverprofile=c.out
 	go tool cover -html=c.out -o common_coverage.html
