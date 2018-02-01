@@ -32,7 +32,7 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.StringVar(&cores, "cores", "0-15", "Specifies CPU cores to be used by YANFF library")
 
-	// Initialize YANFF library at requested cores.
+	// Initialize YANFF library
 	config := flow.Config{
 		CPUList: cores,
 	}

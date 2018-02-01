@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os/user"
 	"regexp"
 	"strconv"
 	"time"
@@ -36,8 +37,14 @@ var (
 	TestFailedRegexp = regexp.MustCompile(`^TEST FAILED$`)
 	TestCoresRegexp  = regexp.MustCompile(`^DEBUG: System is using (\d+) cores now\. (\d+) cores are left available\.$`)
 
-	DeleteContainersOnExit = true
+	NoDeleteContainersOnExit = false
+	username                 string
 )
+
+func init() {
+	u, _ := user.Current()
+	username = u.Username
+}
 
 // Measurement has measured by benchmark values.
 type Measurement struct {
@@ -213,7 +220,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	connectSpec := app.config.HostName + ":" + strconv.Itoa(app.dockerConfig.PktgenPort)
+	connectSpec := app.config.hp.host + ":" + strconv.Itoa(app.dockerConfig.PktgenPort)
 	for {
 		connection, err = net.Dial("tcp", connectSpec)
 
@@ -317,7 +324,7 @@ func (app *RunningApp) InitTest(logger *Logger, index int, config *AppConfig, dc
 func (app *RunningApp) startTest() error {
 	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
 
-	cl, err := client.NewClient("tcp://"+app.config.HostName+":"+strconv.Itoa(app.dockerConfig.DockerPort),
+	cl, err := client.NewClient("tcp://"+app.config.hp.host+":"+strconv.Itoa(app.config.hp.port),
 		app.dockerConfig.DockerVersion, nil, defaultHeaders)
 	app.Logger.LogDebug("Created client for", app, ", client =", cl, ", err =", err)
 
@@ -341,7 +348,7 @@ func (app *RunningApp) startTest() error {
 		// Same as --interactive switch
 		OpenStdin: true,
 		Cmd:       app.config.CommandLine,
-		Image:     app.config.ImageName,
+		Image:     username + "/" + app.config.ImageName,
 	}
 
 	hostConfig := container.HostConfig{
@@ -422,7 +429,7 @@ func killRunningAppAndRemoveData(app *RunningApp) {
 		app.Logger.LogErrorsIfNotNil(err, "Error while killing container", &app)
 	}
 
-	if DeleteContainersOnExit && (app.Status == TestInitialized || app.Status == TestRunning) {
+	if !NoDeleteContainersOnExit && (app.Status == TestInitialized || app.Status == TestRunning) {
 		app.Logger.LogDebug("Trying to remove container for app", app)
 
 		ctx, cancel := context.WithTimeout(context.Background(), app.dockerConfig.RequestTimeout)

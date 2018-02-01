@@ -65,10 +65,10 @@ var (
 
 	outport1 uint
 	outport2 uint
-	inport1 uint
-	inport2 uint
+	inport1  uint
+	inport2  uint
 
-	fixMACAddrs func(*packet.Packet, flow.UserContext)
+	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
@@ -102,14 +102,14 @@ func executeTest(configFile, target string, testScenario uint) {
 	if testScenario > 3 || testScenario < 0 {
 		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
-	// Init YANFF system at 16 available cores
+	// Init YANFF system
 	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
-	
+
 	if testScenario == 2 {
 		// Receive packets from 0 port
 		flow1, err := flow.SetReceiver(uint8(inport1))

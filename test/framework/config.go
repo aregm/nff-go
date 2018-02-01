@@ -6,10 +6,27 @@ package test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
+
+type hostPort struct {
+	host string
+	port int
+}
+
+// HostsList is a slice of host:port pairs that are used to replace
+// values read from JSON config file.
+type HostsList []hostPort
+
+func (hl *HostsList) String() string {
+	return fmt.Sprint(*hl)
+}
 
 // BenchmarkConfig struct has settings controlling benchmark
 // parameters, usually for tests with type TestTypeBenchmark.
@@ -40,6 +57,9 @@ type AppConfig struct {
 	// Specifies an array of application command line arguments. First
 	// argument is application executable.
 	CommandLine []string `json:"exec-cmd"`
+	// Host:port pair after initial config processing. This is the
+	// effectively used address of docker server.
+	hp hostPort
 }
 
 func (app *AppConfig) String() string {
@@ -105,7 +125,7 @@ type TestsuiteConfig struct {
 }
 
 // ReadConfig function reads and parses config file.
-func ReadConfig(fileName string) (*TestsuiteConfig, error) {
+func ReadConfig(fileName string, hl HostsList) (*TestsuiteConfig, error) {
 	var config TestsuiteConfig
 
 	file, err := os.Open(fileName)
@@ -119,5 +139,40 @@ func ReadConfig(fileName string) (*TestsuiteConfig, error) {
 		return nil, err
 	}
 
+	// Correct hostnames in test application configurations
+	for iii := range config.Tests {
+		for jjj := range config.Tests[iii].Apps {
+			if jjj < len(hl) {
+				config.Tests[iii].Apps[jjj].hp = hl[jjj]
+			} else {
+				config.Tests[iii].Apps[jjj].hp.host = config.Tests[iii].Apps[jjj].HostName
+				config.Tests[iii].Apps[jjj].hp.port = config.Config.DockerPort
+			}
+		}
+	}
+
 	return &config, nil
+}
+
+func (hl *HostsList) Set(value string) error {
+	list := strings.Split(value, ",")
+	if len(list) == 0 {
+		return errors.New("Bad format of hosts list")
+	}
+	for _, e := range list {
+		host, portStr, err := net.SplitHostPort(e)
+		if err != nil {
+			return err
+		}
+		port, err := strconv.ParseInt(portStr, 10, 32)
+		if err != nil {
+			return err
+		}
+
+		*hl = append(*hl, hostPort{
+			host: host,
+			port: int(port),
+		})
+	}
+	return nil
 }

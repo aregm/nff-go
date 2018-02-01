@@ -11,7 +11,8 @@ DPDK_DIR = dpdk-$(DPDK_VERSION)
 export RTE_SDK = $(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
 export RTE_TARGET = x86_64-native-linuxapp-gcc
 
-# Configure flags for native code
+# Configure flags for native code. Disable FSGSBASE and F16C to run in
+# VMs and Docker containers.
 CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-O3					\
 	-g					\
@@ -19,6 +20,8 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-m64					\
 	-pthread				\
 	-march=native				\
+	-mno-fsgsbase                           \
+	-mno-f16c                               \
 	-DRTE_MACHINE_CPUFLAG_SSE		\
 	-DRTE_MACHINE_CPUFLAG_SSE2		\
 	-DRTE_MACHINE_CPUFLAG_SSE3		\
@@ -27,11 +30,10 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_SSE4_2		\
 	-DRTE_MACHINE_CPUFLAG_PCLMULQDQ		\
 	-DRTE_MACHINE_CPUFLAG_RDRAND		\
-	-DRTE_MACHINE_CPUFLAG_FSGSBASE		\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
 	-include rte_config.h
 # DEBUG flags
-# export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -include rte_config.h
+# export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -mno-fsgsbase -mno-f16c -include rte_config.h
 
 HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
 ifdef HAVE_AVX2

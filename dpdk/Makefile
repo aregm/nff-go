@@ -15,8 +15,11 @@ include $(PATH_TO_MK)/leaf.mk
 # Main DPDK variables
 DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export WORKDIR=/workdir
+
+# Disable FSGSBASE and F16C to run in VMs and Docker containers.
+export EXTRA_CFLAGS=-mno-fsgsbase -mno-f16c
 # Uncomment to build DEBUG DPDK
-# EXTRA_CFLAGS = -g -O0
+# export EXTRA_CFLAGS=-mno-fsgsbase -mno-f16c -g -O0
 
 all: pktgen
 	cp $(PKTGEN_DIR)/Pktgen.lua .

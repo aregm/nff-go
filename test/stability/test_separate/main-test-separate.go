@@ -72,10 +72,10 @@ var (
 
 	outport1 uint
 	outport2 uint
-	inport1 uint
-	inport2 uint
+	inport1  uint
+	inport2  uint
 
-	fixMACAddrs func(*packet.Packet, flow.UserContext)
+	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 
@@ -111,7 +111,7 @@ func executeTest(configFile, target string, testScenario uint) {
 	if testScenario > 3 || testScenario < 0 {
 		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
-	// Init YANFF system at 16 available cores
+	// Init YANFF system
 	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(configFile, target)
@@ -119,7 +119,7 @@ func executeTest(configFile, target string, testScenario uint) {
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
-	
+
 	if testScenario != 1 {
 		var err error
 		// Get splitting rules from access control file.
@@ -168,7 +168,7 @@ func executeTest(configFile, target string, testScenario uint) {
 			CheckFatal(err)
 			CheckFatal(flow.SetHandler(flow1, fixPackets1, nil))
 			CheckFatal(flow.SetHandler(flow2, fixPackets2, nil))
-	
+
 		}
 		CheckFatal(flow.SetHandler(flow1, checkInputFlow1, nil))
 		CheckFatal(flow.SetHandler(flow2, checkInputFlow2, nil))

@@ -6,17 +6,21 @@ package test
 
 import (
 	"os"
+	"os/signal"
 	"strconv"
 	"time"
 )
 
-func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPipe chan TestcaseReportInfo) {
+func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
+	interrupt chan os.Signal) *TestcaseReportInfo {
 	test := config.Tests[index]
 
 	if test.TestTime < config.Config.RequestTimeout {
 		LogError("Test", test.Name, "duration", test.TestTime, "should be greater than docker http request timeout",
 			config.Config.RequestTimeout)
-		return
+		return &TestcaseReportInfo{
+			Status: TestInvalid,
+		}
 	}
 
 	LogInfo("/--- Running test", test.Name, "---")
@@ -78,10 +82,18 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 					killAllRunningAndRemoveData(apps)
 					apps[r.AppIndex].Status = r.AppStatus
 					if r.AppStatus == TestReportedPassed {
-						setAppStatusOnPassed(apps)
+						setRunningAppsStatusTo(TestReportedPassed, apps)
 					}
 					break endtest
 				}
+			case sig := <-interrupt:
+				// Interrupt signal from keyboard
+				LogDebug("Received signal", sig)
+				LogDebug("Test", test, "is interrupted", test.TestTime)
+				close(cancel)
+				killAllRunningAndRemoveData(apps)
+				setRunningAppsStatusTo(TestInterrupted, apps)
+				break endtest
 			case <-ticker:
 				LogDebug("Test", test, "timeout reached", test.TestTime)
 				// Send all apps signal to stop
@@ -145,7 +157,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string, reportPi
 		c.CoresFree /= number
 	}
 
-	reportPipe <- TestcaseReportInfo{
+	return &TestcaseReportInfo{
 		Status:        testStatus,
 		Benchdata:     b,
 		CoresStats:    c,
@@ -162,11 +174,32 @@ func (config *TestsuiteConfig) RunAllTests(logdir string) {
 		return
 	}
 
+	// Set up reaction to SIGINT (Ctrl-C)
+	sichan := make(chan os.Signal, 1)
+	signal.Notify(sichan, os.Interrupt)
+
+	var totalTests, passedTests, failedTests int
 	for iii := range config.Tests {
-		config.executeOneTest(iii, logdir, report.Pipe)
+		tr := config.executeOneTest(iii, logdir, sichan)
+		report.Pipe <- *tr
+
+		totalTests++
+		if tr.Status == TestReportedPassed {
+			passedTests++
+		} else {
+			failedTests++
+		}
+
+		if tr.Status == TestInterrupted {
+			break
+		}
 	}
 
 	report.FinishReport()
+
+	LogInfo("TESTS EXECUTED:", totalTests)
+	LogInfo("PASSED:", passedTests)
+	LogInfo("FAILED:", failedTests)
 }
 
 func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
@@ -178,19 +211,14 @@ func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
 	} else {
 		setStatus = TestTimedOut
 	}
-	for iii := range apps {
-		if apps[iii].Status == TestRunning {
-			apps[iii].Status = setStatus
-		}
-	}
+
+	setRunningAppsStatusTo(setStatus, apps)
 }
 
-func setAppStatusOnPassed(apps []RunningApp) {
+func setRunningAppsStatusTo(setStatus TestStatus, apps []RunningApp) {
 	// If it was a scenario, and some apps didn't finish, they are
-	// considered as timed out, for benchmarks it is normal
-	var setStatus TestStatus
-	setStatus = TestReportedPassed
-
+	// considered as timed out. In some cases it means that test
+	// passed, in some cases it means an error.
 	for iii := range apps {
 		if apps[iii].Status == TestRunning {
 			apps[iii].Status = setStatus
