@@ -13,7 +13,7 @@ import (
 func setIPv4UDPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
 	if calculateChecksum {
 		l3 := pkt.GetIPv4NoCheck()
-		l4 := pkt.GetUDPForIPv4NoCheck()
+		l4 := pkt.GetUDPNoCheck()
 		if hWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4UDPCksum(l3, l4))
@@ -33,7 +33,7 @@ func setIPv4UDPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool
 func setIPv4TCPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
 	if calculateChecksum {
 		l3 := pkt.GetIPv4NoCheck()
-		l4 := pkt.GetTCPForIPv4NoCheck()
+		l4 := pkt.GetTCPNoCheck()
 		if hWTXChecksum {
 			l3.HdrChecksum = 0
 			l4.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv4TCPCksum(l3))
@@ -63,7 +63,7 @@ func setIPv4ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum boo
 		} else {
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 		}
-		l4 := pkt.GetICMPForIPv4NoCheck()
+		l4 := pkt.GetICMPNoCheck()
 		l4.Cksum = 0
 		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4,
 			unsafe.Pointer(uintptr(unsafe.Pointer(l4))+common.ICMPLen)))
