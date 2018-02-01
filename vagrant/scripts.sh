@@ -43,19 +43,21 @@ natclient ()
 
 # Set up middle machine for NAT example. It initializes two first
 # network interfaces for YANFF bindports command and initializes
-# second interface pair for use with Linux NAT.
+# second interface pair for use with Linux NAT. In this setup enp0s16
+# is connected to server (public network) and enp0s9 is connected to
+# client (private network).
 natsetup ()
 {
     export YANFF_CARDS="00:08.0 00:0a.0"
-    sudo nmcli c add type ethernet ifname enp0s9 con-name enp0s9 ip4 192.168.26.1/24
-    sudo nmcli c add type ethernet ifname enp0s16 con-name enp0s16 ip4 192.168.24.1/24
+    sudo nmcli c add type ethernet ifname enp0s9 con-name enp0s9 ip4 192.168.24.1/24
+    sudo nmcli c add type ethernet ifname enp0s16 con-name enp0s16 ip4 192.168.26.1/24
     sudo nmcli c up enp0s9
     sudo nmcli c up enp0s16
 
     sudo sysctl -w net.ipv4.ip_forward=1
-    sudo iptables -t nat -A POSTROUTING -o enp0s9 -j MASQUERADE
-    sudo iptables -A FORWARD -i enp0s9 -o enp0s16 -m state --state RELATED,ESTABLISHED -j ACCEPT
-    sudo iptables -A FORWARD -i enp0s16 -o enp0s9 -j ACCEPT
+    sudo iptables -t nat -A POSTROUTING -o enp0s16 -j MASQUERADE
+    sudo iptables -A FORWARD -i enp0s16 -o enp0s9 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    sudo iptables -A FORWARD -i enp0s9 -o enp0s16 -j ACCEPT
 }
 
 # Set up server side machine for NAT example. It initializes two
