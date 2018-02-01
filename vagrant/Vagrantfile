@@ -44,7 +44,7 @@ echo . ~/scripts.sh >> .bashrc
 echo Downloading and building YANFF
 go get github.com/pkg/errors
 go get -d -v github.com/intel-go/yanff
-(cd \"$GOPATH\"/src/github.com/intel-go/yanff; git checkout develop; make)
+(cd \"$GOPATH\"/src/github.com/intel-go/yanff; git checkout develop; make -j4)
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
@@ -65,22 +65,22 @@ SHELL
     config.vm.define "yanff-#{i}" do |node|
       node.vm.hostname = "yanff-#{i}"
 
-      # Create inter-VM connections only for VMs inside of one VM group
-      if i + 1 < vm_total_number && (i + 1) % vm_group_size != 0
-        # Define forward inter-VM virtual network links
-        (1..vm_links_number).each do |j|
-          node.vm.network "private_network",
-                          auto_config: false,
-                          virtualbox__intnet: "link-#{user}-#{i + 1}-#{j}"
-        end
-      end
-
+      # Create inter-VM connections for VMs inside of one VM group
       if i % vm_group_size != 0
         # Define backward inter-VM virtual network links
         (1..vm_links_number).each do |j|
           node.vm.network "private_network",
                           auto_config: false,
                           virtualbox__intnet: "link-#{user}-#{i}-#{j}"
+        end
+      end
+
+      if i + 1 < vm_total_number && (i + 1) % vm_group_size != 0
+        # Define forward inter-VM virtual network links
+        (1..vm_links_number).each do |j|
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "link-#{user}-#{i + 1}-#{j}"
         end
       end
     end
