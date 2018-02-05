@@ -487,11 +487,11 @@ func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
-	packet.GetIPv4().NextProtoID = NoNextHeader
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = NoNextHeader
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4OLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -509,9 +509,9 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len)
 
 	packet.ParseL3()
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
-	packet.GetIPv6().Proto = NoNextHeader
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = NoNextHeader
 
 	return true
 }
@@ -545,15 +545,15 @@ func InitEmptyIPv4TCPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = TCPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = TCPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
 
 	packet.ParseL4ForIPv4()
-	packet.GetTCPForIPv4().DataOff = packet.GetTCPForIPv4().DataOff | 0x50 // TODO check
+	packet.GetTCPNoCheck().DataOff = packet.GetTCPNoCheck().DataOff | 0x50 // TODO check
 
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -574,15 +574,15 @@ func InitEmptyIPv4UDPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = UDPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = UDPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
 
 	packet.ParseL4ForIPv4()
-	packet.GetUDPForIPv4().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4UDPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -603,9 +603,9 @@ func InitEmptyIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = ICMPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = ICMPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
 	packet.ParseL4ForIPv4()
 	return true
 }
@@ -625,12 +625,12 @@ func InitEmptyIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + TCPMinLen)
 
 	packet.ParseL3()
-	packet.GetIPv6().Proto = TCPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = TCPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 
 	packet.ParseL4ForIPv6()
-	packet.GetTCPForIPv6().DataOff = packet.GetTCPForIPv6().DataOff | 0x50
+	packet.GetTCPNoCheck().DataOff = packet.GetTCPNoCheck().DataOff | 0x50
 
 	if hwtxchecksum {
 		low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
@@ -652,12 +652,12 @@ func InitEmptyIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + UDPLen)
 
 	packet.ParseL3()
-	packet.GetIPv6().Proto = UDPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = UDPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 
 	packet.ParseL4ForIPv6()
-	packet.GetUDPForIPv6().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
 	if hwtxchecksum {
 		low.SetTXIPv6UDPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
@@ -678,9 +678,9 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv6().Proto = ICMPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = ICMPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 	packet.ParseL4ForIPv6()
 	return true
 }
