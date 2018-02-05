@@ -276,8 +276,8 @@ func (packet *Packet) GetTCPForIPv4() *TCPHdr {
 	return nil
 }
 
-// GetTCPForIPv4NoCheck casts L4 pointer to TCPHdr type.
-func (packet *Packet) GetTCPForIPv4NoCheck() *TCPHdr {
+// GetTCPNoCheck casts L4 pointer to TCPHdr type.
+func (packet *Packet) GetTCPNoCheck() *TCPHdr {
 	return (*TCPHdr)(packet.L4)
 }
 
@@ -289,11 +289,6 @@ func (packet *Packet) GetTCPForIPv6() *TCPHdr {
 	return nil
 }
 
-// GetTCPForIPv6NoCheck casts L4 pointer to *TCPHdr type.
-func (packet *Packet) GetTCPForIPv6NoCheck() *TCPHdr {
-	return (*TCPHdr)(packet.L4)
-}
-
 // GetUDPForIPv4 ensures if L4 type is UDP and cast L4 pointer to *UDPHdr type.
 func (packet *Packet) GetUDPForIPv4() *UDPHdr {
 	if packet.GetIPv4NoCheck().NextProtoID == UDPNumber {
@@ -302,8 +297,8 @@ func (packet *Packet) GetUDPForIPv4() *UDPHdr {
 	return nil
 }
 
-// GetUDPForIPv4NoCheck casts L4 pointer to *UDPHdr type.
-func (packet *Packet) GetUDPForIPv4NoCheck() *UDPHdr {
+// GetUDPNoCheck casts L4 pointer to *UDPHdr type.
+func (packet *Packet) GetUDPNoCheck() *UDPHdr {
 	return (*UDPHdr)(packet.L4)
 }
 
@@ -315,11 +310,6 @@ func (packet *Packet) GetUDPForIPv6() *UDPHdr {
 	return nil
 }
 
-// GetUDPForIPv6NoCheck casts L4 pointer to *UDPHdr type.
-func (packet *Packet) GetUDPForIPv6NoCheck() *UDPHdr {
-	return (*UDPHdr)(packet.L4)
-}
-
 // GetICMPForIPv4 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv4 type.
 func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
@@ -329,8 +319,8 @@ func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
 	return nil
 }
 
-// GetICMPForIPv4NoCheck casts L4 pointer to *ICMPHdr type.
-func (packet *Packet) GetICMPForIPv4NoCheck() *ICMPHdr {
+// GetICMPNoCheck casts L4 pointer to *ICMPHdr type.
+func (packet *Packet) GetICMPNoCheck() *ICMPHdr {
 	return (*ICMPHdr)(packet.L4)
 }
 
@@ -341,11 +331,6 @@ func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
 		return (*ICMPHdr)(packet.L4)
 	}
 	return nil
-}
-
-// GetICMPForIPv6NoCheck casts L4 pointer to *ICMPHdr type.
-func (packet *Packet) GetICMPForIPv6NoCheck() *ICMPHdr {
-	return (*ICMPHdr)(packet.L4)
 }
 
 // ParseAllKnownL3 parses L3 field and returns pointers to parsed headers.
@@ -365,11 +350,11 @@ func (packet *Packet) ParseAllKnownL3() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
 func (packet *Packet) ParseAllKnownL4ForIPv4() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv4()
 	if packet.GetTCPForIPv4() != nil {
-		return packet.GetTCPForIPv4NoCheck(), nil, nil
+		return packet.GetTCPNoCheck(), nil, nil
 	} else if packet.GetUDPForIPv4() != nil {
-		return nil, packet.GetUDPForIPv4NoCheck(), nil
+		return nil, packet.GetUDPNoCheck(), nil
 	} else if packet.GetICMPForIPv4() != nil {
-		return nil, nil, packet.GetICMPForIPv4NoCheck()
+		return nil, nil, packet.GetICMPNoCheck()
 	}
 	return nil, nil, nil
 }
@@ -378,11 +363,11 @@ func (packet *Packet) ParseAllKnownL4ForIPv4() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 func (packet *Packet) ParseAllKnownL4ForIPv6() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv6()
 	if packet.GetTCPForIPv6() != nil {
-		return packet.GetTCPForIPv6NoCheck(), nil, nil
+		return packet.GetTCPNoCheck(), nil, nil
 	} else if packet.GetUDPForIPv6() != nil {
-		return nil, packet.GetUDPForIPv6NoCheck(), nil
+		return nil, packet.GetUDPNoCheck(), nil
 	} else if packet.GetICMPForIPv6() != nil {
-		return nil, nil, packet.GetICMPForIPv6NoCheck()
+		return nil, nil, packet.GetICMPNoCheck()
 	}
 	return nil, nil, nil
 }
