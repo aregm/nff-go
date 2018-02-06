@@ -4,9 +4,12 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test1
-EXECUTABLES = part1 part2
+EXECUTABLES = main-test-resend
 
 all:
 	cp ../../main/config.json .
+
+testing:
+	go test
 
 include $(PATH_TO_MK)/leaf.mk

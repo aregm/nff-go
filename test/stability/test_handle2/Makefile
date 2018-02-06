@@ -4,6 +4,9 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-handle2
-EXECUTABLES = test-handle2-part1 test-handle2-part2
+EXECUTABLES = main-test-handle2
+
+testing:
+	go test
 
 include $(PATH_TO_MK)/leaf.mk

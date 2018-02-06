@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -18,16 +19,20 @@ import (
 	"github.com/intel-go/yanff/test/stability/stabilityCommon"
 )
 
-// test-partition-part1: sends packets to 0 port, receives from 0 and 1 ports.
+// Test with testScenario=1:
+// sends packets to 0 port, receives from 0 and 1 ports.
 // This part of test generates empty packets and send to 0 port. For each packet sender
 // calculates IPv4 and UDP checksums and verify it on packet receive.
 // This part of test expects to get approximately 90% of packet on 0 port and ~10% packets on 1 port.
 // Test also calculates number of broken packets and prints it when
 // a predefined number of packets is received.
 //
-// test-partition-part2:
+// Test with testScenario=2:
 // This part of test receives packets on 0 port, use partition function to create second flow.
 // First 1000 received packets stay in this flow, next 100 go to new flow, and so on.
+//
+// Test with testScenario=0:
+// all these actions are made in one pipeline without actual send and receive.
 
 const (
 	// Test expects to receive ~90% of packets on 0 port and ~10% on 1 port
@@ -58,11 +63,14 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport uint
+	outport1 uint
+	outport2 uint
 	inport1 uint
 	inport2 uint
 
 	fixMACAddrs func(*packet.Packet, flow.UserContext)
+	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
+	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
 
 // CheckFatal is an error handling function
@@ -73,9 +81,12 @@ func CheckFatal(err error) {
 	}
 }
 func main() {
+	var testScenario uint
+	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
 	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
-	flag.UintVar(&outport, "outport", 0, "port for sender")
+	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
+	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
@@ -84,45 +95,93 @@ func main() {
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	flag.Parse()
 
-	// Init YANFF system at 16 available cores
-	config := flow.Config{
-		CPUList: "0-15",
+	executeTest(*configFile, *target, testScenario)
+}
+
+func executeTest(configFile, target string, testScenario uint) {
+	if testScenario > 3 || testScenario < 0 {
+		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
+	// Init YANFF system at 16 available cores
+	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
-	stabilityCommon.InitCommonState(*configFile, *target)
-	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
+	stabilityCommon.InitCommonState(configFile, target)
+	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
+	
+	if testScenario == 2 {
+		// Receive packets from 0 port
+		flow1, err := flow.SetReceiver(uint8(inport1))
+		CheckFatal(err)
+		flow2, err := flow.SetPartitioner(flow1, 1000, 100)
+		CheckFatal(err)
 
-	var m sync.Mutex
-	testDoneEvent = sync.NewCond(&m)
+		CheckFatal(flow.SetHandler(flow1, fixPackets1, nil))
+		CheckFatal(flow.SetHandler(flow2, fixPackets2, nil))
 
-	// Create output packet flow
-	outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
-	CheckFatal(err)
-	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
+		CheckFatal(flow.SetSender(flow1, uint8(outport1)))
+		CheckFatal(flow.SetSender(flow2, uint8(outport2)))
 
-	// Create receiving flows and set a checking function for it
-	inputFlow1, err := flow.SetReceiver(uint8(inport1))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(inputFlow1, checkInputFlow1, nil))
-
-	inputFlow2, err := flow.SetReceiver(uint8(inport2))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(inputFlow2, checkInputFlow2, nil))
-
-	CheckFatal(flow.SetStopper(inputFlow1))
-	CheckFatal(flow.SetStopper(inputFlow2))
-
-	// Start pipeline
-	go func() {
+		// Begin to process packets.
 		CheckFatal(flow.SystemStart())
-	}()
-	progStart = time.Now()
+	} else {
+		var m sync.Mutex
+		testDoneEvent = sync.NewCond(&m)
 
-	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
+		// Create output packet flow
+		outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
+		CheckFatal(err)
+		var flow1, flow2 *flow.Flow
+		if testScenario == 1 {
+			CheckFatal(flow.SetSender(outputFlow, uint8(outport1)))
+			// Create receiving flows and set a checking function for it
+			flow1, err = flow.SetReceiver(uint8(inport1))
+			CheckFatal(err)
+			flow2, err = flow.SetReceiver(uint8(inport2))
+			CheckFatal(err)
+		} else {
+			flow1 = outputFlow
+			flow2, err = flow.SetPartitioner(flow1, 1000, 100)
+			CheckFatal(flow.SetHandler(flow1, fixPackets1, nil))
+			CheckFatal(flow.SetHandler(flow2, fixPackets2, nil))
+			CheckFatal(err)
+		}
+		CheckFatal(flow.SetHandler(flow1, checkInputFlow1, nil))
+		CheckFatal(flow.SetHandler(flow2, checkInputFlow2, nil))
+		CheckFatal(flow.SetStopper(flow1))
+		CheckFatal(flow.SetStopper(flow2))
 
+		// Start pipeline
+		go func() {
+			CheckFatal(flow.SystemStart())
+		}()
+		progStart = time.Now()
+
+		// Wait for enough packets to arrive
+		testDoneEvent.L.Lock()
+		testDoneEvent.Wait()
+		testDoneEvent.L.Unlock()
+
+		composeStatistics()
+	}
+}
+
+func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	fixMACAddrs1(pkt, ctx)
+}
+
+func fixPackets2(pkt *packet.Packet, ctx flow.UserContext) {
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return
+	}
+	fixMACAddrs2(pkt, ctx)
+}
+
+func composeStatistics() {
 	// Compose statistics
 	recv1 := atomic.LoadUint64(&recvCount1)
 	recv2 := atomic.LoadUint64(&recvCount2)

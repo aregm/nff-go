@@ -4,6 +4,9 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-cksum
-EXECUTABLES = part1 part2
+EXECUTABLES = main-test-checksum
+
+testing:
+	go test
 
 include $(PATH_TO_MK)/leaf.mk

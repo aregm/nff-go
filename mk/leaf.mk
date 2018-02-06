@@ -50,7 +50,3 @@ cleanall: .check-deploy-env clean-images
 	-for host in $(YANFF_HOSTS); do \
 		docker -H tcp://$$host:$(DOCKER_PORT) rmi -f $(IMAGENAME); \
 	done
-
-testing:
-	echo This target is not defined for this subdirectory
-	exit 1
