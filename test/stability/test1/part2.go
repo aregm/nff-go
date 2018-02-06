@@ -36,8 +36,8 @@ func CheckFatal(err error) {
 func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver (0 or 1)")
 	flag.UintVar(&outport, "outport", 1, "port for sender (0 or 1)")
-	configFile := flag.String("config", "config.json", "Specify config file name")
-	target := flag.String("target", "nntsat01g4", "Target host name from config file")
+	configFile := flag.String("config", "", "Specify config file name")
+	target := flag.String("target", "", "Target host name from config file")
 	flag.Parse()
 
 	// Init YANFF system at 16 available cores.

@@ -35,8 +35,8 @@ func main() {
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
-	configFile := flag.String("config", "config.json", "Specify config file name")
-	target := flag.String("target", "nntsat01g4", "Target host name from config file")
+	configFile := flag.String("config", "", "Specify config file name")
+	target := flag.String("target", "", "Target host name from config file")
 	flag.Parse()
 
 	// Init YANFF system at requested number of cores.
