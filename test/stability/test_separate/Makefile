@@ -7,7 +7,7 @@ IMAGENAME = yanff-test-separate
 EXECUTABLES = main-test-separate
 
 all:
-	cp ../../main/config.json .
+	cp ../../framework/main/config.json .
 
 testing:
 	go test

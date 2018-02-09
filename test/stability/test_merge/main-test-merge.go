@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"errors"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -64,10 +64,10 @@ var (
 
 	outport1 uint
 	outport2 uint
-	inport1   uint
+	inport1  uint
 	inport2  uint
 
-	fixMACAddrs func(*packet.Packet, flow.UserContext)
+	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 )
@@ -101,6 +101,7 @@ func executeTest(configFile, target string, testScenario uint) {
 	if testScenario > 3 || testScenario < 0 {
 		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
+	// Init YANFF system
 	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(configFile, target)
@@ -120,7 +121,7 @@ func executeTest(configFile, target string, testScenario uint) {
 		CheckFatal(err)
 		CheckFatal(flow.SetHandler(outputFlow, fixPackets, nil))
 		CheckFatal(flow.SetSender(outputFlow, uint8(outport1)))
-		
+
 		// Begin to process packets.
 		CheckFatal(flow.SystemStart())
 	} else {

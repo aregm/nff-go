@@ -48,8 +48,8 @@ const (
 )
 
 var (
-	l3Rules  *packet.L3Rules
-	
+	l3Rules *packet.L3Rules
+
 	totalPackets uint64 = 10000000
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 16
@@ -79,15 +79,15 @@ var (
 
 	outport1 uint
 	outport2 uint
-	inport1 uint
-	inport2 uint
+	inport1  uint
+	inport2  uint
 
-	fixMACAddrs func(*packet.Packet, flow.UserContext)
+	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 
 	rulesString = "test-split.conf"
-	filename = &rulesString
+	filename    = &rulesString
 )
 
 // CheckFatal is an error handling function
@@ -120,7 +120,7 @@ func executeTest(configFile, target string, testScenario uint) {
 	if testScenario > 3 || testScenario < 0 {
 		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
-	// Init YANFF system at 20 available cores.
+	// Init YANFF system
 	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
 	stabilityCommon.InitCommonState(configFile, target)
@@ -137,22 +137,22 @@ func executeTest(configFile, target string, testScenario uint) {
 	if testScenario == 2 {
 		inputFlow, err := flow.SetReceiver(uint8(inport1))
 		CheckFatal(err)
-	
+
 		// Split packet flow based on ACL.
 		flowsNumber := 3
 		splittedFlows, err := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
 		CheckFatal(err)
-	
+
 		// "0" flow is used for dropping packets without sending them.
 		CheckFatal(flow.SetStopper(splittedFlows[0]))
-	
+
 		CheckFatal(flow.SetHandler(splittedFlows[1], fixPackets1, nil))
 		CheckFatal(flow.SetHandler(splittedFlows[2], fixPackets2, nil))
-	
+
 		// Send each flow to corresponding port. Send queues will be added automatically.
 		CheckFatal(flow.SetSender(splittedFlows[1], uint8(outport1)))
 		CheckFatal(flow.SetSender(splittedFlows[2], uint8(outport2)))
-	
+
 		// Begin to process packets.
 		CheckFatal(flow.SystemStart())
 	} else {
@@ -179,7 +179,7 @@ func executeTest(configFile, target string, testScenario uint) {
 			CheckFatal(flow.SetStopper(splittedFlows[0]))
 			flow1 = splittedFlows[1]
 			flow2 = splittedFlows[2]
-			
+
 			CheckFatal(flow.SetHandler(splittedFlows[1], fixPackets1, nil))
 			CheckFatal(flow.SetHandler(splittedFlows[2], fixPackets2, nil))
 		}

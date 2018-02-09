@@ -86,7 +86,6 @@ func CheckFatal(err error) {
 	}
 }
 
-
 func main() {
 	var testScenario uint
 	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")

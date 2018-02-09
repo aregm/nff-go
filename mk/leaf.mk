@@ -25,28 +25,39 @@ clean-default:
 clean: clean-default
 
 # Local docker targets
-.PHONY: images clean-images
+.PHONY: .check-images-env images clean-images
 
-images: Dockerfile .check-defined-IMAGENAME all
-	docker build -t $(IMAGENAME) .
+# Add user name to generated images unless it is yanff-base image
+# because yanff-base image name is hardcoded in Dockerfiles and cannot
+# be different for different users.
+ifeq ($(IMAGENAME),yanff-base)
+WORKIMAGENAME=$(IMAGENAME)
+else
+WORKIMAGENAME=$(USER)/$(IMAGENAME)
+endif
 
-clean-images: .check-defined-IMAGENAME clean
-	-docker rmi $(IMAGENAME)
+.check-images-env: .check-defined-IMAGENAME
+
+images: Dockerfile .check-images-env all
+	docker build -t $(WORKIMAGENAME) .
+
+clean-images: .check-images-env clean
+	-docker rmi $(WORKIMAGENAME)
 
 # Distributed docker targets
 .PHONY: .check-deploy-env deploy cleanall
 
-.check-deploy-env: .check-defined-YANFF_HOSTS .check-defined-DOCKER_PORT
+.check-deploy-env: .check-defined-YANFF_HOSTS
 
 deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
-	docker save $(IMAGENAME) > $(TMPNAME)
+	docker save $(WORKIMAGENAME) > $(TMPNAME)
 	for host in $(YANFF_HOSTS); do								\
-		if ! docker -H tcp://$$host:$(DOCKER_PORT) load < $(TMPNAME); then break; fi;	\
+		if ! docker -H tcp://$$host load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)
 
 cleanall: .check-deploy-env clean-images
 	-for host in $(YANFF_HOSTS); do \
-		docker -H tcp://$$host:$(DOCKER_PORT) rmi -f $(IMAGENAME); \
+		docker -H tcp://$$host rmi -f $(WORKIMAGENAME); \
 	done

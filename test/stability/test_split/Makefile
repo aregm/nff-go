@@ -7,7 +7,7 @@ IMAGENAME = yanff-test-split
 EXECUTABLES = main-test-split
 
 all:
-	cp ../../main/config.json .
+	cp ../../framework/main/config.json .
 
 testing:
 	go test

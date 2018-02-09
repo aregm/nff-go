@@ -23,6 +23,7 @@ const (
 	TestReportedPassed
 	TestReportedFailed
 	TestTimedOut
+	TestInterrupted
 )
 
 // AppType is a type of application.

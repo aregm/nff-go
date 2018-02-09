@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"errors"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
@@ -93,7 +93,7 @@ func executeTest(testScenario uint) {
 	if testScenario > 3 || testScenario < 0 {
 		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
-	// Init YANFF system at 16 available cores.
+	// Init YANFF system
 	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
 	if testScenario != 1 {

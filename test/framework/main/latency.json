@@ -58,7 +58,7 @@
                     ]
                 }
             ]
-        }, 
+        },
 		{
             "name": "latency-test-main",
             "test-time": 60000000000,

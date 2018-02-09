@@ -7,7 +7,7 @@ IMAGENAME = yanff-test-partition
 EXECUTABLES = main-test-partition
 
 all:
-	cp ../../main/config.json .
+	cp ../../framework/main/config.json .
 
 testing:
 	go test
