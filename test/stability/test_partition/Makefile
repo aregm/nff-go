@@ -4,9 +4,12 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-partition
-EXECUTABLES = test-partition-part1 test-partition-part2
+EXECUTABLES = main-test-partition
 
 all:
 	cp ../../main/config.json .
+
+testing:
+	go test
 
 include $(PATH_TO_MK)/leaf.mk

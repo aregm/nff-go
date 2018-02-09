@@ -4,9 +4,12 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = yanff-test-merge
-EXECUTABLES = test-merge-part1 test-merge-part2
+EXECUTABLES = main-test-merge
 
 all:
 	cp ../../main/config.json .
+
+testing:
+	go test
 
 include $(PATH_TO_MK)/leaf.mk

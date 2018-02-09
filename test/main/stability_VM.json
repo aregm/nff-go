@@ -23,7 +23,7 @@
                     "image-name": "yanff-test1",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./part1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./main-test-resend", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
                     ]
                 },
                 {
@@ -31,7 +31,7 @@
                     "image-name": "yanff-test1",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./part2", "-config=config.json", "-target=hostname1"
+                        "./main-test-resend", "-testScenario=2", "-config=config.json", "-target=hostname1"
                     ]
                 }
             ]
@@ -46,7 +46,7 @@
                     "image-name": "yanff-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-merge-part1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./main-test-merge", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
                     ]
                 },
                 {
@@ -54,7 +54,7 @@
                     "image-name": "yanff-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-merge-part2", "-config=config.json", "-target=hostname1"
+                        "./main-test-merge", "-testScenario=2", "-config=config.json", "-target=hostname1"
                     ]
                 }
             ]
@@ -69,7 +69,7 @@
                     "image-name": "yanff-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-split-part1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./main-test-split", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
                     ]
                 },
                 {
@@ -77,7 +77,7 @@
                     "image-name": "yanff-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-split-part2", "-config=config.json", "-target=hostname1"
+                        "./main-test-split", "-testScenario=2", "-config=config.json", "-target=hostname1"
                     ]
                 }
             ]
@@ -92,7 +92,7 @@
                     "image-name": "yanff-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-separate-part1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./main-test-separate", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
                     ]
                 },
                 {
@@ -100,7 +100,7 @@
                     "image-name": "yanff-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-separate-part2", "-config=config.json", "-target=hostname1"
+                        "./main-test-separate", "-testScenario=2", "-config=config.json", "-target=hostname1"
                     ]
                 }
             ]
@@ -115,7 +115,7 @@
                     "image-name": "yanff-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-partition-part1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./main-test-partition", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
                     ]
                 },
                 {
@@ -123,7 +123,7 @@
                     "image-name": "yanff-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./test-partition-part2", "-config=config.json", "-target=hostname1"
+                        "./main-test-partition", "-testScenario=2", "-config=config.json", "-target=hostname1"
                     ]
                 }
             ]

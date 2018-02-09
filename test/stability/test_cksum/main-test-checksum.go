@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -18,8 +19,26 @@ import (
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 
-	"github.com/intel-go/yanff/test/stability/test_cksum/testCommon"
+	"github.com/intel-go/yanff/test/stability/test_cksum/testCksumCommon"
 )
+
+// Test with flag testScenario=1:
+// generates packets on outport and receives
+// them on inport. The test records packet's index inside of the first field
+// of the packet and sets the second field to zero. It expects the
+// other half of the test to copy index from first part of the packet
+// to the second part. When packet is received, test routine compares
+// first and second halves and checks that they are equal. Test also
+// calculates sent/received ratio and prints it when a predefined
+// number of packets is received.
+//
+// Test with flag testScenario=2:
+// receives packets at inport,
+// copies index from first part of the packet to the second part
+// and sends to outport.
+//
+// Test with testScenario=0:
+// makes all it in one pipeline without actual send and receive.
 
 const (
 	ipv4  = 0
@@ -67,15 +86,10 @@ func CheckFatal(err error) {
 	}
 }
 
-// This part of test generates packets on port 0 and receives them on
-// port 1. The test records packet's index inside of the first field
-// of the packet and sets the second field to zero. It expects the
-// other half of the test to copy index from first part of the packet
-// to the second part. When packet is received, test routine compares
-// first and second halves and checks that they are equal. Test also
-// calculates sent/received ratio and prints it when a predefined
-// number of packets is received.
+
 func main() {
+	var testScenario uint
+	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
 	flag.BoolVar(&hwol, "hwol", false, "Use Hardware offloading for TX checksums calculation")
 	flag.UintVar(&inport, "inport", 1, "Input port number")
 	flag.UintVar(&outport, "outport", 0, "Output port number")
@@ -87,15 +101,6 @@ func main() {
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", 10, "Number of packets to send")
 	flag.Parse()
-
-	rnd = rand.New(rand.NewSource(13))
-
-	// Init YANFF system at 16 available cores
-	config := flow.Config{
-		CPUList:      "0-15",
-		HWTXChecksum: hwol,
-	}
-	CheckFatal(flow.SystemInit(&config))
 
 	if !useIPv4 && !useIPv6 {
 		println("No L3 IP mode selected. Enabling IPv4 by default")
@@ -137,34 +142,98 @@ func main() {
 		os.Exit(1)
 	}
 
-	var m sync.Mutex
-	testDoneEvent = sync.NewCond(&m)
+	executeTest(testScenario)
+}
 
-	// Use here usual generator (enabled if speed = 0).
-	// High performance generator (enabled if speed != 0) is not used here, as it
-	// can send fully only number of packets N which is multiple of burst size (default 32),
-	// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
-	firstFlow := flow.SetGenerator(generatePacket, nil)
+func executeTest(testScenario uint) {
+	if testScenario > 3 || testScenario < 0 {
+		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
+	}
+	rnd = rand.New(rand.NewSource(13))
+	// Init YANFF system at 16 available cores
+	config := flow.Config{
+		HWTXChecksum: hwol,
+	}
+	CheckFatal(flow.SystemInit(&config))
 
-	// Send all generated packets to the output
-	CheckFatal(flow.SetSender(firstFlow, uint8(outport)))
+	if testScenario == 2 {
+		// Receive packets from zero port. Receive queue will be added automatically.
+		inputFlow, err := flow.SetReceiver(uint8(inport))
+		CheckFatal(err)
+		CheckFatal(flow.SetHandler(inputFlow, fixPacket, nil))
+		CheckFatal(flow.SetSender(inputFlow, uint8(outport)))
 
-	// Create receiving flow and set a checking function for it
-	secondFlow, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(secondFlow, checkPackets, nil))
-	CheckFatal(flow.SetStopper(secondFlow))
-
-	// Start pipeline
-	go func() {
+		// Begin to process packets.
 		CheckFatal(flow.SystemStart())
-	}()
+	} else {
+		var m sync.Mutex
+		testDoneEvent = sync.NewCond(&m)
 
-	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
+		// Use here usual generator (enabled if speed = 0).
+		// High performance generator (enabled if speed != 0) is not used here, as it
+		// can send fully only number of packets N which is multiple of burst size (default 32),
+		// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
+		generatedFlow := flow.SetGenerator(generatePacket, nil)
+		var finalFlow *flow.Flow
+		var err error
+		if testScenario == 1 {
+			// Send all generated packets to the output
+			CheckFatal(flow.SetSender(generatedFlow, uint8(outport)))
+			// Create receiving flow and set a checking function for it
+			finalFlow, err = flow.SetReceiver(uint8(inport))
+			CheckFatal(err)
+		} else {
+			finalFlow = generatedFlow
+			CheckFatal(flow.SetHandler(finalFlow, fixPacket, nil))
+		}
+		CheckFatal(flow.SetHandler(finalFlow, checkPackets, nil))
+		CheckFatal(flow.SetStopper(finalFlow))
 
+		// Start pipeline
+		go func() {
+			CheckFatal(flow.SystemStart())
+		}()
+
+		// Wait for enough packets to arrive
+		testDoneEvent.L.Lock()
+		testDoneEvent.Wait()
+		testDoneEvent.L.Unlock()
+
+		composeStatistics()
+	}
+}
+
+func fixPacket(pkt *packet.Packet, context flow.UserContext) {
+	offset := pkt.ParseData()
+
+	if !testCksumCommon.CheckPacketChecksums(pkt) {
+		println("TEST FAILED")
+	}
+
+	if offset < 0 {
+		println("ParseL4 returned negative value", offset)
+		println("TEST FAILED")
+		return
+	}
+
+	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
+	if ptr.F2 != 0 {
+		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
+		println("TEST FAILED")
+		return
+	}
+
+	ptr.F2 = ptr.F1
+
+	if hwol {
+		packet.SetPseudoHdrChecksum(pkt)
+		pkt.SetHWCksumOLFlags()
+	} else {
+		testCksumCommon.CalculateChecksum(pkt)
+	}
+}
+
+func composeStatistics() {
 	// Compose statistics
 	sent := atomic.LoadUint64(&sentPackets)
 	received := atomic.LoadUint64(&receivedPackets)
@@ -238,7 +307,7 @@ func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
 
 	// Put a unique non-zero value here
 	sent := atomic.LoadUint64(&sentPackets)
-	ptr := (*testCommon.Packetdata)(emptyPacket.Data)
+	ptr := (*testCksumCommon.Packetdata)(emptyPacket.Data)
 	ptr.F1 = sent + 1
 	ptr.F2 = 0
 }
@@ -381,7 +450,7 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseData()
 
-	if !testCommon.CheckPacketChecksums(pkt) {
+	if !testCksumCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")
 	}
 
@@ -392,7 +461,7 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 		println("TEST FAILED")
 		atomic.StoreInt32(&passed, 0)
 	} else {
-		ptr := (*testCommon.Packetdata)(pkt.Data)
+		ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {
 			fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)

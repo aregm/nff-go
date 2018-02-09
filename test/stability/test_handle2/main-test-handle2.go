@@ -12,12 +12,14 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"errors"
 
 	"github.com/intel-go/yanff/flow"
 	"github.com/intel-go/yanff/packet"
 )
 
-// test-handle2-part1: sends packets to 0 port, receives from 0 and 1 ports.
+// Test with testScenario=1:
+// sends packets to 0 port, receives from 0 and 1 ports.
 // This part of test generates three packet flows (1st, 2nd and 3rd), merges them into one flow
 // and send it to 0 port. Packets in original 1st, 2nd and 3rd flows has UDP destination addresses
 // dstPort1, dstPort2, dstPort3 respectively. For each packet sender calculates
@@ -26,9 +28,12 @@ import (
 // Test also calculates number of broken packets and prints it when a predefined number
 // of packets is received.
 //
-// test-handle2-part2:
+// Test with testScenario=2:
 // This part of test receives packets on 0 port, separate input flow according to rules
 // in test-separate-l3rules.conf into 2 flows. Accepted flow sent to 0 port, rejected flow is stopped.
+//
+// Test with testScenario=0:
+// all these actions are made in one pipeline without actual send and receive.
 
 const (
 	totalPackets = 10000000
@@ -41,6 +46,7 @@ const (
 )
 
 var (
+	l3Rules *packet.L3Rules
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint = 16
 	d           uint = 10
@@ -61,6 +67,8 @@ var (
 
 	outport uint
 	inport  uint
+
+	rulesConfig = "test-handle2-l3rules.conf"
 )
 
 // CheckFatal is an error handling function
@@ -72,40 +80,81 @@ func CheckFatal(err error) {
 }
 
 func main() {
+	var testScenario uint
+	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
 
-	// Init YANFF system at 16 available cores.
-	config := flow.Config{
-		CPUList: "0-15",
+	executeTest(testScenario)
+}
+
+func executeTest(testScenario uint) {
+	if testScenario > 3 || testScenario < 0 {
+		CheckFatal(errors.New("testScenario should be in interval [0, 3]"))
 	}
+	// Init YANFF system at 16 available cores.
+	config := flow.Config{}
 	CheckFatal(flow.SystemInit(&config))
+	if testScenario != 1 {
+		var err error
+		// Get splitting rules from access control file.
+		l3Rules, err = packet.GetL3ACLFromORIG(rulesConfig)
+		CheckFatal(err)
+	}
+	if testScenario == 2 {
+		// Receive packets from 0 port
+		flow1, err := flow.SetReceiver(uint8(inport))
+		CheckFatal(err)
 
-	var m sync.Mutex
-	testDoneEvent = sync.NewCond(&m)
+		// Handle packet flow
+		// ~33% of packets should left in flow1
+		CheckFatal(flow.SetHandlerDrop(flow1, l3Handler, nil))
 
-	// Create first packet flow
-	outputFlow := flow.SetGenerator(generatePacket, nil)
+		// Send each flow to corresponding port. Send queues will be added automatically.
+		CheckFatal(flow.SetSender(flow1, uint8(outport)))
 
-	CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
-
-	// Create receiving flows and set a checking function for it
-	inputFlow1, err := flow.SetReceiver(uint8(outport))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(inputFlow1, checkInputFlow, nil))
-	CheckFatal(flow.SetStopper(inputFlow1))
-
-	// Start pipeline
-	go func() {
+		// Begin to process packets.
 		CheckFatal(flow.SystemStart())
-	}()
+	} else {
+		var m sync.Mutex
+		testDoneEvent = sync.NewCond(&m)
 
-	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
+		// Create first packet flow
+		outFlow := flow.SetGenerator(generatePacket, nil)
+		var finalFlow *flow.Flow
+		if testScenario == 1 {
+			var err error
+			CheckFatal(flow.SetSender(outFlow, uint8(outport)))
+			// Create receiving flows and set a checking function for it
+			finalFlow, err = flow.SetReceiver(uint8(outport))
+			CheckFatal(err)
+		} else {
+			finalFlow = outFlow
+			CheckFatal(flow.SetHandlerDrop(finalFlow, l3Handler, nil))
+		}
+		CheckFatal(flow.SetHandler(finalFlow, checkInputFlow, nil))
+		CheckFatal(flow.SetStopper(finalFlow))
 
+		// Start pipeline
+		go func() {
+			CheckFatal(flow.SystemStart())
+		}()
+
+		// Wait for enough packets to arrive
+		testDoneEvent.L.Lock()
+		testDoneEvent.Wait()
+		testDoneEvent.L.Unlock()
+
+		composeStatistics()
+	}
+}
+
+func l3Handler(pkt *packet.Packet, context flow.UserContext) bool {
+	return pkt.L3ACLPermit(l3Rules)
+}
+
+func composeStatistics() {
 	// Compose statistics
 	sent1 := sentPacketsGroup1
 	sent2 := sentPacketsGroup2
@@ -132,7 +181,6 @@ func main() {
 	} else {
 		println("TEST FAILED")
 	}
-
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
