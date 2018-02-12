@@ -23,7 +23,7 @@
                     "image-name": "yanff-test1",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-resend", "-testScenario=1"
+                        "./testResend", "-testScenario=1"
                     ]
                 },
                 {
@@ -31,7 +31,7 @@
                     "image-name": "yanff-test1",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-resend", "-testScenario=2"
+                        "./testResend", "-testScenario=2"
                     ]
                 }
             ]
@@ -46,7 +46,7 @@
                     "image-name": "yanff-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-merge", "-testScenario=1"
+                        "./testMerge", "-testScenario=1"
                     ]
                 },
                 {
@@ -54,7 +54,7 @@
                     "image-name": "yanff-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-merge", "-testScenario=2"
+                        "./testMerge", "-testScenario=2"
                     ]
                 }
             ]
@@ -69,7 +69,7 @@
                     "image-name": "yanff-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-split", "-testScenario=1"
+                        "./testSplit", "-testScenario=1"
                     ]
                 },
                 {
@@ -77,7 +77,7 @@
                     "image-name": "yanff-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-split", "-testScenario=2"
+                        "./testSplit", "-testScenario=2"
                     ]
                 }
             ]
@@ -92,7 +92,7 @@
                     "image-name": "yanff-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-separate", "-testScenario=1"
+                        "./testSeparate", "-testScenario=1"
                     ]
                 },
                 {
@@ -100,7 +100,7 @@
                     "image-name": "yanff-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-separate", "-testScenario=2"
+                        "./testSeparate", "-testScenario=2"
                     ]
                 }
             ]
@@ -115,7 +115,7 @@
                     "image-name": "yanff-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-partition", "-testScenario=1"
+                        "./testPartition", "-testScenario=1"
                     ]
                 },
                 {
@@ -123,7 +123,7 @@
                     "image-name": "yanff-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-partition", "-testScenario=2"
+                        "./testPartition", "-testScenario=2"
                     ]
                 }
             ]
@@ -138,7 +138,7 @@
                     "image-name": "yanff-test-handle2",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-handle2", "-testScenario=1"
+                        "./testHandle", "-testScenario=1"
                     ]
                 },
                 {
@@ -146,7 +146,7 @@
                     "image-name": "yanff-test-handle2",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-handle2", "-testScenario=2"
+                        "./testHandle", "-testScenario=2"
                     ]
                 }
             ]
@@ -161,7 +161,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol"
                     ]
                 },
                 {
@@ -169,7 +169,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000"
                     ]
                 }
             ]
@@ -184,7 +184,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol"
                     ]
                 },
                 {
@@ -192,7 +192,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000"
                     ]
                 }
             ]
@@ -207,7 +207,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol"
                     ]
                 },
                 {
@@ -215,7 +215,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000"
                     ]
                 }
             ]
@@ -230,7 +230,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol"
                     ]
                 },
                 {
@@ -238,7 +238,7 @@
                     "image-name": "yanff-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./main-test-checksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000"
                     ]
                 }
             ]

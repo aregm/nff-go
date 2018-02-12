@@ -5,7 +5,8 @@
 PATH_TO_MK = mk
 SUBDIRS = yanff-base dpdk test examples
 DOC_TARGETS = flow packet
-TESTING_TARGETS = packet low common test/stability
+CI_TESTING_TARGETS = packet low common
+TESTING_TARGETS = $(CI_TESTING_TARGETS) test/stability
 
 all: $(SUBDIRS)
 
@@ -21,6 +22,10 @@ perf_testing:
 .PHONY: testing $(TESTING_TARGETS)
 .NOTPARALLEL: testing $(TESTING_TARGETS)
 testing: $(TESTING_TARGETS)
+
+.PHONY: citesting $(CI_TESTING_TARGETS)
+.NOTPARALLEL: citesting $(CI_TESTING_TARGETS)
+citesting: $(CI_TESTING_TARGETS)
 
 $(TESTING_TARGETS):
 	$(MAKE) -C $@ testing
