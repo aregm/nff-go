@@ -7,8 +7,9 @@ IMAGENAME = nff-go-base
 EXECUTABLES =
 NOCHECK_PKTGEN = yes
 
-Dockerfile:
-	echo 'FROM fedora' > Dockerfile
+Dockerfile: Makefile
+	echo 'ARG USER_NAME' > Dockerfile
+	echo 'FROM fedora' >> Dockerfile
 	if [ -n '${http_proxy}' ]; then					\
 		echo 'ENV http_proxy ${http_proxy}' >> Dockerfile;	\
 		echo 'ENV https_proxy ${http_proxy}' >> Dockerfile;	\

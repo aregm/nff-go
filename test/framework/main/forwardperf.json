@@ -9,7 +9,6 @@
             "/sys/devices/system/node:/sys/devices/system/node",
             "/dev:/dev"
         ],
-        "docker-port": 2375,
         "pktgen-port": 22022
     },
     "tests": [
@@ -19,7 +18,6 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "host-name": "hostname1",
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
@@ -27,7 +25,6 @@
                     ]
                 },
                 {
-                    "host-name": "hostname2",
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
@@ -49,7 +46,6 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "host-name": "hostname1",
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
@@ -57,7 +53,6 @@
                     ]
                 },
                 {
-                    "host-name": "hostname2",
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [

@@ -27,11 +27,9 @@ clean: clean-default
 # Local docker targets
 .PHONY: .check-images-env images clean-images
 
-# Add user name to generated images unless it is nff-go-base image
-# because nff-go-base image name is hardcoded in Dockerfiles and cannot
-# be different for different users.
-ifeq ($(IMAGENAME),nff-go-base)
-WORKIMAGENAME=$(IMAGENAME)
+# Add user name to generated images
+ifdef NFF_IMAGE_PREFIX
+WORKIMAGENAME=$(NFF_GO_IMAGE_PREFIX)/$(USER)/$(IMAGENAME)
 else
 WORKIMAGENAME=$(USER)/$(IMAGENAME)
 endif
@@ -39,7 +37,7 @@ endif
 .check-images-env: .check-defined-IMAGENAME
 
 images: Dockerfile .check-images-env all
-	docker build -t $(WORKIMAGENAME) .
+	docker build --build-arg USER_NAME=$(USER) -t $(WORKIMAGENAME) .
 
 clean-images: .check-images-env clean
 	-docker rmi $(WORKIMAGENAME)
@@ -52,12 +50,12 @@ clean-images: .check-images-env clean
 deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
 	docker save $(WORKIMAGENAME) > $(TMPNAME)
-	for host in $(NFF_GO_HOSTS); do								\
+	for host in `echo $(NFF_GO_HOSTS) | tr ',' ' '`; do			\
 		if ! docker -H tcp://$$host load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)
 
 cleanall: .check-deploy-env clean-images
-	-for host in $(NFF_GO_HOSTS); do \
-		docker -H tcp://$$host rmi -f $(WORKIMAGENAME); \
+	-for host in `echo $(NFF_GO_HOSTS) | tr ',' ' '`; do	\
+		docker -H tcp://$$host rmi -f $(WORKIMAGENAME);	\
 	done

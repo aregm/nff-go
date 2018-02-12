@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/user"
 	"regexp"
 	"strconv"
@@ -44,6 +45,10 @@ var (
 func init() {
 	u, _ := user.Current()
 	username = u.Username
+	prefix, exists := os.LookupEnv("NFF_GO_IMAGE_PREFIX")
+	if exists {
+		username = prefix + "/" + username
+	}
 }
 
 // Measurement has measured by benchmark values.
