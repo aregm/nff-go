@@ -2,10 +2,10 @@
 [![GoDoc](https://godoc.org/github.com/intel-go/yanff?status.svg)](https://godoc.org/github.com/intel-go/yanff)
 [![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/intel-go/yanff.svg?branch=develop)](https://travis-ci.org/intel-go/yanff)
-# YANFF - Yet Another Network Function Framework 
+# Network Function Framework for Go (former YANFF)
 
 ## What it is
-YANFF is a set of libraries for creating and deploying cloud-native Network
+NFF-Go is a set of libraries for creating and deploying cloud-native Network
 Functions (NFs). It simplifies the creation of network functions without
 sacrificing performance. 
 * Higher level abstractions than DPDK. Using DPDK as a fast I/O engine for performance
@@ -34,7 +34,7 @@ func CheckFatal(err error) {
 }
 
 func main() {
-	// Initialize YANFF library to use 8 cores max.   
+	// Initialize NFF-Go library to use 8 cores max.   
 	config := flow.Config{
 		CPUCoresNumber: 8,
 	}
@@ -70,21 +70,21 @@ func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 }
 ```
 
-YANFF is an Open Source BSD licensed project that runs mostly in Linux user
+NFF-Go is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
 available in the master branch.
 
-## Getting YANFF
+## Getting NFF-Go
 
-Use the **go get** command to download YANFF. You must first set your GOPATH
+Use the **go get** command to download NFF-Go. You must first set your GOPATH
 
        export GOPATH=/my/local/directory
-       go get -v -d github.com/intel-go/yanff
+       go get -v -d github.com/intel-go/nff-go
 
-Go will download the sources into $GOPATH/src. It will try to build YANFF and
+Go will download the sources into $GOPATH/src. It will try to build NFF-Go and
 fail with a message:
 
-        can't load package: package github.com/intel-go/yanff: no buildable Go source files in /localdisk/work/rscohn1/ws/yanff-test/src/github.com/intel-go/yanff
+        can't load package: package github.com/intel-go/yanff: no buildable Go source files in /localdisk/work/rscohn1/ws/nff-test/src/github.com/intel-go/nff-go
 
 Ignore the message for now. We need to install some dependencies before you can
 build.
@@ -103,13 +103,13 @@ then do this:
         cd $GOPATH/src/github.com
         mkdir intel-go
         cd intel-go
-        ln -s ../rscohn2/yanff .
+        ln -s ../rscohn2/nff-go .
 
 ## Setting up the build and run environment
 
 ### DPDK
     
-YANFF uses DPDK, so you must setup your system to build and run DPDK. See [System
+NFF-Go uses DPDK, so you must setup your system to build and run DPDK. See [System
 Requirements in the DPDK Getting Started Guide for
 Linux](http://dpdk.org/doc/guides/linux_gsg/sys_reqs.html) for more
 information.
@@ -125,7 +125,7 @@ in the DPDK Getting Started Guide for Linux for more information.
 The kernel module, which is required for DPDK user-mode drivers, is built but
 not installed into kernel directory. You can load it using the full path to the
 module file:
-$GOPATH/src/github.com/intel-go/yanff/test/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+$GOPATH/src/github.com/intel-go/nff-go/test/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
 
 ### Go
@@ -134,20 +134,20 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
         go version
         
-### Installing YANFF dependencies
+### Installing NFF dependencies
 
-        $GOPATH/src/github.com/intel-go/yanff/scripts/get-depends.sh
+        $GOPATH/src/github.com/intel-go/nff-go/scripts/get-depends.sh
 
 ### environment variables
     
         export PATH="$PATH:$GOPATH"/bin
     
-## Building YANFF
+## Building NFF
 
-        cd $GOPATH/src/github.com/intel-go/yanff
+        cd $GOPATH/src/github.com/intel-go/nff-go
         make -j8
 
-## Running YANFF
+## Running NFF
 
 
 ## Documentation 
@@ -161,13 +161,13 @@ to generate full documentation. Alternatively, you can do:
 
 and browse the following URLs:
 
-* http://localhost:6060/pkg/yanff/flow/
-* http://localhost:6060/pkg/yanff/packet/
+* http://localhost:6060/pkg/nff-go/flow/
+* http://localhost:6060/pkg/nff-go/packet/
 
 ## Tests
 
 Invoking make in the top-level directory builds the testing framework and
-examples. YANFF distributed tests are packaged inside of Docker container
+examples. NFF-Go distributed tests are packaged inside of Docker container
 images. There are also single node unit tests in some packages that you can
 run using the command:
 
@@ -204,18 +204,18 @@ deployed images listed in YANFF_HOSTS, use the **make cleanall** command.
 
 ## Changing the DPDK sources
 
-If you use the **make** command from YANFF directories, the DPDK driver is
+If you use the **make** command from NFF-Go directories, the DPDK driver is
 downloaded automatically.
 
 ## Contributing
 
-If you want to contribute to YANFF, check our [Contributing
+If you want to contribute to NFF-Go, check our [Contributing
 guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
 recommend checking the 'janitorial' bugs in our list of open issues; these bugs
-can be solved without an extensive knowledge of YANFF. We would love to help
+can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 
-You can reach the YANFF development team via our [mailing
+You can reach the NFF-Go development team via our [mailing
 list](mailto:areg.melik-adamyan@intel.com).
 
     
