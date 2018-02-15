@@ -9,8 +9,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 type nowFuncT func() time.Time

@@ -5,8 +5,8 @@
 package testCksumCommon
 
 import (
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // Packetdata is a structure for packet pointer cast.

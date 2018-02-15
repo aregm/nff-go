@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/nff-go/flow"
 )
 
 // CheckFatal is an error handling function
@@ -31,7 +31,7 @@ func main() {
 	}
 
 	CheckFatal(flow.SystemInit(&config))
-	// (port of device, core (not from YANFF set) which will handle device, name of device)
+	// (port of device, core (not from NFF-GO set) which will handle device, name of device)
 	kni := flow.CreateKniDevice(1, 20, "myKNI")
 
 	fromEthFlow, err := flow.SetReceiver(uint8(0))

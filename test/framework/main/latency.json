@@ -20,7 +20,7 @@
             "test-apps": [
                 {
                     "host-name": "hostname1",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1"
@@ -28,7 +28,7 @@
                 },
                 {
                     "host-name": "hostname2",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_light"
@@ -43,7 +43,7 @@
             "test-apps": [
                 {
                     "host-name": "hostname1",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1", "-LAT_NUMBER=1000"
@@ -51,7 +51,7 @@
                 },
                 {
                     "host-name": "hostname2",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_seq"
@@ -66,7 +66,7 @@
             "test-apps": [
                 {
                     "host-name": "hostname1",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./latency-part1", "-LAT_NUMBER=1000"
@@ -74,7 +74,7 @@
                 },
                 {
                     "host-name": "hostname2",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./perf_main"

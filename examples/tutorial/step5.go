@@ -1,7 +1,7 @@
 package main
 
-import "github.com/intel-go/yanff/flow"
-import "github.com/intel-go/yanff/packet"
+import "github.com/intel-go/nff-go/flow"
+import "github.com/intel-go/nff-go/packet"
 
 var l3Rules *packet.L3Rules
 

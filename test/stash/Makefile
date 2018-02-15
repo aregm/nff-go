@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-IMAGENAME = yanff-stash
+IMAGENAME = nff-go-stash
 EXECUTABLES =  create_packet_example forwardingTestL3 send_fixed_number rw_example
 
 include $(PATH_TO_MK)/leaf.mk

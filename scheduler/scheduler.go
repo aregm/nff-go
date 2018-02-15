@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 // TODO: 1 is a delta of speeds. This delta should be

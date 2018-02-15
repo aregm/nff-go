@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/intel-go/yanff/common"
+	. "github.com/intel-go/nff-go/common"
 )
 
 type MPLSHdr struct {

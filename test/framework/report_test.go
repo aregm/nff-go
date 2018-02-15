@@ -5,7 +5,7 @@
 package test_test
 
 import (
-	"github.com/intel-go/yanff/test"
+	"github.com/intel-go/nff-go/test"
 
 	"os"
 	"strconv"
@@ -77,7 +77,7 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 		for iii := range appConfig {
 			appConfig[iii] = test.AppConfig{
 				HostName:  "hostname",
-				ImageName: "yanff-tests",
+				ImageName: "nff-go-tests",
 			}
 			if iii == 0 && testtype == test.TestTypeBenchmark {
 				appConfig[iii].Type = test.TestAppPktgen

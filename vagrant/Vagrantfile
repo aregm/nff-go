@@ -53,17 +53,17 @@ chmod +x ~/scripts.sh
 . ~/scripts.sh
 echo . ~/scripts.sh >> .bashrc
 
-echo Downloading and building YANFF
+echo Downloading and building NFF-GO
 go get github.com/pkg/errors
-go get -d -v github.com/intel-go/yanff
-(cd \"$GOPATH\"/src/github.com/intel-go/yanff; git checkout develop; make -j4)
+go get -d -v github.com/intel-go/nff-go
+(cd \"$GOPATH\"/src/github.com/intel-go/nff-go; git checkout develop; make -j4)
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 sudo sh -c 'echo vm.nr_hugepages=1024 >> /etc/sysctl.conf'
 echo IMPORTANT MESSAGE:
 echo If kernel was updated during provisioning, it is highly recommended to reboot this VM before using it!!!
-echo Use functions from scripts.sh to further setup YANFF environment.
+echo Use functions from scripts.sh to further setup NFF-GO environment.
 SHELL
 
   config.vm.provision "file", source: "scripts.sh", destination: "scripts.sh"
@@ -75,11 +75,11 @@ SHELL
   # environment.
   config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu + $provision_common
 
-  # Define six YANFF VMs
+  # Define six NFF-GO VMs
   user = ENV.fetch('USER', "nouser")
   (0..vm_total_number - 1).each do |i|
-    config.vm.define "yanff-#{i}" do |node|
-      node.vm.hostname = "yanff-#{i}"
+    config.vm.define "nff-go-#{i}" do |node|
+      node.vm.hostname = "nff-go-#{i}"
 
       # Create inter-VM connections for VMs inside of one VM group
       if i % vm_group_size != 0

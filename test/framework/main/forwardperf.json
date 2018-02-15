@@ -20,7 +20,7 @@
             "test-apps": [
                 {
                     "host-name": "hostname1",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./sendback", "-inport", "0", "-outport", "0", "-cores", "16"
@@ -28,7 +28,7 @@
                 },
                 {
                     "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
+                    "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
@@ -50,7 +50,7 @@
             "test-apps": [
                 {
                     "host-name": "hostname1",
-                    "image-name": "yanff-performance",
+                    "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./sendback", "-inport", "0", "-outport", "0", "-cores", "16"
@@ -58,7 +58,7 @@
                 },
                 {
                     "host-name": "hostname2",
-                    "image-name": "yanff-pktgen",
+                    "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
                         "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"

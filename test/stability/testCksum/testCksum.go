@@ -15,11 +15,11 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 
-	"github.com/intel-go/yanff/test/stability/testCksum/testCksumCommon"
+	"github.com/intel-go/nff-go/test/stability/testCksum/testCksumCommon"
 )
 
 // Test with flag testScenario=1:
@@ -143,7 +143,7 @@ func executeTest(testScenario uint) error {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	rnd = rand.New(rand.NewSource(13))
-	// Init YANFF system at 16 available cores
+	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		HWTXChecksum: hwol,
 	}

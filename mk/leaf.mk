@@ -27,10 +27,10 @@ clean: clean-default
 # Local docker targets
 .PHONY: .check-images-env images clean-images
 
-# Add user name to generated images unless it is yanff-base image
-# because yanff-base image name is hardcoded in Dockerfiles and cannot
+# Add user name to generated images unless it is nff-go-base image
+# because nff-go-base image name is hardcoded in Dockerfiles and cannot
 # be different for different users.
-ifeq ($(IMAGENAME),yanff-base)
+ifeq ($(IMAGENAME),nff-go-base)
 WORKIMAGENAME=$(IMAGENAME)
 else
 WORKIMAGENAME=$(USER)/$(IMAGENAME)
@@ -47,17 +47,17 @@ clean-images: .check-images-env clean
 # Distributed docker targets
 .PHONY: .check-deploy-env deploy cleanall
 
-.check-deploy-env: .check-defined-YANFF_HOSTS
+.check-deploy-env: .check-defined-NFF_GO_HOSTS
 
 deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
 	docker save $(WORKIMAGENAME) > $(TMPNAME)
-	for host in $(YANFF_HOSTS); do								\
+	for host in $(NFF_GO_HOSTS); do								\
 		if ! docker -H tcp://$$host load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)
 
 cleanall: .check-deploy-env clean-images
-	-for host in $(YANFF_HOSTS); do \
+	-for host in $(NFF_GO_HOSTS); do \
 		docker -H tcp://$$host rmi -f $(WORKIMAGENAME); \
 	done

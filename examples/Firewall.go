@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var (
@@ -34,7 +34,7 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Parse()
 
-	// Initialize YANFF library at 8 cores by default
+	// Initialize NFF-GO library at 8 cores by default
 	config := flow.Config{
 		CPUList: "0-7",
 	}

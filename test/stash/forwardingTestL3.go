@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // L3ACL.json assumes that pktgen is configured the following way
@@ -46,7 +46,7 @@ func main() {
 	flag.StringVar(&mode, "mode", "orig", "Format of rules file")
 	flag.Parse()
 
-	// Initialize YANFF library at 16 available cores
+	// Initialize NFF-GO library at 16 available cores
 	config := flow.Config{
 		CPUList: "0-15",
 	}

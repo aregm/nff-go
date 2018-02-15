@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/intel-go/yanff/asm"
-	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/nff-go/asm"
+	"github.com/intel-go/nff-go/common"
 )
 
 // DirectStop frees mbufs.
@@ -32,7 +32,7 @@ func DirectSend(m *Mbuf, port uint8) bool {
 }
 
 // Ring is a ring buffer for pointers
-type Ring C.struct_yanff_ring
+type Ring C.struct_nff_go_ring
 
 // Mbuf is a message buffer.
 type Mbuf C.struct_rte_mbuf
@@ -222,24 +222,24 @@ const (
 func CreateRing(name string, count uint) *Ring {
 	var ring *Ring
 	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
-	ring = (*Ring)(unsafe.Pointer(C.yanff_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+	ring = (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 
 	return ring
 }
 
 // EnqueueBurst enqueues data to ring buffer.
 func (ring *Ring) EnqueueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMpEnqueueBurst((*C.struct_yanff_ring)(ring), buffer, count)
+	return nffgoRingMpEnqueueBurst((*C.struct_nff_go_ring)(ring), buffer, count)
 }
 
 // DequeueBurst dequeues data from ring buffer.
 func (ring *Ring) DequeueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMcDequeueBurst((*C.struct_yanff_ring)(ring), buffer, count)
+	return nffgoRingMcDequeueBurst((*C.struct_nff_go_ring)(ring), buffer, count)
 }
 
 // Heavily based on DPDK ENQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func enqueuePtrs(r *C.struct_yanff_ring, prodHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr /*const*/) {
+func enqueuePtrs(r *C.struct_nff_go_ring, prodHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr /*const*/) {
 	var size C.uint32_t = r.DPDK_ring.size
 	var idx C.uint32_t = prodHead & mask
 	var i uint
@@ -279,7 +279,7 @@ func enqueuePtrs(r *C.struct_yanff_ring, prodHead C.uint32_t, mask C.uint32_t, n
 
 // Heavily based on DPDK DEQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func dequeuePtrs(r *C.struct_yanff_ring, consHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr) {
+func dequeuePtrs(r *C.struct_nff_go_ring, consHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr) {
 	var idx C.uint32_t = consHead & mask
 	var size C.uint32_t = r.DPDK_ring.size
 	var i uint
@@ -318,7 +318,7 @@ func dequeuePtrs(r *C.struct_yanff_ring, consHead C.uint32_t, mask C.uint32_t, n
 }
 
 // Heavily based on DPDK mp_do_enqueue
-func yanffRingMpDoEnqueue(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
+func nffgoRingMpDoEnqueue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var prodHead, prodNext C.uint32_t
 	var consTail, freeEntries C.uint32_t
 	var max = n //max should be const but can't
@@ -367,7 +367,7 @@ func yanffRingMpDoEnqueue(r *C.struct_yanff_ring, objTable []uintptr, n uint) ui
 }
 
 // Heavily based on DPDK mc_do_dequeue
-func yanffRingMcDoDequeue(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
+func nffgoRingMcDoDequeue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var consHead, prodTail C.uint32_t
 	var consNext, entries C.uint32_t
 	var max = n // max should be const but can't
@@ -415,13 +415,13 @@ func yanffRingMcDoDequeue(r *C.struct_yanff_ring, objTable []uintptr, n uint) ui
 }
 
 // Heavily based on DPDK mp_enqueue_burst
-func yanffRingMpEnqueueBurst(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
-	return yanffRingMpDoEnqueue(r, objTable, n)
+func nffgoRingMpEnqueueBurst(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
+	return nffgoRingMpDoEnqueue(r, objTable, n)
 }
 
 // Heavily based on DPDK mc_dequeue_burst
-func yanffRingMcDequeueBurst(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
-	return yanffRingMcDoDequeue(r, objTable, n)
+func nffgoRingMcDequeueBurst(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
+	return nffgoRingMcDoDequeue(r, objTable, n)
 }
 
 // GetRingCount gets number of objects in ring.
@@ -435,7 +435,7 @@ func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Send - dequeue packets and send.
@@ -444,12 +444,12 @@ func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Stop - dequeue and free packets.
 func Stop(IN *Ring) {
-	C.yanff_stop(IN.DPDK_ring)
+	C.nff_go_stop(IN.DPDK_ring)
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.

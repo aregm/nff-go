@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = yanff-nat
+IMAGENAME = nff-go-nat
 EXECUTABLES = nat
 
 nat: ../config.go ../translation.go ../portalloc.go ../cksum.go ../util.go

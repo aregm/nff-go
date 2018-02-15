@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = yanff-test-split
+IMAGENAME = nff-go-test-split
 EXECUTABLES = testSplit
 
 all:

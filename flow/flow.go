@@ -10,7 +10,7 @@
 // parse them as well as internal library options.
 
 // Packet processing graph construction:
-// YANFF library provides nine so-called Flow Functions for packet processing graph
+// NFF-GO library provides nine so-called Flow Functions for packet processing graph
 // construction. They operate term "flow" however it is just abstraction for connecting
 // them. Not anything beyond this. These nine flow functions are:
 // Receive, Generate - for adding packets to graph
@@ -25,7 +25,7 @@
 // allocated packet in generate). Function types of user defined functions are
 // also defined in this file.
 
-// Package flow is the main package of YANFF library and should be always imported by
+// Package flow is the main package of NFF-GO library and should be always imported by
 // user application.
 package flow
 
@@ -36,11 +36,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/asm"
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
-	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/scheduler"
+	"github.com/intel-go/nff-go/asm"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/scheduler"
 )
 
 var openFlowsNumber = uint32(0)
@@ -300,7 +300,7 @@ const (
 	autoPort
 )
 
-// Config is a struct with all parameters, which user can pass to YANFF library
+// Config is a struct with all parameters, which user can pass to NFF-GO library
 type Config struct {
 	// Specifies cores which will be available for scheduler to place
 	// flow functions and their clones.
@@ -474,7 +474,7 @@ func SystemStart() error {
 	if err := schedState.SystemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
-	common.LogTitle(common.Initialization, "------------***--------- YANFF-GO Started --------***------------")
+	common.LogTitle(common.Initialization, "------------***--------- NFF-GO-GO Started --------***------------")
 	schedState.Schedule(schedTime)
 	return nil
 }
@@ -1534,7 +1534,7 @@ func checkSystem() error {
 }
 
 // CreateKniDevice creates KNI device for using in receive or send functions.
-// Gets port, core (not from YANFF list), and unique name of future KNI device.
+// Gets port, core (not from NFF-GO list), and unique name of future KNI device.
 func CreateKniDevice(port uint8, core uint8, name string) *Kni {
 	low.CreateKni(port, core, name)
 	kni := new(Kni)

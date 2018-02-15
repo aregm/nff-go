@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var l3Rules *packet.L3Rules
@@ -25,7 +25,7 @@ func CheckFatal(err error) {
 // Main function for constructing packet processing graph.
 func main() {
 	var err error
-	// Initialize YANFF library at 16 cores by default
+	// Initialize NFF-GO library at 16 cores by default
 	config := flow.Config{
 		CPUList: "0-15",
 	}

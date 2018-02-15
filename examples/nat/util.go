@@ -9,7 +9,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/packet"
 )
 
 func (t *Tuple) String() string {

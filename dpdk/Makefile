@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../mk
-IMAGENAME = yanff-pktgen
+IMAGENAME = nff-go-pktgen
 
 # Pktgen variables
 NOCHECK_PKTGEN = yes

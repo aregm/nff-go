@@ -11,14 +11,14 @@
 // At the moment IPv6 is supported without extension headers.
 //
 // For performance
-// reasons YANFF provides a set of functions each of them parse exact network level.
+// reasons NFF-GO provides a set of functions each of them parse exact network level.
 //
 // Packet parsing
 //
 // Family of parsing functions can parse packets with known structure of headers
 // and parse exactly required protocols.
 //
-// YANFF provides two groups of parsing functions:
+// NFF-GO provides two groups of parsing functions:
 // conditional and unconditional parsing functions.
 //
 // Unconditional parsing functions are used to parse exactly required protocols. They use constant offsets and
@@ -45,8 +45,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	. "github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 var mbufStructSize uintptr
@@ -179,7 +179,7 @@ func (hdr *ICMPHdr) String() string {
 	return r0 + r1 + r2 + r3 + r4 + r5
 }
 
-// Packet is a set of pointers in YANFF library. Each pointer points to one of five headers:
+// Packet is a set of pointers in NFF-GO library. Each pointer points to one of five headers:
 // Mac, IPv4, IPv6, TCP and UDP plus raw pointer.
 //
 // Empty packet means that only raw pointer is not nil: it points to beginning of packet data

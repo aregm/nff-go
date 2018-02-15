@@ -5,7 +5,7 @@
 // Package packet provides functionality for checking and comparing packets.
 // Besides parsing packets user can request comparing packets. In some flow functions
 // user needs to compare packet with some rules, for example access control lists.
-// It can be done manually after packet parsing, however YANFF library provides more
+// It can be done manually after packet parsing, however NFF-GO library provides more
 // convenient way for checking and comparing packets via rules.
 //
 // Rules construction
@@ -37,7 +37,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/nff-go/common"
 )
 
 type rawL2Rule struct {

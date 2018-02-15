@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../mk
-IMAGENAME = yanff-base
+IMAGENAME = nff-go-base
 EXECUTABLES =
 NOCHECK_PKTGEN = yes
 

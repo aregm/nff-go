@@ -13,7 +13,7 @@ import (
 	"testing"
 	"unsafe"
 
-	. "github.com/intel-go/yanff/common"
+	. "github.com/intel-go/nff-go/common"
 )
 
 func init() {
