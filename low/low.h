@@ -63,6 +63,7 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
+static int kni_config_network_interface(uint8_t port_id, uint8_t if_up);
 
 uint32_t BURST_SIZE;
 
@@ -82,18 +83,24 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
-	struct rte_kni_conf port_conf_default = {
-	    .core_id = core, // Core ID to bind kernel thread on
-	    .group_id = (uint16_t)port,
-	    .mbuf_size = 2048,
-	    .addr = dev_info.pci_dev->addr,
-	    .id = dev_info.pci_dev->id,
-	    .force_bind = 1 // Flag to bind kernel thread
-	};
-	snprintf(port_conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
-	// TODO this NULL is for ops structure which handles callbacks from kernels requests
-	// DPDK example has callbacks for "change mtu" and "config network interface"
-	kni[port] = rte_kni_alloc(mbuf_pool, &port_conf_default, NULL);
+
+	struct rte_kni_conf conf_default;
+	memset(&conf_default, 0, sizeof(conf_default));
+	snprintf(conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
+	conf_default.core_id = core; // Core ID to bind kernel thread on
+	conf_default.group_id = (uint16_t)port;
+	conf_default.mbuf_size = 2048;
+	conf_default.addr = dev_info.pci_dev->addr;
+	conf_default.id = dev_info.pci_dev->id;
+	conf_default.force_bind = 1; // Flag to bind kernel thread
+
+	struct rte_kni_ops ops;
+	memset(&ops, 0, sizeof(ops));
+	ops.port_id = port;
+	// TODO Add handling of changing MTU here
+	ops.config_network_if = kni_config_network_interface;
+
+	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
 	}
@@ -226,6 +233,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t
 		} else {
 			// If queue == "-1" is means that this receive is from KNI device
 			rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+			rte_kni_handle_request(kni[port]);
 		}
 #ifdef REASSEMBLY
 		uint16_t temp_number = 0;
@@ -486,4 +494,29 @@ int lpm_delete(void *lpm, uint32_t ip, uint8_t depth) {
 
 void lpm_free(void *lpm) {
 	rte_lpm_free((struct rte_lpm *)lpm);
+}
+
+// Callback for request of configuring KNI up/down
+// Copy of DPDK kni_config_network_interface from examples/kni/main.c
+static int kni_config_network_interface(uint8_t port_id, uint8_t if_up) {
+	int ret = 0;
+	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
+		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");
+                return -EINVAL;
+        }
+
+	fprintf(stderr, "DEBUG: Configure network interface of %d %s\n", port_id, if_up ? "up" : "down");
+
+        if (if_up != 0) { // Configure network interface up
+                rte_eth_dev_stop(port_id);
+                ret = rte_eth_dev_start(port_id);
+        } else { // Configure network interface down
+                rte_eth_dev_stop(port_id);
+	}
+
+        if (ret < 0) {
+		rte_exit(EXIT_FAILURE, "Failed to start port while KNI configuring\n");
+	}
+
+        return ret;
 }
