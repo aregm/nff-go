@@ -7,8 +7,8 @@ import (
 	"log"
 	"net"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 // isInit is common for all tests

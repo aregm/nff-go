@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = yanff-test-partition
+IMAGENAME = nff-go-test-partition
 EXECUTABLES = testPartition
 
 all:

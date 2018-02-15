@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var (
@@ -40,7 +40,7 @@ func main() {
 	flag.UintVar(&outport2, "outport2", 2, "port for 2nd sender")
 	flag.Parse()
 
-	// Initialize YANFF library at 16 cores by default
+	// Initialize NFF-GO library at 16 cores by default
 	config := flow.Config{
 		CPUList: "0-15",
 	}

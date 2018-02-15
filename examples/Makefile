@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../mk
-IMAGENAME = yanff-examples
+IMAGENAME = nff-go-examples
 EXECUTABLES = demo dump Forwarding Firewall clonable_pcap_dumper kni copy ErrorHandling
 SUBDIRS = nat tutorial antiddos
 

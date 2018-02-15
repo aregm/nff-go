@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // Latency test includes 2 parts:
@@ -103,7 +103,7 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Initialize YANFF library at 30 available cores
+	// Initialize NFF-GO library at 30 available cores
 	config := flow.Config{
 		CPUList: "0-29",
 	}

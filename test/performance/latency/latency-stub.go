@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/nff-go/flow"
 )
 
 var (
@@ -30,9 +30,9 @@ func CheckFatal(err error) {
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.StringVar(&cores, "cores", "0-15", "Specifies CPU cores to be used by YANFF library")
+	flag.StringVar(&cores, "cores", "0-15", "Specifies CPU cores to be used by NFF-GO library")
 
-	// Initialize YANFF library
+	// Initialize NFF-GO library
 	config := flow.Config{
 		CPUList: cores,
 	}

@@ -18,8 +18,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 const (
@@ -71,7 +71,7 @@ func main() {
 	flag.IntVar(&inPort, "inPort", 0, "port to receive")
 	flag.Uint64Var(&totalPackets, "totalPackets", 100000000, "finish work when total number of packets received")
 	flag.Parse()
-	// Init YANFF system at requested number of cores.
+	// Init NFF-GO system at requested number of cores.
 	config := flow.Config{
 		CPUList: "0-15",
 	}

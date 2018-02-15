@@ -205,7 +205,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -276,7 +276,7 @@ void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t 
 	}
 }
 
-void yanff_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -309,7 +309,7 @@ void yanff_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t c
 	}
 }
 
-void yanff_stop(struct rte_ring *in_ring) {
+void nff_go_stop(struct rte_ring *in_ring) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.
@@ -445,17 +445,17 @@ int getMempoolSpace(struct rte_mempool * m) {
 	return rte_mempool_in_use_count(m);
 }
 
-struct yanff_ring {
+struct nff_go_ring {
         struct rte_ring *DPDK_ring;
         // We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
         void *internal_DPDK_ring;
         uint32_t offset;
 };
 
-struct yanff_ring *
-yanff_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
-        struct yanff_ring* r;
-        r = malloc(sizeof(struct yanff_ring));
+struct nff_go_ring *
+nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
+        struct nff_go_ring* r;
+        r = malloc(sizeof(struct nff_go_ring));
 
         r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
         // Ring elements are located immidiately behind rte_ring structure

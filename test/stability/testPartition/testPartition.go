@@ -13,9 +13,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/test/stability/stabilityCommon"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/test/stability/stabilityCommon"
 )
 
 // Test with testScenario=1:
@@ -96,7 +96,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 	if testScenario > 3 || testScenario < 0 {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
-	// Init YANFF system
+	// Init NFF-GO system
 	config := flow.Config{}
 	if err := flow.SystemInit(&config); err != nil { return err }
 	stabilityCommon.InitCommonState(configFile, target)

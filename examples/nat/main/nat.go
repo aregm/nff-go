@@ -10,8 +10,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/intel-go/yanff/examples/nat"
-	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/nff-go/examples/nat"
+	"github.com/intel-go/nff-go/flow"
 )
 
 // CheckFatal is an error handling function
@@ -37,13 +37,13 @@ func main() {
 	// Read config
 	CheckFatal(nat.ReadConfig(*configFile))
 
-	// Init YANFF system at 16 available cores
-	yanffconfig := flow.Config{
+	// Init NFF-GO system at 16 available cores
+	nffgoconfig := flow.Config{
 		CPUList:      *cores,
 		HWTXChecksum: nat.HWTXChecksum,
 	}
 
-	CheckFatal(flow.SystemInit(&yanffconfig))
+	CheckFatal(flow.SystemInit(&nffgoconfig))
 
 	// Initialize flows and necessary state
 	nat.InitFlows()

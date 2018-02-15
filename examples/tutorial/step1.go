@@ -1,9 +1,9 @@
 package main
 
-import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/nff-go/flow"
 
 func main() {
-	// Init YANFF system
+	// Init NFF-GO system
 	config := flow.Config{}
 	checkFatal(flow.SystemInit(&config))
 

@@ -134,7 +134,7 @@ const (
 	SetAffinityErr
 )
 
-// NFError is error type returned by yanff functions
+// NFError is error type returned by nff-go functions
 type NFError struct {
 	Code     ErrorCode
 	Message  string

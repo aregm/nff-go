@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/intel-go/yanff/common"
+	. "github.com/intel-go/nff-go/common"
 )
 
 // VLANHdr 802.1Q VLAN header. We interpret it as an addition after

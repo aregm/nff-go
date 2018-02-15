@@ -1,8 +1,8 @@
 export GOPATH="$HOME"/go
 export GOROOT=/opt/go
-export YANFF="$GOPATH"/src/github.com/intel-go/yanff
+export NFF-GO="$GOPATH"/src/github.com/intel-go/nff-go
 export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
-export YANFF_CARDS="00:08.0 00:09.0"
+export NFF-GO_CARDS="00:08.0 00:09.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
 if [ $DISTRO == Ubuntu ]; then
     export CARD1=enp0s8
@@ -16,20 +16,20 @@ fi
 bindports ()
 {
     sudo modprobe uio
-    sudo insmod "$YANFF"/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    sudo "$YANFF"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=igb_uio $YANFF_CARDS
+    sudo insmod "$NFF-GO"/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo "$NFF-GO"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=igb_uio $NFF-GO_CARDS
 }
 
 # Bind ports to Linux kernel driver
 unbindports ()
 {
-    sudo "$YANFF"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=e1000 $YANFF_CARDS
+    sudo "$NFF-GO"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=e1000 $NFF-GO_CARDS
 }
 
 # Run pktgen
 runpktgen ()
 {
-    (cd "$YANFF"/dpdk; sudo ./pktgen -c 0xff -n 4 -- -P -m "[1:2].0, [3:4].1" -T)
+    (cd "$NFF-GO"/dpdk; sudo ./pktgen -c 0xff -n 4 -- -P -m "[1:2].0, [3:4].1" -T)
     rc=$?; if [[ $rc == 0 ]]; then reset; fi
 }
 
@@ -54,13 +54,13 @@ natclient ()
 }
 
 # Set up middle machine for NAT example. It initializes two first
-# network interfaces for YANFF bindports command and initializes
+# network interfaces for NFF-GO bindports command and initializes
 # second interface pair for use with Linux NAT. In this setup enp0s16
 # is connected to server (public network) and enp0s9 is connected to
 # client (private network).
 natsetup ()
 {
-    export YANFF_CARDS="00:08.0 00:0a.0"
+    export NFF-GO_CARDS="00:08.0 00:0a.0"
     if [ $DISTRO == Ubuntu ]; then
         export CARD1=enp0s9
         export CARD2=enp0s16

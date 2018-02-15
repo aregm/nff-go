@@ -1,6 +1,6 @@
 package main
 
-import "github.com/intel-go/yanff/flow"
+import "github.com/intel-go/nff-go/flow"
 
 func main() {
 	config := flow.Config{}

@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/nff-go/common"
 )
 
 // AddrRange describes range of addresses.

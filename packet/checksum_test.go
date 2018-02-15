@@ -6,7 +6,7 @@ package packet
 
 import (
 	"encoding/binary"
-	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/nff-go/common"
 	"net"
 	"testing"
 )

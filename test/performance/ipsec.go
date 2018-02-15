@@ -13,9 +13,9 @@ import (
 	"os"
 	"unsafe"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // CheckFatal is an error handling function

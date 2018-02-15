@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/nff-go/flow"
 )
 
 // CheckFatal is an error handling function
@@ -22,7 +22,7 @@ func CheckFatal(err error) {
 func main() {
 	config := flow.Config{}
 
-	// Initialize YANFF library at 15 cores by default
+	// Initialize NFF-GO library at 15 cores by default
 	CheckFatal(flow.SystemInit(&config))
 
 	a, err := flow.SetReceiver(uint8(0))

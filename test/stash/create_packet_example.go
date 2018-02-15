@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var firstFlow *flow.Flow
@@ -33,7 +33,7 @@ func main() {
 	enablePacketFromByte := flag.Bool("pfb", false, "enables generating packets with GeneratePacketFromByte() from raw buffer. Otherwise, by default empty 128-byte packets are generated")
 	flag.Parse()
 
-	// Initialize YANFF library at 16 available cores
+	// Initialize NFF-GO library at 16 available cores
 	config := flow.Config{
 		CPUList: "0-15",
 	}

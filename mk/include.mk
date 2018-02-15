@@ -124,7 +124,7 @@ export CGO_LDFLAGS =				\
 
 check-pktgen:
 	@if [ ! -f $(PROJECT_ROOT)/dpdk/pktgen ]; then						\
-		echo "!!! It is necessary to build DPDK before building any parts of YANFF." &&	\
+		echo "!!! It is necessary to build DPDK before building any parts of NFF-GO." &&	\
 		echo "!!! Please run make at the project root or in dpdk subdirectory" &&	\
 		exit 1;										\
 	fi

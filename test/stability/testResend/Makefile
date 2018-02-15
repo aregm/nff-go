@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = yanff-test-resend
+IMAGENAME = nff-go-test-resend
 EXECUTABLES = testResend
 
 all:

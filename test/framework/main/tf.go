@@ -4,7 +4,7 @@
 
 package main
 
-import "github.com/intel-go/yanff/test/framework"
+import "github.com/intel-go/nff-go/test/framework"
 
 import (
 	"flag"
