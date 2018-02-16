@@ -46,10 +46,6 @@ type BenchmarkConfig struct {
 // AppConfig struct has settings controlling test
 // distributed application parameters.
 type AppConfig struct {
-	// Specifies host name where docker daemon is running. Port number
-	// is specified in DockerConfig structure and is the same for all
-	// hosts.
-	HostName string `json:"host-name"`
 	// Specifies docker image to run for this test application.
 	ImageName string `json:"image-name"`
 	// Specifies application type. Valid values are "TestAppGo" and "TestAppPktgen"
@@ -63,7 +59,7 @@ type AppConfig struct {
 }
 
 func (app *AppConfig) String() string {
-	return fmt.Sprintf("%s:%s", app.HostName, app.ImageName)
+	return fmt.Sprintf("%s:%d:%s", app.hp.host, app.hp.port, app.ImageName)
 }
 
 // TestConfig struct has settings for one test case.
@@ -107,9 +103,6 @@ type DockerConfig struct {
 	// container. If wrong filesystems are specified in this array,
 	// DPDK doesn't work.
 	Volumes []string `json:"map-volumes"`
-	// Network socket port to be used to communicate with docker
-	// daemon. Usually 2375.
-	DockerPort int `json:"docker-port"`
 	// Network socket port to be used to communicate with pktgen
 	// program. Usually 22022.
 	PktgenPort int `json:"pktgen-port"`
@@ -145,8 +138,9 @@ func ReadConfig(fileName string, hl HostsList) (*TestsuiteConfig, error) {
 			if jjj < len(hl) {
 				config.Tests[iii].Apps[jjj].hp = hl[jjj]
 			} else {
-				config.Tests[iii].Apps[jjj].hp.host = config.Tests[iii].Apps[jjj].HostName
-				config.Tests[iii].Apps[jjj].hp.port = config.Config.DockerPort
+				LogPanic("Host number ", jjj, " not defined on command line for test \"",
+					config.Tests[iii].Name,
+					"\"\nIt is necessary to specify hosts for all test applications in -hosts switch.\n")
 			}
 		}
 	}

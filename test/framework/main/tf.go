@@ -41,5 +41,6 @@ func main() {
 	}
 
 	// Start test execution
-	config.RunAllTests(directory)
+	status := config.RunAllTests(directory)
+	os.Exit(status)
 }

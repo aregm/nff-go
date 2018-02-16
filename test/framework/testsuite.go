@@ -168,10 +168,10 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 }
 
 // RunAllTests launches all tests.
-func (config *TestsuiteConfig) RunAllTests(logdir string) {
+func (config *TestsuiteConfig) RunAllTests(logdir string) int {
 	report := StartReport(logdir)
 	if report == nil {
-		return
+		return 255
 	}
 
 	// Set up reaction to SIGINT (Ctrl-C)
@@ -200,6 +200,7 @@ func (config *TestsuiteConfig) RunAllTests(logdir string) {
 	LogInfo("TESTS EXECUTED:", totalTests)
 	LogInfo("PASSED:", passedTests)
 	LogInfo("FAILED:", failedTests)
+	return failedTests
 }
 
 func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {
