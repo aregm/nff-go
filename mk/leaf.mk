@@ -28,7 +28,7 @@ clean: clean-default
 .PHONY: .check-images-env images clean-images
 
 # Add user name to generated images
-ifdef NFF_IMAGE_PREFIX
+ifdef NFF_GO_IMAGE_PREFIX
 WORKIMAGENAME=$(NFF_GO_IMAGE_PREFIX)/$(USER)/$(IMAGENAME)
 else
 WORKIMAGENAME=$(USER)/$(IMAGENAME)
