@@ -103,7 +103,7 @@ natserver ()
         sudo systemctl enable apache2
         sudo systemctl start apache2
     elif [ $DISTRO == Fedora ]; then
-        sudo apt-get install -y httpd
+        sudo dnf -y install httpd
         sudo firewall-cmd --permanent --add-service=http
         sudo firewall-cmd --add-service=http
         sudo systemctl enable httpd
