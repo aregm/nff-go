@@ -12,8 +12,12 @@ file and install it with command
 
         sudo dpkg -i vagrant_2.0.1_x86_64.deb
 
-To add a proxyconf plugin to your vagrant installation, run the
-following command for normal user
+A plugin is required to restart VMs after provisioning:
+
+        vagrant plugin install vagrant-reload
+
+If you need to work through http proxy, it is necessary to install
+vagrant-proxyconf plugin:
 
         vagrant plugin install vagrant-proxyconf
 
