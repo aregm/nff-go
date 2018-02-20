@@ -33,18 +33,26 @@ runpktgen ()
     rc=$?; if [[ $rc == 0 ]]; then reset; fi
 }
 
-# Set up client side machine for NAT example. It initializes two
-# network interfaces and sets up default routes to the server
-# network. Apache package is installed for apache benchmark program.
+# Perform transient NAT client machine configuration. It initializes
+# two network interfaces and sets up default routes to the server
+# network.
 natclient ()
+{
+    sudo ip route add 192.168.16.0/24 via 192.168.14.1 dev $CARD1
+    sudo ip route add 192.168.26.0/24 via 192.168.24.1 dev $CARD2
+}
+
+# Perform one-time configuration needed for NAT client test
+# machine. For it apache package is installed for apache benchmark
+# program.
+setupnatclient ()
 {
     sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.14.2/24
     sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.24.2/24
     sudo nmcli c up $CARD1
     sudo nmcli c up $CARD2
 
-    sudo ip route add 192.168.16.0/24 via 192.168.14.1 dev $CARD1
-    sudo ip route add 192.168.26.0/24 via 192.168.24.1 dev $CARD2
+    natclient
 
     if [ $DISTRO == Ubuntu ]; then
         sudo apt-get install -y apache2
@@ -53,12 +61,12 @@ natclient ()
     fi
 }
 
-# Set up middle machine for NAT example. It initializes two first
-# network interfaces for NFF-GO bindports command and initializes
-# second interface pair for use with Linux NAT. In this setup enp0s16
-# is connected to server (public network) and enp0s9 is connected to
-# client (private network).
-natsetup ()
+# Perform transient configuration for NAT middle machine. It
+# initializes two first network interfaces for NFF-GO bindports
+# command and initializes second interface pair for use with Linux
+# NAT. In this setup eth4(enp0s16) is connected to server (public
+# network) and eth2(enp0s9) is connected to client (private network).
+natmiddle ()
 {
     export NFF_GO_CARDS="00:08.0 00:0a.0"
     if [ $DISTRO == Ubuntu ]; then
@@ -68,10 +76,8 @@ natsetup ()
         export CARD1=eth2
         export CARD2=eth4
     fi
-    sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.24.1/24
-    sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.1/24
-    sudo nmcli c up $CARD1
-    sudo nmcli c up $CARD2
+
+    bindports
 
     sudo sysctl -w net.ipv4.ip_forward=1
 
@@ -79,19 +85,34 @@ natsetup ()
         sudo iptables -t nat -A POSTROUTING -o $CARD2 -j MASQUERADE
         sudo iptables -A FORWARD -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
         sudo iptables -A FORWARD -i $CARD1 -o $CARD2 -j ACCEPT
-    elif [ $DISTRO == Fedora ]; then
-        sudo firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
-        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
     fi
 }
 
-# Set up server side machine for NAT example. It initializes two
-# network interfaces and installs Apache web server.
-natserver ()
+# Perform one-time configuration needed for NAT middle machine. On
+# Fedora we use firewall daemon to permanently record IP forwarding
+# rules.
+setupnatmiddle ()
+{
+    natmiddle
+
+    sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.24.1/24
+    sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.1/24
+    sudo nmcli c up $CARD1
+    sudo nmcli c up $CARD2
+
+    if [ $DISTRO == Fedora ]; then
+        sudo firewall-cmd --permanent --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
+        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
+        sudo firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
+        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
+    fi
+}
+
+# Perform one-time configuration needed for NAT server side
+# machine. It installs Apache web server.
+setupnatserver ()
 {
     sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.16.2/24
     sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.2/24
@@ -109,6 +130,10 @@ natserver ()
         sudo systemctl enable httpd
         sudo systemctl start httpd
     fi
+
+    sudo dd if=/dev/zero of=/var/www/html/10k.bin bs=1 count=10240
+    sudo dd if=/dev/zero of=/var/www/html/100k.bin bs=1 count=102400
+    sudo dd if=/dev/zero of=/var/www/html/1m.bin bs=1 count=1048576
 }
 
 # Set up docker daemon, this is needed for automated testing.

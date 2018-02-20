@@ -75,7 +75,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 		for {
 			select {
 			case r := <-report:
-				apps[r.AppIndex].Logger.LogInfo(r.AppIndex, "\"", r.msg, "\"")
+				apps[r.AppIndex].Logger.LogInfo(r.AppIndex, r.msg)
 				if r.AppStatus == TestReportedFailed || r.AppStatus == TestReportedPassed {
 					apps[r.AppIndex].Logger.LogDebug("Finished with code", r.AppStatus)
 

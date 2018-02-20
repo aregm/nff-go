@@ -2,11 +2,16 @@
 # vi: set ft=ruby :
 
 Vagrant.configure(2) do |config|
+  unless Vagrant.has_plugin?("vagrant-reload")
+    raise 'Plugin vagrant-reload is not installed!'
+  end
+
   if Vagrant.has_plugin?("vagrant-proxyconf")
     config.proxy.http     = ENV.fetch('http_proxy', false)
     config.proxy.https    = ENV.fetch('https_proxy', false)
   end
 
+  vm_name = ENV.fetch('VM_NAME', "nff-go")
   vm_group_size = ENV.fetch('VM_GROUP_SIZE', 2).to_i
   vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 2).to_i
   vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
@@ -47,11 +52,12 @@ SHELL
 
 $provision_common = <<SHELL
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.9.4.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
 echo . ~/scripts.sh >> .bashrc
+setupdocker
 
 echo Downloading and building NFF-GO
 go get -d -v github.com/intel-go/nff-go
@@ -73,12 +79,14 @@ SHELL
   # Optional Ubuntu provisioning, use if you want to work in Ubuntu
   # environment.
   config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu + $provision_common
+  # Reboot VM after provisioning
+  config.vm.provision :reload
 
   # Define six NFF-GO VMs
   user = ENV.fetch('USER', "nouser")
   (0..vm_total_number - 1).each do |i|
-    config.vm.define "nff-go-#{i}" do |node|
-      node.vm.hostname = "nff-go-#{i}"
+    config.vm.define "#{vm_name}-#{i}" do |node|
+      node.vm.hostname = "#{vm_name}-#{i}"
 
       # Create inter-VM connections for VMs inside of one VM group
       if i % vm_group_size != 0
@@ -86,7 +94,7 @@ SHELL
         (1..vm_links_number).each do |j|
           node.vm.network "private_network",
                           auto_config: false,
-                          virtualbox__intnet: "link-#{user}-#{i}-#{j}"
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}"
         end
       end
 
@@ -95,7 +103,7 @@ SHELL
         (1..vm_links_number).each do |j|
           node.vm.network "private_network",
                           auto_config: false,
-                          virtualbox__intnet: "link-#{user}-#{i + 1}-#{j}"
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i + 1}-#{j}"
         end
       end
     end
