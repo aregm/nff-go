@@ -115,7 +115,9 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{}
-	if err := flow.SystemInit(&config); err != nil { return err }
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
@@ -125,70 +127,112 @@ func executeTest(configFile, target string, testScenario uint) error {
 		var err error
 		// Get splitting rules from access control file.
 		l3Rules, err = packet.GetL3ACLFromORIG(*filename)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	}
 	if testScenario == 2 {
 		inputFlow, err := flow.SetReceiver(uint8(inport1))
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		// Split packet flow based on ACL.
 		flowsNumber := 3
 		splittedFlows, err := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		// "0" flow is used for dropping packets without sending them.
-		if err := flow.SetStopper(splittedFlows[0]); err != nil { return err }
+		if err := flow.SetStopper(splittedFlows[0]); err != nil {
+			return err
+		}
 
-		if err := flow.SetHandler(splittedFlows[1], fixPackets1, nil); err != nil { return err }
-		if err := flow.SetHandler(splittedFlows[2], fixPackets2, nil); err != nil { return err }
-
+		if err := flow.SetHandler(splittedFlows[1], fixPackets1, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(splittedFlows[2], fixPackets2, nil); err != nil {
+			return err
+		}
 
 		// Send each flow to corresponding port. Send queues will be added automatically.
-		if err := flow.SetSender(splittedFlows[1], uint8(outport1)); err != nil { return err }
-		if err := flow.SetSender(splittedFlows[2], uint8(outport2)); err != nil { return err }
-
+		if err := flow.SetSender(splittedFlows[1], uint8(outport1)); err != nil {
+			return err
+		}
+		if err := flow.SetSender(splittedFlows[2], uint8(outport2)); err != nil {
+			return err
+		}
 
 		// Begin to process packets.
-		if err := flow.SystemStart(); err != nil { return err }
+		if err := flow.SystemStart(); err != nil {
+			return err
+		}
 	} else {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create first packet flow
 		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		var flow1, flow2 *flow.Flow
 		if testScenario == 1 {
-			if err := flow.SetSender(generatedFlow, uint8(outport1)); err != nil { return err }
+			if err := flow.SetSender(generatedFlow, uint8(outport1)); err != nil {
+				return err
+			}
 			// Create receiving flows and set a checking function for it
 			flow1, err = flow.SetReceiver(uint8(inport1))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 			flow2, err = flow.SetReceiver(uint8(inport2))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		} else {
 			// Split packet flow based on ACL.
 			flowsNumber := 3
 			splittedFlows, err := flow.SetSplitter(generatedFlow, l3Splitter, uint(flowsNumber), nil)
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 			// "0" flow is used for dropping packets without sending them.
-			if err := flow.SetStopper(splittedFlows[0]); err != nil { return err }
+			if err := flow.SetStopper(splittedFlows[0]); err != nil {
+				return err
+			}
 			flow1 = splittedFlows[1]
 			flow2 = splittedFlows[2]
 
-			if err := flow.SetHandler(splittedFlows[1], fixPackets1, nil); err != nil { return err }
-			if err := flow.SetHandler(splittedFlows[2], fixPackets2, nil); err != nil { return err }
+			if err := flow.SetHandler(splittedFlows[1], fixPackets1, nil); err != nil {
+				return err
+			}
+			if err := flow.SetHandler(splittedFlows[2], fixPackets2, nil); err != nil {
+				return err
+			}
 		}
-		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil { return err }
-		if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil { return err }
+		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
+			return err
+		}
 
-		if err := flow.SetStopper(flow1); err != nil { return err }
-		if err := flow.SetStopper(flow2); err != nil { return err }
+		if err := flow.SetStopper(flow1); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(flow2); err != nil {
+			return err
+		}
 
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
 		}()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		progStart = time.Now()
 
 		// Wait for enough packets to arrive
@@ -222,9 +266,15 @@ func composeStatistics() {
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 	println("Ratio =", received*100/sent, "%")
+	println()
+	println("Group1 sent", sent1, "packets")
+	println("Group1 received", recv1, "packets")
 	println("Group1 ratio =", recv1*100/sent1, "%")
+	println()
+	println("Group2 sent", sent2, "packets")
+	println("Group2 received", recv2, "packets")
 	println("Group2 ratio =", recv2*100/sent2, "%")
-
+	println()
 	println("Group1 proportion of packets received on", inport1, "port =", p1, "%")
 	println("Group2 proportion of packets received on", inport2, "port =", p2, "%")
 

@@ -35,8 +35,6 @@ import (
 // all these actions are made in one pipeline without actual send and receive.
 
 const (
-	totalPackets = 10000000
-
 	// Test expects to receive 33% of packets on 0 port.
 	// Test is PASSSED, if p1 is in [low1;high1]
 	eps   = 5
@@ -45,10 +43,11 @@ const (
 )
 
 var (
-	l3Rules *packet.L3Rules
+	totalPackets uint64 = 10000000
+	l3Rules      *packet.L3Rules
 	// Payload is 16 byte md5 hash sum of headers
-	payloadSize uint = 16
-	d           uint = 10
+	payloadSize uint   = 16
+	speed       uint64 = 1000000
 
 	sentPacketsGroup1 uint64
 	sentPacketsGroup2 uint64
@@ -63,6 +62,11 @@ var (
 	dstPort3 uint16 = 333
 
 	testDoneEvent *sync.Cond
+	progStart     time.Time
+
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T = 10 * time.Second
 
 	outport uint
 	inport  uint
@@ -73,8 +77,11 @@ var (
 func main() {
 	var testScenario uint
 	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
+	flag.Uint64Var(&speed, "speed", speed, "speed of 1 and 2 generators, Pkts/s")
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
+	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	flag.Parse()
 
 	if err := executeTest(testScenario); err != nil {
@@ -88,53 +95,81 @@ func executeTest(testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{}
-	if err := flow.SystemInit(&config); err != nil { return err }
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
 	if testScenario != 1 {
 		var err error
 		// Get splitting rules from access control file.
 		l3Rules, err = packet.GetL3ACLFromORIG(rulesConfig)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	}
 	if testScenario == 2 {
 		// Receive packets from 0 port
 		flow1, err := flow.SetReceiver(uint8(inport))
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		// Handle packet flow
 		// ~33% of packets should left in flow1
-		if err := flow.SetHandlerDrop(flow1, l3Handler, nil); err != nil { return err }
+		if err := flow.SetHandlerDrop(flow1, l3Handler, nil); err != nil {
+			return err
+		}
 
 		// Send each flow to corresponding port. Send queues will be added automatically.
-		if err := flow.SetSender(flow1, uint8(outport)); err != nil { return err }
+		if err := flow.SetSender(flow1, uint8(outport)); err != nil {
+			return err
+		}
 
 		// Begin to process packets.
-		if err := flow.SystemStart(); err != nil { return err }
+		if err := flow.SystemStart(); err != nil {
+			return err
+		}
 	} else {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create first packet flow
-		outFlow := flow.SetGenerator(generatePacket, nil)
+		outFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
+		if err != nil {
+			return err
+		}
+
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
 			var err error
-			if err := flow.SetSender(outFlow, uint8(outport)); err != nil { return err }
+			if err := flow.SetSender(outFlow, uint8(outport)); err != nil {
+				return err
+			}
 			// Create receiving flows and set a checking function for it
-			finalFlow, err = flow.SetReceiver(uint8(outport))
-			if err != nil { return err }
+			finalFlow, err = flow.SetReceiver(uint8(inport))
+			if err != nil {
+				return err
+			}
 		} else {
 			finalFlow = outFlow
-			if err := flow.SetHandlerDrop(finalFlow, l3Handler, nil); err != nil { return err }
+			if err := flow.SetHandlerDrop(finalFlow, l3Handler, nil); err != nil {
+				return err
+			}
 		}
-		if err := flow.SetHandler(finalFlow, checkInputFlow, nil); err != nil { return err }
-		if err := flow.SetStopper(finalFlow); err != nil { return err }
+		if err := flow.SetHandler(finalFlow, checkInputFlow, nil); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(finalFlow); err != nil {
+			return err
+		}
 
-		var err error
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
 		}()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
+		progStart = time.Now()
 
 		// Wait for enough packets to arrive
 		testDoneEvent.L.Lock()
@@ -155,13 +190,13 @@ func composeStatistics() {
 	sent1 := sentPacketsGroup1
 	sent2 := sentPacketsGroup2
 	sent3 := sentPacketsGroup3
-	sent := sent1 + sent2 + sent3
+	sentTotal := sent1 + sent2 + sent3
 
 	received := atomic.LoadUint64(&recv)
 
 	var p int
-	if sent != 0 {
-		p = int(received * 100 / sent)
+	if sentTotal != 0 {
+		p = int(received * 100 / sentTotal)
 	}
 	broken := atomic.LoadUint64(&brokenPackets)
 
@@ -188,29 +223,40 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
-	switch sent % 3 {
+	t := sent % 3
+	switch t {
 	case 0:
 		udp.DstPort = packet.SwapBytesUint16(dstPort1)
-		sentPacketsGroup1++
 	case 1:
 		udp.DstPort = packet.SwapBytesUint16(dstPort2)
-		sentPacketsGroup2++
 	case 2:
 		udp.DstPort = packet.SwapBytesUint16(dstPort3)
-		sentPacketsGroup3++
 	}
 	sent++
 
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 
-	if sentPacketsGroup1 > totalPackets/3 {
-		time.Sleep(time.Second * time.Duration(d))
-		println("TEST FAILED")
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) < T {
+		return
+	}
+
+	switch t {
+	case 0:
+		atomic.AddUint64(&sentPacketsGroup1, 1)
+	case 1:
+		atomic.AddUint64(&sentPacketsGroup2, 1)
+	case 2:
+		atomic.AddUint64(&sentPacketsGroup3, 1)
 	}
 }
 
 func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
+	if time.Since(progStart) < T {
+		return
+	}
+
 	offset := pkt.ParseData()
 	if offset < 0 {
 		println("ParseData returned negative value", offset)
@@ -229,8 +275,7 @@ func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
 		}
 		atomic.AddUint64(&recv, 1)
 	}
-	// TODO 80% of requested number of packets.
-	if recv >= totalPackets/32*8 {
+	if recv >= totalPackets {
 		testDoneEvent.Signal()
 	}
 }

@@ -61,7 +61,7 @@ setupdocker
 
 echo Downloading and building NFF-GO
 go get -d -v github.com/intel-go/nff-go
-(cd \"$GOPATH\"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make -j4)
+(cd \"$GOPATH\"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make)
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'

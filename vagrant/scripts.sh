@@ -2,6 +2,7 @@ export GOPATH="$HOME"/go
 export GOROOT=/opt/go
 export NFF_GO="$GOPATH"/src/github.com/intel-go/nff-go
 export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
+export MAKEFLAGS="-j 4"
 export NFF_GO_CARDS="00:08.0 00:09.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
 if [ $DISTRO == Ubuntu ]; then
