@@ -18,17 +18,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test1",
+                    "image-name": "nff-go-test-resend",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testResend", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./testResend", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000", "-inport=1", "-outport=1"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test1",
+                    "image-name": "nff-go-test-resend",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testResend", "-testScenario=2", "-config=config.json", "-target=hostname1"
+                        "./testResend", "-testScenario=2", "-config=config.json", "-target=hostname1", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -42,14 +42,14 @@
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./testMerge", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000", "-inport1=1", "-outport1=1", "-outport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-testScenario=2", "-config=config.json", "-target=hostname1"
+                        "./testMerge", "-testScenario=2", "-config=config.json", "-target=hostname1", "-inport1=0", "-inport2=1", "-outport1=0"
                     ]
                 }
             ]
@@ -63,14 +63,14 @@
                     "image-name": "nff-go-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./testSplit", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000", "-inport1=1", "-outport1=0", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-testScenario=2", "-config=config.json", "-target=hostname1"
+                        "./testSplit", "-testScenario=2", "-config=config.json", "-target=hostname1", "-inport1=1", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]
@@ -84,14 +84,14 @@
                     "image-name": "nff-go-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./testSeparate", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000", "-inport1=1", "-outport1=1", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-testScenario=2", "-config=config.json", "-target=hostname1"
+                        "./testSeparate", "-testScenario=2", "-config=config.json", "-target=hostname1", "-inport1=0", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]
@@ -105,14 +105,14 @@
                     "image-name": "nff-go-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000"
+                        "./testPartition", "-testScenario=1", "-number=10000", "-config=config.json", "-target=hostname2", "-speed=1000", "-inport1=1", "-outport1=1", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-testScenario=2", "-config=config.json", "-target=hostname1"
+                        "./testPartition", "-testScenario=2", "-config=config.json", "-target=hostname1", "-inport1=0", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]

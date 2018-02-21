@@ -12,7 +12,6 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
@@ -276,14 +275,6 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 		} else {
 			generateIPv6TCP(emptyPacket)
 		}
-	}
-
-	curValue := atomic.LoadUint64(&sentPackets)
-
-	if curValue >= totalPackets {
-		testDoneEvent.Signal()
-		// Stop sending packets, let program finish.
-		time.Sleep(2 * time.Second)
 	}
 
 	atomic.AddUint64(&sentPackets, 1)

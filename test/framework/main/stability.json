@@ -18,17 +18,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test1",
+                    "image-name": "nff-go-test-resend",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testResend", "-testScenario=1"
+                        "./testResend", "-testScenario=1", "-inport=1", "-outport=1"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test1",
+                    "image-name": "nff-go-test-resend",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testResend", "-testScenario=2"
+                        "./testResend", "-testScenario=2", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -42,14 +42,14 @@
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-testScenario=1"
+                        "./testMerge", "-testScenario=1", "-inport1=1", "-outport1=1", "-outport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-testScenario=2"
+                        "./testMerge", "-testScenario=2", "-inport1=0", "-inport2=1", "-outport1=0"
                     ]
                 }
             ]
@@ -63,14 +63,14 @@
                     "image-name": "nff-go-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-testScenario=1"
+                        "./testSplit", "-testScenario=1", "-inport1=1", "-outport1=0", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-split",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-testScenario=2"
+                        "./testSplit", "-testScenario=2", "-inport1=1", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]
@@ -84,14 +84,14 @@
                     "image-name": "nff-go-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-testScenario=1"
+                        "./testSeparate", "-testScenario=1", "-inport1=1", "-outport1=1", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-separate",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-testScenario=2"
+                        "./testSeparate", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]
@@ -105,14 +105,14 @@
                     "image-name": "nff-go-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-testScenario=1"
+                        "./testPartition", "-testScenario=1", "-inport1=1", "-outport1=1", "-inport2=0"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-partition",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-testScenario=2"
+                        "./testPartition", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
                     ]
                 }
             ]
@@ -123,17 +123,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-handle2",
+                    "image-name": "nff-go-test-handle",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testHandle", "-testScenario=1"
+                        "./testHandle", "-testScenario=1", "-inport=1", "-outport=1"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-handle2",
+                    "image-name": "nff-go-test-handle",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testHandle", "-testScenario=2"
+                        "./testHandle", "-testScenario=2", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -147,14 +147,14 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=1"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -168,14 +168,14 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=1"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -189,14 +189,14 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=1"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000", "-inport=0", "-outport=0"
                     ]
                 }
             ]
@@ -210,14 +210,14 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=2", "-hwol"
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=1"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000", "-inport=0", "-outport=0"
                     ]
                 }
             ]
