@@ -66,7 +66,7 @@ var (
 	outport2 uint
 	inport1  uint
 	inport2  uint
-	dpdkLogLevel *string
+	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
@@ -86,7 +86,7 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
-	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
@@ -100,9 +100,11 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ *dpdkLogLevel },
+		DPDKArgs: []string{ dpdkLogLevel },
 	}
-	if err := flow.SystemInit(&config); err != nil { return err }
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
@@ -111,50 +113,88 @@ func executeTest(configFile, target string, testScenario uint) error {
 	if testScenario == 2 {
 		// Receive packets from 0 port
 		flow1, err := flow.SetReceiver(uint8(inport1))
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		flow2, err := flow.SetPartitioner(flow1, 1000, 100)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
-		if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil { return err }
-		if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil { return err }
+		if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil {
+			return err
+		}
 
-		if err := flow.SetSender(flow1, uint8(outport1)); err != nil { return err }
-		if err := flow.SetSender(flow2, uint8(outport2)); err != nil { return err }
+		if err := flow.SetSender(flow1, uint8(outport1)); err != nil {
+			return err
+		}
+		if err := flow.SetSender(flow2, uint8(outport2)); err != nil {
+			return err
+		}
 
 		// Begin to process packets.
-		if err := flow.SystemStart(); err != nil { return err }
+		if err := flow.SystemStart(); err != nil {
+			return err
+		}
 	} else {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create output packet flow
 		outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		var flow1, flow2 *flow.Flow
 		if testScenario == 1 {
-			if err := flow.SetSender(outputFlow, uint8(outport1)); err != nil { return err }
+			if err := flow.SetSender(outputFlow, uint8(outport1)); err != nil {
+				return err
+			}
 			// Create receiving flows and set a checking function for it
 			flow1, err = flow.SetReceiver(uint8(inport1))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 			flow2, err = flow.SetReceiver(uint8(inport2))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		} else {
 			flow1 = outputFlow
 			flow2, err = flow.SetPartitioner(flow1, 1000, 100)
-			if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil { return err }
-			if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil { return err }
-			if err != nil { return err }
+			if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil {
+				return err
+			}
+			if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil {
+				return err
+			}
+			if err != nil {
+				return err
+			}
 		}
-		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil { return err }
-		if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil { return err }
-		if err := flow.SetStopper(flow1); err != nil { return err }
-		if err := flow.SetStopper(flow2); err != nil { return err }
+		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(flow1); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(flow2); err != nil {
+			return err
+		}
 
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
 		}()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		progStart = time.Now()
 
 		// Wait for enough packets to arrive
@@ -162,7 +202,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
 
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
@@ -181,7 +221,7 @@ func fixPackets2(pkt *packet.Packet, ctx flow.UserContext) {
 	fixMACAddrs2(pkt, ctx)
 }
 
-func composeStatistics() {
+func composeStatistics() error {
 	// Compose statistics
 	recv1 := atomic.LoadUint64(&recvCount1)
 	recv2 := atomic.LoadUint64(&recvCount2)
@@ -206,9 +246,10 @@ func composeStatistics() {
 
 	if p1 <= high1 && p2 <= high2 && p1 >= low1 && p2 >= low2 && received*100/sent > passedLimit {
 		println("TEST PASSED")
-	} else {
-		println("TEST FAILED")
+		return nil
 	}
+	println("TEST FAILED")
+	return errors.New("final statistics check failed")
 
 }
 
