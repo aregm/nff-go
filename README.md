@@ -1,11 +1,11 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/nff-go)](https://goreportcard.com/report/github.com/intel-go/nff-go)
-[![GoDoc](https://godoc.org/github.com/intel-go/nff-go?status.svg)](https://godoc.org/github.com/intel-go/nff-go)
-[![Dev chat at https://gitter.im/intel-nff-go/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-nff-go/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
-# NFF-GO - Yet Another Network Function Framework
+[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff) 
+[![GoDoc](https://godoc.org/github.com/intel-go/yanff?status.svg)](https://godoc.org/github.com/intel-go/yanff)
+[![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](https://travis-ci.org/intel-go/yanff.svg?branch=develop)](https://travis-ci.org/intel-go/yanff)
+# Network Function Framework for Go (former YANFF)
 
 ## What it is
-NFF-GO is a set of libraries for creating and deploying cloud-native Network
+NFF-Go is a set of libraries for creating and deploying cloud-native Network
 Functions (NFs). It simplifies the creation of network functions without
 sacrificing performance. 
 * Higher level abstractions than DPDK. Using DPDK as a fast I/O engine for performance
@@ -69,7 +69,6 @@ func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	return currentPacket.L3ACLPermit(L3Rules)
 }
 ```
-
 NFF-GO is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
 available in the master branch.
@@ -77,7 +76,6 @@ available in the master branch.
 ## Getting NFF-GO
 
 Use the **go get** command to download NFF-GO. You must first set your GOPATH
-
        export GOPATH=/my/local/directory
        go get -v -d github.com/intel-go/nff-go
 
@@ -85,7 +83,6 @@ Go will download the sources into $GOPATH/src. It will try to build NFF-GO and
 fail with a message:
 
         can't load package: package github.com/intel-go/nff-go: no buildable Go source files in /localdisk/work/rscohn1/ws/nff-go-test/src/github.com/intel-go/nff-go
-
 Ignore the message for now. We need to install some dependencies before you can
 build.
 
@@ -134,7 +131,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
         go version
         
-### Installing NFF-GO dependencies
+### Installing NFF dependencies
 
         $GOPATH/src/github.com/intel-go/nff-go/scripts/get-depends.sh
 
@@ -147,8 +144,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
         cd $GOPATH/src/github.com/intel-go/nff-go
         make -j8
 
-## Running NFF-GO
-
+# Running NFF-GO
 
 ## Documentation 
 
@@ -209,13 +205,12 @@ downloaded automatically.
 
 ## Contributing
 
-If you want to contribute to NFF-GO, check our [Contributing
-guide](https://github.com/intel-go/nff-go/blob/master/CONTRIBUTING.md). We also
+If you want to contribute to NFF-Go, check our [Contributing
+guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
 recommend checking the 'janitorial' bugs in our list of open issues; these bugs
-can be solved without an extensive knowledge of NFF-GO. We would love to help
+can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 
-You can reach the NFF-GO development team via our [mailing
-list](mailto:areg.melik-adamyan@intel.com).
+You can reach the NFF-Go development team via our [mailing list](mailto:areg.melik-adamyan@intel.com).
 
     
