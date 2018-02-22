@@ -1,0 +1,226 @@
+{
+    "docker-config": {
+        "request-timeout": 10000000000,
+        "docker-client-version": "1.24",
+        "privileged": true,
+        "map-volumes": [
+            "/sys/bus/pci/drivers:/sys/bus/pci/drivers",
+            "/sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages",
+            "/sys/devices/system/node:/sys/devices/system/node",
+            "/dev:/dev"
+        ],
+        "pktgen-port": 22022
+    },
+    "tests": [
+        {
+            "name": "generate1",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-resend",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testResend", "-number=100000", "-testScenario=1", "-inport=1", "-outport=0"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-resend",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testResend", "-testScenario=2", "-inport=0", "-outport=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge1",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=1", "-outport2=0"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=0", "-inport2=1", "-outport1=0"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "split1",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-split",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testSplit", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-split",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testSplit", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "separate1",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-separate",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testSeparate", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-separate",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testSeparate", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "partition1",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-partition",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testPartition", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-partition",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testPartition", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "handle1",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-handle",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testHandle", "-speed=1000", "-number=10000", "-testScenario=1", "-inport=1", "-outport=0"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-handle",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testHandle", "-testScenario=2", "-inport=0", "-outport=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv4_tcp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000", "-inport=0", "-outport=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=0"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv4_udp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000", "-inport=0", "-outport=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=0"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv6_tcp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000", "-inport=0", "-outport=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=0"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cksums_ipv6_udp",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000", "-inport=0", "-outport=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-cksum",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=0"
+                    ]
+                }
+            ]
+        }
+    ]
+}

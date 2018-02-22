@@ -11,14 +11,14 @@
 // At the moment IPv6 is supported without extension headers.
 //
 // For performance
-// reasons YANFF provides a set of functions each of them parse exact network level.
+// reasons NFF-GO provides a set of functions each of them parse exact network level.
 //
 // Packet parsing
 //
 // Family of parsing functions can parse packets with known structure of headers
 // and parse exactly required protocols.
 //
-// YANFF provides two groups of parsing functions:
+// NFF-GO provides two groups of parsing functions:
 // conditional and unconditional parsing functions.
 //
 // Unconditional parsing functions are used to parse exactly required protocols. They use constant offsets and
@@ -45,8 +45,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	. "github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 var mbufStructSize uintptr
@@ -179,7 +179,7 @@ func (hdr *ICMPHdr) String() string {
 	return r0 + r1 + r2 + r3 + r4 + r5
 }
 
-// Packet is a set of pointers in YANFF library. Each pointer points to one of five headers:
+// Packet is a set of pointers in NFF-GO library. Each pointer points to one of five headers:
 // Mac, IPv4, IPv6, TCP and UDP plus raw pointer.
 //
 // Empty packet means that only raw pointer is not nil: it points to beginning of packet data
@@ -276,8 +276,8 @@ func (packet *Packet) GetTCPForIPv4() *TCPHdr {
 	return nil
 }
 
-// GetTCPForIPv4NoCheck casts L4 pointer to TCPHdr type.
-func (packet *Packet) GetTCPForIPv4NoCheck() *TCPHdr {
+// GetTCPNoCheck casts L4 pointer to TCPHdr type.
+func (packet *Packet) GetTCPNoCheck() *TCPHdr {
 	return (*TCPHdr)(packet.L4)
 }
 
@@ -289,11 +289,6 @@ func (packet *Packet) GetTCPForIPv6() *TCPHdr {
 	return nil
 }
 
-// GetTCPForIPv6NoCheck casts L4 pointer to *TCPHdr type.
-func (packet *Packet) GetTCPForIPv6NoCheck() *TCPHdr {
-	return (*TCPHdr)(packet.L4)
-}
-
 // GetUDPForIPv4 ensures if L4 type is UDP and cast L4 pointer to *UDPHdr type.
 func (packet *Packet) GetUDPForIPv4() *UDPHdr {
 	if packet.GetIPv4NoCheck().NextProtoID == UDPNumber {
@@ -302,8 +297,8 @@ func (packet *Packet) GetUDPForIPv4() *UDPHdr {
 	return nil
 }
 
-// GetUDPForIPv4NoCheck casts L4 pointer to *UDPHdr type.
-func (packet *Packet) GetUDPForIPv4NoCheck() *UDPHdr {
+// GetUDPNoCheck casts L4 pointer to *UDPHdr type.
+func (packet *Packet) GetUDPNoCheck() *UDPHdr {
 	return (*UDPHdr)(packet.L4)
 }
 
@@ -315,11 +310,6 @@ func (packet *Packet) GetUDPForIPv6() *UDPHdr {
 	return nil
 }
 
-// GetUDPForIPv6NoCheck casts L4 pointer to *UDPHdr type.
-func (packet *Packet) GetUDPForIPv6NoCheck() *UDPHdr {
-	return (*UDPHdr)(packet.L4)
-}
-
 // GetICMPForIPv4 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv4 type.
 func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
@@ -329,8 +319,8 @@ func (packet *Packet) GetICMPForIPv4() *ICMPHdr {
 	return nil
 }
 
-// GetICMPForIPv4NoCheck casts L4 pointer to *ICMPHdr type.
-func (packet *Packet) GetICMPForIPv4NoCheck() *ICMPHdr {
+// GetICMPNoCheck casts L4 pointer to *ICMPHdr type.
+func (packet *Packet) GetICMPNoCheck() *ICMPHdr {
 	return (*ICMPHdr)(packet.L4)
 }
 
@@ -341,11 +331,6 @@ func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
 		return (*ICMPHdr)(packet.L4)
 	}
 	return nil
-}
-
-// GetICMPForIPv6NoCheck casts L4 pointer to *ICMPHdr type.
-func (packet *Packet) GetICMPForIPv6NoCheck() *ICMPHdr {
-	return (*ICMPHdr)(packet.L4)
 }
 
 // ParseAllKnownL3 parses L3 field and returns pointers to parsed headers.
@@ -365,11 +350,11 @@ func (packet *Packet) ParseAllKnownL3() (*IPv4Hdr, *IPv6Hdr, *ARPHdr) {
 func (packet *Packet) ParseAllKnownL4ForIPv4() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv4()
 	if packet.GetTCPForIPv4() != nil {
-		return packet.GetTCPForIPv4NoCheck(), nil, nil
+		return packet.GetTCPNoCheck(), nil, nil
 	} else if packet.GetUDPForIPv4() != nil {
-		return nil, packet.GetUDPForIPv4NoCheck(), nil
+		return nil, packet.GetUDPNoCheck(), nil
 	} else if packet.GetICMPForIPv4() != nil {
-		return nil, nil, packet.GetICMPForIPv4NoCheck()
+		return nil, nil, packet.GetICMPNoCheck()
 	}
 	return nil, nil, nil
 }
@@ -378,11 +363,11 @@ func (packet *Packet) ParseAllKnownL4ForIPv4() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 func (packet *Packet) ParseAllKnownL4ForIPv6() (*TCPHdr, *UDPHdr, *ICMPHdr) {
 	packet.ParseL4ForIPv6()
 	if packet.GetTCPForIPv6() != nil {
-		return packet.GetTCPForIPv6NoCheck(), nil, nil
+		return packet.GetTCPNoCheck(), nil, nil
 	} else if packet.GetUDPForIPv6() != nil {
-		return nil, packet.GetUDPForIPv6NoCheck(), nil
+		return nil, packet.GetUDPNoCheck(), nil
 	} else if packet.GetICMPForIPv6() != nil {
-		return nil, nil, packet.GetICMPForIPv6NoCheck()
+		return nil, nil, packet.GetICMPNoCheck()
 	}
 	return nil, nil, nil
 }
@@ -502,11 +487,11 @@ func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
-	packet.GetIPv4().NextProtoID = NoNextHeader
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = NoNextHeader
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4OLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -524,9 +509,9 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len)
 
 	packet.ParseL3()
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
-	packet.GetIPv6().Proto = NoNextHeader
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = NoNextHeader
 
 	return true
 }
@@ -560,15 +545,15 @@ func InitEmptyIPv4TCPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = TCPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = TCPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
 
 	packet.ParseL4ForIPv4()
-	packet.GetTCPForIPv4().DataOff = packet.GetTCPForIPv4().DataOff | 0x50 // TODO check
+	packet.GetTCPNoCheck().DataOff = packet.GetTCPNoCheck().DataOff | 0x50 // TODO check
 
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -589,15 +574,15 @@ func InitEmptyIPv4UDPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = UDPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = UDPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
 
 	packet.ParseL4ForIPv4()
-	packet.GetUDPForIPv4().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
 	if hwtxchecksum {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4UDPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
 	}
 	return true
@@ -618,9 +603,9 @@ func InitEmptyIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4().NextProtoID = ICMPNumber
-	packet.GetIPv4().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
-	packet.GetIPv4().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	packet.GetIPv4NoCheck().NextProtoID = ICMPNumber
+	packet.GetIPv4NoCheck().VersionIhl = 0x45 // Ipv4, IHL = 5 (min header len)
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
 	packet.ParseL4ForIPv4()
 	return true
 }
@@ -640,12 +625,12 @@ func InitEmptyIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + TCPMinLen)
 
 	packet.ParseL3()
-	packet.GetIPv6().Proto = TCPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = TCPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 
 	packet.ParseL4ForIPv6()
-	packet.GetTCPForIPv6().DataOff = packet.GetTCPForIPv6().DataOff | 0x50
+	packet.GetTCPNoCheck().DataOff = packet.GetTCPNoCheck().DataOff | 0x50
 
 	if hwtxchecksum {
 		low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
@@ -667,12 +652,12 @@ func InitEmptyIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + UDPLen)
 
 	packet.ParseL3()
-	packet.GetIPv6().Proto = UDPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = UDPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 
 	packet.ParseL4ForIPv6()
-	packet.GetUDPForIPv6().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
 	if hwtxchecksum {
 		low.SetTXIPv6UDPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
@@ -693,9 +678,9 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 
 	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv6().Proto = ICMPNumber
-	packet.GetIPv6().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
+	packet.GetIPv6NoCheck().Proto = ICMPNumber
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
+	packet.GetIPv6NoCheck().VtcFlow = SwapBytesUint32(0x60 << 24) // IP version
 	packet.ParseL4ForIPv6()
 	return true
 }
@@ -835,4 +820,61 @@ func (p *Packet) SendPacket(port uint8) bool {
 // Shouldn't be called by user
 func SetNonPerfMempool(m *low.Mempool) {
 	nonPerfMempool = m
+}
+
+type LPM struct {
+	tbl24 *([MaxLength]uint32)
+	tbl8  *([MaxLength]uint32)
+	lpm   unsafe.Pointer //C.struct_rte_lpm
+}
+
+// CreateLPM creates longest prefix match structure with given name at given socket
+// maxRules - maximum number of LPM rules inside table, numberTbl8 - maximum number
+// of rules with mask length more than 24 bits
+// LPM is stored in C management memory - no garbage collectors there. You should use
+// Free function after working with it.
+func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32) *LPM {
+	lpm := new(LPM)
+	lpm.lpm = low.CreateLPM(name, socket, maxRules, numberTbl8, unsafe.Pointer(&lpm.tbl24), unsafe.Pointer(&lpm.tbl8))
+	return lpm
+}
+
+// Lookup looks for given ip inside LPM table. If ip was
+// matched with LPM rule true is returned and nextHop contains
+// next hop identifier for this rule. Else false is returned.
+// Heavily based on DPDK rte_lpm_lookup with constants from there
+// No error checking (lpm == NULL or nextHop == NULL) due to performance
+// User should check it manually
+func (lpm *LPM) Lookup(ip uint32, nextHop *uint32) bool {
+	tbl24_index := ip >> 8
+	tbl_entry := (*lpm.tbl24)[tbl24_index] // Copy tbl24 entry
+
+	if tbl_entry&low.RteLpmValidExtEntryBitmask == low.RteLpmValidExtEntryBitmask {
+		// Copy tbl8 entry (only if needed)
+		tbl8_index := (ip & 0x000000FF) + ((tbl_entry & 0x00FFFFFF) * low.RteLpmTbl8GroupNumEntries)
+		tbl_entry = (*lpm.tbl8)[tbl8_index]
+	}
+
+	*nextHop = tbl_entry & 0x00FFFFFF
+	if tbl_entry&low.RteLpmLookupSuccess != 0 {
+		return true
+	}
+	return false
+}
+
+// Add adds longest prefix match rule with specified ip, depth and nextHop
+// inside LPM table. Returns 0 if success and negative value otherwise
+func (lpm *LPM) Add(ip uint32, depth uint8, nextHop uint32) int {
+	return low.AddLPMRule(lpm.lpm, ip, depth, nextHop)
+}
+
+// Delete removes longest prefix match rule with diven ip and depth from
+// LPM table. Returns 0 if success and negative value otherwise
+func (lpm *LPM) Delete(ip uint32, depth uint8) int {
+	return low.DeleteLPMRule(lpm.lpm, ip, depth)
+}
+
+// Free frees LPM C management memory
+func (lpm *LPM) Free() {
+	low.FreeLPM(lpm.lpm)
 }

@@ -18,10 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
-	"github.com/intel-go/yanff/test/localTesting/pktgen/parseConfig"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/test/localTesting/pktgen/parseConfig"
 )
 
 var (
@@ -55,7 +55,7 @@ func main() {
 		panic(fmt.Sprintf("config reading failed: %v", err))
 	}
 
-	// Init YANFF system at 16 available cores
+	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		CPUList: "0-15",
 	}

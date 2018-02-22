@@ -34,7 +34,7 @@ func CheckFatal(err error) {
 }
 
 func main() {
-	// Initialize NFF-Go library to use 8 cores max.   
+	// Initialize NFF-GO library to use 8 cores max.
 	config := flow.Config{
 		CPUCoresNumber: 8,
 	}
@@ -69,35 +69,32 @@ func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 	return currentPacket.L3ACLPermit(L3Rules)
 }
 ```
-
-NFF-Go is an Open Source BSD licensed project that runs mostly in Linux user
+NFF-GO is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
 available in the master branch.
 
-## Getting NFF-Go
+## Getting NFF-GO
 
-Use the **go get** command to download NFF-Go. You must first set your GOPATH
-
+Use the **go get** command to download NFF-GO. You must first set your GOPATH
        export GOPATH=/my/local/directory
        go get -v -d github.com/intel-go/nff-go
 
-Go will download the sources into $GOPATH/src. It will try to build NFF-Go and
+Go will download the sources into $GOPATH/src. It will try to build NFF-GO and
 fail with a message:
 
-        can't load package: package github.com/intel-go/yanff: no buildable Go source files in /localdisk/work/rscohn1/ws/nff-test/src/github.com/intel-go/nff-go
-
+        can't load package: package github.com/intel-go/nff-go: no buildable Go source files in /localdisk/work/rscohn1/ws/nff-go-test/src/github.com/intel-go/nff-go
 Ignore the message for now. We need to install some dependencies before you can
 build.
 
 ### Working with a github fork
 
-If you are working on a fork, then the **go get** command will not put yanff in
+If you are working on a fork, then the **go get** command will not put nff-go in
 $GOPATH/src/github.com/intel-go. However, imports will continue to reference
-githb.com/intel-go. This is a feature of Go and not a problem in the way yanff
+githb.com/intel-go. This is a feature of Go and not a problem in the way nff-go
 is written. See [stackoverflow
 article](https://stackoverflow.com/questions/14323872/using-forked-package-import-in-go)
 for a discussion. A simple way to resolve the problem is to use a symlink. If
-you are rscohn2 on github, and you forked yanff into your personal account,
+you are rscohn2 on github, and you forked nff-go into your personal account,
 then do this:
 
         cd $GOPATH/src/github.com
@@ -109,7 +106,7 @@ then do this:
 
 ### DPDK
     
-NFF-Go uses DPDK, so you must setup your system to build and run DPDK. See [System
+NFF-GO uses DPDK, so you must setup your system to build and run DPDK. See [System
 Requirements in the DPDK Getting Started Guide for
 Linux](http://dpdk.org/doc/guides/linux_gsg/sys_reqs.html) for more
 information.
@@ -142,13 +139,12 @@ Use Go version 1.9 or higher. To check the version of Go, do:
     
         export PATH="$PATH:$GOPATH"/bin
     
-## Building NFF
+## Building NFF-GO
 
         cd $GOPATH/src/github.com/intel-go/nff-go
         make -j8
 
-## Running NFF
-
+# Running NFF-GO
 
 ## Documentation 
 
@@ -167,7 +163,7 @@ and browse the following URLs:
 ## Tests
 
 Invoking make in the top-level directory builds the testing framework and
-examples. NFF-Go distributed tests are packaged inside of Docker container
+examples. NFF-GO distributed tests are packaged inside of Docker container
 images. There are also single node unit tests in some packages that you can
 run using the command:
 
@@ -182,8 +178,8 @@ variable), use the **make images** command.
 To deploy Docker images for use in distributed testing, use the **make deploy**
 command. This command requires two environment variables:
 
-* YANFF_HOSTS="hostname1 hostname2 ... hostnameN"* - a list of all hostnames for deployed test Docker images
-* DOCKER_PORT=2375* - the port number to connect to Docker daemons running on hosts in the YANFF_HOSTS variable
+* NFF_GO_HOSTS="hostname1 hostname2 ... hostnameN"* - a list of all hostnames for deployed test Docker images
+* DOCKER_PORT=2375* - the port number to connect to Docker daemons running on hosts in the NFF_GO_HOSTS variable
 
 To delete generated images in the default Docker target, use the **make
 clean-images** command.
@@ -194,17 +190,17 @@ After the Docker images are deployed on all test hosts, you can run distributed
 network tests. The test framework is located in the test/main directory and
 accepts a JSON file with a test specification. There are predefined configs for
 performance and stability tests in the same directory. To run these tests,
-change **hostname1** and **hostname2** to the hosts from the YANFF_HOSTS list
+change **hostname1** and **hostname2** to the hosts from the NFF_GO_HOSTS list
 in these JSON files.
 
 ## Cleaning-up
 
 To clean all generated binaries, use the **make clean** command.  To delete all
-deployed images listed in YANFF_HOSTS, use the **make cleanall** command.
+deployed images listed in NFF_GO_HOSTS, use the **make cleanall** command.
 
 ## Changing the DPDK sources
 
-If you use the **make** command from NFF-Go directories, the DPDK driver is
+If you use the **make** command from NFF-GO directories, the DPDK driver is
 downloaded automatically.
 
 ## Contributing
@@ -215,7 +211,6 @@ recommend checking the 'janitorial' bugs in our list of open issues; these bugs
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 
-You can reach the NFF-Go development team via our [mailing
-list](mailto:areg.melik-adamyan@intel.com).
+You can reach the NFF-Go development team via our [mailing list](mailto:areg.melik-adamyan@intel.com).
 
     

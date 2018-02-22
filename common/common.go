@@ -10,12 +10,15 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
-	"runtime"
 	"strconv"
 
 	"github.com/pkg/errors"
 )
+
+// Max array length for type conversions
+const MaxLength = math.MaxInt32
 
 // Length of addresses.
 const (
@@ -128,9 +131,10 @@ const (
 	PcapReadFail
 	PcapWriteFail
 	InvalidCPURangeErr
+	SetAffinityErr
 )
 
-// NFError is error type returned by yanff functions
+// NFError is error type returned by nff-go functions
 type NFError struct {
 	Code     ErrorCode
 	Message  string
@@ -301,7 +305,7 @@ func GetDPDKLogLevel() string {
 	}
 }
 
-// GetDefaultCPUs returns default core list {0, 1, ..., GOMAXPROCS-1}
+// GetDefaultCPUs returns default core list {0, 1, ..., NumCPU}
 func GetDefaultCPUs(cpuNumber uint) []uint {
 	cpus := make([]uint, cpuNumber, cpuNumber)
 	for i := uint(0); i < cpuNumber; i++ {
@@ -310,9 +314,17 @@ func GetDefaultCPUs(cpuNumber uint) []uint {
 	return cpus
 }
 
-// ParseCPUs parses cpu list string into array of cpu numbers
-// and truncate the list according to given coresNumber (GOMAXPROCS)
-func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
+// HandleCPUs parses cpu list string into array of valid core numbers.
+// Removes duplicates
+func HandleCPUList(s string, maxcpu uint) ([]uint, error) {
+	nums, err := parseCPUs(s)
+	nums = removeDuplicates(nums)
+	nums = dropInvalidCPUs(nums, maxcpu)
+	return nums, err
+}
+
+// parseCPUs parses cpu list string into array of cpu numbers
+func parseCPUs(s string) ([]uint, error) {
 	var startRange, k int
 	nums := make([]uint, 0, 256)
 	if s == "" {
@@ -351,19 +363,6 @@ func ParseCPUs(s string, coresNumber uint) ([]uint, error) {
 			j = i + 1
 		}
 	}
-
-	nums = removeDuplicates(nums)
-
-	numCPU := uint(runtime.NumCPU())
-	for _, cpu := range nums {
-		if cpu >= numCPU {
-			return []uint{}, WrapWithNFError(nil, "requested cpu exceeds maximum cores number on machine", MaxCPUExceedErr)
-		}
-	}
-	if len(nums) > int(coresNumber) {
-		return nums[:coresNumber], nil
-	}
-
 	return nums, nil
 }
 
@@ -377,4 +376,19 @@ func removeDuplicates(array []uint) []uint {
 		}
 	}
 	return result
+}
+
+// dropInvalidCPUs validates cpu list. Takes array of cpu ids and checks it is < maxcpu on machine,
+// invalid are excluded. Returns list of valid cpu ids.
+func dropInvalidCPUs(nums []uint, maxcpu uint) []uint {
+	i := 0
+	for _, x := range nums {
+		if x < maxcpu {
+			nums[i] = x
+			i++
+		} else {
+			LogWarning(Initialization, "Requested cpu", x, "exceeds maximum cores number on machine, skip it")
+		}
+	}
+	return nums[:i]
 }

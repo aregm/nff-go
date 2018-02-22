@@ -10,8 +10,8 @@ import (
 	"os"
 	"sync/atomic"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var totalPackets int64
@@ -39,7 +39,7 @@ func main() {
 
 	payloadSize = packetSize - hdrsSize
 
-	// Initialize YANFF library at 16 cores by default
+	// Initialize NFF-GO library at 16 cores by default
 	config := flow.Config{
 		CPUList: "0-15",
 	}

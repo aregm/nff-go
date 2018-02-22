@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
 )
 
 type terminationDirection uint8

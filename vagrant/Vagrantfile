@@ -2,16 +2,25 @@
 # vi: set ft=ruby :
 
 Vagrant.configure(2) do |config|
+  unless Vagrant.has_plugin?("vagrant-reload")
+    raise 'Plugin vagrant-reload is not installed!'
+  end
+
   if Vagrant.has_plugin?("vagrant-proxyconf")
     config.proxy.http     = ENV.fetch('http_proxy', false)
     config.proxy.https    = ENV.fetch('https_proxy', false)
   end
 
+  vm_name = ENV.fetch('VM_NAME', "nff-go")
   vm_group_size = ENV.fetch('VM_GROUP_SIZE', 2).to_i
   vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 2).to_i
   vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
 
-  config.vm.box = "ubuntu/xenial64"
+#  config.vm.box = "ubuntu/xenial64"
+  config.vm.box = "generic/fedora27"
+
+  # Docker server port
+  config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -27,60 +36,74 @@ Vagrant.configure(2) do |config|
     end
   end
 
-$provision = <<SHELL
+$provision_fedora = <<SHELL
+echo Installing system packages
+sudo dnf update
+sudo dnf install -y redhat-lsb-core net-tools numactl-devel libpcap-devel elfutils-libelf-devel
+SHELL
+
+$provision_ubuntu = <<SHELL
 echo Installing system packages
 sudo apt-get update
 sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager
 sudo systemctl enable network-manager
 sudo systemctl start network-manager
+SHELL
 
+$provision_common = <<SHELL
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://redirector.gvt1.com/edgedl/go/go1.9.2.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.9.4.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
 echo . ~/scripts.sh >> .bashrc
+setupdocker
 
-echo Downloading and building YANFF
-go get github.com/pkg/errors
-go get -d -v github.com/intel-go/yanff
-(cd \"$GOPATH\"/src/github.com/intel-go/yanff; git checkout develop; make)
+echo Downloading and building NFF-GO
+go get -d -v github.com/intel-go/nff-go
+(cd \"$GOPATH\"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make)
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 sudo sh -c 'echo vm.nr_hugepages=1024 >> /etc/sysctl.conf'
+echo IMPORTANT MESSAGE:
+echo If kernel was updated during provisioning, it is highly recommended to reboot this VM before using it!!!
+echo Use functions from scripts.sh to further setup NFF-GO environment.
 SHELL
 
   config.vm.provision "file", source: "scripts.sh", destination: "scripts.sh"
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  config.vm.provision "shell",
-                      privileged: false,
-                      inline: $provision
+  config.vm.provision "shell", privileged: false, inline: $provision_fedora + $provision_common
+  # Optional Ubuntu provisioning, use if you want to work in Ubuntu
+  # environment.
+  config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu + $provision_common
+  # Reboot VM after provisioning
+  config.vm.provision :reload
 
-  # Define six YANFF VMs
+  # Define six NFF-GO VMs
   user = ENV.fetch('USER', "nouser")
   (0..vm_total_number - 1).each do |i|
-    config.vm.define "yanff-#{i}" do |node|
-      node.vm.hostname = "yanff-#{i}"
+    config.vm.define "#{vm_name}-#{i}" do |node|
+      node.vm.hostname = "#{vm_name}-#{i}"
 
-      # Create inter-VM connections only for VMs inside of one VM group
-      if i + 1 < vm_total_number && (i + 1) % vm_group_size != 0
-        # Define forward inter-VM virtual network links
-        (1..vm_links_number).each do |j|
-          node.vm.network "private_network",
-                          auto_config: false,
-                          virtualbox__intnet: "link-#{user}-#{i + 1}-#{j}"
-        end
-      end
-
+      # Create inter-VM connections for VMs inside of one VM group
       if i % vm_group_size != 0
         # Define backward inter-VM virtual network links
         (1..vm_links_number).each do |j|
           node.vm.network "private_network",
                           auto_config: false,
-                          virtualbox__intnet: "link-#{user}-#{i}-#{j}"
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}"
+        end
+      end
+
+      if i + 1 < vm_total_number && (i + 1) % vm_group_size != 0
+        # Define forward inter-VM virtual network links
+        (1..vm_links_number).each do |j|
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i + 1}-#{j}"
         end
       end
     end

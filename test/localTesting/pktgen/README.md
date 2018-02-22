@@ -1,7 +1,7 @@
 # Packet generation to file
 
 ## What it is
-Pktgen parses config in json format and generates packets according to it in pcap file that can be read by YANFF reader, Wireshark, tcpdump and other tools reading pcap files.
+Pktgen parses config in json format and generates packets according to it in pcap file that can be read by NFF-GO reader, Wireshark, tcpdump and other tools reading pcap files.
 
 ### Command-line options:
 * --totalPackets sets the number of packets to generate, default value is 10000000

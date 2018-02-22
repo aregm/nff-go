@@ -7,9 +7,9 @@ package nat
 import (
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // Tuple is a pair of address and port.
@@ -350,7 +350,7 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 		return flowOut
 	}
 
-	icmp := pkt.GetICMPForIPv4NoCheck()
+	icmp := pkt.GetICMPNoCheck()
 
 	// Check that received ICMP packet is echo request packet. We
 	// don't support any other messages yet, so process them in normal

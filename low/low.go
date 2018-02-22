@@ -11,15 +11,14 @@ import "C"
 
 import (
 	"encoding/hex"
-	"math"
 	"os"
 	"runtime"
 	"sync/atomic"
 	"syscall"
 	"unsafe"
 
-	"github.com/intel-go/yanff/asm"
-	"github.com/intel-go/yanff/common"
+	"github.com/intel-go/nff-go/asm"
+	"github.com/intel-go/nff-go/common"
 )
 
 // DirectStop frees mbufs.
@@ -33,7 +32,7 @@ func DirectSend(m *Mbuf, port uint8) bool {
 }
 
 // Ring is a ring buffer for pointers
-type Ring C.struct_yanff_ring
+type Ring C.struct_nff_go_ring
 
 // Mbuf is a message buffer.
 type Mbuf C.struct_rte_mbuf
@@ -212,28 +211,35 @@ const (
 	RtePtypeL4Udp   = C.RTE_PTYPE_L4_UDP
 )
 
+// These constants are used by packet package for longest prefix match lookup
+const (
+	RteLpmValidExtEntryBitmask = C.RTE_LPM_VALID_EXT_ENTRY_BITMASK
+	RteLpmTbl8GroupNumEntries  = C.RTE_LPM_TBL8_GROUP_NUM_ENTRIES
+	RteLpmLookupSuccess        = C.RTE_LPM_LOOKUP_SUCCESS
+)
+
 // CreateRing creates ring with given name and count.
 func CreateRing(name string, count uint) *Ring {
 	var ring *Ring
 	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
-	ring = (*Ring)(unsafe.Pointer(C.yanff_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+	ring = (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 
 	return ring
 }
 
 // EnqueueBurst enqueues data to ring buffer.
 func (ring *Ring) EnqueueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMpEnqueueBurst((*C.struct_yanff_ring)(ring), buffer, count)
+	return nffgoRingMpEnqueueBurst((*C.struct_nff_go_ring)(ring), buffer, count)
 }
 
 // DequeueBurst dequeues data from ring buffer.
 func (ring *Ring) DequeueBurst(buffer []uintptr, count uint) uint {
-	return yanffRingMcDequeueBurst((*C.struct_yanff_ring)(ring), buffer, count)
+	return nffgoRingMcDequeueBurst((*C.struct_nff_go_ring)(ring), buffer, count)
 }
 
 // Heavily based on DPDK ENQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func enqueuePtrs(r *C.struct_yanff_ring, prodHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr /*const*/) {
+func enqueuePtrs(r *C.struct_nff_go_ring, prodHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr /*const*/) {
 	var size C.uint32_t = r.DPDK_ring.size
 	var idx C.uint32_t = prodHead & mask
 	var i uint
@@ -273,7 +279,7 @@ func enqueuePtrs(r *C.struct_yanff_ring, prodHead C.uint32_t, mask C.uint32_t, n
 
 // Heavily based on DPDK DEQUEUE_PTRS
 // in C version it is a macros with do-while(0). I suppose that we don't need while(0) now because it is a function.
-func dequeuePtrs(r *C.struct_yanff_ring, consHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr) {
+func dequeuePtrs(r *C.struct_nff_go_ring, consHead C.uint32_t, mask C.uint32_t, n uint, objTable []uintptr) {
 	var idx C.uint32_t = consHead & mask
 	var size C.uint32_t = r.DPDK_ring.size
 	var i uint
@@ -312,7 +318,7 @@ func dequeuePtrs(r *C.struct_yanff_ring, consHead C.uint32_t, mask C.uint32_t, n
 }
 
 // Heavily based on DPDK mp_do_enqueue
-func yanffRingMpDoEnqueue(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
+func nffgoRingMpDoEnqueue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var prodHead, prodNext C.uint32_t
 	var consTail, freeEntries C.uint32_t
 	var max = n //max should be const but can't
@@ -361,7 +367,7 @@ func yanffRingMpDoEnqueue(r *C.struct_yanff_ring, objTable []uintptr, n uint) ui
 }
 
 // Heavily based on DPDK mc_do_dequeue
-func yanffRingMcDoDequeue(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
+func nffgoRingMcDoDequeue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var consHead, prodTail C.uint32_t
 	var consNext, entries C.uint32_t
 	var max = n // max should be const but can't
@@ -409,13 +415,13 @@ func yanffRingMcDoDequeue(r *C.struct_yanff_ring, objTable []uintptr, n uint) ui
 }
 
 // Heavily based on DPDK mp_enqueue_burst
-func yanffRingMpEnqueueBurst(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
-	return yanffRingMpDoEnqueue(r, objTable, n)
+func nffgoRingMpEnqueueBurst(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
+	return nffgoRingMpDoEnqueue(r, objTable, n)
 }
 
 // Heavily based on DPDK mc_dequeue_burst
-func yanffRingMcDequeueBurst(r *C.struct_yanff_ring, objTable []uintptr, n uint) uint {
-	return yanffRingMcDoDequeue(r, objTable, n)
+func nffgoRingMcDequeueBurst(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
+	return nffgoRingMcDoDequeue(r, objTable, n)
 }
 
 // GetRingCount gets number of objects in ring.
@@ -429,7 +435,7 @@ func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Send - dequeue packets and send.
@@ -438,12 +444,12 @@ func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.yanff_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
 }
 
 // Stop - dequeue and free packets.
 func Stop(IN *Ring) {
-	C.yanff_stop(IN.DPDK_ring)
+	C.nff_go_stop(IN.DPDK_ring)
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -501,14 +507,18 @@ func CreateMempool() *Mempool {
 }
 
 // SetAffinity sets cpu affinity mask.
-func SetAffinity(coreID uint8) {
+func SetAffinity(coreID uint8) error {
 	// go tool trace shows that each proc executes different goroutine. However it is expected behavior
 	// (golang issue #20853) and each goroutine is locked to one OS thread.
 	runtime.LockOSThread()
 
 	var cpuset C.cpu_set_t
 	C.initCPUSet(C.uint8_t(coreID), &cpuset)
-	syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
+	_, _, errno := syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
+	if errno != 0 {
+		return common.WrapWithNFError(nil, errno.Error(), common.SetAffinityErr)
+	}
+	return nil
 }
 
 // AllocateMbufs allocates n mbufs.
@@ -532,7 +542,7 @@ func AllocateMbuf(mb *uintptr, mempool *Mempool) error {
 // WriteDataToMbuf copies data to mbuf.
 func WriteDataToMbuf(mb *Mbuf, data []byte) {
 	d := unsafe.Pointer(GetPacketDataStartPointer(mb))
-	slice := (*[math.MaxInt32]byte)(d)[:len(data)] // copy requires slice
+	slice := (*[common.MaxLength]byte)(d)[:len(data)] // copy requires slice
 	//TODO need to investigate maybe we need to use C function C.rte_memcpy here
 	copy(slice, data)
 }
@@ -576,4 +586,31 @@ func CreateKni(port uint8, core uint8, name string) {
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempool)
 	C.create_kni(C.uint8_t(port), C.uint8_t(core), C.CString(name), mempool)
+}
+
+// CreateLPM creates LPM table
+// We can't reuse any structures like rte_lpm or rte_lpm_tbl_entry due to
+// CGO problems with bitfields (uint24 compile time error).
+// We we pass pointers via "unsafe.Pointer" and "void*"
+// C function will return pointers to correct rte_lpm fields to tbl24 and tbl8,
+// so we shouldn't worry about rte_lpm changings. However we use indexing
+// while lookup, so we will need to check our sizes if DPDK changes rte_lpm_tbl_entry struct size
+func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32, tbl24 unsafe.Pointer, tbl8 unsafe.Pointer) unsafe.Pointer {
+	return unsafe.Pointer(C.lpm_create(C.CString(name), C.int(socket), C.uint32_t(maxRules), C.uint32_t(numberTbl8),
+		(**[1]C.uint32_t)(tbl24), (**[1]C.uint32_t)(tbl8)))
+}
+
+// AddLPMRule adds one rule to LPM table
+func AddLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8, nextHop uint32) int {
+	return int(C.lpm_add(lpm, C.uint32_t(ip), C.uint8_t(depth), C.uint32_t(nextHop)))
+}
+
+// DeleteLPMRule removes one rule from LPM table
+func DeleteLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8) int {
+	return int(C.lpm_delete(lpm, C.uint32_t(ip), C.uint8_t(depth)))
+}
+
+// FreeLPM frees lpm structure
+func FreeLPM(lpm unsafe.Pointer) {
+	C.lpm_free(lpm)
 }

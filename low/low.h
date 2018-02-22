@@ -16,6 +16,7 @@
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
 #include <rte_kni.h>
+#include <rte_lpm.h>
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
@@ -62,6 +63,7 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
+static int kni_config_network_interface(uint8_t port_id, uint8_t if_up);
 
 uint32_t BURST_SIZE;
 
@@ -81,18 +83,24 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
-	struct rte_kni_conf port_conf_default = {
-	    .core_id = core, // Core ID to bind kernel thread on
-	    .group_id = (uint16_t)port,
-	    .mbuf_size = 2048,
-	    .addr = dev_info.pci_dev->addr,
-	    .id = dev_info.pci_dev->id,
-	    .force_bind = 1 // Flag to bind kernel thread
-	};
-	snprintf(port_conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
-	// TODO this NULL is for ops structure which handles callbacks from kernels requests
-	// DPDK example has callbacks for "change mtu" and "config network interface"
-	kni[port] = rte_kni_alloc(mbuf_pool, &port_conf_default, NULL);
+
+	struct rte_kni_conf conf_default;
+	memset(&conf_default, 0, sizeof(conf_default));
+	snprintf(conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
+	conf_default.core_id = core; // Core ID to bind kernel thread on
+	conf_default.group_id = (uint16_t)port;
+	conf_default.mbuf_size = 2048;
+	conf_default.addr = dev_info.pci_dev->addr;
+	conf_default.id = dev_info.pci_dev->id;
+	conf_default.force_bind = 1; // Flag to bind kernel thread
+
+	struct rte_kni_ops ops;
+	memset(&ops, 0, sizeof(ops));
+	ops.port_id = port;
+	// TODO Add handling of changing MTU here
+	ops.config_network_if = kni_config_network_interface;
+
+	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
 	}
@@ -204,7 +212,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -225,6 +233,7 @@ void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t 
 		} else {
 			// If queue == "-1" is means that this receive is from KNI device
 			rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+			rte_kni_handle_request(kni[port]);
 		}
 #ifdef REASSEMBLY
 		uint16_t temp_number = 0;
@@ -275,7 +284,7 @@ void yanff_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t 
 	}
 }
 
-void yanff_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -308,7 +317,7 @@ void yanff_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t c
 	}
 }
 
-void yanff_stop(struct rte_ring *in_ring) {
+void nff_go_stop(struct rte_ring *in_ring) {
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.
@@ -444,17 +453,17 @@ int getMempoolSpace(struct rte_mempool * m) {
 	return rte_mempool_in_use_count(m);
 }
 
-struct yanff_ring {
+struct nff_go_ring {
         struct rte_ring *DPDK_ring;
         // We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
         void *internal_DPDK_ring;
         uint32_t offset;
 };
 
-struct yanff_ring *
-yanff_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
-        struct yanff_ring* r;
-        r = malloc(sizeof(struct yanff_ring));
+struct nff_go_ring *
+nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
+        struct nff_go_ring* r;
+        r = malloc(sizeof(struct nff_go_ring));
 
         r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
         // Ring elements are located immidiately behind rte_ring structure
@@ -462,4 +471,52 @@ yanff_ring_create(const char *name, unsigned count, int socket_id, unsigned flag
         r->internal_DPDK_ring = &(r->DPDK_ring)[1];
         r->offset = sizeof(void*);
         return r;
+}
+
+void *
+lpm_create(const char *name, int socket_id, uint32_t maxRules, uint32_t numberTbl8, uint32_t (**tbl24)[1], uint32_t (**tbl8)[1]) {
+	struct rte_lpm_config config;
+	config.max_rules = maxRules;
+	config.number_tbl8s = numberTbl8;
+	struct rte_lpm *lpm = rte_lpm_create(name, socket_id, &config);
+	*tbl24 = (uint32_t(*)[1])lpm->tbl24;
+	*tbl8 = (uint32_t(*)[1])lpm->tbl8;
+	return (void*)lpm;
+}
+
+int lpm_add(void *lpm, uint32_t ip, uint8_t depth, uint32_t next_hop) {
+	return rte_lpm_add((struct rte_lpm*)lpm, ip, depth, next_hop);
+}
+
+int lpm_delete(void *lpm, uint32_t ip, uint8_t depth) {
+	return rte_lpm_delete((struct rte_lpm *)lpm, ip, depth);
+}
+
+void lpm_free(void *lpm) {
+	rte_lpm_free((struct rte_lpm *)lpm);
+}
+
+// Callback for request of configuring KNI up/down
+// Copy of DPDK kni_config_network_interface from examples/kni/main.c
+static int kni_config_network_interface(uint8_t port_id, uint8_t if_up) {
+	int ret = 0;
+	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
+		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");
+                return -EINVAL;
+        }
+
+	fprintf(stderr, "DEBUG: Configure network interface of %d %s\n", port_id, if_up ? "up" : "down");
+
+        if (if_up != 0) { // Configure network interface up
+                rte_eth_dev_stop(port_id);
+                ret = rte_eth_dev_start(port_id);
+        } else { // Configure network interface down
+                rte_eth_dev_stop(port_id);
+	}
+
+        if (ret < 0) {
+		rte_exit(EXIT_FAILURE, "Failed to start port while KNI configuring\n");
+	}
+
+        return ret;
 }

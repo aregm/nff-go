@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var (
@@ -43,7 +43,7 @@ func main() {
 	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
 	flag.Parse()
 
-	// Initialize YANFF library at 35 cores by default
+	// Initialize NFF-GO library at 35 cores by default
 	config := flow.Config{
 		CPUList:          "0-34",
 		DisableScheduler: noscheduler,

@@ -7,8 +7,8 @@ package packet
 import (
 	"fmt"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 // ARPHdr is protocol structure used in Address Resolution Protocol

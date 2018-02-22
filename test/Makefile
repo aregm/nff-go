@@ -3,16 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../mk
-SUBDIRS = stability performance stash
-.PHONY: main perf_testing
-
-perf_testing: main
-	$(MAKE) -C ./main perf_testing
-
-main: apptype_string.go
-	$(MAKE) -C ./main main
-
-apptype_string.go:
-	go generate
+SUBDIRS = stability performance stash framework
+.PHONY: perf_testing
 
 include $(PATH_TO_MK)/intermediate.mk

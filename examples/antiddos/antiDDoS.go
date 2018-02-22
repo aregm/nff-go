@@ -5,7 +5,7 @@
 // Below is an example of simple anti DDoS function. Type of atack is L4 flood.
 // DDoS attack is considered when only one packet is sent from each of multiple
 // source addresses with high frequrncy.
-// Packets are split on flows (NOT YANFF flows) – abstraction of all packets
+// Packets are split on flows (NOT NFF-GO flows) – abstraction of all packets
 // came from one scr addr and src port.
 // Layer 4 anti DDoS filter will be based on 2 indicators:
 // * Rate of inter-arrival times within [0, 200 us) (IAT):
@@ -25,9 +25,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/flow"
-	"github.com/intel-go/yanff/packet"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 // Constants are taken from paper:
@@ -87,7 +87,7 @@ func main() {
 	flag.IntVar(&inPort, "inPort", 0, "port to receive")
 	flag.Parse()
 
-	// Init YANFF system at requested number of cores.
+	// Init NFF-GO system at requested number of cores.
 	config := flow.Config{
 		CPUList: "0-15",
 	}

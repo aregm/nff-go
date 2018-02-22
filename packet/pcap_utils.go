@@ -9,8 +9,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/intel-go/yanff/common"
-	"github.com/intel-go/yanff/low"
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/low"
 )
 
 type nowFuncT func() time.Time
@@ -88,7 +88,7 @@ func writePacketBytes(f io.Writer, pktBytes []byte) error {
 // ReadPcapGlobalHdr read global pcap header into file.
 func ReadPcapGlobalHdr(f io.Reader, glHdr *PcapGlobHdr) error {
 	if err := binary.Read(f, binary.LittleEndian, glHdr); err != nil {
-		return common.WrapWithNFError(err, "read pcap one packet failed", common.PcapReadFail)
+		return common.WrapWithNFError(err, "read pcap global header failed", common.PcapReadFail)
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func readPacketBytes(f io.Reader, inclLen uint32) ([]byte, error) {
 // Assumes that global pcap header is already read.
 func (pkt *Packet) ReadPcapOnePacket(f io.Reader) (bool, error) {
 	var hdr PcapRecHdr
-	if err := readPcapRecHdr(f, &hdr); err == io.EOF {
+	if err := readPcapRecHdr(f, &hdr); common.GetNFError(err).Cause() == io.EOF {
 		return true, nil
 	} else if err != nil {
 		return false, common.WrapWithNFError(err, "read pcap one packet failed", common.PcapReadFail)
