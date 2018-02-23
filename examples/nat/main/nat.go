@@ -28,6 +28,7 @@ func main() {
 	configFile := flag.String("config", "config.json", "Specify config file name")
 	flag.BoolVar(&nat.CalculateChecksum, "csum", true, "Specify whether to calculate checksums in modified packets")
 	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", true, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Set up reaction to SIGINT (Ctrl-C)
@@ -41,6 +42,7 @@ func main() {
 	nffgoconfig := flow.Config{
 		CPUList:      *cores,
 		HWTXChecksum: nat.HWTXChecksum,
+		DPDKArgs: []string{ *dpdkLogLevel },
 	}
 
 	CheckFatal(flow.SystemInit(&nffgoconfig))
