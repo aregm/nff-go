@@ -200,7 +200,12 @@ func (config *TestsuiteConfig) RunAllTests(logdir string) int {
 	LogInfo("TESTS EXECUTED:", totalTests)
 	LogInfo("PASSED:", passedTests)
 	LogInfo("FAILED:", failedTests)
-	return failedTests
+
+	if failedTests > 0 {
+		return 100 + failedTests
+	} else {
+		return 0
+	}
 }
 
 func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {

@@ -57,8 +57,7 @@ var (
 
 	outport uint
 	inport  uint
-
-	cores uint
+	dpdkLogLevel *string
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
@@ -74,6 +73,7 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start timeout, time to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
+	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
 		fmt.Printf("fail: %+v\n", err)
@@ -85,7 +85,9 @@ func executeTest(configFile, target string, testScenario uint) error {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	// Init NFF-GO system
-	config := flow.Config{}
+	config := flow.Config{
+		DPDKArgs: []string{ *dpdkLogLevel },
+	}
 
 	if err := flow.SystemInit(&config); err != nil { return err }
 

@@ -147,20 +147,19 @@ setupdocker ()
         sudo apt-get install -y docker-ce
         sudo gpasswd -a ubuntu docker
         sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H fd://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
-    sudo sh -c 'cat <<EOF > /etc/docker/daemon.json
-{
-    "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375", "fd://"]
-}
-EOF'
     elif [ $DISTRO == Fedora ]; then
         sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
         sudo dnf -y install docker-ce
         sudo gpasswd -a vagrant docker
         sudo firewall-cmd --permanent --add-port=2375/tcp
         sudo firewall-cmd --add-port=2375/tcp
-        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd,ExecStart=/usr/bin/dockerd -H unix:///var/run/docker.sock -H tcp://0.0.0.0:2375,' /lib/systemd/system/docker.service
     fi
 
+    sudo sh -c 'cat <<EOF > /etc/docker/daemon.json
+{
+    "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
+}
+EOF'
     sudo systemctl enable docker.service
     sudo systemctl daemon-reload
     sudo systemctl restart docker.service

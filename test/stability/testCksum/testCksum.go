@@ -75,6 +75,7 @@ var (
 	randomL4     = false
 	l4type       int
 	packetLength int
+	dpdkLogLevel *string
 )
 
 func main() {
@@ -90,6 +91,7 @@ func main() {
 	flag.BoolVar(&useIPv6, "ipv6", false, "Generate IPv6 packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", 10, "Number of packets to send")
+	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	if !useIPv4 && !useIPv6 {
@@ -145,6 +147,7 @@ func executeTest(testScenario uint) error {
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		HWTXChecksum: hwol,
+		DPDKArgs: []string{ *dpdkLogLevel },
 	}
 	if err := flow.SystemInit(&config); err != nil { return err }
 

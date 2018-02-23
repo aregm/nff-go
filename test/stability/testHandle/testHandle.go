@@ -70,6 +70,7 @@ var (
 
 	outport uint
 	inport  uint
+	dpdkLogLevel *string
 
 	rulesConfig = "test-handle-l3rules.conf"
 )
@@ -82,6 +83,7 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
+	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	if err := executeTest(testScenario); err != nil {
@@ -94,7 +96,9 @@ func executeTest(testScenario uint) error {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	// Init NFF-GO system
-	config := flow.Config{}
+	config := flow.Config{
+		DPDKArgs: []string{ *dpdkLogLevel },
+	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
 	}
