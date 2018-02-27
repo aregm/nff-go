@@ -207,7 +207,13 @@ func CalculateIPv4UDPChecksum(hdr *IPv4Hdr, udp *UDPHdr, data unsafe.Pointer) ui
 		uint32(SwapBytesUint16(udp.DstPort)) +
 		uint32(SwapBytesUint16(udp.DgramLen))
 
-	return ^reduceChecksum(sum)
+	retSum := ^reduceChecksum(sum)
+	// If the checksum calculation results in the value zero (all 16 bits 0) it
+	// should be sent as the one's complement (all 1s).
+	if retSum == 0 {
+		retSum = ^retSum
+	}
+	return retSum
 }
 
 func calculateTCPChecksum(tcp *TCPHdr) uint32 {
@@ -271,7 +277,13 @@ func CalculateIPv6UDPChecksum(hdr *IPv6Hdr, udp *UDPHdr, data unsafe.Pointer) ui
 		uint32(SwapBytesUint16(udp.DstPort)) +
 		uint32(SwapBytesUint16(udp.DgramLen))
 
-	return ^reduceChecksum(sum)
+	retSum := ^reduceChecksum(sum)
+	// If the checksum calculation results in the value zero (all 16 bits 0) it
+	// should be sent as the one's complement (all 1s).
+	if retSum == 0 {
+		retSum = ^retSum
+	}
+	return retSum
 }
 
 // CalculateIPv6TCPChecksum calculates TCP checksum for case if L3 protocol is IPv6.
