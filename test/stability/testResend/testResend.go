@@ -57,7 +57,7 @@ var (
 
 	outport uint
 	inport  uint
-	dpdkLogLevel *string
+	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
@@ -73,7 +73,7 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start timeout, time to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
-	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
 		fmt.Printf("fail: %+v\n", err)
@@ -86,10 +86,12 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ *dpdkLogLevel },
+		DPDKArgs: []string{ dpdkLogLevel },
 	}
 
-	if err := flow.SystemInit(&config); err != nil { return err }
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
 
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport].(func(*packet.Packet, flow.UserContext))
@@ -97,49 +99,71 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 	if testScenario == 2 {
 		inputFlow, err := flow.SetReceiver(uint8(inport))
-		if err != nil { return err }
-		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil { return err }
-		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil { return err }
+		if err != nil {
+			return err
+		}
+		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil {
+			return err
+		}
+		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil {
+			return err
+		}
 
 		// Begin to process packets.
-		if err := flow.SystemStart(); err != nil { return err }
+		if err := flow.SystemStart(); err != nil {
+			return err
+		}
 	} else {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
 		firstFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		var secondFlow *flow.Flow
 		if testScenario == 1 {
 			// Send all generated packets to the output
-			if err := flow.SetSender(firstFlow, uint8(outport)); err != nil { return err }
+			if err := flow.SetSender(firstFlow, uint8(outport)); err != nil {
+				return err
+			}
 			// Create receiving flow and set a checking function for it
 			secondFlow, err = flow.SetReceiver(uint8(inport))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		} else {
 			secondFlow = firstFlow
-			if err := flow.SetHandler(secondFlow, fixPacket, nil); err != nil { return err }
+			if err := flow.SetHandler(secondFlow, fixPacket, nil); err != nil {
+				return err
+			}
 		}
-		if err := flow.SetHandler(secondFlow, checkPackets, nil); err != nil { return err }
-		if err := flow.SetStopper(secondFlow); err != nil { return err }
+		if err := flow.SetHandler(secondFlow, checkPackets, nil); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(secondFlow); err != nil {
+			return err
+		}
 
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
 		}()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		progStart = time.Now()
 
 		// Wait for enough packets to arrive
 		testDoneEvent.L.Lock()
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
 
-func composeStatistics() {
+func composeStatistics() error {
 	// Compose statistics
 	sent := atomic.LoadUint64(&sentPackets)
 	received := atomic.LoadUint64(&receivedPackets)
@@ -151,9 +175,11 @@ func composeStatistics() {
 	println("Ratio = ", ratio, "%")
 	if atomic.LoadInt32(&passed) != 0 {
 		println("TEST PASSED")
-	} else {
-		println("TEST FAILED")
+		return nil
 	}
+	println("TEST FAILED")
+	return errors.New("final statistics check failed")
+
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
@@ -210,6 +236,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	if res < 0 {
 		println("ParseL4 returned negative value", res)
 		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 		return
 	}
 
@@ -217,6 +244,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	if ptr.F2 != 0 {
 		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
 		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 		return
 	}
 

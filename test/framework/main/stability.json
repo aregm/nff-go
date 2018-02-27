@@ -147,7 +147,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=10000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-tcp", "-number=1000000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -168,7 +168,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=10000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv4", "-udp", "-number=1000000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -189,7 +189,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=10000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-tcp", "-number=1000000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -210,7 +210,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=10000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-udp", "-number=1000000", "-inport=0", "-outport=1"
                     ]
                 },
                 {

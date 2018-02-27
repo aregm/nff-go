@@ -41,6 +41,50 @@ func ShouldBeSkipped(pkt *packet.Packet) bool {
 	return false
 }
 
+// ProtocolType used to determine which protocols should not
+// be skipped.
+type ProtocolType uint
+
+const (
+	// constants for different protocol types.
+	TypeUdpTcpIcmp ProtocolType = iota
+	TypeUdpTcp
+	TypeTcp
+	TypeUdp
+	TypeIcmp
+)
+
+// ShouldBeSkippedAllExcept return false for packets with given ip version and protocol type
+// and true for all other. Specify 0 ip version to accept both 4 and 6.
+func ShouldBeSkippedAllExcept(pkt *packet.Packet, ipVersion uint, protocol ProtocolType) bool {
+	var pktTCP *packet.TCPHdr
+	var pktUDP *packet.UDPHdr
+	var pktICMP *packet.ICMPHdr
+	pktIPv4, pktIPv6, _ := pkt.ParseAllKnownL3()
+	if (ipVersion == 0 || ipVersion == 4) && pktIPv4 != nil {
+		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv4()
+	} else if (ipVersion == 0 || ipVersion == 6) && pktIPv6 != nil {
+		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv6()
+	}
+	if pktTCP != nil {
+		switch protocol {
+		case TypeTcp, TypeUdpTcpIcmp, TypeUdpTcp:
+			return false
+		}
+	} else if pktUDP != nil {
+		switch protocol {
+		case TypeUdp, TypeUdpTcpIcmp, TypeUdpTcp:
+			return false
+		}
+	} else if pktICMP != nil {
+		switch protocol {
+		case TypeIcmp, TypeUdpTcpIcmp:
+			return false
+		}
+	}
+	return true
+}
+
 // readConfig function reads and parses config file
 func readConfig(fileName string) error {
 	file, err := os.Open(fileName)

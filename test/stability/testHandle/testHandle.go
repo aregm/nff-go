@@ -70,7 +70,7 @@ var (
 
 	outport uint
 	inport  uint
-	dpdkLogLevel *string
+	dpdkLogLevel = "--log-level=0"
 
 	rulesConfig = "test-handle-l3rules.conf"
 )
@@ -83,7 +83,7 @@ func main() {
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
-	dpdkLogLevel = flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
 	if err := executeTest(testScenario); err != nil {
@@ -97,7 +97,7 @@ func executeTest(testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ *dpdkLogLevel },
+		DPDKArgs: []string{ dpdkLogLevel },
 	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
@@ -180,7 +180,7 @@ func executeTest(testScenario uint) error {
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
 
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
@@ -189,7 +189,7 @@ func l3Handler(pkt *packet.Packet, context flow.UserContext) bool {
 	return pkt.L3ACLPermit(l3Rules)
 }
 
-func composeStatistics() {
+func composeStatistics() error {
 	// Compose statistics
 	sent1 := sentPacketsGroup1
 	sent2 := sentPacketsGroup2
@@ -213,9 +213,10 @@ func composeStatistics() {
 	// Test is PASSSED, if p is ~33%
 	if p <= high1 && p >= low1 {
 		println("TEST PASSED")
-	} else {
-		println("TEST FAILED")
+		return nil
 	}
+	println("TEST FAILED")
+	return errors.New("final statistics check failed")
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {

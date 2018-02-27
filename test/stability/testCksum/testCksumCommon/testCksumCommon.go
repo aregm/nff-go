@@ -42,6 +42,14 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			} else {
 				status = l3status
 			}
+		} else if pIPv4.NextProtoID == common.ICMPNumber {
+			pICMP := p.GetICMPForIPv4()
+			csum := packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP, p.Data)
+			if packet.SwapBytesUint16(pICMP.Cksum) != csum {
+				println("IPv4 ICMP checksum mismatch", packet.SwapBytesUint16(pICMP.Cksum), "should be", csum)
+			} else {
+				status = l3status
+			}
 		} else {
 			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 		}
@@ -60,6 +68,14 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			csum := packet.CalculateIPv6TCPChecksum(pIPv6, pTCP, p.Data)
 			if packet.SwapBytesUint16(pTCP.Cksum) != csum {
 				println("IPv6 TCP datagram checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
+			} else {
+				status = true
+			}
+		} else if pIPv6.Proto == common.ICMPNumber {
+			pICMP := p.GetICMPForIPv6()
+			csum := packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP, p.Data)
+			if packet.SwapBytesUint16(pICMP.Cksum) != csum {
+				println("IPv6 ICMP checksum mismatch", packet.SwapBytesUint16(pICMP.Cksum), "should be", csum)
 			} else {
 				status = true
 			}
@@ -85,6 +101,9 @@ func CalculateChecksum(p *packet.Packet) {
 		} else if pIPv4.NextProtoID == common.TCPNumber {
 			pTCP := p.GetTCPForIPv4()
 			pTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pIPv4, pTCP, p.Data))
+		} else if pIPv4.NextProtoID == common.ICMPNumber {
+			pICMP := p.GetICMPForIPv4()
+			pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP, p.Data))
 		} else {
 			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 			println("TEST FAILED")
@@ -97,6 +116,9 @@ func CalculateChecksum(p *packet.Packet) {
 		} else if pIPv6.Proto == common.TCPNumber {
 			pTCP := p.GetTCPForIPv6()
 			pTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pIPv6, pTCP, p.Data))
+		} else if pIPv6.Proto == common.ICMPNumber {
+			pICMP := p.GetICMPForIPv6()
+			pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP, p.Data))
 		} else {
 			println("Unknown IPv6 protocol number", pIPv6.Proto)
 			println("TEST FAILED")
