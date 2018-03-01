@@ -62,11 +62,13 @@ var (
 	useUDP       bool
 	useTCP       bool
 	useICMP      bool
+	useVLAN      bool
 	randomL4     = false
 	packetLength int
-	ipVersion    uint = 4
-	dpdkLogLevel      = "--log-level=0"
-	protocol          = stabilityCommon.TypeUdp
+	ipVersion    uint   = 4
+	tci          uint16 = 2
+	dpdkLogLevel        = "--log-level=0"
+	protocol            = stabilityCommon.TypeUdp
 )
 
 func main() {
@@ -80,6 +82,7 @@ func main() {
 	flag.BoolVar(&useICMP, "icmp", false, "Generate ICMP Echo Request packets")
 	flag.BoolVar(&useIPv4, "ipv4", false, "Generate IPv4 packets")
 	flag.BoolVar(&useIPv6, "ipv6", false, "Generate IPv6 packets")
+	flag.BoolVar(&useVLAN, "vlan", false, "Add VLAN tag to all packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "Number of packets to send")
 	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
@@ -149,6 +152,12 @@ func executeTest(testScenario uint) error {
 		// Receive packets from zero port. Receive queue will be added automatically.
 		inputFlow, err := flow.SetReceiver(uint8(inport))
 		if err != nil {
+			return err
+		}
+		if err := flow.SetHandlerDrop(inputFlow, filterPacketsUdpTcpIcmp, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(inputFlow, checkChecksum, nil); err != nil {
 			return err
 		}
 		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil {
@@ -232,25 +241,12 @@ func filterPackets(pkt *packet.Packet, context flow.UserContext) bool {
 	return true
 }
 
+func filterPacketsUdpTcpIcmp(pkt *packet.Packet, context flow.UserContext) bool {
+	return !stabilityCommon.ShouldBeSkippedAllExcept(pkt, 0, stabilityCommon.TypeUdpTcpIcmp)
+}
+
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	// Skip all except ip (v4 or v6) and tcp or udp, cause CheckPacketChecksums
-	// cant parse anything else
-	if stabilityCommon.ShouldBeSkippedAllExcept(pkt, 0, stabilityCommon.TypeUdpTcpIcmp) {
-		return
-	}
-	offset := pkt.ParseData()
-
-	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		println("TEST FAILED")
-		return
-	}
-
-	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		println("TEST FAILED")
-		atomic.StoreInt32(&passed, 0)
-	}
-
+	pkt.ParseDataCheckVLAN()
 	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 	if ptr.F2 != 0 {
 		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
@@ -265,6 +261,19 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 		pkt.SetHWCksumOLFlags()
 	} else {
 		testCksumCommon.CalculateChecksum(pkt)
+	}
+}
+
+func checkChecksum(pkt *packet.Packet, context flow.UserContext) {
+	offset := pkt.ParseDataCheckVLAN()
+	if offset < 0 {
+		println("ParseDataCheckVLAN returned negative value", offset)
+		println("TEST FAILED")
+		return
+	}
+	if !testCksumCommon.CheckPacketChecksums(pkt) {
+		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 	}
 }
 
@@ -324,6 +333,14 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 			generateIPv6ICMP(emptyPacket)
 		} else {
 			generateIPv6TCP(emptyPacket)
+		}
+	}
+
+	if useVLAN {
+		emptyPacket.AddVLANTag(tci)
+		if hwol {
+			// l2 len changed after add VLAN tag, need to reset hwol flags
+			emptyPacket.SetHWCksumOLFlags()
 		}
 	}
 
@@ -487,26 +504,17 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseData()
-
-	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		println("TEST FAILED")
-		return
-	}
-
-	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		println("TEST FAILED")
-		atomic.StoreInt32(&passed, 0)
-	}
-
 	newValue := atomic.AddUint64(&receivedPackets, 1)
-
+	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
 		println("TEST FAILED")
 		atomic.StoreInt32(&passed, 0)
 	} else {
+		if !testCksumCommon.CheckPacketChecksums(pkt) {
+			println("TEST FAILED")
+			atomic.StoreInt32(&passed, 0)
+		}
 		ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {
