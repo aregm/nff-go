@@ -38,12 +38,13 @@ func main() {
 	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
 	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
 	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
-	// Initialize NFF-GO library at 15 cores by default
+	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList:          "0-14",
 		DisableScheduler: noscheduler,
+		DPDKArgs:         []string{dpdkLogLevel},
 	}
 	CheckFatal(flow.SystemInit(&config))
 

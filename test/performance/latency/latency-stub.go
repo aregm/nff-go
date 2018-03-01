@@ -30,11 +30,13 @@ func CheckFatal(err error) {
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.StringVar(&cores, "cores", "0-15", "Specifies CPU cores to be used by NFF-GO library")
+	flag.StringVar(&cores, "cores", "", "Specifies CPU cores to be used by NFF-GO library")
+	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList: cores,
+		CPUList:  cores,
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 	CheckFatal(flow.SystemInit(&config))
 
