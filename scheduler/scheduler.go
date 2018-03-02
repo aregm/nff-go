@@ -83,6 +83,7 @@ func (scheduler *Scheduler) NewFF(name string, ucfn uncloneFlowFunction, cfn clo
 	ff.report = report
 	ff.context = context
 	ff.targetSpeed = targetSpeed
+	ff.previousSpeed = make([]float64, len(scheduler.cores), len(scheduler.cores))
 	return ff
 }
 
@@ -152,14 +153,15 @@ func (scheduler *Scheduler) SystemStart() (err error) {
 		low.Stop(scheduler.StopRing, core)
 	}()
 	for i := range scheduler.UnClonable {
-		if core, err = scheduler.getCore(); err != nil {
+		if core, err := scheduler.getCore(); err != nil {
 			return err
+		} else {
+			ff := scheduler.UnClonable[i]
+			common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, "at", core, "core")
+			go func() {
+				ff.uncloneFunction(ff.Parameters, core)
+			}()
 		}
-		ff := scheduler.UnClonable[i]
-		common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, "at", core, "core")
-		go func() {
-			ff.uncloneFunction(ff.Parameters, core)
-		}()
 	}
 	for i := range scheduler.Clonable {
 		if err = scheduler.startClonable(scheduler.Clonable[i]); err != nil {
