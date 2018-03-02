@@ -342,8 +342,8 @@ type Config struct {
 // SystemInit is initialization of system. This function should be always called before graph construction.
 // Function can panic during execution.
 func SystemInit(args *Config) error {
-	CPUCoresNumber := uint(runtime.NumCPU())
-	var cpus []uint
+	CPUCoresNumber := runtime.NumCPU()
+	var cpus []int
 	var err error
 	if args.CPUList != "" {
 		if cpus, err = common.HandleCPUList(args.CPUList, CPUCoresNumber); err != nil {
@@ -846,12 +846,12 @@ func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
-func receive(parameters interface{}, coreID uint8) {
+func receive(parameters interface{}, coreID int) {
 	srp := parameters.(*receiveParameters)
 	low.Receive(srp.port, srp.queue, srp.out, coreID)
 }
 
-func generateOne(parameters interface{}, core uint8) {
+func generateOne(parameters interface{}, core int) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
@@ -998,7 +998,7 @@ func pcopy(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func send(parameters interface{}, coreID uint8) {
+func send(parameters interface{}, coreID int) {
 	srp := parameters.(*sendParameters)
 	low.Send(srp.port, srp.queue, srp.in, coreID)
 }
@@ -1175,7 +1175,7 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 	}
 }
 
-func partition(parameters interface{}, core uint8) {
+func partition(parameters interface{}, core int) {
 	cp := parameters.(*partitionParameters)
 	IN := cp.in
 	OUTFirst := cp.outFirst
@@ -1379,7 +1379,7 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	}
 }
 
-func write(parameters interface{}, coreID uint8) {
+func write(parameters interface{}, coreID int) {
 	wp := parameters.(*writeParameters)
 	IN := wp.in
 	filename := wp.filename
@@ -1411,7 +1411,7 @@ func write(parameters interface{}, coreID uint8) {
 	}
 }
 
-func read(parameters interface{}, coreID uint8) {
+func read(parameters interface{}, coreID int) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename

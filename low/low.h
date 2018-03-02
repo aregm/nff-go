@@ -67,12 +67,12 @@ static int kni_config_network_interface(uint8_t port_id, uint8_t if_up);
 
 uint32_t BURST_SIZE;
 
-void initCPUSet(uint8_t coreId, cpu_set_t* cpuset) {
+void initCPUSet(int coreId, cpu_set_t* cpuset) {
 	CPU_ZERO(cpuset);
 	CPU_SET(coreId, cpuset);
 }
 
-void setAffinity(uint8_t coreId) {
+void setAffinity(int coreId) {
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(coreId, &cpuset);
@@ -212,7 +212,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -284,7 +284,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t
 	}
 }
 
-void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -317,7 +317,9 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t 
 	}
 }
 
-void nff_go_stop(struct rte_ring *in_ring) {
+void nff_go_stop(struct rte_ring *in_ring, int coreId) {
+	setAffinity(coreId);
+
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.

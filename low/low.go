@@ -430,26 +430,26 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // Receive - get packets and enqueue on a Ring.
-func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
+func Receive(port uint8, queue int16, OUT *Ring, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.int(coreID))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
+func Send(port uint8, queue int16, IN *Ring, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Ring) {
-	C.nff_go_stop(IN.DPDK_ring)
+func Stop(IN *Ring, coreID int) {
+	C.nff_go_stop(IN.DPDK_ring, C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -507,13 +507,13 @@ func CreateMempool() *Mempool {
 }
 
 // SetAffinity sets cpu affinity mask.
-func SetAffinity(coreID uint8) error {
+func SetAffinity(coreID int) error {
 	// go tool trace shows that each proc executes different goroutine. However it is expected behavior
 	// (golang issue #20853) and each goroutine is locked to one OS thread.
 	runtime.LockOSThread()
 
 	var cpuset C.cpu_set_t
-	C.initCPUSet(C.uint8_t(coreID), &cpuset)
+	C.initCPUSet(C.int(coreID), &cpuset)
 	_, _, errno := syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
 	if errno != 0 {
 		return common.WrapWithNFError(nil, errno.Error(), common.SetAffinityErr)
