@@ -6,6 +6,7 @@ package scheduler
 
 import (
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/intel-go/nff-go/common"
@@ -33,7 +34,7 @@ type UserContext interface {
 // Function types which are used inside flow functions
 type uncloneFlowFunction func(interface{}, uint8)
 type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
-type conditionFlowFunction func(interface{}, bool) bool
+type conditionFlowFunction func(interface{}, bool) int
 
 // FlowFunction is a structure for all functions, is used inside flow package
 type FlowFunction struct {
@@ -62,49 +63,23 @@ type FlowFunction struct {
 	// For debug purposes
 	currentSpeed float64
 	// Name of flow function
-	name string
-	// Identifier which could be used together with flow function name
-	// to uniquely identify this flow function
-	identifier  int
+	name        string
 	context     UserContext
 	targetSpeed float64
 	pause       int
 }
 
-// NewUnclonableFlowFunction is a function for adding unclonable flow functions. Is used inside flow package
-func (scheduler *Scheduler) NewUnclonableFlowFunction(name string, id int, ucfn uncloneFlowFunction,
-	par interface{}) *FlowFunction {
+// NewFF is a function for adding every flow function. Then these function will be concatenated with
+// appropriate lists, for example Clonable or Unclonable
+func (scheduler *Scheduler) NewFF(name string, ucfn uncloneFlowFunction, cfn cloneFlowFunction,
+	par interface{}, check conditionFlowFunction, targetSpeed float64, report chan uint64, context UserContext) *FlowFunction {
 	ff := new(FlowFunction)
-	ff.name = name
-	ff.identifier = id
+	scheduler.ffCount++
+	ff.name = name + " " + strconv.Itoa(scheduler.ffCount)
 	ff.uncloneFunction = ucfn
-	ff.Parameters = par
-	return ff
-}
-
-// NewClonableFlowFunction is a function for adding clonable flow functions. Is used inside flow package
-func (scheduler *Scheduler) NewClonableFlowFunction(name string, id int, cfn cloneFlowFunction,
-	par interface{}, check conditionFlowFunction, report chan uint64, context UserContext) *FlowFunction {
-	ff := new(FlowFunction)
-	ff.name = name
-	ff.identifier = id
 	ff.cloneFunction = cfn
 	ff.Parameters = par
 	ff.checkPrintFunction = check
-	ff.report = report
-	ff.previousSpeed = make([]float64, len(scheduler.cores), len(scheduler.cores))
-	ff.context = context
-	return ff
-}
-
-// NewGenerateFlowFunction is a function for adding fast generate flow functions. Is used inside flow package
-func (scheduler *Scheduler) NewGenerateFlowFunction(name string, id int, cfn cloneFlowFunction,
-	par interface{}, targetSpeed float64, report chan uint64, context UserContext) *FlowFunction {
-	ff := new(FlowFunction)
-	ff.name = name
-	ff.identifier = id
-	ff.cloneFunction = cfn
-	ff.Parameters = par
 	ff.report = report
 	ff.context = context
 	ff.targetSpeed = targetSpeed
@@ -125,6 +100,7 @@ type Scheduler struct {
 	checkTime         uint
 	debugTime         uint
 	Dropped           uint
+	ffCount           int
 }
 
 type core struct {
@@ -156,54 +132,45 @@ func NewScheduler(cpus []uint, schedulerOff bool, schedulerOffRemove bool,
 
 // SystemStart starts whole system. Is used inside flow package
 func (scheduler *Scheduler) SystemStart() (err error) {
-	err = common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
-	index := scheduler.getCoreIndex()
-	if index == -1 {
+	var core uint
+	if core, err = scheduler.getCore(); err != nil {
 		return err
 	}
-	core := scheduler.cores[index].id
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
-	if err := low.SetAffinity(uint8(core)); err != nil {
-		return common.WrapWithNFError(err, "cannot set affinity for scheduler thread", common.SetAffinityErr)
+	if err = low.SetAffinity(uint8(core)); err != nil {
+		common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 	}
 	if scheduler.stopDedicatedCore {
-		index = scheduler.getCoreIndex()
-		if index == -1 {
+		if core, err = scheduler.getCore(); err != nil {
 			return err
 		}
-		core := scheduler.cores[index].id
 		common.LogDebug(common.Initialization, "Start STOP at", core, "core")
 	} else {
 		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
 	}
 	go func() {
-		err := low.SetAffinity(uint8(core))
-		if err != nil {
+		if err = low.SetAffinity(uint8(core)); err != nil {
 			common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 		}
 		low.Stop(scheduler.StopRing)
 	}()
 	for i := range scheduler.UnClonable {
-		ff := scheduler.UnClonable[i]
-		index := scheduler.getCoreIndex()
-		if index == -1 {
+		if core, err = scheduler.getCore(); err != nil {
 			return err
 		}
-		core := scheduler.cores[index].id
-		common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
+		ff := scheduler.UnClonable[i]
+		common.LogDebug(common.Initialization, "Start unclonable FlowFunction", ff.name, "at", core, "core")
 		go func() {
 			ff.uncloneFunction(ff.Parameters, uint8(core))
 		}()
 	}
 	for i := range scheduler.Clonable {
-		err = scheduler.startClonable(scheduler.Clonable[i])
-		if err != nil {
+		if err = scheduler.startClonable(scheduler.Clonable[i]); err != nil {
 			return err
 		}
 	}
 	for i := range scheduler.Generate {
-		err = scheduler.startClonable(scheduler.Generate[i])
-		if err != nil {
+		if err = scheduler.startClonable(scheduler.Generate[i]); err != nil {
 			return err
 		}
 	}
@@ -212,20 +179,17 @@ func (scheduler *Scheduler) SystemStart() (err error) {
 	return nil
 }
 
-func (scheduler *Scheduler) startClonable(ff *FlowFunction) error {
-	index := scheduler.getCoreIndex()
-	if index == -1 {
-		return common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
+func (scheduler *Scheduler) startClonable(ff *FlowFunction) (err error) {
+	var core uint
+	if core, err = scheduler.getCore(); err != nil {
+		return err
 	}
-	core := scheduler.cores[index].id
-	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, ff.identifier, "at", core, "core")
+	common.LogDebug(common.Initialization, "Start clonable FlowFunction", ff.name, "at", core, "core")
 	go func() {
-		ff.channel = make(chan int)
-		err := low.SetAffinity(uint8(core))
-		if err != nil {
+		if err := low.SetAffinity(uint8(core)); err != nil {
 			common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 		}
-		ff.cloneNumber = 0
+		ff.channel = make(chan int)
 		if ff.context != nil {
 			ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
 		} else {
@@ -287,7 +251,7 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 			// 1. check function signals that we need to clone
 			// 2. scheduler is switched on
 			// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
-			if (ff.checkPrintFunction(ff.Parameters, false) == true) && (scheduler.off == false) &&
+			if (ff.checkPrintFunction(ff.Parameters, false) == 1) && (scheduler.off == false) &&
 				(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*ff.currentSpeed) {
 				// Save current speed as speed of flow function with this number of clones before adding
 				ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
@@ -354,13 +318,12 @@ func (scheduler *Scheduler) Schedule(schedTime uint) {
 func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 	index := scheduler.getCoreIndex()
 	if index == -1 {
-		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, ff.identifier)
+		common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
 		return false
 	}
 	core := scheduler.cores[index].id
-	quit := make(chan int)
 	cp := new(clonePair)
-	cp.channel = quit
+	cp.channel = make(chan int)
 	cp.index = index
 	ff.clone = append(ff.clone, cp)
 	ff.cloneNumber++
@@ -370,9 +333,9 @@ func (scheduler *Scheduler) startClone(ff *FlowFunction) bool {
 			common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
 		}
 		if ff.context != nil {
-			ff.cloneFunction(ff.Parameters, quit, ff.report, (ff.context.Copy()).(UserContext))
+			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, (ff.context.Copy()).(UserContext))
 		} else {
-			ff.cloneFunction(ff.Parameters, quit, ff.report, nil)
+			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, nil)
 		}
 	}()
 	return true
@@ -404,9 +367,9 @@ func (ff *FlowFunction) printDebug(schedTime uint) {
 	// TODO This Mbits measurement should be used only for 84 packet size for debug purposes
 	// speedMbits := speedPKTS * 84 * 8 / 1000 / 1000
 	if ff.targetSpeed == 0 {
-		common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S")
+		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S")
 	} else {
-		common.LogDebug(common.Debug, "Current speed of", ff.name, ff.identifier, "is", speedPKTS, "PKT/S, target speed is", int64(ff.targetSpeed), "PKT/S")
+		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, target speed is", int64(ff.targetSpeed), "PKT/S")
 	}
 }
 
@@ -443,4 +406,12 @@ func (scheduler *Scheduler) getCoreIndex() int {
 		}
 	}
 	return -1
+}
+
+func (scheduler *Scheduler) getCore() (uint, error) {
+	index := scheduler.getCoreIndex()
+	if index == -1 {
+		return 0, common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
+	}
+	return scheduler.cores[index].id, nil
 }
