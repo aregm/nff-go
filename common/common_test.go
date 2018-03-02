@@ -16,17 +16,17 @@ var invalidCpuRangeErr = WrapWithNFError(nil, "CPU range is invalid, min should 
 
 var cpuParseTests = []struct {
 	line        string // input
-	expected    []uint // expected result
+	expected    []int  // expected result
 	expectedErr error
 }{
-	{"", []uint{}, nil},
-	{"1-5", []uint{1, 2, 3, 4, 5}, nil},
-	{"1,10-13,9", []uint{1, 10, 11, 12, 13, 9}, nil},
-	{"10-14,13-15", []uint{10, 11, 12, 13, 14, 13, 14, 15}, nil},
-	{"1-3,6-", []uint{1, 2, 3}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
-	{"-1", []uint{}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
-	{"10-6", []uint{}, GetNFError(invalidCpuRangeErr)},
-	{"1-3,10-6", []uint{1, 2, 3}, GetNFError(invalidCpuRangeErr)},
+	{"", []int{}, nil},
+	{"1-5", []int{1, 2, 3, 4, 5}, nil},
+	{"1,10-13,9", []int{1, 10, 11, 12, 13, 9}, nil},
+	{"10-14,13-15", []int{10, 11, 12, 13, 14, 13, 14, 15}, nil},
+	{"1-3,6-", []int{1, 2, 3}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
+	{"-1", []int{}, &strconv.NumError{"Atoi", "", strconv.ErrSyntax}},
+	{"10-6", []int{}, GetNFError(invalidCpuRangeErr)},
+	{"1-3,10-6", []int{1, 2, 3}, GetNFError(invalidCpuRangeErr)},
 }
 
 func TestParseCPUs(t *testing.T) {
@@ -43,13 +43,13 @@ func TestParseCPUs(t *testing.T) {
 }
 
 var dropInvalidCPUsTests = []struct {
-	cpus     []uint
-	maxcpu   uint
-	expected []uint // expected valid cpu list
+	cpus     []int
+	maxcpu   int
+	expected []int // expected valid cpu list
 }{
-	{[]uint{}, 20, []uint{}},
-	{[]uint{1, 2, 100, 1, 2, 100}, 20, []uint{1, 2, 1, 2}},
-	{[]uint{1, 2, 100, 100, 2, 100}, 20, []uint{1, 2, 2}},
+	{[]int{}, 20, []int{}},
+	{[]int{1, 2, 100, 1, 2, 100}, 20, []int{1, 2, 1, 2}},
+	{[]int{1, 2, 100, 100, 2, 100}, 20, []int{1, 2, 2}},
 }
 
 func TestDropInvalidCPUs(t *testing.T) {
@@ -62,13 +62,13 @@ func TestDropInvalidCPUs(t *testing.T) {
 }
 
 var removeDuplicatesTests = []struct {
-	cpus     []uint
-	expected []uint
+	cpus     []int
+	expected []int
 }{
-	{[]uint{}, []uint{}},
-	{[]uint{1, 2, 100, 100, 2, 100}, []uint{1, 2, 100}},
-	{[]uint{1, 2, 100, 3}, []uint{1, 2, 100, 3}},
-	{[]uint{1, 2, 1, 100, 100, 3}, []uint{1, 2, 100, 3}},
+	{[]int{}, []int{}},
+	{[]int{1, 2, 100, 100, 2, 100}, []int{1, 2, 100}},
+	{[]int{1, 2, 100, 3}, []int{1, 2, 100, 3}},
+	{[]int{1, 2, 1, 100, 100, 3}, []int{1, 2, 100, 3}},
 }
 
 func TestRemoveDuplicates(t *testing.T) {
