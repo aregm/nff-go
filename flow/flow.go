@@ -45,7 +45,6 @@ import (
 
 var openFlowsNumber = uint32(0)
 var ringName = 1
-var ffCount = 0
 var createdPorts []port
 
 // UserContext is a type which should be passed to all flow functions.
@@ -110,8 +109,7 @@ func makeReceiver(port uint8, queue int16, out *low.Ring) *scheduler.FlowFunctio
 	par.port = port
 	par.queue = queue
 	par.out = out
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("receiver", ffCount, receive, par)
+	return schedState.NewFF("receiver", receive, nil, par, nil, 0, nil, nil)
 }
 
 type generateParameters struct {
@@ -125,8 +123,7 @@ func makeGenerator(out *low.Ring, generateFunction GenerateFunction) *scheduler.
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
+	return schedState.NewFF("generator", generateOne, nil, par, nil, 0, nil, nil)
 }
 
 func makeFastGenerator(out *low.Ring, generateFunction GenerateFunction,
@@ -136,8 +133,7 @@ func makeFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool()
 	par.vectorGenerateFunction = vectorGenerateFunction
-	ffCount++
-	return schedState.NewGenerateFlowFunction("fast generator", ffCount, generatePerf, par, float64(targetSpeed), make(chan uint64, 50), context)
+	return schedState.NewFF("fast generator", nil, generatePerf, par, nil, float64(targetSpeed), make(chan uint64, 50), context)
 }
 
 type sendParameters struct {
@@ -151,8 +147,7 @@ func makeSender(port uint8, queue int16, in *low.Ring) *scheduler.FlowFunction {
 	par.port = port
 	par.queue = queue
 	par.in = in
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("sender", ffCount, send, par)
+	return schedState.NewFF("sender", send, nil, par, nil, 0, nil, nil)
 }
 
 type copyParameters struct {
@@ -168,8 +163,7 @@ func makeCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) *scheduler.FlowF
 	par.out = out
 	par.outCopy = outCopy
 	par.mempool = low.CreateMempool()
-	ffCount++
-	return schedState.NewClonableFlowFunction("copy", ffCount, pcopy, par, copyCheck, make(chan uint64, 50), nil)
+	return schedState.NewFF("copy", nil, pcopy, par, copyCheck, 0, make(chan uint64, 50), nil)
 }
 
 type partitionParameters struct {
@@ -187,8 +181,7 @@ func makePartitioner(in *low.Ring, outFirst *low.Ring, outSecond *low.Ring, N ui
 	par.outSecond = outSecond
 	par.N = N
 	par.M = M
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("partitioner", ffCount, partition, par)
+	return schedState.NewFF("partitioner", partition, nil, par, nil, 0, nil, nil)
 }
 
 type separateParameters struct {
@@ -208,8 +201,7 @@ func makeSeparator(in *low.Ring, outTrue *low.Ring, outFalse *low.Ring,
 	par.outFalse = outFalse
 	par.separateFunction = separateFunction
 	par.vectorSeparateFunction = vectorSeparateFunction
-	ffCount++
-	return schedState.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50), context)
+	return schedState.NewFF(name, nil, separate, par, separateCheck, 0, make(chan uint64, 50), context)
 }
 
 type splitParameters struct {
@@ -226,8 +218,7 @@ func makeSplitter(in *low.Ring, outs []*low.Ring,
 	par.outs = outs
 	par.splitFunction = splitFunction
 	par.flowNumber = flowNumber
-	ffCount++
-	return schedState.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50), context)
+	return schedState.NewFF("splitter", nil, split, par, splitCheck, 0, make(chan uint64, 50), context)
 }
 
 type handleParameters struct {
@@ -245,8 +236,7 @@ func makeHandler(in *low.Ring, out *low.Ring,
 	par.out = out
 	par.handleFunction = handleFunction
 	par.vectorHandleFunction = vectorHandleFunction
-	ffCount++
-	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
+	return schedState.NewFF(name, nil, handle, par, handleCheck, 0, make(chan uint64, 50), context)
 }
 
 type writeParameters struct {
@@ -258,8 +248,7 @@ func makeWriter(filename string, in *low.Ring) *scheduler.FlowFunction {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("writer", ffCount, write, par)
+	return schedState.NewFF("writer", write, nil, par, nil, 0, nil, nil)
 }
 
 type readParameters struct {
@@ -273,8 +262,7 @@ func makeReader(filename string, out *low.Ring, repcount int32) *scheduler.FlowF
 	par.out = out
 	par.filename = filename
 	par.repcount = repcount
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
+	return schedState.NewFF("reader", read, nil, par, nil, 0, nil, nil)
 }
 
 var burstSize uint
@@ -941,16 +929,16 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	}
 }
 
-func copyCheck(parameters interface{}, debug bool) bool {
+func copyCheck(parameters interface{}, debug bool) int {
 	cp := parameters.(*copyParameters)
 	IN := cp.in
 	if debug == true {
 		common.LogDebug(common.Debug, "Number of packets in queue for copy: ", IN.GetRingCount())
 	}
 	if IN.GetRingCount() > maxPacketsToClone {
-		return true
+		return 1
 	}
-	return false
+	return 0
 }
 
 // TODO reassembled packets are not supported
@@ -1083,16 +1071,16 @@ func merge(from *low.Ring, to *low.Ring) {
 	}
 }
 
-func separateCheck(parameters interface{}, debug bool) bool {
+func separateCheck(parameters interface{}, debug bool) int {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	if debug == true {
 		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetRingCount())
 	}
 	if IN.GetRingCount() > maxPacketsToClone {
-		return true
+		return 1
 	}
-	return false
+	return 0
 }
 
 func separate(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
@@ -1238,16 +1226,16 @@ func partition(parameters interface{}, core uint8) {
 	}
 }
 
-func splitCheck(parameters interface{}, debug bool) bool {
+func splitCheck(parameters interface{}, debug bool) int {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	if debug == true {
 		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetRingCount())
 	}
 	if IN.GetRingCount() > maxPacketsToClone {
-		return true
+		return 1
 	}
-	return false
+	return 0
 }
 
 func split(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
@@ -1319,16 +1307,16 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func handleCheck(parameters interface{}, debug bool) bool {
+func handleCheck(parameters interface{}, debug bool) int {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	if debug == true {
 		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetRingCount())
 	}
 	if IN.GetRingCount() > maxPacketsToClone {
-		return true
+		return 1
 	}
-	return false
+	return 0
 }
 
 func handle(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
