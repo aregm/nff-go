@@ -70,7 +70,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "sh", "-c", "sleep 10; wget --no-proxy http://192.168.26.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
+                        "sh", "-c", "sleep 10; wget --no-proxy http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
                 },
                 {

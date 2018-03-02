@@ -65,7 +65,7 @@ var (
 	randomL4     = false
 	packetLength int
 	ipVersion    uint = 4
-	dpdkLogLevel = "--log-level=0"
+	dpdkLogLevel      = "--log-level=0"
 	protocol          = stabilityCommon.TypeUdp
 )
 
@@ -139,7 +139,7 @@ func executeTest(testScenario uint) error {
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		HWTXChecksum: hwol,
-		DPDKArgs: []string{ dpdkLogLevel },
+		DPDKArgs:     []string{dpdkLogLevel},
 	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
@@ -244,6 +244,11 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 		println("ParseL4 returned negative value", offset)
 		println("TEST FAILED")
 		return
+	}
+
+	if !testCksumCommon.CheckPacketChecksums(pkt) {
+		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 	}
 
 	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
@@ -483,6 +488,12 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseData()
+
+	if offset < 0 {
+		println("ParseL4 returned negative value", offset)
+		println("TEST FAILED")
+		return
+	}
 
 	if !testCksumCommon.CheckPacketChecksums(pkt) {
 		println("TEST FAILED")

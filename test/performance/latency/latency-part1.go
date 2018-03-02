@@ -92,6 +92,7 @@ func main() {
 
 	flag.UintVar(&outport, "outport", 0, "port for sender")
 	flag.UintVar(&inport, "inport", 1, "port for receiver")
+	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 
 	latencies = make(chan time.Duration)
 	stop = make(chan string)
@@ -103,9 +104,9 @@ func main() {
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
-	// Initialize NFF-GO library at 30 available cores
+	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList: "0-29",
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 	CheckFatal(flow.SystemInit(&config))
 	payloadSize = packetSize - servDataSize
