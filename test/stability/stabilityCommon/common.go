@@ -60,7 +60,7 @@ func ShouldBeSkippedAllExcept(pkt *packet.Packet, ipVersion uint, protocol Proto
 	var pktTCP *packet.TCPHdr
 	var pktUDP *packet.UDPHdr
 	var pktICMP *packet.ICMPHdr
-	pktIPv4, pktIPv6, _ := pkt.ParseAllKnownL3()
+	pktIPv4, pktIPv6, _ := pkt.ParseAllKnownL3CheckVLAN()
 	if (ipVersion == 0 || ipVersion == 4) && pktIPv4 != nil {
 		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv4()
 	} else if (ipVersion == 0 || ipVersion == 6) && pktIPv6 != nil {

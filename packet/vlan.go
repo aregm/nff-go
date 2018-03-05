@@ -139,3 +139,30 @@ func (packet *Packet) RemoveVLANTag() bool {
 	}
 	return true
 }
+
+// ParseDataCheckVLAN parses L3, L4 and fills the field packet.Data.
+// returns 0 in case of success and -1 in case of
+// failure to parse L3 or L4. VLAN presence is checked.
+func (packet *Packet) ParseDataCheckVLAN() int {
+	var pktTCP *TCPHdr
+	var pktUDP *UDPHdr
+	var pktICMP *ICMPHdr
+
+	pktIPv4, pktIPv6, _ := packet.ParseAllKnownL3CheckVLAN()
+	if pktIPv4 != nil {
+		pktTCP, pktUDP, pktICMP = packet.ParseAllKnownL4ForIPv4()
+	} else if pktIPv6 != nil {
+		pktTCP, pktUDP, pktICMP = packet.ParseAllKnownL4ForIPv6()
+	}
+
+	if pktTCP != nil {
+		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(((*TCPHdr)(packet.L4)).DataOff&0xf0)>>2)
+	} else if pktUDP != nil {
+		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(UDPLen))
+	} else if pktICMP != nil {
+		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(ICMPLen))
+	} else {
+		return -1
+	}
+	return 0
+}

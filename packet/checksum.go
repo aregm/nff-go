@@ -14,23 +14,27 @@ import (
 
 // SetHWCksumOLFlags sets hardware offloading flags to packet
 func (packet *Packet) SetHWCksumOLFlags() {
-	ipv4, ipv6, _ := packet.ParseAllKnownL3()
+	ipv4, ipv6, _ := packet.ParseAllKnownL3CheckVLAN()
+	l2len := uint32(EtherLen)
+	if SwapBytesUint16(packet.Ether.EtherType) == VLANNumber {
+		l2len += VLANLen
+	}
 	if ipv4 != nil {
-		packet.GetIPv4().HdrChecksum = 0
+		packet.GetIPv4NoCheck().HdrChecksum = 0
 		tcp, udp, _ := packet.ParseAllKnownL4ForIPv4()
 		if tcp != nil {
-			low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
+			low.SetTXIPv4TCPOLFlags(packet.CMbuf, l2len, IPv4MinLen)
 		} else if udp != nil {
-			low.SetTXIPv4UDPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
+			low.SetTXIPv4UDPOLFlags(packet.CMbuf, l2len, IPv4MinLen)
 		} else {
-			low.SetTXIPv4OLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
+			low.SetTXIPv4OLFlags(packet.CMbuf, l2len, IPv4MinLen)
 		}
 	} else if ipv6 != nil {
 		tcp, udp, _ := packet.ParseAllKnownL4ForIPv6()
 		if tcp != nil {
-			low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
+			low.SetTXIPv6TCPOLFlags(packet.CMbuf, l2len, IPv6Len)
 		} else if udp != nil {
-			low.SetTXIPv6UDPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
+			low.SetTXIPv6UDPOLFlags(packet.CMbuf, l2len, IPv6Len)
 		}
 	}
 }
@@ -117,26 +121,31 @@ func CalculatePseudoHdrIPv6UDPCksum(hdr *IPv6Hdr, udp *UDPHdr) uint16 {
 // checksum for required pseudo-header and writes result to correct place. This
 // is required for checksum compute by hardware offload.
 func SetHWOffloadingHdrChecksum(p *Packet) {
-	ipv4, ipv6, _ := p.ParseAllKnownL3()
+	ipv4, ipv6, _ := p.ParseAllKnownL3CheckVLAN()
 	if ipv4 != nil {
-		p.GetIPv4().HdrChecksum = 0
+		ipv4.HdrChecksum = 0
 		tcp, udp, icmp := p.ParseAllKnownL4ForIPv4()
 		if tcp != nil {
-			p.GetTCPForIPv4().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv4TCPCksum(p.GetIPv4()))
+			p.GetTCPForIPv4().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv4TCPCksum(ipv4))
 		} else if udp != nil {
-			p.GetUDPForIPv4().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv4UDPCksum(p.GetIPv4(), p.GetUDPForIPv4()))
+			p.GetUDPForIPv4().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv4UDPCksum(ipv4, udp))
 		} else if icmp != nil {
 			// calculate full software checksum for icmp, cause there is no
 			// hardware calculation for icmp packets.
-			p.GetICMPForIPv4().Cksum = SwapBytesUint16(CalculateIPv4ICMPChecksum(p.GetIPv4(), p.GetICMPForIPv4(),
-				unsafe.Pointer(uintptr(unsafe.Pointer(p.GetICMPForIPv4())) + ICMPLen)))
+			p.GetICMPForIPv4().Cksum = SwapBytesUint16(CalculateIPv4ICMPChecksum(ipv4, icmp,
+				unsafe.Pointer(uintptr(unsafe.Pointer(icmp))+ICMPLen)))
 		}
 	} else if ipv6 != nil {
-		tcp, udp, _ := p.ParseAllKnownL4ForIPv6()
+		tcp, udp, icmp := p.ParseAllKnownL4ForIPv6()
 		if tcp != nil {
-			p.GetTCPForIPv6().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv6TCPCksum(p.GetIPv6()))
+			p.GetTCPForIPv6().Cksum = SwapBytesUint16(CalculatePseudoHdrIPv6TCPCksum(ipv6))
 		} else if udp != nil {
-			p.GetUDPForIPv6().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv6UDPCksum(p.GetIPv6(), p.GetUDPForIPv6()))
+			p.GetUDPForIPv6().DgramCksum = SwapBytesUint16(CalculatePseudoHdrIPv6UDPCksum(ipv6, udp))
+		} else if icmp != nil {
+			// calculate full software checksum for icmp, cause there is no
+			// hardware calculation for icmp packets.
+			p.GetICMPForIPv6().Cksum = SwapBytesUint16(CalculateIPv6ICMPChecksum(ipv6, icmp,
+				unsafe.Pointer(uintptr(unsafe.Pointer(icmp))+ICMPLen)))
 		}
 	}
 }

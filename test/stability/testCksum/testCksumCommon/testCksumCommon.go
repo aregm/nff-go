@@ -18,14 +18,14 @@ type Packetdata struct {
 func CheckPacketChecksums(p *packet.Packet) bool {
 	status := false
 
-	if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV4Number {
-		pIPv4 := p.GetIPv4()
+	if p.GetEtherType() == common.IPV4Number {
+		pIPv4 := p.GetIPv4CheckVLAN()
+		csum := packet.CalculateIPv4Checksum(pIPv4)
 		l3status := true
-		if packet.SwapBytesUint16(pIPv4.HdrChecksum) != packet.CalculateIPv4Checksum(pIPv4) {
-			println("IPv4 checksum mismatch")
+		if packet.SwapBytesUint16(pIPv4.HdrChecksum) != csum {
+			println("IPv4 checksum mismatch", packet.SwapBytesUint16(pIPv4.HdrChecksum), "should be", csum)
 			l3status = false
 		}
-
 		if pIPv4.NextProtoID == common.UDPNumber {
 			pUDP := p.GetUDPForIPv4()
 			csum := packet.CalculateIPv4UDPChecksum(pIPv4, pUDP, p.Data)
@@ -58,8 +58,8 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 		} else {
 			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 		}
-	} else if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV6Number {
-		pIPv6 := p.GetIPv6()
+	} else if p.GetEtherType() == common.IPV6Number {
+		pIPv6 := p.GetIPv6CheckVLAN()
 		if pIPv6.Proto == common.UDPNumber {
 			pUDP := p.GetUDPForIPv6()
 			csum := packet.CalculateIPv6UDPChecksum(pIPv6, pUDP, p.Data)
@@ -101,8 +101,8 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 
 // CalculateChecksum calculates checksum and writes to fields of packet.
 func CalculateChecksum(p *packet.Packet) {
-	if p.Ether.EtherType == packet.SwapBytesUint16(common.IPV4Number) {
-		pIPv4 := p.GetIPv4()
+	if p.GetEtherType() == common.IPV4Number {
+		pIPv4 := p.GetIPv4NoCheck()
 		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
 
 		if pIPv4.NextProtoID == common.UDPNumber {
@@ -118,8 +118,8 @@ func CalculateChecksum(p *packet.Packet) {
 			println("Unknown IPv4 protocol number", pIPv4.NextProtoID)
 			println("TEST FAILED")
 		}
-	} else if packet.SwapBytesUint16(p.Ether.EtherType) == common.IPV6Number {
-		pIPv6 := p.GetIPv6()
+	} else if p.GetEtherType() == common.IPV6Number {
+		pIPv6 := p.GetIPv6NoCheck()
 		if pIPv6.Proto == common.UDPNumber {
 			pUDP := p.GetUDPForIPv6()
 			pUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pIPv6, pUDP, p.Data))
