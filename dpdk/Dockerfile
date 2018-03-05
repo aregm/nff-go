@@ -13,6 +13,6 @@ WORKDIR /workdir
 COPY pktgen .
 COPY Pktgen.lua .
 # Workaround for linking agains libpcap.so.0.8 on Ubuntu
-RUN ln -s libpcap.so.1.7.4 /usr/lib64/libpcap.so.0.8
+RUN ln -s libpcap.so.1 /usr/lib64/libpcap.so.0.8
 
 CMD ["./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:1-2].0, [3:3-4].1, [5-6:5].2, [7-8:7].3", "-G"]
