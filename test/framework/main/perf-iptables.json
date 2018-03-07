@@ -1,0 +1,100 @@
+{
+    "docker-config": {
+        "request-timeout": 10000000000,
+        "docker-client-version": "1.24",
+        "privileged": true,
+        "map-volumes": [
+            "/sys/bus/pci/drivers:/sys/bus/pci/drivers",
+            "/sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages",
+            "/sys/devices/system/node:/sys/devices/system/node",
+            "/dev:/dev"
+        ],
+        "pktgen-port": 22022
+    },
+    "tests": [
+        {
+            "name": "LinuxNAT-10k-1c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 1 -n 10000 http://192.168.16.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-100k-1c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 1 -n 1000 http://192.168.16.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-1M-1c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 1 -n 1000 http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-10k-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 10 -n 10000 http://192.168.16.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-100k-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 10 -n 1000 http://192.168.16.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-1M-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 10 -n 1000 http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        }
+    ]
+}
