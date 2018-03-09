@@ -13,8 +13,8 @@ Vagrant.configure(2) do |config|
   end
 
   vm_name = ENV.fetch('VM_NAME', "nff-go")
-  vm_group_size = ENV.fetch('VM_GROUP_SIZE', 2).to_i
-  vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 2).to_i
+  vm_group_size = ENV.fetch('VM_GROUP_SIZE', 3).to_i
+  vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 3).to_i
   vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
 
 #  config.vm.box = "ubuntu/xenial64"
@@ -38,7 +38,7 @@ Vagrant.configure(2) do |config|
   end
 
 $provision_fedora = <<SHELL
-echo Fixing bootloader to use consisntent interface names
+echo Fixing bootloader to use consistent interface names
 sudo sed -i -e 's,biosdevname=0 net.ifnames=0 ,,' /etc/default/grub
 sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 

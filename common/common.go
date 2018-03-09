@@ -34,6 +34,12 @@ const (
 	VLANNumber = 0x8100
 	MPLSNumber = 0x8847
 	IPV6Number = 0x86dd
+
+	SwapIPV4Number = 0x0008
+	SwapARPNumber  = 0x0608
+	SwapVLANNumber = 0x0081
+	SwapMPLSNumber = 0x4788
+	SwapIPV6Number = 0xdd86
 )
 
 // Supported L4 types

@@ -95,10 +95,10 @@ var (
 	Natconfig *Config
 	// CalculateChecksum is a flag whether checksums should be
 	// calculated for modified packets.
-	CalculateChecksum bool
+	NoCalculateChecksum bool
 	// HWTXChecksum is a flag whether checksums calculation should be
 	// offloaded to HW.
-	HWTXChecksum bool
+	NoHWTXChecksum bool
 
 	// Debug variables
 	debugDump = false
