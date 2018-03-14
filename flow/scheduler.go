@@ -2,6 +2,21 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// RSS scaling
+// 1) Receive flow function can get packets from port or KNI. If function
+// receives packets from port it has type receiveRSS and is clonable: clone
+// is added if internal NIC queue is overloaded and removed otherwise.
+// 2) Cloning of receiveRSS function is implemented as changes to RETA
+// table. Reta table is a table which maps hardware counted packet tuple hash to
+// real number of receive queues. Port with receive function has all receive
+// queues running at the start stage. However RETA table has links only
+// to first receive queue. When it is required to add a clone RETA table is
+// changed to send packets to new number of receive queues. And new
+// core with receive function from new receive queue is added.
+// 3) As receive function is invocated in C it is unable to stop them via
+// go channels functionality. So we use volatile flag otherwise. If we want
+// to stop a clone we switch off this flag and change RETA table.
+
 package flow
 
 import (
@@ -23,6 +38,7 @@ const generatePauseStep = 0.1
 type clonePair struct {
 	index   int
 	channel chan int
+	flag    int
 }
 
 // UserContext is used inside flow packet and is going for user via it
@@ -32,14 +48,17 @@ type UserContext interface {
 }
 
 // Function types which are used inside flow functions
-type uncloneFlowFunction func(interface{}, int)
+type uncloneFlowFunction func(interface{})
 type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
+type cFlowFunction func(interface{}, *int, int)
 
 type ffType int
 
 const (
 	handleSplitSeparateCopy ffType = iota
 	fastGenerate
+	receiveRSS     // receive from port
+	sendReceiveKNI // send to port, send to KNI, receive from KNI
 	other
 )
 
@@ -49,6 +68,8 @@ type flowFunction struct {
 	Parameters interface{}
 	// Main body of unclonable flow function
 	uncloneFunction uncloneFlowFunction
+	// Main body of receive flow function
+	cFunction cFlowFunction
 	// Main body of clonable flow function
 	cloneFunction cloneFlowFunction
 	// Pause channel of function itself (not clones)
@@ -74,12 +95,13 @@ type flowFunction struct {
 }
 
 // Adding every flow function to scheduler list
-func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, cfn cloneFlowFunction,
+func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
 	par interface{}, report chan uint64, context UserContext, fType ffType) {
 	ff := new(flowFunction)
 	scheduler.ffCount++
 	ff.name = name + " " + strconv.Itoa(scheduler.ffCount)
 	ff.uncloneFunction = ucfn
+	ff.cFunction = Cfn
 	ff.cloneFunction = cfn
 	ff.Parameters = par
 	ff.report = report
@@ -164,24 +186,26 @@ func (scheduler *scheduler) systemStart() (err error) {
 func (scheduler *scheduler) startFF(ff1 *flowFunction, core int) (err error) {
 	ff := ff1
 	common.LogDebug(common.Initialization, "Start FlowFunction", ff.name, "at", core, "core")
-	switch ff.fType {
-	case handleSplitSeparateCopy, fastGenerate:
-		go func() {
+	stopFlag := int(1)
+	go func() {
+		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
 			if err := low.SetAffinity(core); err != nil {
 				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 			}
-			ff.channel = make(chan int)
-			if ff.context != nil {
-				ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
+			if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+				ff.channel = make(chan int)
+				if ff.context != nil {
+					ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
+				} else {
+					ff.cloneFunction(ff.Parameters, ff.channel, ff.report, nil)
+				}
 			} else {
-				ff.cloneFunction(ff.Parameters, ff.channel, ff.report, nil)
+				ff.uncloneFunction(ff.Parameters)
 			}
-		}()
-	case other:
-		go func() {
-			ff.uncloneFunction(ff.Parameters, core)
-		}()
-	}
+		} else {
+			ff.cFunction(ff.Parameters, &stopFlag, core)
+		}
+	}()
 	return nil
 }
 
@@ -214,6 +238,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		}
 		// Procced with each flow function
 		for i := range scheduler.ff {
+			recC := -1
 			ff := scheduler.ff[i]
 			if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
 				ff.updateCurrentSpeed()
@@ -256,7 +281,15 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							}
 						}
 					}
-				case other:
+				case receiveRSS:
+					recC = low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port)
+					// TODO "5" and "39" constants below derived empirically. Need to investigate more elegant thresholds.
+					if recC < 5 {
+						scheduler.removeClone(ff)
+						low.DecreaseRSS((ff.Parameters.(*receiveParameters)).port)
+						continue
+					}
+				case other, sendReceiveKNI:
 				}
 			}
 			// Secondly we check adding clones. We can add one clone if:
@@ -299,7 +332,16 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							continue
 						}
 					}
-				case other:
+				case receiveRSS:
+					if recC == -1 {
+						recC = low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port)
+					}
+					if recC > 39 && ff.checkOutputRing() <= scheduler.maxPacketsToClone {
+						if low.IncreaseRSS((ff.Parameters.(*receiveParameters)).port) {
+							scheduler.startClone(ff)
+						}
+					}
+				case other, sendReceiveKNI:
 				}
 			}
 		}
@@ -316,26 +358,37 @@ func (scheduler *scheduler) startClone(ff *flowFunction) bool {
 	}
 	core := scheduler.cores[index].id
 	cp := new(clonePair)
-	cp.channel = make(chan int)
 	cp.index = index
+	if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+		cp.channel = make(chan int)
+	}
+	cp.flag = 1
 	ff.clone = append(ff.clone, cp)
 	ff.cloneNumber++
 	go func() {
-		err := low.SetAffinity(core)
-		if err != nil {
-			common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
-		}
-		if ff.context != nil {
-			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, (ff.context.Copy()).(UserContext))
+		if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+			err := low.SetAffinity(core)
+			if err != nil {
+				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
+			}
+			if ff.context != nil {
+				ff.cloneFunction(ff.Parameters, cp.channel, ff.report, (ff.context.Copy()).(UserContext))
+			} else {
+				ff.cloneFunction(ff.Parameters, cp.channel, ff.report, nil)
+			}
 		} else {
-			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, nil)
+			ff.cFunction(ff.Parameters, &cp.flag, core)
 		}
 	}()
 	return true
 }
 
 func (scheduler *scheduler) removeClone(ff *flowFunction) {
-	ff.clone[ff.cloneNumber-1].channel <- -1
+	if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+		ff.clone[ff.cloneNumber-1].channel <- -1
+	} else {
+		ff.clone[ff.cloneNumber-1].flag = 0
+	}
 	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
 	ff.clone = ff.clone[:len(ff.clone)-1]
 	ff.cloneNumber--
@@ -359,7 +412,7 @@ func (ff *flowFunction) printDebug(schedTime uint) {
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
 		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, target speed is", int64(targetSpeed), "PKT/S")
-	case other:
+	case other, sendReceiveKNI, receiveRSS:
 	}
 }
 
@@ -421,6 +474,14 @@ func (ff *flowFunction) checkInputRing() (n uint32) {
 		n = ff.Parameters.(*splitParameters).in.GetRingCount()
 	case *copyParameters:
 		n = ff.Parameters.(*copyParameters).in.GetRingCount()
+	}
+	return n
+}
+
+func (ff *flowFunction) checkOutputRing() (n uint32) {
+	switch ff.Parameters.(type) {
+	case *receiveParameters:
+		n = ff.Parameters.(*receiveParameters).out.GetRingCount()
 	}
 	return n
 }
