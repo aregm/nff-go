@@ -9,6 +9,8 @@ import "github.com/intel-go/nff-go/packet"
 
 var rulesp unsafe.Pointer
 
+const vecSize = 32
+
 func main() {
 	config := flow.Config{}
 	checkFatal(flow.SystemInit(&config))
@@ -38,15 +40,17 @@ func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
 	return cur.L3ACLPort(localL3Rules)
 }
 
-func myHandler(curV []*packet.Packet, num uint, ctx flow.UserContext) {
-	for i := uint(0); i < num; i++ {
-		cur := curV[i]
-		cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
-		cur.ParseL3()
-		cur.GetIPv4NoCheck().SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
-		cur.GetIPv4NoCheck().DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
-		cur.GetIPv4NoCheck().VersionIhl = 0x45
-		cur.GetIPv4NoCheck().NextProtoID = 0x04
+func myHandler(curV []*packet.Packet, mask *[vecSize]bool, ctx flow.UserContext) {
+	for i := uint(0); i < 32; i++ {
+		if (*mask)[i] == true {
+			cur := curV[i]
+			cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
+			cur.ParseL3()
+			cur.GetIPv4NoCheck().SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
+			cur.GetIPv4NoCheck().DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
+			cur.GetIPv4NoCheck().VersionIhl = 0x45
+			cur.GetIPv4NoCheck().NextProtoID = 0x04
+		}
 	}
 	// Some heavy computational code
 	heavyCode()
