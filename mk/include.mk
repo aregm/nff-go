@@ -60,70 +60,11 @@ endif
 export CGO_CFLAGS = $(CFLAGS)
 
 export CGO_LDFLAGS =				\
-	-L$(RTE_SDK)/$(RTE_TARGET)/lib		\
-	-W					\
-	-Wall					\
-	-Werror					\
-	-Wstrict-prototypes			\
-	-Wmissing-prototypes			\
-	-Wmissing-declarations			\
-	-Wold-style-definition			\
-	-Wpointer-arith				\
-	-Wcast-align				\
-	-Wnested-externs			\
-	-Wcast-qual				\
-	-Wformat-nonliteral			\
-	-Wformat-security			\
-	-Wundef					\
-	-Wwrite-strings				\
+	-L$(RTE_SDK)/$(RTE_TARGET)/lib 		\
 	-Wl,--no-as-needed			\
-	-Wl,-export-dynamic			\
-	-Wl,--whole-archive			\
-	-lrte_distributor			\
-	-lrte_reorder				\
-	-lrte_kni				\
-	-lrte_pipeline				\
-	-lrte_table				\
-	-lrte_port				\
-	-lrte_timer				\
-	-lrte_hash				\
-	-lrte_jobstats				\
-	-lrte_lpm				\
-	-lrte_power				\
-	-lrte_acl				\
-	-lrte_meter				\
-	-lrte_sched				\
-	-lrte_vhost				\
-	-Wl,--start-group			\
-	-lrte_kvargs				\
-	-lrte_mbuf				\
-	-lrte_ip_frag				\
-	-lrte_ethdev				\
-	-lrte_mempool				\
-	-lrte_ring				\
-	-lrte_eal				\
-	-lrte_cmdline				\
-	-lrte_cfgfile				\
-	-lrte_pmd_bond				\
-	-lrte_pmd_vmxnet3_uio			\
-	-lrte_net				\
-	-lrte_pmd_virtio			\
-	-lrte_pmd_cxgbe				\
-	-lrte_pmd_enic				\
-	-lrte_pmd_i40e				\
-	-lrte_pmd_fm10k				\
-	-lrte_pmd_ixgbe				\
-	-lrte_pmd_e1000				\
-	-lrte_pmd_ring				\
-	-lrte_pmd_af_packet			\
-	-lrte_pmd_null				\
-	-lrt					\
-	-lm					\
-	-ldl					\
-	-lnuma					\
-	-lrte_mempool_ring			\
-	-Wl,--end-group				\
-	-Wl,--no-whole-archive
+	-Wl,-export-dynamic
+
+export CGO_LDFLAGS_ALLOW=-Wl,--((no-)?whole-archive|((start|end)-group))
 
 # Universal check whether a variable is set
 .PHONY: .check-defined-%

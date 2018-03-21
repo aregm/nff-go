@@ -4,7 +4,16 @@
 
 package low
 
+// Libraries below are DPDK libraries. PMD drivers and some basic DPDK
+// libraries have to be specified between --whole-archive and
+// --start-group options because PMD driver libraries have to be
+// linked entirely and dependencies for them have to be resolved
+// circularly. Don't add any more libraries inside of --whole-archive
+// group of libraries unless they are really necessary there because
+// it increases executable size and build time.
+
 /*
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
 #include "low.h"
 */
 import "C"
