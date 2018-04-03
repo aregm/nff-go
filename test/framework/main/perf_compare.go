@@ -39,21 +39,13 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 	for i < len(lines) {
-		if strings.Contains(lines[i], "TEST_TYPE_BENCHMARK") && !strings.Contains(lines[i], "log") { // "TestTypeBenchmark"
-			name := strings.Split(lines[i][8:len(lines[i])-20], "_off_") // -21 / -18 -17 ?
+		if strings.Contains(lines[i], "TestTypeBenchmark") && !strings.Contains(lines[i], "log") {
+			name := strings.Split(lines[i][8:len(lines[i])-18], "_off_")
 			if len(name[1]) == 2 {
 				name[1] = "  " + name[1]
 			} else if len(name[1]) == 3 {
 				name[1] = " " + name[1]
 			}
-
-			normal_cores := 6
-			if name[0] == "ipsec" {
-				normal_cores = 4
-			} else if name[0] == "nat_fixed_ports" || name[0] == "nat_nonfixed_ports" {
-				// Ask Maria!!!
-			}
-
 			j := i + 1
 			for strings.Contains(lines[j], "Average") == false {
 				j++
@@ -62,8 +54,6 @@ func main() {
 			off_MGB, _ := strconv.Atoi(t[:len(t)-5]) // -6 ?
 			t = strings.Split(lines[j+1], "</td>")[0]
 			off_cores, _ := strconv.Atoi(t[40:])
-			off_cores = off_cores - normal_cores
-
 			k := j + 1
 			for strings.Contains(lines[k], "Average") == false {
 				k++
@@ -72,16 +62,11 @@ func main() {
 			on_MGB, _ := strconv.Atoi(t[:len(t)-5]) // -6 ?
 			t = strings.Split(lines[k+1], "</td>")[0]
 			on_cores, _ := strconv.Atoi(t[40:])
-			on_cores = on_cores - normal_cores
 
-			t = strings.Split(lines[k+1], "</td><td class=\"rborder\">")[1]
-			decreased := (t)[:len(t)-6]
-
-			percent := int(float64(on_MGB) / float64(on_cores) / float64(off_MGB) * float64(off_cores) * 100)
 			if (s < 9 && s%3 == 0) || (s >= 9 && (s-9)%4 == 0) {
-				fmt.Println("--------", name[0], name[1], "off:", off_MGB, "on:", on_MGB, on_cores, "cores,", percent, "%", decreased, "--------")
+				fmt.Println("--------", name[0], name[1], "off:", off_MGB, "on:", on_MGB, "off_cores:", off_cores, "on_cores:", on_cores, "--------")
 			} else {
-				fmt.Println("        ", name[0], name[1], "off:", off_MGB, "on:", on_MGB, on_cores, "cores,", percent, "%", decreased)
+				fmt.Println("        ", name[0], name[1], "off:", off_MGB, "on:", on_MGB, "off_cores:", off_cores, "on_cores:", on_cores)
 			}
 			global_off = global_off * float64(off_MGB)
 			global_on = global_on * float64(on_MGB)
