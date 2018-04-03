@@ -15,6 +15,7 @@
 
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
+#include <rte_bus_pci.h>
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
@@ -65,7 +66,7 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
-static int kni_config_network_interface(uint8_t port_id, uint8_t if_up);
+static int kni_config_network_interface(uint16_t port_id, uint8_t if_up);
 
 uint32_t BURST_SIZE;
 
@@ -568,7 +569,7 @@ void lpm_free(void *lpm) {
 
 // Callback for request of configuring KNI up/down
 // Copy of DPDK kni_config_network_interface from examples/kni/main.c
-static int kni_config_network_interface(uint8_t port_id, uint8_t if_up) {
+static int kni_config_network_interface(uint16_t port_id, uint8_t if_up) {
 	int ret = 0;
 	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
 		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");
