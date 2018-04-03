@@ -61,10 +61,10 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport1 uint
-	outport2 uint
-	inport1  uint
-	inport2  uint
+	outport1     uint
+	outport2     uint
+	inport1      uint
+	inport2      uint
 	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
@@ -99,7 +99,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ dpdkLogLevel },
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
@@ -140,17 +140,11 @@ func executeTest(configFile, target string, testScenario uint) error {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
+		// Create first packet flow
 		firstFlow, err := flow.SetFastGenerator(generatePacketGroup1, speed, nil)
 		if err != nil {
 			return err
 		}
-
-		if testScenario == 1 {
-			if err := flow.SetSender(firstFlow, uint8(outport1)); err != nil {
-				return err
-			}
-		}
-
 		// Create second packet flow
 		secondFlow, err := flow.SetFastGenerator(generatePacketGroup2, speed, nil)
 		if err != nil {
@@ -159,6 +153,9 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
+			if err := flow.SetSender(firstFlow, uint8(outport1)); err != nil {
+				return err
+			}
 			if err := flow.SetSender(secondFlow, uint8(outport2)); err != nil {
 				return err
 			}
@@ -230,7 +227,7 @@ func composeStatistics() error {
 	// Test is passed, if p1 and p2 do not differ too much: |p1-p2| < 4%
 	// and enough packets received back
 	if atomic.LoadInt32(&passed) != 0 &&
-		(p1-p2 < 4 || p2-p1 < 4) && received*100/sent > passedLimit {
+		(p1-p2 < 4 && p1-p2 > -4) && received*100/sent > passedLimit {
 		println("TEST PASSED")
 		return nil
 	}
@@ -261,11 +258,9 @@ func generatePacketGroup1(pkt *packet.Packet, context flow.UserContext) {
 	fixMACAddrs1(pkt, context)
 
 	// We do not consider the start time of the system in this test
-	if time.Since(progStart) < T {
-		return
+	if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+		atomic.AddUint64(&sentPacketsGroup1, 1)
 	}
-
-	atomic.AddUint64(&sentPacketsGroup1, 1)
 }
 
 func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
@@ -284,25 +279,22 @@ func generatePacketGroup2(pkt *packet.Packet, context flow.UserContext) {
 	fixMACAddrs2(pkt, context)
 
 	// We do not consider the start time of the system in this test
-	if time.Since(progStart) < T {
-		return
+	if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+		atomic.AddUint64(&sentPacketsGroup2, 1)
 	}
-
-	atomic.AddUint64(&sentPacketsGroup2, 1)
 }
 
 // Count and check packets in received flow
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if atomic.AddUint64(&recvPackets, 1) >= totalPackets {
+		testDoneEvent.Signal()
 		return
 	}
+
 	pkt.ParseData()
-
-	recvCount := atomic.AddUint64(&recvPackets, 1)
-
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
 	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
@@ -321,9 +313,5 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 		println("Packet Ipv4 src addr does not match addr1 or addr2")
 		println("TEST FAILED")
 		atomic.StoreInt32(&passed, 0)
-	}
-
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
 	}
 }

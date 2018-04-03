@@ -50,7 +50,7 @@ var (
 	speed       uint64 = 1000000
 	passedLimit uint64 = 85
 
-	sent          uint64
+	sentCount     uint64
 	recvPackets   uint64
 	recvCount1    uint64
 	recvCount2    uint64
@@ -62,10 +62,10 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport1 uint
-	outport2 uint
-	inport1  uint
-	inport2  uint
+	outport1     uint
+	outport2     uint
+	inport1      uint
+	inport2      uint
 	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
@@ -100,7 +100,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ dpdkLogLevel },
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
@@ -226,6 +226,7 @@ func composeStatistics() error {
 	recv1 := atomic.LoadUint64(&recvCount1)
 	recv2 := atomic.LoadUint64(&recvCount2)
 	received := recv1 + recv2
+	sent := atomic.LoadUint64(&sentCount)
 
 	var p1 int
 	var p2 int
@@ -261,10 +262,6 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	if packet.InitEmptyIPv4UDPPacket(pkt, payloadSize) == false {
 		log.Fatal("Failed to init empty packet")
 	}
-	// We do not consider the start time of the system in this test
-	if time.Since(progStart) < T {
-		return
-	}
 	fixMACAddrs(pkt, context)
 
 	ipv4 := pkt.GetIPv4()
@@ -272,20 +269,22 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 
-	atomic.AddUint64(&sent, 1)
+	// We do not consider the start time of the system in this test
+	if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+		atomic.AddUint64(&sentCount, 1)
+	}
 }
 
 func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if atomic.AddUint64(&recvPackets, 1) > totalPackets {
+		testDoneEvent.Signal()
 		return
 	}
+
 	pkt.ParseData()
-
-	recvCount := atomic.AddUint64(&recvPackets, 1)
-
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
 	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
@@ -296,21 +295,18 @@ func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
 		return
 	}
 	atomic.AddUint64(&recvCount1, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
 
 func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if atomic.AddUint64(&recvPackets, 1) > totalPackets {
+		testDoneEvent.Signal()
 		return
 	}
-	pkt.ParseData()
-	recvCount := atomic.AddUint64(&recvPackets, 1)
 
+	pkt.ParseData()
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
 	recvIPv4Cksum := packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
@@ -321,7 +317,4 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 		return
 	}
 	atomic.AddUint64(&recvCount2, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
