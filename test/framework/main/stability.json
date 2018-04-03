@@ -238,7 +238,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=2", "-hwol", "-vlan", "-inport=1", "-outport=0"
+                        "./testCksum", "-testScenario=2", "-hwol", "-inport=1", "-outport=0"
                     ]
                 }
             ]
