@@ -157,19 +157,24 @@ func TrimMbuf(m *Mbuf, length uint) bool {
 	return true
 }
 
+func setMbufLen(mb *Mbuf, l2len, l3len uint32) {
+	// Assign l2_len:7 and l3_len:9 fields in rte_mbuf
+	mb.anon4[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon4[1] = uint8(l3len >> 1)
+	mb.anon4[2] = 0
+	mb.anon4[3] = 0
+	mb.anon4[4] = 0
+	mb.anon4[5] = 0
+	mb.anon4[6] = 0
+	mb.anon4[7] = 0
+}
+
 // SetTXIPv4OLFlags sets mbuf flags for IPv4 header
 // checksum calculation hardware offloading.
 func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv4UDPOLFlags sets mbuf flags for IPv4 and UDP
@@ -177,14 +182,7 @@ func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (3 << 52) | (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv4TCPOLFlags sets mbuf flags for IPv4 and TCP
@@ -192,14 +190,7 @@ func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header
@@ -207,14 +198,7 @@ func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IPV6
 	mb.ol_flags = (3 << 52) | (1 << 56)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP
@@ -222,14 +206,7 @@ func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv6TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 56)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // These constants are used by packet package to parse protocol headers
