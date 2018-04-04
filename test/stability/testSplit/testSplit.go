@@ -61,10 +61,9 @@ var (
 	recvPacketsGroup1 uint64
 	recvPacketsGroup2 uint64
 
-	count          uint64
-	countFromStart uint64
-	recvPackets    uint64
-	brokenPackets  uint64
+	count         uint64
+	recvPackets   uint64
+	brokenPackets uint64
 
 	dstPort1 uint16 = 111
 	dstPort2 uint16 = 222
@@ -76,10 +75,10 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport1 uint
-	outport2 uint
-	inport1  uint
-	inport2  uint
+	outport1     uint
+	outport2     uint
+	inport1      uint
+	inport2      uint
 	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
@@ -118,7 +117,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ dpdkLogLevel },
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
@@ -307,16 +306,16 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
-	// We do not consider the start time of the system in this test
-	if time.Since(progStart) < T {
-		return
-	}
 	if count%5 == 0 {
 		udp.DstPort = packet.SwapBytesUint16(dstPort1)
-		atomic.AddUint64(&sentPacketsGroup1, 1)
+		if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+			atomic.AddUint64(&sentPacketsGroup1, 1)
+		}
 	} else {
 		udp.DstPort = packet.SwapBytesUint16(dstPort2)
-		atomic.AddUint64(&sentPacketsGroup2, 1)
+		if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+			atomic.AddUint64(&sentPacketsGroup2, 1)
+		}
 	}
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
@@ -325,13 +324,14 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 }
 
 func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
-		return
-	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
 	recvCount := atomic.AddUint64(&recvPackets, 1)
+	if recvCount > totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
 
 	pkt.ParseData()
 	ipv4 := pkt.GetIPv4()
@@ -350,19 +350,17 @@ func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
 		return
 	}
 	atomic.AddUint64(&recvPacketsGroup1, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
 
 func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
-		return
-	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
 	recvCount := atomic.AddUint64(&recvPackets, 1)
+	if recvCount > totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
 
 	pkt.ParseData()
 	ipv4 := pkt.GetIPv4()
@@ -381,9 +379,6 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 		return
 	}
 	atomic.AddUint64(&recvPacketsGroup2, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {

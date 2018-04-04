@@ -55,8 +55,8 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport uint
-	inport  uint
+	outport      uint
+	inport       uint
 	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
@@ -86,7 +86,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 	}
 	// Init NFF-GO system
 	config := flow.Config{
-		DPDKArgs: []string{ dpdkLogLevel },
+		DPDKArgs: []string{dpdkLogLevel},
 	}
 
 	if err := flow.SystemInit(&config); err != nil {
