@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-func TestPartition(t *testing.T) {
-	if err := executeTest("", "", 0); err != nil {
+func TestSplit(t *testing.T) {
+	if err := executeTest("", "", 0, split); err != nil {
 		t.Logf("fail: %+v\n", err)
 		t.Fail()
 	}

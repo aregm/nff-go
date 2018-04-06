@@ -1,0 +1,18 @@
+# Copyright 2017 Intel Corporation. 
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+PATH_TO_MK = ../../../mk
+IMAGENAME = nff-go-test-divide
+EXECUTABLES = testDivide
+
+all:
+	cp ../../framework/main/config.json .
+
+# We can't test them together because our system won't stop handlers between tests
+testing:
+	go test separate_test.go testDivide.go
+	go test split_test.go testDivide.go
+	go test partition_test.go testDivide.go
+
+include $(PATH_TO_MK)/leaf.mk

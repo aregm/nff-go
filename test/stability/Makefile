@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-SUBDIRS = testResend testMerge testSplit testSeparate testPartition testHandle testCksum
+SUBDIRS = testResend testMerge testDivide testHandle testCksum
 
 testing:
 	for dir in $(SUBDIRS); do \
