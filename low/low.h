@@ -15,12 +15,15 @@
 
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
+#include <rte_bus_pci.h>
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
+
+#define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
 // #define DEBUG
 // #define REASSEMBLY
@@ -63,16 +66,21 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
-static int kni_config_network_interface(uint8_t port_id, uint8_t if_up);
+static int kni_config_network_interface(uint16_t port_id, uint8_t if_up);
 
 uint32_t BURST_SIZE;
 
-void initCPUSet(uint8_t coreId, cpu_set_t* cpuset) {
+struct cPort {
+	uint8_t PortId;
+	uint8_t QueuesNumber;
+};
+
+void initCPUSet(int coreId, cpu_set_t* cpuset) {
 	CPU_ZERO(cpuset);
 	CPU_SET(coreId, cpuset);
 }
 
-void setAffinity(uint8_t coreId) {
+void setAffinity(int coreId) {
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(coreId, &cpuset);
@@ -106,11 +114,64 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	}
 }
 
+int checkRSSPacketCount(struct cPort *port) {
+	return rte_eth_rx_queue_count(port->PortId, port->QueuesNumber-1);
+}
+
+bool changeRSSReta(struct cPort *port, bool increment) {
+	struct rte_eth_dev_info dev_info;
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port->PortId, &dev_info);
+
+	struct rte_eth_rss_reta_entry64 reta_conf[APP_RETA_SIZE_MAX];
+	memset(reta_conf, 0, sizeof(reta_conf));
+
+	// This is required, hanging without this
+	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
+		reta_conf[i].mask = UINT64_MAX;
+	}
+
+	if (increment) {
+		if (port->QueuesNumber == dev_info.max_rx_queues) {
+			return false;
+		}
+		port->QueuesNumber++;
+	} else {
+		port->QueuesNumber--;
+	}
+
+        rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
+
+	// http://dpdk.org/doc/api/examples_2ip_pipeline_2init_8c-example.html#a27
+	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
+		for (int j = 0; j < RTE_RETA_GROUP_SIZE; j++) {
+			reta_conf[i].reta[j] = j % port->QueuesNumber;
+		}
+	}
+	rte_eth_dev_rss_reta_update(port->PortId, reta_conf, dev_info.reta_size);
+	return true;
+	// TODO we don't start or stop queues here. Is it right?
+}
+
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool,
-    struct ether_addr* addr, bool hwtxchecksum) {
-	const uint16_t rx_rings = receiveQueuesNumber, tx_rings = sendQueuesNumber;
+int port_init(uint8_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
+	uint16_t rx_rings, tx_rings = sendQueuesNumber;
+
+        struct rte_eth_dev_info dev_info;
+        memset(&dev_info, 0, sizeof(dev_info));
+        rte_eth_dev_info_get(port, &dev_info);
+
+	if (willReceive) {
+		// TODO Investigate this
+		if (dev_info.max_rx_queues > 16) {
+			rx_rings = 16;
+		} else {
+			rx_rings = dev_info.max_rx_queues;
+		}
+	} else {
+		rx_rings = 0;
+	}
 	int retval;
 	uint16_t q;
 
@@ -138,9 +199,6 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 			return retval;
 	}
 
-	struct rte_eth_dev_info dev_info;
-	memset(&dev_info, 0, sizeof(dev_info));
-	rte_eth_dev_info_get(port, &dev_info);
 	if (hwtxchecksum) {
 		/* Default TX settings are to disable offload operations, need to fix it */
 		dev_info.default_txconf.txq_flags = 0;
@@ -164,6 +222,17 @@ int port_init(uint8_t port, uint16_t receiveQueuesNumber, uint16_t sendQueuesNum
 
 	/* Enable RX in promiscuous mode for the Ethernet device. */
 	rte_eth_promiscuous_enable(port);
+
+	// Not to use .rx_deferred_start = 0 in custom configuration
+	// and use default configuration instead
+	struct cPort newPort = {
+		.PortId  = port,
+		.QueuesNumber = rx_rings
+	};
+	// Stop all queues except the last one. Queues will be added later if needed
+	for (q = 0; q < rx_rings - 1; q++) {
+		changeRSSReta(&newPort, false);
+	}
 
 	return 0;
 }
@@ -212,7 +281,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t coreId) {
+void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -226,7 +295,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t
 	struct rte_mbuf *temp;
 #endif
 	// Run until the application is quit. Recv can't be stopped now.
-	for (;;) {
+	while (*flag == 1) {
 		// Get RX packets from port
 		if (queue != -1) {
 			rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
@@ -284,7 +353,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, uint8_t
 	}
 }
 
-void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t coreId) {
+void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -317,7 +386,9 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, uint8_t 
 	}
 }
 
-void nff_go_stop(struct rte_ring *in_ring) {
+void nff_go_stop(struct rte_ring *in_ring, int coreId) {
+	setAffinity(coreId);
+
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.
@@ -498,7 +569,7 @@ void lpm_free(void *lpm) {
 
 // Callback for request of configuring KNI up/down
 // Copy of DPDK kni_config_network_interface from examples/kni/main.c
-static int kni_config_network_interface(uint8_t port_id, uint8_t if_up) {
+static int kni_config_network_interface(uint16_t port_id, uint8_t if_up) {
 	int ret = 0;
 	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
 		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");

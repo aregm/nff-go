@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestMerge (t *testing.T) {
+func TestMerge(t *testing.T) {
 	if err := executeTest("", "", 0); err != nil {
 		t.Logf("fail: %+v\n", err)
 		t.Fail()

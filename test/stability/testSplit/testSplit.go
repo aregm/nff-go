@@ -61,10 +61,9 @@ var (
 	recvPacketsGroup1 uint64
 	recvPacketsGroup2 uint64
 
-	count          uint64
-	countFromStart uint64
-	recvPackets    uint64
-	brokenPackets  uint64
+	count         uint64
+	recvPackets   uint64
+	brokenPackets uint64
 
 	dstPort1 uint16 = 111
 	dstPort2 uint16 = 222
@@ -76,17 +75,19 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport1 uint
-	outport2 uint
-	inport1  uint
-	inport2  uint
+	outport1     uint
+	outport2     uint
+	inport1      uint
+	inport2      uint
+	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 
-	rulesString = "test-split.conf"
-	filename    = &rulesString
+	rulesString       = "test-split.conf"
+	filename          = &rulesString
+	passed      int32 = 1
 )
 
 func main() {
@@ -103,6 +104,7 @@ func main() {
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	filename = flag.String("FILE", rulesString, "file with split rules in .conf format. If you change default port numbers, please, provide modified rules file too")
+	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
 		fmt.Printf("fail: %+v\n", err)
@@ -114,7 +116,9 @@ func executeTest(configFile, target string, testScenario uint) error {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	// Init NFF-GO system
-	config := flow.Config{}
+	config := flow.Config{
+		DPDKArgs: []string{dpdkLogLevel},
+	}
 	if err := flow.SystemInit(&config); err != nil {
 		return err
 	}
@@ -239,12 +243,12 @@ func executeTest(configFile, target string, testScenario uint) error {
 		testDoneEvent.L.Lock()
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
 
-func composeStatistics() {
+func composeStatistics() error {
 	// Compose statistics
 	sent1 := atomic.LoadUint64(&sentPacketsGroup1)
 	sent2 := atomic.LoadUint64(&sentPacketsGroup2)
@@ -282,12 +286,14 @@ func composeStatistics() {
 
 	// Test is passed, if each of p1 ~ 20% and p2 ~80%
 	// and if total receive/send rate is high
-	if p1 <= high1 && p2 <= high2 && p1 >= low1 && p2 >= low2 && received*100/sent > passedLimit {
+	if atomic.LoadInt32(&passed) != 0 &&
+		p1 <= high1 && p2 <= high2 && p1 >= low1 &&
+		p2 >= low2 && received*100/sent > passedLimit {
 		println("TEST PASSED")
-	} else {
-		println("TEST FAILED")
+		return nil
 	}
-
+	println("TEST FAILED")
+	return errors.New("final statistics check failed")
 }
 
 // Function to use in generator
@@ -300,16 +306,16 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	}
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
-	// We do not consider the start time of the system in this test
-	if time.Since(progStart) < T {
-		return
-	}
 	if count%5 == 0 {
 		udp.DstPort = packet.SwapBytesUint16(dstPort1)
-		atomic.AddUint64(&sentPacketsGroup1, 1)
+		if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+			atomic.AddUint64(&sentPacketsGroup1, 1)
+		}
 	} else {
 		udp.DstPort = packet.SwapBytesUint16(dstPort2)
-		atomic.AddUint64(&sentPacketsGroup2, 1)
+		if time.Since(progStart) >= T && atomic.LoadUint64(&recvPackets) < totalPackets {
+			atomic.AddUint64(&sentPacketsGroup2, 1)
+		}
 	}
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
@@ -318,13 +324,14 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 }
 
 func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
-		return
-	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
 	recvCount := atomic.AddUint64(&recvPackets, 1)
+	if recvCount > totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
 
 	pkt.ParseData()
 	ipv4 := pkt.GetIPv4()
@@ -339,22 +346,21 @@ func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
 	if udp.DstPort != packet.SwapBytesUint16(dstPort1) {
 		println("Unexpected packet in inputFlow1")
 		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 		return
 	}
 	atomic.AddUint64(&recvPacketsGroup1, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
 
 func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
-	if time.Since(progStart) < T {
-		return
-	}
-	if stabilityCommon.ShouldBeSkipped(pkt) {
+	if time.Since(progStart) < T || stabilityCommon.ShouldBeSkipped(pkt) {
 		return
 	}
 	recvCount := atomic.AddUint64(&recvPackets, 1)
+	if recvCount > totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
 
 	pkt.ParseData()
 	ipv4 := pkt.GetIPv4()
@@ -369,12 +375,10 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 	if udp.DstPort != packet.SwapBytesUint16(dstPort2) {
 		println("Unexpected packet in inputFlow2")
 		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
 		return
 	}
 	atomic.AddUint64(&recvPacketsGroup2, 1)
-	if recvCount >= totalPackets {
-		testDoneEvent.Signal()
-	}
 }
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {

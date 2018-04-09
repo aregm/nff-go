@@ -40,16 +40,12 @@ import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/low"
 	"github.com/intel-go/nff-go/packet"
-	"github.com/intel-go/nff-go/scheduler"
 )
 
 var openFlowsNumber = uint32(0)
 var ringName = 1
-var ffCount = 0
 var createdPorts []port
-
-// UserContext is a type which should be passed to all flow functions.
-type UserContext scheduler.UserContext
+var schedState *scheduler
 
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
@@ -96,22 +92,25 @@ type SplitFunction func(*packet.Packet, UserContext) uint
 // in C memory in low.c and is defined by its port which is equal to port
 // in this structure
 type Kni struct {
-	port uint8
+	portId uint8
 }
 
 type receiveParameters struct {
-	out   *low.Ring
-	queue int16
-	port  uint8
+	out  *low.Ring
+	port *low.Port
+	kni  bool
 }
 
-func makeReceiver(port uint8, queue int16, out *low.Ring) *scheduler.FlowFunction {
+func addReceiver(portId uint8, kni bool, out *low.Ring) {
 	par := new(receiveParameters)
-	par.port = port
-	par.queue = queue
+	par.port = low.GetPort(portId)
 	par.out = out
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("receiver", ffCount, receive, par)
+	par.kni = kni
+	if kni {
+		schedState.addFF("receiver", nil, recvKNI, nil, par, nil, nil, sendReceiveKNI)
+	} else {
+		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, nil, receiveRSS)
+	}
 }
 
 type generateParameters struct {
@@ -119,25 +118,25 @@ type generateParameters struct {
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
+	targetSpeed            float64
 }
 
-func makeGenerator(out *low.Ring, generateFunction GenerateFunction) *scheduler.FlowFunction {
+func addGenerator(out *low.Ring, generateFunction GenerateFunction) {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("generator", ffCount, generateOne, par)
+	schedState.addFF("generator", generateOne, nil, nil, par, nil, nil, other)
 }
 
-func makeFastGenerator(out *low.Ring, generateFunction GenerateFunction,
-	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) *scheduler.FlowFunction {
+func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
+	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool()
 	par.vectorGenerateFunction = vectorGenerateFunction
-	ffCount++
-	return schedState.NewGenerateFlowFunction("fast generator", ffCount, generatePerf, par, float64(targetSpeed), make(chan uint64, 50), context)
+	par.targetSpeed = float64(targetSpeed)
+	schedState.addFF("fast generator", nil, nil, generatePerf, par, make(chan uint64, 50), context, fastGenerate)
 }
 
 type sendParameters struct {
@@ -146,13 +145,12 @@ type sendParameters struct {
 	port  uint8
 }
 
-func makeSender(port uint8, queue int16, in *low.Ring) *scheduler.FlowFunction {
+func addSender(port uint8, queue int16, in *low.Ring) {
 	par := new(sendParameters)
 	par.port = port
 	par.queue = queue
 	par.in = in
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("sender", ffCount, send, par)
+	schedState.addFF("sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
 }
 
 type copyParameters struct {
@@ -162,14 +160,13 @@ type copyParameters struct {
 	mempool *low.Mempool
 }
 
-func makeCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) *scheduler.FlowFunction {
+func addCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) {
 	par := new(copyParameters)
 	par.in = in
 	par.out = out
 	par.outCopy = outCopy
 	par.mempool = low.CreateMempool()
-	ffCount++
-	return schedState.NewClonableFlowFunction("copy", ffCount, pcopy, par, copyCheck, make(chan uint64, 50), nil)
+	schedState.addFF("copy", nil, nil, pcopy, par, make(chan uint64, 50), nil, handleSplitSeparateCopy)
 }
 
 type partitionParameters struct {
@@ -180,15 +177,14 @@ type partitionParameters struct {
 	M         uint64
 }
 
-func makePartitioner(in *low.Ring, outFirst *low.Ring, outSecond *low.Ring, N uint64, M uint64) *scheduler.FlowFunction {
+func addPartitioner(in *low.Ring, outFirst *low.Ring, outSecond *low.Ring, N uint64, M uint64) {
 	par := new(partitionParameters)
 	par.in = in
 	par.outFirst = outFirst
 	par.outSecond = outSecond
 	par.N = N
 	par.M = M
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("partitioner", ffCount, partition, par)
+	schedState.addFF("partitioner", partition, nil, nil, par, nil, nil, other)
 }
 
 type separateParameters struct {
@@ -199,17 +195,16 @@ type separateParameters struct {
 	vectorSeparateFunction VectorSeparateFunction
 }
 
-func makeSeparator(in *low.Ring, outTrue *low.Ring, outFalse *low.Ring,
+func addSeparator(in *low.Ring, outTrue *low.Ring, outFalse *low.Ring,
 	separateFunction SeparateFunction, vectorSeparateFunction VectorSeparateFunction,
-	name string, context UserContext) *scheduler.FlowFunction {
+	name string, context UserContext) {
 	par := new(separateParameters)
 	par.in = in
 	par.outTrue = outTrue
 	par.outFalse = outFalse
 	par.separateFunction = separateFunction
 	par.vectorSeparateFunction = vectorSeparateFunction
-	ffCount++
-	return schedState.NewClonableFlowFunction(name, ffCount, separate, par, separateCheck, make(chan uint64, 50), context)
+	schedState.addFF(name, nil, nil, separate, par, make(chan uint64, 50), context, handleSplitSeparateCopy)
 }
 
 type splitParameters struct {
@@ -219,15 +214,14 @@ type splitParameters struct {
 	flowNumber    uint
 }
 
-func makeSplitter(in *low.Ring, outs []*low.Ring,
-	splitFunction SplitFunction, flowNumber uint, context UserContext) *scheduler.FlowFunction {
+func addSplitter(in *low.Ring, outs []*low.Ring,
+	splitFunction SplitFunction, flowNumber uint, context UserContext) {
 	par := new(splitParameters)
 	par.in = in
 	par.outs = outs
 	par.splitFunction = splitFunction
 	par.flowNumber = flowNumber
-	ffCount++
-	return schedState.NewClonableFlowFunction("splitter", ffCount, split, par, splitCheck, make(chan uint64, 50), context)
+	schedState.addFF("splitter", nil, nil, split, par, make(chan uint64, 50), context, handleSplitSeparateCopy)
 }
 
 type handleParameters struct {
@@ -237,16 +231,15 @@ type handleParameters struct {
 	vectorHandleFunction VectorHandleFunction
 }
 
-func makeHandler(in *low.Ring, out *low.Ring,
+func addHandler(in *low.Ring, out *low.Ring,
 	handleFunction HandleFunction, vectorHandleFunction VectorHandleFunction,
-	name string, context UserContext) *scheduler.FlowFunction {
+	name string, context UserContext) {
 	par := new(handleParameters)
 	par.in = in
 	par.out = out
 	par.handleFunction = handleFunction
 	par.vectorHandleFunction = vectorHandleFunction
-	ffCount++
-	return schedState.NewClonableFlowFunction(name, ffCount, handle, par, handleCheck, make(chan uint64, 50), context)
+	schedState.addFF(name, nil, nil, handle, par, make(chan uint64, 50), context, handleSplitSeparateCopy)
 }
 
 type writeParameters struct {
@@ -254,12 +247,11 @@ type writeParameters struct {
 	filename string
 }
 
-func makeWriter(filename string, in *low.Ring) *scheduler.FlowFunction {
+func addWriter(filename string, in *low.Ring) {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("writer", ffCount, write, par)
+	schedState.addFF("writer", write, nil, nil, par, nil, nil, other)
 }
 
 type readParameters struct {
@@ -268,37 +260,25 @@ type readParameters struct {
 	repcount int32
 }
 
-func makeReader(filename string, out *low.Ring, repcount int32) *scheduler.FlowFunction {
+func addReader(filename string, out *low.Ring, repcount int32) {
 	par := new(readParameters)
 	par.out = out
 	par.filename = filename
 	par.repcount = repcount
-	ffCount++
-	return schedState.NewUnclonableFlowFunction("reader", ffCount, read, par)
+	schedState.addFF("reader", read, nil, nil, par, nil, nil, other)
 }
 
 var burstSize uint
 var sizeMultiplier uint
 var schedTime uint
-var maxPacketsToClone uint32
 var hwtxchecksum bool
 
 type port struct {
-	rxQueues       []bool
-	txQueues       []bool
-	config         int
-	rxQueuesNumber int16
+	wasRequested   bool // has user requested any send/receive operations at this port
 	txQueuesNumber int16
+	willReceive    bool // will this port receive packets
 	port           uint8
 }
-
-var schedState scheduler.Scheduler
-
-// Flow port types
-const (
-	inactivePort = iota
-	autoPort
-)
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
 type Config struct {
@@ -354,8 +334,8 @@ type Config struct {
 // SystemInit is initialization of system. This function should be always called before graph construction.
 // Function can panic during execution.
 func SystemInit(args *Config) error {
-	CPUCoresNumber := uint(runtime.NumCPU())
-	var cpus []uint
+	CPUCoresNumber := runtime.NumCPU()
+	var cpus []int
 	var err error
 	if args.CPUList != "" {
 		if cpus, err = common.HandleCPUList(args.CPUList, CPUCoresNumber); err != nil {
@@ -422,7 +402,7 @@ func SystemInit(args *Config) error {
 
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
-	maxPacketsToClone = uint32(sizeMultiplier * burstSize / 5 * 4)
+	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
@@ -432,13 +412,12 @@ func SystemInit(args *Config) error {
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
 	for i := range createdPorts {
 		createdPorts[i].port = uint8(i)
-		createdPorts[i].config = inactivePort
 	}
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
-	schedState = scheduler.NewScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime)
+	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone)
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
@@ -452,13 +431,13 @@ func SystemInit(args *Config) error {
 // Function can panic during execution.
 func SystemStart() error {
 	common.LogTitle(common.Initialization, "------------***--------- Checking system ---------***------------")
-	if err := checkSystem(); err != nil {
-		return err
+	if openFlowsNumber != 0 {
+		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
 	}
 	common.LogTitle(common.Initialization, "------------***---------- Creating ports ---------***------------")
 	for i := range createdPorts {
-		if createdPorts[i].config != inactivePort {
-			if err := low.CreatePort(createdPorts[i].port, uint16(createdPorts[i].rxQueuesNumber),
+		if createdPorts[i].wasRequested {
+			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
 				uint16(createdPorts[i].txQueuesNumber), hwtxchecksum); err != nil {
 				return err
 			}
@@ -471,11 +450,11 @@ func SystemStart() error {
 	time.Sleep(time.Second * 2)
 
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
-	if err := schedState.SystemStart(); err != nil {
+	if err := schedState.systemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
 	common.LogTitle(common.Initialization, "------------***--------- NFF-GO-GO Started --------***------------")
-	schedState.Schedule(schedTime)
+	schedState.schedule(schedTime)
 	return nil
 }
 
@@ -493,8 +472,7 @@ func SetSenderFile(IN *Flow, filename string) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	write := makeWriter(filename, IN.current)
-	schedState.UnClonable = append(schedState.UnClonable, write)
+	addWriter(filename, IN.current)
 	IN.current = nil
 	openFlowsNumber--
 	return nil
@@ -507,8 +485,7 @@ func SetSenderFile(IN *Flow, filename string) error {
 // Function can panic during execution.
 func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	read := makeReader(filename, ring, repcount)
-	schedState.UnClonable = append(schedState.UnClonable, read)
+	addReader(filename, ring, repcount)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -520,19 +497,20 @@ func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 // Function can panic during execution.
-func SetReceiver(port uint8) (OUT *Flow, err error) {
-	if port >= uint8(len(createdPorts)) {
+func SetReceiver(portId uint8) (OUT *Flow, err error) {
+	if portId >= uint8(len(createdPorts)) {
 		return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
-	createdPorts[port].config = autoPort
-	createdPorts[port].rxQueues = append(createdPorts[port].rxQueues, true)
+	if createdPorts[portId].willReceive {
+		return nil, common.WrapWithNFError(nil, "Requested receive port was already set to receive. Two receives from one port are prohibited.", common.MultipleReceivePort)
+	}
+	createdPorts[portId].wasRequested = true
+	createdPorts[portId].willReceive = true
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	recv := makeReceiver(port, createdPorts[port].rxQueuesNumber, ring)
-	schedState.UnClonable = append(schedState.UnClonable, recv)
+	addReceiver(portId, false, ring)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
-	createdPorts[port].rxQueuesNumber++
 	return OUT, nil
 }
 
@@ -543,8 +521,7 @@ func SetReceiver(port uint8) (OUT *Flow, err error) {
 // Function can panic during execution.
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	recvKni := makeReceiver(kni.port, -1, ring)
-	schedState.UnClonable = append(schedState.UnClonable, recvKni)
+	addReceiver(kni.portId, true, ring)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -558,13 +535,11 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Function can panic during execution.
 func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
-		generate = makeFastGenerator(ring, GenerateFunction(f), nil, targetSpeed, context)
+		addFastGenerator(ring, GenerateFunction(f), nil, targetSpeed, context)
 	} else {
 		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
-	schedState.Generate = append(schedState.Generate, generate)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -578,13 +553,11 @@ func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, c
 // Function can panic during execution.
 func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	var generate *scheduler.FlowFunction
 	if targetSpeed > 0 {
-		generate = makeFastGenerator(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
+		addFastGenerator(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
 	} else {
 		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
-	schedState.Generate = append(schedState.Generate, generate)
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -599,8 +572,7 @@ func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetS
 // Function can panic during execution.
 func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	generate := makeGenerator(ring, GenerateFunction(f))
-	schedState.UnClonable = append(schedState.UnClonable, generate)
+	addGenerator(ring, GenerateFunction(f))
 	OUT = new(Flow)
 	OUT.current = ring
 	openFlowsNumber++
@@ -611,18 +583,16 @@ func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
 // Function can panic during execution.
-func SetSender(IN *Flow, port uint8) error {
+func SetSender(IN *Flow, portId uint8) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	if port >= uint8(len(createdPorts)) {
+	if portId >= uint8(len(createdPorts)) {
 		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
-	createdPorts[port].config = autoPort
-	createdPorts[port].txQueues = append(createdPorts[port].txQueues, true)
-	send := makeSender(port, createdPorts[port].txQueuesNumber, IN.current)
-	createdPorts[port].txQueuesNumber++
-	schedState.UnClonable = append(schedState.UnClonable, send)
+	createdPorts[portId].wasRequested = true
+	addSender(portId, createdPorts[portId].txQueuesNumber, IN.current)
+	createdPorts[portId].txQueuesNumber++
 	IN.current = nil
 	openFlowsNumber--
 	return nil
@@ -636,8 +606,7 @@ func SetSenderKNI(IN *Flow, kni *Kni) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	sendKni := makeSender(kni.port, -1, IN.current)
-	schedState.UnClonable = append(schedState.UnClonable, sendKni)
+	addSender(kni.portId, -1, IN.current)
 	IN.current = nil
 	openFlowsNumber--
 	return nil
@@ -651,13 +620,10 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 		return nil, err
 	}
 	OUT = new(Flow)
-
 	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-	pcopy := makeCopier(IN.current, ringFirst, ringSecond)
-
-	schedState.Clonable = append(schedState.Clonable, pcopy)
+	addCopier(IN.current, ringFirst, ringSecond)
 	IN.current = ringFirst
 	OUT.current = ringSecond
 	return OUT, nil
@@ -668,6 +634,9 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 // Each loop N packets will be remained in input flow, next M packets will be sent to new flow.
 // It is advised not to use this function less then (75, 75) for performance reasons.
 // Function can panic during execution.
+// We make partition function unclonable. The most complex task is (1,1).
+// It means that if you would like to simply divide a flow
+// it is recommended to use (75,75) instead of (1,1) for performance reasons.
 func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
@@ -679,11 +648,7 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-	partition := makePartitioner(IN.current, ringFirst, ringSecond, N, M)
-	// We make partition function unclonable. The most complex task is (1,1).
-	// It means that if you would like to simply divide a flow
-	// it is recommended to use (75,75) instead of (1,1) for performance reasons.
-	schedState.UnClonable = append(schedState.UnClonable, partition)
+	addPartitioner(IN.current, ringFirst, ringSecond, N, M)
 	IN.current = ringFirst
 	OUT.current = ringSecond
 	return OUT, nil
@@ -702,9 +667,7 @@ func SetSeparator(IN *Flow, f func(*packet.Packet, UserContext) bool, context Us
 	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-
-	separate := makeSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
-	schedState.Clonable = append(schedState.Clonable, separate)
+	addSeparator(IN.current, ringTrue, ringFalse, SeparateFunction(f), nil, "separator", context)
 	IN.current = ringTrue
 	OUT.current = ringFalse
 	return OUT, nil
@@ -723,9 +686,7 @@ func SetVectorSeparator(IN *Flow, f func([]*packet.Packet, []bool, uint, UserCon
 	ringTrue := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringFalse := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	openFlowsNumber++
-
-	separate := makeSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
-	schedState.Clonable = append(schedState.Clonable, separate)
+	addSeparator(IN.current, ringTrue, ringFalse, nil, VectorSeparateFunction(f), "vector separator", context)
 	IN.current = ringTrue
 	OUT.current = ringFalse
 	return OUT, nil
@@ -749,8 +710,7 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 		rings[i] = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 		OutArray[i].current = rings[i]
 	}
-	split := makeSplitter(IN.current, rings, splitFunction, flowNumber, context)
-	schedState.Clonable = append(schedState.Clonable, split)
+	addSplitter(IN.current, rings, splitFunction, flowNumber, context)
 	IN.current = nil
 	openFlowsNumber--
 	return OutArray, nil
@@ -779,8 +739,7 @@ func SetHandler(IN *Flow, f func(*packet.Packet, UserContext), context UserConte
 		return err
 	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	handle := makeHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
-	schedState.Clonable = append(schedState.Clonable, handle)
+	addHandler(IN.current, ring, HandleFunction(f), nil, "handler", context)
 	IN.current = ring
 	return nil
 }
@@ -795,8 +754,7 @@ func SetVectorHandler(IN *Flow, f func([]*packet.Packet, uint, UserContext), con
 		return err
 	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	handle := makeHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
-	schedState.Clonable = append(schedState.Clonable, handle)
+	addHandler(IN.current, ring, nil, VectorHandleFunction(f), "vector handler", context)
 	IN.current = ring
 	return nil
 }
@@ -811,8 +769,7 @@ func SetHandlerDrop(IN *Flow, f func(*packet.Packet, UserContext) bool, context 
 		return err
 	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	handle := makeSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
-	schedState.Clonable = append(schedState.Clonable, handle)
+	addSeparator(IN.current, ring, schedState.StopRing, SeparateFunction(f), nil, "handler", context)
 	IN.current = ring
 	return nil
 }
@@ -827,8 +784,7 @@ func SetVectorHandlerDrop(IN *Flow, f func([]*packet.Packet, []bool, uint, UserC
 		return err
 	}
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	handle := makeSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
-	schedState.Clonable = append(schedState.Clonable, handle)
+	addSeparator(IN.current, ring, schedState.StopRing, nil, VectorSeparateFunction(f), "vector handler", context)
 	IN.current = ring
 	return nil
 }
@@ -858,19 +814,20 @@ func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
-func receive(parameters interface{}, coreID uint8) {
+func recvRSS(parameters interface{}, flag *int, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(srp.port, srp.queue, srp.out, coreID)
+	low.Receive(uint8(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
 }
 
-func generateOne(parameters interface{}, core uint8) {
+func recvKNI(parameters interface{}, flag *int, coreID int) {
+	srp := parameters.(*receiveParameters)
+	low.Receive(uint8(srp.port.PortId), -1, srp.out, flag, coreID)
+}
+
+func generateOne(parameters interface{}) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
-	if err := low.SetAffinity(core); err != nil {
-		common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
-	}
-
 	for {
 		tempPacket, err := packet.NewPacket()
 		if err != nil {
@@ -881,7 +838,7 @@ func generateOne(parameters interface{}, core uint8) {
 	}
 }
 
-func generatePerf(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+func generatePerf(parameters interface{}, stopper chan int, report chan uint64, context UserContext) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
@@ -941,20 +898,8 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	}
 }
 
-func copyCheck(parameters interface{}, debug bool) bool {
-	cp := parameters.(*copyParameters)
-	IN := cp.in
-	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for copy: ", IN.GetRingCount())
-	}
-	if IN.GetRingCount() > maxPacketsToClone {
-		return true
-	}
-	return false
-}
-
 // TODO reassembled packets are not supported
-func pcopy(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+func pcopy(parameters interface{}, stopper chan int, report chan uint64, context UserContext) {
 	cp := parameters.(*copyParameters)
 	IN := cp.in
 	OUT := cp.out
@@ -1010,7 +955,7 @@ func pcopy(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func send(parameters interface{}, coreID uint8) {
+func send(parameters interface{}, flag *int, coreID int) {
 	srp := parameters.(*sendParameters)
 	low.Send(srp.port, srp.queue, srp.in, coreID)
 }
@@ -1022,80 +967,56 @@ func merge(from *low.Ring, to *low.Ring) {
 	// out rings. Also we don't proceed merge function because they are added
 	// strictly one after another. The next merge will change previous "after merge"
 	// ring automatically.
-	for i := range schedState.UnClonable {
-		switch schedState.UnClonable[i].Parameters.(type) {
+	for i := range schedState.ff {
+		switch schedState.ff[i].Parameters.(type) {
 		case *receiveParameters:
-			if schedState.UnClonable[i].Parameters.(*receiveParameters).out == from {
-				schedState.UnClonable[i].Parameters.(*receiveParameters).out = to
+			if schedState.ff[i].Parameters.(*receiveParameters).out == from {
+				schedState.ff[i].Parameters.(*receiveParameters).out = to
 			}
 		case *partitionParameters:
-			if schedState.UnClonable[i].Parameters.(*partitionParameters).outFirst == from {
-				schedState.UnClonable[i].Parameters.(*partitionParameters).outFirst = to
+			if schedState.ff[i].Parameters.(*partitionParameters).outFirst == from {
+				schedState.ff[i].Parameters.(*partitionParameters).outFirst = to
 			}
-			if schedState.UnClonable[i].Parameters.(*partitionParameters).outSecond == from {
-				schedState.UnClonable[i].Parameters.(*partitionParameters).outSecond = to
+			if schedState.ff[i].Parameters.(*partitionParameters).outSecond == from {
+				schedState.ff[i].Parameters.(*partitionParameters).outSecond = to
 			}
 		case *generateParameters:
-			if schedState.UnClonable[i].Parameters.(*generateParameters).out == from {
-				schedState.UnClonable[i].Parameters.(*generateParameters).out = to
+			if schedState.ff[i].Parameters.(*generateParameters).out == from {
+				schedState.ff[i].Parameters.(*generateParameters).out = to
 			}
 		case *readParameters:
-			if schedState.UnClonable[i].Parameters.(*readParameters).out == from {
-				schedState.UnClonable[i].Parameters.(*readParameters).out = to
+			if schedState.ff[i].Parameters.(*readParameters).out == from {
+				schedState.ff[i].Parameters.(*readParameters).out = to
 			}
 		case *copyParameters:
-			if schedState.UnClonable[i].Parameters.(*copyParameters).out == from {
-				schedState.UnClonable[i].Parameters.(*copyParameters).out = to
+			if schedState.ff[i].Parameters.(*copyParameters).out == from {
+				schedState.ff[i].Parameters.(*copyParameters).out = to
 			}
-			if schedState.UnClonable[i].Parameters.(*copyParameters).outCopy == from {
-				schedState.UnClonable[i].Parameters.(*copyParameters).outCopy = to
+			if schedState.ff[i].Parameters.(*copyParameters).outCopy == from {
+				schedState.ff[i].Parameters.(*copyParameters).outCopy = to
 			}
-		}
-	}
-	for i := range schedState.Clonable {
-		switch schedState.Clonable[i].Parameters.(type) {
 		case *splitParameters:
-			for j := uint(0); j < schedState.Clonable[i].Parameters.(*splitParameters).flowNumber; j++ {
-				if schedState.Clonable[i].Parameters.(*splitParameters).outs[j] == from {
-					schedState.Clonable[i].Parameters.(*splitParameters).outs[j] = to
+			for j := uint(0); j < schedState.ff[i].Parameters.(*splitParameters).flowNumber; j++ {
+				if schedState.ff[i].Parameters.(*splitParameters).outs[j] == from {
+					schedState.ff[i].Parameters.(*splitParameters).outs[j] = to
 				}
 			}
 		case *separateParameters:
-			if schedState.Clonable[i].Parameters.(*separateParameters).outTrue == from {
-				schedState.Clonable[i].Parameters.(*separateParameters).outTrue = to
+			if schedState.ff[i].Parameters.(*separateParameters).outTrue == from {
+				schedState.ff[i].Parameters.(*separateParameters).outTrue = to
 			}
-			if schedState.Clonable[i].Parameters.(*separateParameters).outFalse == from {
-				schedState.Clonable[i].Parameters.(*separateParameters).outFalse = to
+			if schedState.ff[i].Parameters.(*separateParameters).outFalse == from {
+				schedState.ff[i].Parameters.(*separateParameters).outFalse = to
 			}
 		case *handleParameters:
-			if schedState.Clonable[i].Parameters.(*handleParameters).out == from {
-				schedState.Clonable[i].Parameters.(*handleParameters).out = to
-			}
-		}
-	}
-	for i := range schedState.Generate {
-		switch schedState.Generate[i].Parameters.(type) {
-		case *generateParameters:
-			if schedState.Generate[i].Parameters.(*generateParameters).out == from {
-				schedState.Generate[i].Parameters.(*generateParameters).out = to
+			if schedState.ff[i].Parameters.(*handleParameters).out == from {
+				schedState.ff[i].Parameters.(*handleParameters).out = to
 			}
 		}
 	}
 }
 
-func separateCheck(parameters interface{}, debug bool) bool {
-	sp := parameters.(*separateParameters)
-	IN := sp.in
-	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for separate: ", IN.GetRingCount())
-	}
-	if IN.GetRingCount() > maxPacketsToClone {
-		return true
-	}
-	return false
-}
-
-func separate(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+func separate(parameters interface{}, stopper chan int, report chan uint64, context UserContext) {
 	sp := parameters.(*separateParameters)
 	IN := sp.in
 	OUTTrue := sp.outTrue
@@ -1187,17 +1108,13 @@ func separate(parameters interface{}, stopper chan int, report chan uint64, cont
 	}
 }
 
-func partition(parameters interface{}, core uint8) {
+func partition(parameters interface{}) {
 	cp := parameters.(*partitionParameters)
 	IN := cp.in
 	OUTFirst := cp.outFirst
 	OUTSecond := cp.outSecond
 	N := cp.N
 	M := cp.M
-
-	if err := low.SetAffinity(core); err != nil {
-		common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
-	}
 
 	bufsIn := make([]uintptr, burstSize)
 	bufsFirst := make([]uintptr, burstSize)
@@ -1238,19 +1155,7 @@ func partition(parameters interface{}, core uint8) {
 	}
 }
 
-func splitCheck(parameters interface{}, debug bool) bool {
-	sp := parameters.(*splitParameters)
-	IN := sp.in
-	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for split: ", IN.GetRingCount())
-	}
-	if IN.GetRingCount() > maxPacketsToClone {
-		return true
-	}
-	return false
-}
-
-func split(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+func split(parameters interface{}, stopper chan int, report chan uint64, context UserContext) {
 	sp := parameters.(*splitParameters)
 	IN := sp.in
 	OUT := sp.outs
@@ -1319,19 +1224,7 @@ func split(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func handleCheck(parameters interface{}, debug bool) bool {
-	sp := parameters.(*handleParameters)
-	IN := sp.in
-	if debug == true {
-		common.LogDebug(common.Debug, "Number of packets in queue for handle: ", IN.GetRingCount())
-	}
-	if IN.GetRingCount() > maxPacketsToClone {
-		return true
-	}
-	return false
-}
-
-func handle(parameters interface{}, stopper chan int, report chan uint64, context scheduler.UserContext) {
+func handle(parameters interface{}, stopper chan int, report chan uint64, context UserContext) {
 	sp := parameters.(*handleParameters)
 	IN := sp.in
 	OUT := sp.out
@@ -1391,7 +1284,7 @@ func handle(parameters interface{}, stopper chan int, report chan uint64, contex
 	}
 }
 
-func write(parameters interface{}, coreID uint8) {
+func write(parameters interface{}) {
 	wp := parameters.(*writeParameters)
 	IN := wp.in
 	filename := wp.filename
@@ -1423,7 +1316,7 @@ func write(parameters interface{}, coreID uint8) {
 	}
 }
 
-func read(parameters interface{}, coreID uint8) {
+func read(parameters interface{}) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
@@ -1508,38 +1401,13 @@ func checkFlow(f *Flow) error {
 	return nil
 }
 
-func checkSystem() error {
-	if openFlowsNumber != 0 {
-		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
-	}
-	for i := range createdPorts {
-		if createdPorts[i].config == inactivePort {
-			continue
-		}
-		if createdPorts[i].rxQueuesNumber == 0 && createdPorts[i].txQueuesNumber == 0 {
-			return common.WrapWithNFError(nil, "port has no send and receive queues. It is an error in DPDK.", common.PortHasNoQueues)
-		}
-		for j := range createdPorts[i].rxQueues {
-			if createdPorts[i].rxQueues[j] != true {
-				return common.WrapWithNFError(nil, "port doesn't use all receive queues, packets can be missed due to RSS!", common.NotAllQueuesUsed)
-			}
-		}
-		for j := range createdPorts[i].txQueues {
-			if createdPorts[i].txQueues[j] != true {
-				return common.WrapWithNFError(nil, "port has unused send queue. Performance can be lower than it is expected!", common.NotAllQueuesUsed)
-			}
-		}
-	}
-	return nil
-}
-
 // CreateKniDevice creates KNI device for using in receive or send functions.
 // Gets port, core (not from NFF-GO list), and unique name of future KNI device.
-func CreateKniDevice(port uint8, core uint8, name string) *Kni {
-	low.CreateKni(port, core, name)
+func CreateKniDevice(portId uint8, core uint8, name string) *Kni {
+	low.CreateKni(portId, core, name)
 	kni := new(Kni)
 	// Port will be identifier of this KNI
 	// KNI structure itself is stored inside low.c
-	kni.port = port
+	kni.portId = portId
 	return kni
 }

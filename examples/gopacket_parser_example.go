@@ -15,10 +15,8 @@ import (
 )
 
 var (
-	printOn bool
-
-	inport1     uint
-	inport2     uint
+	printOn     bool
+	inport      uint
 	outport1    uint
 	outport2    uint
 	noscheduler bool
@@ -36,8 +34,7 @@ func main() {
 	flag.BoolVar(&printOn, "print", false, "enable print of parsed layers")
 	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
-	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
 	flag.Parse()
 
@@ -49,12 +46,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow0, err := flow.SetReceiver(uint8(inport1))
-	CheckFatal(err)
-	firstFlow1, err := flow.SetReceiver(uint8(inport2))
-	CheckFatal(err)
-
-	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
+	firstFlow, err := flow.SetReceiver(uint8(inport))
 	CheckFatal(err)
 
 	var ctx gopacketContext

@@ -13,71 +13,85 @@
     },
     "tests": [
         {
-            "name": "PingNATFromPrivate",
-            "test-time": 60000000000,
+            "name": "LinuxNAT-10k-1c",
+            "test-time": 90000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "sh", "-c", "sleep 10; ping -c 5 192.168.14.1 && echo TEST PASSED || echo TEST FAILED"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "sh", "-c", "ab -c 1 -n 10000 http://192.168.16.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
                 }
             ]
         },
         {
-            "name": "PingNATFromPublic",
-            "test-time": 60000000000,
+            "name": "LinuxNAT-100k-1c",
+            "test-time": 90000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "sleep", "60"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./nat", "-config", "config.json"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "sh", "-c", "sleep 10; ping -c 5 192.168.16.1 && echo TEST PASSED || echo TEST FAILED"
+                        "sh", "-c", "ab -c 1 -n 1000 http://192.168.16.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
                 }
             ]
         },
         {
-            "name": "NATDownloadFile",
-            "test-time": 60000000000,
+            "name": "LinuxNAT-1M-1c",
+            "test-time": 90000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "sh", "-c", "sleep 10; wget --no-proxy http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
+                        "sh", "-c", "ab -c 1 -n 1000 http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
-                },
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-10k-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
                 {
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "sh", "-c", "ab -c 10 -n 10000 http://192.168.16.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-100k-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 10 -n 1000 http://192.168.16.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "LinuxNAT-1M-10c",
+            "test-time": 90000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "ab -c 10 -n 1000 http://192.168.16.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
                 }
             ]

@@ -3,12 +3,14 @@
         {
             "private-port": {
                 "index": 0,
-                "subnet": "192.168.14.1/24"
+                "subnet": "192.168.114.1/24",
+                "vlan-tag": 114
             },
             "public-port": {
                 "index": 1,
                 "dst-mac": "3C:FD:FE:A4:DD:F0",
-                "subnet": "192.168.16.1"
+                "subnet": "192.168.116.1",
+                "vlan-tag": 116
             }
         }
     ]

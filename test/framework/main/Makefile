@@ -8,9 +8,6 @@ tf: tf.go ../config.go ../dockerlauncher.go ../logging.go ../testsuite.go ../typ
 	go build $<
 	go build perf_compare.go
 
-perf_testing:
-	./AutoPerf.sh $(s1) $(s2) $(r)
-
 clean:
 	-rm tf perf_compare
 
