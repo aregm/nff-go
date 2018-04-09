@@ -147,13 +147,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
 	dumpPacket(pkt, pi.index, iPRIVATE)
@@ -252,13 +252,13 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
 	dumpPacket(pkt, pi.index, iPUBLIC)
@@ -313,8 +313,15 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
 
 	// Check that someone is asking about MAC of my IP address and HW
 	// address is blank in request
-	if packet.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != packet.SwapBytesUint32(port.Subnet.Addr) ||
-		arp.THA != [common.EtherAddrLen]byte{} {
+	if packet.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != packet.SwapBytesUint32(port.Subnet.Addr) {
+		println("Warning! Got an ARP packet with target IPv4 address", StringIPv4Array(arp.TPA),
+			"different from IPv4 address on interface. Should be", StringIPv4Int(port.Subnet.Addr),
+			". ARP request ignored.")
+		return flowDrop
+	}
+	if arp.THA != [common.EtherAddrLen]byte{} {
+		println("Warning! Got an ARP packet with non-zero MAC address", StringMAC(arp.THA),
+			". ARP request ignored.")
 		return flowDrop
 	}
 
@@ -363,6 +370,6 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 	// Return a packet back to sender
 	swapAddrIPv4(pkt)
 	icmp.Type = common.ICMPTypeEchoResponse
-	setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+	setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	return flowBack
 }

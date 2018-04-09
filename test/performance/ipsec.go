@@ -18,6 +18,11 @@ import (
 	"github.com/intel-go/nff-go/packet"
 )
 
+var (
+	inport  uint
+	outport uint
+)
+
 // CheckFatal is an error handling function
 func CheckFatal(err error) {
 	if err != nil {
@@ -28,20 +33,23 @@ func CheckFatal(err error) {
 
 func main() {
 	var noscheduler bool
+	flag.UintVar(&outport, "outport", 1, "port for sender")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
 	config := flow.Config{
-		CPUList:          "0-31",
 		DisableScheduler: noscheduler,
+		DPDKArgs:         []string{dpdkLogLevel},
 	}
 	CheckFatal(flow.SystemInit(&config))
 
-	input, err := flow.SetReceiver(uint8(0))
+	input, err := flow.SetReceiver(uint8(inport))
 	CheckFatal(err)
 	CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
 	CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
-	CheckFatal(flow.SetSender(input, uint8(1)))
+	CheckFatal(flow.SetSender(input, uint8(outport)))
 
 	CheckFatal(flow.SystemStart())
 }

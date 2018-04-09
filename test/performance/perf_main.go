@@ -14,11 +14,9 @@ import (
 )
 
 var (
-	load   uint
-	loadRW uint
-
-	inport1     uint
-	inport2     uint
+	load        uint
+	loadRW      uint
+	inport      uint
 	outport1    uint
 	outport2    uint
 	noscheduler bool
@@ -38,25 +36,20 @@ func main() {
 
 	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
-	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
+	flag.UintVar(&inport, "inport", 0, "port for receiver")
 	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
-	// Initialize NFF-GO library at 35 cores by default
+	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList:          "0-34",
 		DisableScheduler: noscheduler,
+		DPDKArgs:         []string{dpdkLogLevel},
 	}
 	CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow0, err := flow.SetReceiver(uint8(inport1))
-	CheckFatal(err)
-	firstFlow1, err := flow.SetReceiver(uint8(inport2))
-	CheckFatal(err)
-
-	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
+	firstFlow, err := flow.SetReceiver(uint8(inport))
 	CheckFatal(err)
 
 	// Handle second flow via some heavy function

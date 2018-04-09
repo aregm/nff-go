@@ -18,6 +18,7 @@ import (
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 
+	"github.com/intel-go/nff-go/test/stability/stabilityCommon"
 	"github.com/intel-go/nff-go/test/stability/testCksum/testCksumCommon"
 )
 
@@ -39,16 +40,6 @@ import (
 // Test with testScenario=0:
 // makes all it in one pipeline without actual send and receive.
 
-const (
-	ipv4  = 0
-	ipv5  = 1
-	maxL3 = 2
-	udp   = 0
-	tcp   = 1
-	icmp  = 2
-	maxL4 = 2
-)
-
 var (
 	totalPackets uint64 = 10
 
@@ -68,13 +59,16 @@ var (
 	useIPv4      bool
 	useIPv6      bool
 	randomL3     = false
-	l3type       int
 	useUDP       bool
 	useTCP       bool
 	useICMP      bool
+	useVLAN      bool
 	randomL4     = false
-	l4type       int
 	packetLength int
+	ipVersion    uint   = 4
+	tci          uint16 = 2
+	dpdkLogLevel        = "--log-level=0"
+	protocol            = stabilityCommon.TypeUdp
 )
 
 func main() {
@@ -88,26 +82,27 @@ func main() {
 	flag.BoolVar(&useICMP, "icmp", false, "Generate ICMP Echo Request packets")
 	flag.BoolVar(&useIPv4, "ipv4", false, "Generate IPv4 packets")
 	flag.BoolVar(&useIPv6, "ipv6", false, "Generate IPv6 packets")
+	flag.BoolVar(&useVLAN, "vlan", false, "Add VLAN tag to all packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
-	flag.Uint64Var(&totalPackets, "number", 10, "Number of packets to send")
+	flag.Uint64Var(&totalPackets, "number", totalPackets, "Number of packets to send")
+	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 
-	if !useIPv4 && !useIPv6 {
-		println("No L3 IP mode selected. Enabling IPv4 by default")
-		useIPv4 = true
-	}
-
-	if useIPv4 && !useIPv6 {
-		print("IPv4 L3 and ")
-		l3type = ipv4
-	} else if !useIPv4 && useIPv6 {
-		print("IPv6 L3 and ")
-		l3type = ipv5
+	if useIPv4 {
+		if useIPv6 {
+			print("IPv4 and IPv6 L3 and ")
+			randomL3 = true
+		} else {
+			print("IPv4 L3 and ")
+		}
 	} else {
-		print("IPv4 and IPv6 L3 and ")
-		randomL3 = true
+		if useIPv6 {
+			print("IPv6 L3 and ")
+			ipVersion = 6
+		} else {
+			println("No L3 IP mode selected. Enabling IPv4 by default")
+		}
 	}
-
 	if !useUDP && !useTCP && !useICMP {
 		println("No L4 packet type mode selected. Enabling UDP by default")
 		useUDP = true
@@ -115,21 +110,23 @@ func main() {
 
 	if useUDP && !useTCP && !useICMP {
 		println("UDP L4 mode is enabled")
-		l4type = udp
 	} else if !useUDP && useTCP && !useICMP {
 		println("TCP L4 mode is enabled")
-		l4type = tcp
+		protocol = stabilityCommon.TypeTcp
 	} else if !useUDP && !useTCP && useICMP {
 		println("ICMP L4 mode is enabled")
-		l4type = icmp
+		protocol = stabilityCommon.TypeIcmp
 	} else {
 		println("UDP and TCP L4 modes are enabled")
 		randomL4 = true
 	}
 
 	if useICMP && hwol {
-		println("Cannot use HW offloading with ICMP protocol")
-		os.Exit(1)
+		println("Warning: cannot use HW offloading with ICMP protocol, only for L3 ipv4")
+		if useIPv6 {
+			println("Can't calculate anything for configuration: ipv6 + icmp + hw mode, exiting")
+			os.Exit(1)
+		}
 	}
 
 	if err := executeTest(testScenario); err != nil {
@@ -145,18 +142,35 @@ func executeTest(testScenario uint) error {
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		HWTXChecksum: hwol,
+		DPDKArgs:     []string{dpdkLogLevel},
 	}
-	if err := flow.SystemInit(&config); err != nil { return err }
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
 
 	if testScenario == 2 {
 		// Receive packets from zero port. Receive queue will be added automatically.
 		inputFlow, err := flow.SetReceiver(uint8(inport))
-		if err != nil { return err }
-		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil { return err }
-		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil { return err }
+		if err != nil {
+			return err
+		}
+		if err := flow.SetHandlerDrop(inputFlow, filterPacketsUdpTcpIcmp, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(inputFlow, checkChecksum, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil {
+			return err
+		}
+		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil {
+			return err
+		}
 
 		// Begin to process packets.
-		if err := flow.SystemStart(); err != nil { return err }
+		if err := flow.SystemStart(); err != nil {
+			return err
+		}
 	} else {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
@@ -170,46 +184,69 @@ func executeTest(testScenario uint) error {
 		var err error
 		if testScenario == 1 {
 			// Send all generated packets to the output
-			if err := flow.SetSender(generatedFlow, uint8(outport)); err != nil { return err }
+			if err := flow.SetSender(generatedFlow, uint8(outport)); err != nil {
+				return err
+			}
 			// Create receiving flow and set a checking function for it
 			finalFlow, err = flow.SetReceiver(uint8(inport))
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		} else {
 			finalFlow = generatedFlow
-			if err := flow.SetHandler(finalFlow, fixPacket, nil); err != nil { return err }
+			if err := flow.SetHandler(finalFlow, fixPacket, nil); err != nil {
+				return err
+			}
 		}
-		if err := flow.SetHandler(finalFlow, checkPackets, nil); err != nil { return err }
-		if err := flow.SetStopper(finalFlow); err != nil { return err }
+		if err := flow.SetHandlerDrop(finalFlow, filterPackets, nil); err != nil {
+			return err
+		}
+		if err := flow.SetHandler(finalFlow, checkPackets, nil); err != nil {
+			return err
+		}
+		if err := flow.SetStopper(finalFlow); err != nil {
+			return err
+		}
 
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
 		}()
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		// Wait for enough packets to arrive
 		testDoneEvent.L.Lock()
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
 
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
 
+func filterPackets(pkt *packet.Packet, context flow.UserContext) bool {
+	l3 := ipVersion
+	l4 := protocol
+	if randomL3 {
+		l3 = 0
+	}
+	if randomL4 {
+		l4 = stabilityCommon.TypeUdpTcp
+	}
+	if stabilityCommon.ShouldBeSkippedAllExcept(pkt, l3, l4) {
+		return false
+	}
+	return true
+}
+
+func filterPacketsUdpTcpIcmp(pkt *packet.Packet, context flow.UserContext) bool {
+	return !stabilityCommon.ShouldBeSkippedAllExcept(pkt, 0, stabilityCommon.TypeUdpTcpIcmp)
+}
+
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseData()
-
-	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		println("TEST FAILED")
-	}
-
-	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		println("TEST FAILED")
-		return
-	}
-
+	pkt.ParseDataCheckVLAN()
 	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 	if ptr.F2 != 0 {
 		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
@@ -220,14 +257,27 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	ptr.F2 = ptr.F1
 
 	if hwol {
-		packet.SetPseudoHdrChecksum(pkt)
+		packet.SetHWOffloadingHdrChecksum(pkt)
 		pkt.SetHWCksumOLFlags()
 	} else {
 		testCksumCommon.CalculateChecksum(pkt)
 	}
 }
 
-func composeStatistics() {
+func checkChecksum(pkt *packet.Packet, context flow.UserContext) {
+	offset := pkt.ParseDataCheckVLAN()
+	if offset < 0 {
+		println("ParseDataCheckVLAN returned negative value", offset)
+		println("TEST FAILED")
+		return
+	}
+	if !testCksumCommon.CheckPacketChecksums(pkt) {
+		println("TEST FAILED")
+		atomic.StoreInt32(&passed, 0)
+	}
+}
+
+func composeStatistics() error {
 	// Compose statistics
 	sent := atomic.LoadUint64(&sentPackets)
 	received := atomic.LoadUint64(&receivedPackets)
@@ -237,11 +287,12 @@ func composeStatistics() {
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 	println("Ratio = ", ratio, "%")
-	if atomic.LoadInt32(&passed) != 0 {
+	if atomic.LoadInt32(&passed) != 0 && ratio >= 90 {
 		println("TEST PASSED")
-	} else {
-		println("TEST FAILED")
+		return nil
 	}
+	println("TEST FAILED")
+	return errors.New("final statistics check failed")
 }
 
 func generatePayloadLength() uint16 {
@@ -253,27 +304,43 @@ func generatePayloadLength() uint16 {
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	if randomL3 {
-		l3type = rnd.Intn(maxL3)
+		if rnd.Int()%2 == 0 {
+			ipVersion = 6
+		} else {
+			ipVersion = 4
+		}
 	}
 	if randomL4 {
-		l4type = rnd.Intn(maxL4)
+		if rnd.Int()%2 == 0 {
+			protocol = stabilityCommon.TypeTcp
+		} else {
+			protocol = stabilityCommon.TypeUdp
+		}
 	}
 
-	if l3type == ipv4 {
-		if l4type == udp {
+	if ipVersion == 4 {
+		if protocol == stabilityCommon.TypeUdp {
 			generateIPv4UDP(emptyPacket)
-		} else if l4type == icmp {
+		} else if protocol == stabilityCommon.TypeIcmp {
 			generateIPv4ICMP(emptyPacket)
 		} else {
 			generateIPv4TCP(emptyPacket)
 		}
 	} else {
-		if l4type == udp {
+		if protocol == stabilityCommon.TypeUdp {
 			generateIPv6UDP(emptyPacket)
-		} else if l4type == icmp {
+		} else if protocol == stabilityCommon.TypeIcmp {
 			generateIPv6ICMP(emptyPacket)
 		} else {
 			generateIPv6TCP(emptyPacket)
+		}
+	}
+
+	if useVLAN {
+		emptyPacket.AddVLANTag(tci)
+		if hwol {
+			// l2 len changed after add VLAN tag, need to reset hwol flags
+			emptyPacket.SetHWCksumOLFlags()
 		}
 	}
 
@@ -375,13 +442,16 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 	initPacketCommon(emptyPacket, length)
 	initPacketIPv4(emptyPacket)
 	initPacketICMP(emptyPacket)
-
-	if !hwol {
-		pIPv4 := emptyPacket.GetIPv4()
-		pICMP := emptyPacket.GetICMPForIPv4()
+	pIPv4 := emptyPacket.GetIPv4()
+	pICMP := emptyPacket.GetICMPForIPv4()
+	if hwol {
+		pIPv4.HdrChecksum = 0
+		emptyPacket.SetTXIPv4OLFlags(common.EtherLen, common.IPv4MinLen)
+	} else {
 		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
-		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP, emptyPacket.Data))
 	}
+	pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP,
+		unsafe.Pointer(uintptr(unsafe.Pointer(pICMP))+common.ICMPLen)))
 }
 
 func generateIPv6UDP(emptyPacket *packet.Packet) {
@@ -434,19 +504,17 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	offset := pkt.ParseData()
-
-	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		println("TEST FAILED")
-	}
-
 	newValue := atomic.AddUint64(&receivedPackets, 1)
-
+	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
 		println("TEST FAILED")
 		atomic.StoreInt32(&passed, 0)
 	} else {
+		if !testCksumCommon.CheckPacketChecksums(pkt) {
+			println("TEST FAILED")
+			atomic.StoreInt32(&passed, 0)
+		}
 		ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {

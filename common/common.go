@@ -34,6 +34,12 @@ const (
 	VLANNumber = 0x8100
 	MPLSNumber = 0x8847
 	IPV6Number = 0x86dd
+
+	SwapIPV4Number = 0x0008
+	SwapARPNumber  = 0x0608
+	SwapVLANNumber = 0x0081
+	SwapMPLSNumber = 0x4788
+	SwapIPV6Number = 0xdd86
 )
 
 // Supported L4 types
@@ -132,6 +138,7 @@ const (
 	PcapWriteFail
 	InvalidCPURangeErr
 	SetAffinityErr
+	MultipleReceivePort
 )
 
 // NFError is error type returned by nff-go functions
@@ -306,9 +313,9 @@ func GetDPDKLogLevel() string {
 }
 
 // GetDefaultCPUs returns default core list {0, 1, ..., NumCPU}
-func GetDefaultCPUs(cpuNumber uint) []uint {
-	cpus := make([]uint, cpuNumber, cpuNumber)
-	for i := uint(0); i < cpuNumber; i++ {
+func GetDefaultCPUs(cpuNumber int) []int {
+	cpus := make([]int, cpuNumber, cpuNumber)
+	for i := 0; i < cpuNumber; i++ {
 		cpus[i] = i
 	}
 	return cpus
@@ -316,7 +323,7 @@ func GetDefaultCPUs(cpuNumber uint) []uint {
 
 // HandleCPUs parses cpu list string into array of valid core numbers.
 // Removes duplicates
-func HandleCPUList(s string, maxcpu uint) ([]uint, error) {
+func HandleCPUList(s string, maxcpu int) ([]int, error) {
 	nums, err := parseCPUs(s)
 	nums = removeDuplicates(nums)
 	nums = dropInvalidCPUs(nums, maxcpu)
@@ -324,9 +331,9 @@ func HandleCPUList(s string, maxcpu uint) ([]uint, error) {
 }
 
 // parseCPUs parses cpu list string into array of cpu numbers
-func parseCPUs(s string) ([]uint, error) {
+func parseCPUs(s string) ([]int, error) {
 	var startRange, k int
-	nums := make([]uint, 0, 256)
+	nums := make([]int, 0, 256)
 	if s == "" {
 		return nums, nil
 	}
@@ -351,11 +358,11 @@ func parseCPUs(s string) ([]uint, error) {
 					return nums, WrapWithNFError(nil, "CPU range is invalid, min should not exceed max", InvalidCPURangeErr)
 				}
 				for k = startRange; k <= r; k++ {
-					nums = append(nums, uint(k))
+					nums = append(nums, k)
 				}
 				startRange = -1
 			} else {
-				nums = append(nums, uint(r))
+				nums = append(nums, r)
 			}
 			if i == len(s) {
 				break
@@ -366,9 +373,9 @@ func parseCPUs(s string) ([]uint, error) {
 	return nums, nil
 }
 
-func removeDuplicates(array []uint) []uint {
-	result := []uint{}
-	seen := map[uint]bool{}
+func removeDuplicates(array []int) []int {
+	result := []int{}
+	seen := map[int]bool{}
 	for _, val := range array {
 		if _, ok := seen[val]; !ok {
 			result = append(result, val)
@@ -380,7 +387,7 @@ func removeDuplicates(array []uint) []uint {
 
 // dropInvalidCPUs validates cpu list. Takes array of cpu ids and checks it is < maxcpu on machine,
 // invalid are excluded. Returns list of valid cpu ids.
-func dropInvalidCPUs(nums []uint, maxcpu uint) []uint {
+func dropInvalidCPUs(nums []int, maxcpu int) []int {
 	i := 0
 	for _, x := range nums {
 		if x < maxcpu {

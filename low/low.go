@@ -4,7 +4,16 @@
 
 package low
 
+// Libraries below are DPDK libraries. PMD drivers and some basic DPDK
+// libraries have to be specified between --whole-archive and
+// --start-group options because PMD driver libraries have to be
+// linked entirely and dependencies for them have to be resolved
+// circularly. Don't add any more libraries inside of --whole-archive
+// group of libraries unless they are really necessary there because
+// it increases executable size and build time.
+
 /*
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
 #include "low.h"
 */
 import "C"
@@ -40,16 +49,37 @@ type Mbuf C.struct_rte_mbuf
 // Mempool is a pool of objects.
 type Mempool C.struct_rte_mempool
 
+type Port C.struct_cPort
+
 var mbufNumberT uint
 var mbufCacheSizeT uint
 var usedMempools []*C.struct_rte_mempool
+
+func GetPort(n uint8) *Port {
+	p := new(Port)
+	p.PortId = C.uint8_t(n)
+	p.QueuesNumber = 1
+	return p
+}
+
+func CheckRSSPacketCount(p *Port) int {
+	return int(C.checkRSSPacketCount((*C.struct_cPort)(p)))
+}
+
+func DecreaseRSS(p *Port) {
+	C.changeRSSReta((*C.struct_cPort)(p), false)
+}
+
+func IncreaseRSS(p *Port) bool {
+	return bool(C.changeRSSReta((*C.struct_cPort)(p), true))
+}
 
 // GetPortMACAddress gets MAC address of given port.
 func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
 	var mac [common.EtherAddrLen]uint8
 	var cmac C.struct_ether_addr
 
-	C.rte_eth_macaddr_get(C.uint8_t(port), &cmac)
+	C.rte_eth_macaddr_get(C.uint16_t(port), &cmac)
 	for i := range mac {
 		mac[i] = uint8(cmac.addr_bytes[i])
 	}
@@ -127,19 +157,24 @@ func TrimMbuf(m *Mbuf, length uint) bool {
 	return true
 }
 
+func setMbufLen(mb *Mbuf, l2len, l3len uint32) {
+	// Assign l2_len:7 and l3_len:9 fields in rte_mbuf
+	mb.anon4[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon4[1] = uint8(l3len >> 1)
+	mb.anon4[2] = 0
+	mb.anon4[3] = 0
+	mb.anon4[4] = 0
+	mb.anon4[5] = 0
+	mb.anon4[6] = 0
+	mb.anon4[7] = 0
+}
+
 // SetTXIPv4OLFlags sets mbuf flags for IPv4 header
 // checksum calculation hardware offloading.
 func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv4UDPOLFlags sets mbuf flags for IPv4 and UDP
@@ -147,14 +182,7 @@ func SetTXIPv4OLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (3 << 52) | (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv4TCPOLFlags sets mbuf flags for IPv4 and TCP
@@ -162,14 +190,7 @@ func SetTXIPv4UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 54) | (1 << 55)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv6UDPOLFlags sets mbuf flags for IPv6 UDP header
@@ -177,14 +198,7 @@ func SetTXIPv4TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_UDP_CKSUM | PKT_TX_IPV6
 	mb.ol_flags = (3 << 52) | (1 << 56)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // SetTXIPv6TCPOLFlags sets mbuf flags for IPv6 TCP
@@ -192,14 +206,7 @@ func SetTXIPv6UDPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 func SetTXIPv6TCPOLFlags(mb *Mbuf, l2len, l3len uint32) {
 	// PKT_TX_TCP_CKSUM | PKT_TX_IPV4
 	mb.ol_flags = (1 << 52) | (1 << 56)
-	mb.anon3[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon3[1] = uint8(l3len >> 1)
-	mb.anon3[2] = 0
-	mb.anon3[3] = 0
-	mb.anon3[4] = 0
-	mb.anon3[5] = 0
-	mb.anon3[6] = 0
-	mb.anon3[7] = 0
+	setMbufLen(mb, l2len, l3len)
 }
 
 // These constants are used by packet package to parse protocol headers
@@ -430,26 +437,26 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // Receive - get packets and enqueue on a Ring.
-func Receive(port uint8, queue int16, OUT *Ring, coreID uint8) {
-	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
+func Receive(port uint8, queue int16, OUT *Ring, flag *int, coreID int) {
+	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue int16, IN *Ring, coreID uint8) {
-	t := C.rte_eth_dev_socket_id(C.uint8_t(port))
+func Send(port uint8, queue int16, IN *Ring, coreID int) {
+	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.uint8_t(coreID))
+	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Ring) {
-	C.nff_go_stop(IN.DPDK_ring)
+func Stop(IN *Ring, coreID int) {
+	C.nff_go_stop(IN.DPDK_ring, C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -479,16 +486,16 @@ func GetPortsNumber() int {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint8, receiveQueuesNumber uint16, sendQueuesNumber uint16, hwtxchecksum bool) error {
+func CreatePort(port uint8, willReceive bool, sendQueuesNumber uint16, hwtxchecksum bool) error {
 	addr := make([]byte, C.ETHER_ADDR_LEN)
 	var mempool *C.struct_rte_mempool
-	if receiveQueuesNumber != 0 {
+	if willReceive {
 		mempool = C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 		usedMempools = append(usedMempools, mempool)
 	} else {
 		mempool = nil
 	}
-	if C.port_init(C.uint8_t(port), C.uint16_t(receiveQueuesNumber), C.uint16_t(sendQueuesNumber),
+	if C.port_init(C.uint8_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
 		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
@@ -507,13 +514,13 @@ func CreateMempool() *Mempool {
 }
 
 // SetAffinity sets cpu affinity mask.
-func SetAffinity(coreID uint8) error {
+func SetAffinity(coreID int) error {
 	// go tool trace shows that each proc executes different goroutine. However it is expected behavior
 	// (golang issue #20853) and each goroutine is locked to one OS thread.
 	runtime.LockOSThread()
 
 	var cpuset C.cpu_set_t
-	C.initCPUSet(C.uint8_t(coreID), &cpuset)
+	C.initCPUSet(C.int(coreID), &cpuset)
 	_, _, errno := syscall.RawSyscall(syscall.SYS_SCHED_SETAFFINITY, uintptr(0), unsafe.Sizeof(cpuset), uintptr(unsafe.Pointer(&cpuset)))
 	if errno != 0 {
 		return common.WrapWithNFError(nil, errno.Error(), common.SetAffinityErr)
@@ -582,10 +589,10 @@ func ReportMempoolsState() {
 }
 
 // CreateKni creates a KNI device
-func CreateKni(port uint8, core uint8, name string) {
+func CreateKni(portId uint8, core uint8, name string) {
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempool)
-	C.create_kni(C.uint8_t(port), C.uint8_t(core), C.CString(name), mempool)
+	C.create_kni(C.uint8_t(portId), C.uint8_t(core), C.CString(name), mempool)
 }
 
 // CreateLPM creates LPM table

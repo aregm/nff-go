@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestSplit (t *testing.T) {
+func TestSplit(t *testing.T) {
 	if err := executeTest("", "", 0); err != nil {
 		t.Logf("fail: %+v\n", err)
 		t.Fail()

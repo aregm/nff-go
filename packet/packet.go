@@ -260,12 +260,12 @@ func (packet *Packet) GetIPv6NoCheck() *IPv6Hdr {
 
 // ParseL4ForIPv4 set L4 to start of L4 header, if L3 protocol is IPv4.
 func (packet *Packet) ParseL4ForIPv4() {
-	packet.L4 = unsafe.Pointer(uintptr(packet.unparsed()) + uintptr((packet.GetIPv4NoCheck().VersionIhl&0x0f)<<2))
+	packet.L4 = unsafe.Pointer(uintptr(packet.L3) + uintptr((packet.GetIPv4NoCheck().VersionIhl&0x0f)<<2))
 }
 
 // ParseL4ForIPv6 set L4 to start of L4 header, if L3 protocol is IPv6.
 func (packet *Packet) ParseL4ForIPv6() {
-	packet.L4 = unsafe.Pointer(uintptr(packet.unparsed()) + uintptr(IPv6Len))
+	packet.L4 = unsafe.Pointer(uintptr(packet.L3) + uintptr(IPv6Len))
 }
 
 // GetTCPForIPv4 ensures if L4 type is TCP and cast L4 pointer to TCPHdr type.

@@ -9,11 +9,12 @@ Vagrant.configure(2) do |config|
   if Vagrant.has_plugin?("vagrant-proxyconf")
     config.proxy.http     = ENV.fetch('http_proxy', false)
     config.proxy.https    = ENV.fetch('https_proxy', false)
+    config.proxy.no_proxy = ENV.fetch('no_proxy', false)
   end
 
   vm_name = ENV.fetch('VM_NAME', "nff-go")
-  vm_group_size = ENV.fetch('VM_GROUP_SIZE', 2).to_i
-  vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 2).to_i
+  vm_group_size = ENV.fetch('VM_GROUP_SIZE', 3).to_i
+  vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 3).to_i
   vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
 
 #  config.vm.box = "ubuntu/xenial64"
@@ -37,6 +38,10 @@ Vagrant.configure(2) do |config|
   end
 
 $provision_fedora = <<SHELL
+echo Fixing bootloader to use consistent interface names
+sudo sed -i -e 's,biosdevname=0 net.ifnames=0 ,,' /etc/default/grub
+sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+
 echo Installing system packages
 sudo dnf update
 sudo dnf install -y redhat-lsb-core net-tools numactl-devel libpcap-devel elfutils-libelf-devel
@@ -66,9 +71,6 @@ go get -d -v github.com/intel-go/nff-go
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
 sudo sh -c 'echo vm.nr_hugepages=1024 >> /etc/sysctl.conf'
-echo IMPORTANT MESSAGE:
-echo If kernel was updated during provisioning, it is highly recommended to reboot this VM before using it!!!
-echo Use functions from scripts.sh to further setup NFF-GO environment.
 SHELL
 
   config.vm.provision "file", source: "scripts.sh", destination: "scripts.sh"
