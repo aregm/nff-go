@@ -60,17 +60,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-split",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=1"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-split",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSplit", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=1"
                     ]
                 }
             ]
@@ -81,17 +81,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-separate",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=0"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-separate",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testSeparate", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=0"
                     ]
                 }
             ]
@@ -102,17 +102,17 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-partition",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1"
+                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "testType=2"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-partition",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testPartition", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1"
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "testType=2"
                     ]
                 }
             ]
