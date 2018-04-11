@@ -79,8 +79,6 @@ var (
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 
-	rulesString       = ""
-	filename          = &rulesString
 	passed      int32 = 1
 	l3Rules     *packet.L3Rules
 
@@ -104,7 +102,6 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
-	filename = flag.String("FILE", rulesString, "file with rules in .conf format. If you change default port numbers, please, provide modified rules file too")
 	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario, testType); err != nil {
@@ -117,6 +114,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	gTestType = testType
+	var rulesString string
 	if testType == separate {
 		rulesString = "test-separate-l3rules.conf"
 		// Test expects to receive 33% of packets on 0 port and 66% on 1 port
@@ -149,7 +147,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	if testType != partition && testScenario != generatePart {
 		var err error
 		// Get splitting rules from access control file.
-		l3Rules, err = packet.GetL3ACLFromORIG(*filename)
+		l3Rules, err = packet.GetL3ACLFromORIG(rulesString)
 		if err != nil {
 			return err
 		}
