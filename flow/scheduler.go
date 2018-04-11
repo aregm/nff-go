@@ -49,13 +49,13 @@ type UserContext interface {
 
 // Function types which are used inside flow functions
 type uncloneFlowFunction func(interface{})
-type cloneFlowFunction func(interface{}, chan int, chan uint64, UserContext)
+type cloneFlowFunction func(interface{}, chan int, chan uint64, []UserContext)
 type cFlowFunction func(interface{}, *int, int)
 
 type ffType int
 
 const (
-	handleSplitSeparateCopy ffType = iota
+	segmentCopy ffType = iota
 	fastGenerate
 	receiveRSS     // receive from port
 	sendReceiveKNI // send to port, send to KNI, receive from KNI
@@ -89,14 +89,14 @@ type flowFunction struct {
 	currentSpeed float64
 	// Name of flow function
 	name    string
-	context UserContext
+	context *[]UserContext
 	pause   int
 	fType   ffType
 }
 
 // Adding every flow function to scheduler list
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
-	par interface{}, report chan uint64, context UserContext, fType ffType) {
+	par interface{}, report chan uint64, context *[]UserContext, fType ffType) {
 	ff := new(flowFunction)
 	scheduler.ffCount++
 	ff.name = name + " " + strconv.Itoa(scheduler.ffCount)
@@ -192,13 +192,9 @@ func (scheduler *scheduler) startFF(ff1 *flowFunction, core int) (err error) {
 			if err := low.SetAffinity(core); err != nil {
 				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 			}
-			if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+			if ff.fType == segmentCopy || ff.fType == fastGenerate {
 				ff.channel = make(chan int)
-				if ff.context != nil {
-					ff.cloneFunction(ff.Parameters, ff.channel, ff.report, (ff.context.Copy()).(UserContext))
-				} else {
-					ff.cloneFunction(ff.Parameters, ff.channel, ff.report, nil)
-				}
+				ff.cloneFunction(ff.Parameters, ff.channel, ff.report, cloneContext(ff.context))
 			} else {
 				ff.uncloneFunction(ff.Parameters)
 			}
@@ -240,7 +236,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		for i := range scheduler.ff {
 			recC := -1
 			ff := scheduler.ff[i]
-			if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+			if ff.fType == segmentCopy || ff.fType == fastGenerate {
 				ff.updateCurrentSpeed()
 			}
 			// Firstly we check removing clones. We can remove one clone if:
@@ -248,7 +244,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			// 2. scheduler removing is switched on
 			if (ff.cloneNumber != 0) && (scheduler.offRemove == false) {
 				switch ff.fType {
-				case handleSplitSeparateCopy:
+				case segmentCopy:
 					// 3. current speed of flow function is lower, than saved speed with less number of clones
 					if ff.currentSpeed < speedDelta*ff.previousSpeed[ff.cloneNumber-1] {
 						// Save current speed as speed of flow function with this number of clones before removing
@@ -296,7 +292,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			// 1. scheduler is switched on
 			if scheduler.off == false {
 				switch ff.fType {
-				case handleSplitSeparateCopy:
+				case segmentCopy:
 					// 2. check function signals that we need to clone
 					// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
 					if (ff.checkInputRing() > scheduler.maxPacketsToClone) &&
@@ -359,23 +355,19 @@ func (scheduler *scheduler) startClone(ff *flowFunction) bool {
 	core := scheduler.cores[index].id
 	cp := new(clonePair)
 	cp.index = index
-	if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+	if ff.fType == segmentCopy || ff.fType == fastGenerate {
 		cp.channel = make(chan int)
 	}
 	cp.flag = 1
 	ff.clone = append(ff.clone, cp)
 	ff.cloneNumber++
 	go func() {
-		if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+		if ff.fType == segmentCopy || ff.fType == fastGenerate {
 			err := low.SetAffinity(core)
 			if err != nil {
 				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
 			}
-			if ff.context != nil {
-				ff.cloneFunction(ff.Parameters, cp.channel, ff.report, (ff.context.Copy()).(UserContext))
-			} else {
-				ff.cloneFunction(ff.Parameters, cp.channel, ff.report, nil)
-			}
+			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, cloneContext(ff.context))
 		} else {
 			ff.cFunction(ff.Parameters, &cp.flag, core)
 		}
@@ -384,7 +376,7 @@ func (scheduler *scheduler) startClone(ff *flowFunction) bool {
 }
 
 func (scheduler *scheduler) removeClone(ff *flowFunction) {
-	if ff.fType == handleSplitSeparateCopy || ff.fType == fastGenerate {
+	if ff.fType == segmentCopy || ff.fType == fastGenerate {
 		ff.clone[ff.cloneNumber-1].channel <- -1
 	} else {
 		ff.clone[ff.cloneNumber-1].flag = 0
@@ -392,6 +384,19 @@ func (scheduler *scheduler) removeClone(ff *flowFunction) {
 	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
 	ff.clone = ff.clone[:len(ff.clone)-1]
 	ff.cloneNumber--
+}
+
+func cloneContext(ctx *[]UserContext) []UserContext {
+	if ctx == nil {
+		return nil
+	}
+	ret := make([]UserContext, len(*ctx))
+	for i := range *ctx {
+		if (*ctx)[i] != nil {
+			ret[i] = ((*ctx)[i].Copy()).(UserContext)
+		}
+	}
+	return ret
 }
 
 func (ff *flowFunction) updatePause(pause int) {
@@ -404,7 +409,7 @@ func (ff *flowFunction) updatePause(pause int) {
 
 func (ff *flowFunction) printDebug(schedTime uint) {
 	switch ff.fType {
-	case handleSplitSeparateCopy:
+	case segmentCopy:
 		common.LogDebug(common.Debug, "Number of packets in queue", ff.name, ":", ff.checkInputRing())
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
 		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S")
@@ -466,12 +471,8 @@ func (scheduler *scheduler) getCore() (int, error) {
 
 func (ff *flowFunction) checkInputRing() (n uint32) {
 	switch ff.Parameters.(type) {
-	case *handleParameters:
-		n = ff.Parameters.(*handleParameters).in.GetRingCount()
-	case *separateParameters:
-		n = ff.Parameters.(*separateParameters).in.GetRingCount()
-	case *splitParameters:
-		n = ff.Parameters.(*splitParameters).in.GetRingCount()
+	case *segmentParameters:
+		n = ff.Parameters.(*segmentParameters).in.GetRingCount()
 	case *copyParameters:
 		n = ff.Parameters.(*copyParameters).in.GetRingCount()
 	}
