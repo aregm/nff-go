@@ -105,14 +105,14 @@
                     "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "testType=2"
+                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=2"
                     ]
                 },
                 {
                     "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "testType=2"
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=2"
                     ]
                 }
             ]
