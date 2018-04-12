@@ -8,21 +8,21 @@ var l3Rules *packet.L3Rules
 func main() {
 	var err error
 	config := flow.Config{}
-	checkFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
 	l3Rules, err = packet.GetL3ACLFromORIG("rules1.conf")
-	checkFatal(err)
+	flow.CheckFatal(err)
 
 	firstFlow, err := flow.SetReceiver(0)
-	checkFatal(err)
+	flow.CheckFatal(err)
 	secondFlow, err := flow.SetSeparator(firstFlow, mySeparator, nil)
-	checkFatal(err)
-	checkFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
-	checkFatal(flow.SetSender(firstFlow, 0))
-	checkFatal(flow.SetStopper(secondFlow))
-	checkFatal(flow.SystemStart())
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	flow.CheckFatal(flow.SetSender(firstFlow, 0))
+	flow.CheckFatal(flow.SetStopper(secondFlow))
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {

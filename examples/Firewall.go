@@ -6,8 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -18,14 +16,6 @@ var (
 	outport uint
 	inport  uint
 )
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -38,28 +28,28 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-7",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get filtering rules from access control file.
 	l3Rules, err = packet.GetL3ACLFromORIG("Firewall.conf")
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Separate packet flow based on ACL.
 	rejectFlow, err := flow.SetSeparator(inputFlow, l3Separator, nil)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Drop rejected packets.
-	CheckFatal(flow.SetStopper(rejectFlow))
+	flow.CheckFatal(flow.SetStopper(rejectFlow))
 
 	// Send accepted packets to first port. Send queue will be added automatically.
-	CheckFatal(flow.SetSender(inputFlow, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(inputFlow, uint8(outport)))
 
 	// Begin to process packets.
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 // User defined function for separating packets

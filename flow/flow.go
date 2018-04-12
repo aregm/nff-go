@@ -1343,3 +1343,11 @@ func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr)
 	}
 	return uint8(count)
 }
+
+// CheckFatal is a default error handling function, which prints error message and
+// makes os.Exit in case of non nil error. Any other error handler can be used instead.
+func CheckFatal(err error) {
+	if err != nil {
+		common.LogFatal(common.Debug, "fail with error: %+v\n", err)
+	}
+}

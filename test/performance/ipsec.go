@@ -8,9 +8,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"flag"
-	"fmt"
 	"hash"
-	"os"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
@@ -22,14 +20,6 @@ var (
 	inport  uint
 	outport uint
 )
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	var noscheduler bool
@@ -43,15 +33,15 @@ func main() {
 		DisableScheduler: noscheduler,
 		DPDKArgs:         []string{dpdkLogLevel},
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	input, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
-	CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
-	CheckFatal(flow.SetSender(input, uint8(outport)))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
+	flow.CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
+	flow.CheckFatal(flow.SetSender(input, uint8(outport)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 type context struct {

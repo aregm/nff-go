@@ -6,8 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -32,14 +30,6 @@ import (
 
 var l3Rules *packet.L3Rules
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	var mode string
 	var err error
@@ -50,40 +40,40 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Start regular updating forwarding rules
 	switch mode {
 	case "json":
 		l3Rules, err = packet.GetL3ACLFromJSON("forwardingTestL3_ACL.json")
-		CheckFatal(err)
+		flow.CheckFatal(err)
 	case "orig":
 		l3Rules, err = packet.GetL3ACLFromORIG("forwardingTestL3_ACL.orig")
-		CheckFatal(err)
+		flow.CheckFatal(err)
 	}
 
 	// Receive packets from zero port. One queue will be added automatically.
 	firstFlow0, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 	firstFlow1, err := flow.SetReceiver(uint8(1))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Merge flows with TCP and UDP packets
 	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Split packet flow based on ACL
 	Flows, err := flow.SetSplitter(firstFlow, l3Splitter, 4, nil)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Send each flow to corresponding port
 	// It is test. So we don't stop "0" packets, we count them as others.
-	CheckFatal(flow.SetSender(Flows[0], uint8(0)))
-	CheckFatal(flow.SetSender(Flows[1], uint8(1)))
-	CheckFatal(flow.SetSender(Flows[2], uint8(2)))
-	CheckFatal(flow.SetSender(Flows[3], uint8(3)))
+	flow.CheckFatal(flow.SetSender(Flows[0], uint8(0)))
+	flow.CheckFatal(flow.SetSender(Flows[1], uint8(1)))
+	flow.CheckFatal(flow.SetSender(Flows[2], uint8(2)))
+	flow.CheckFatal(flow.SetSender(Flows[3], uint8(3)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {

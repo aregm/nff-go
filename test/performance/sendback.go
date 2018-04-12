@@ -6,22 +6,12 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 )
 
 var inport, outport uint
 var cores string
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 // This is a test for pure send/receive performance measurements. No
 // other functions used here.
@@ -37,13 +27,13 @@ func main() {
 		CPUList:  cores,
 		DPDKArgs: []string{dpdkLogLevel},
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from input port. One queue will be added automatically.
 	f, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
-	CheckFatal(flow.SetSender(f, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(f, uint8(outport)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }

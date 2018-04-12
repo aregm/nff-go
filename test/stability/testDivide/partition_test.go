@@ -9,7 +9,7 @@ import (
 )
 
 func TestPartition(t *testing.T) {
-	if err := executeTest("", "", 0, partition); err != nil {
+	if err := executeTest("", "", gotest, partition); err != nil {
 		t.Logf("fail: %+v\n", err)
 		t.Fail()
 	}
