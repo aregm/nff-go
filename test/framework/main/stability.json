@@ -13,7 +13,7 @@
     },
     "tests": [
         {
-            "name": "generate1",
+            "name": "generate",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
@@ -34,7 +34,7 @@
             ]
         },
         {
-            "name": "merge1",
+            "name": "merge",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
@@ -42,7 +42,7 @@
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=1", "-outport2=0"
+                        "./testMerge", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=1", "-outport2=0"
                     ]
                 },
                 {
@@ -55,7 +55,7 @@
             ]
         },
         {
-            "name": "split1",
+            "name": "split",
             "test-time": 90000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
@@ -63,7 +63,7 @@
                     "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=1"
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=1"
                     ]
                 },
                 {
@@ -76,7 +76,7 @@
             ]
         },
         {
-            "name": "separate1",
+            "name": "separate",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
@@ -84,7 +84,7 @@
                     "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=0"
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=0"
                     ]
                 },
                 {
@@ -97,7 +97,7 @@
             ]
         },
         {
-            "name": "partition1",
+            "name": "partition",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
@@ -105,7 +105,7 @@
                     "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testDivide", "-speed=1000", "-number=10000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=2"
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=2"
                     ]
                 },
                 {
@@ -117,23 +117,65 @@
                 }
             ]
         },
-        {
-            "name": "handle1",
+	{
+            "name": "pcopy",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-handle",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testHandle", "-speed=1000", "-number=10000", "-testScenario=1", "-inport=1", "-outport=0"
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=3"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-handle",
+                    "image-name": "nff-go-test-divide",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testHandle", "-testScenario=2", "-inport=0", "-outport=1"
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=3"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "handle",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-divide",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=4"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-divide",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=4"
+                    ]
+                }
+            ]
+        },
+	{
+            "name": "dhandle",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-divide",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testDivide", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=5"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-divide",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testDivide", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=5"
                     ]
                 }
             ]

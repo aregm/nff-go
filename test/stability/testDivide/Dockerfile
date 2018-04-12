@@ -11,4 +11,5 @@ WORKDIR /workdir
 COPY testDivide .
 COPY test-separate-l3rules.conf .
 COPY test-split.conf .
+COPY test-handle-l3rules.conf .
 COPY config.json .

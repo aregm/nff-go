@@ -9,7 +9,7 @@ import (
 )
 
 func TestHandle(t *testing.T) {
-	if err := executeTest(0); err != nil {
+	if err := executeTest("", "", gotest, handle); err != nil {
 		t.Logf("fail: %+v\n", err)
 		t.Fail()
 	}
