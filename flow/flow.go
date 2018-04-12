@@ -107,7 +107,7 @@ type VectorGenerateFunction func([]*packet.Packet, uint, UserContext)
 // function.
 type HandleFunction func(*packet.Packet, UserContext)
 
-// VectorHandleFunction is a function type like GenerateFunction for vector handling
+// VectorHandleFunction is a function type like HandleFunction for vector handling
 type VectorHandleFunction func([]*packet.Packet, *[burstSize]bool, UserContext)
 
 // SeparateFunction is a function type for user defined function which separates packets
@@ -116,7 +116,7 @@ type VectorHandleFunction func([]*packet.Packet, *[burstSize]bool, UserContext)
 // this flow - return true, or should be sent to new added flow - return false.
 type SeparateFunction func(*packet.Packet, UserContext) bool
 
-// VectorSeparateFunction is a function type like GenerateFunction for vector separation
+// VectorSeparateFunction is a function type like SeparateFunction for vector separation
 type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]uint8, UserContext)
 
 // SplitFunction is a function type for user defined function which splits packets
@@ -128,6 +128,7 @@ type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize
 // set after "Split" function in it.
 type SplitFunction func(*packet.Packet, UserContext) uint
 
+// VectorSplitFunction is a function type like SplitFunction for vector splitting
 type VectorSplitFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]uint8, UserContext)
 
 // Kni is a high level struct of KNI device. The device itself is stored
@@ -692,6 +693,24 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 		OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
 	}
 	return OutArray, nil
+}
+
+// SetVectorSplitter adds vector split function to flow graph.
+// Gets flow, user defined vector split function, flowNumber of new flows and context.
+// Returns array of new opened flows with corresponding length.
+// Each packet from input flow will be sent to one of new flows based on
+// user defined function output for this packet.
+func SetVectorSplitter(IN *Flow, vectorSplitFunction VectorSplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow), err error) {
+        if err := checkFlow(IN); err != nil {
+                return nil, err
+        }
+        split := makeSplitter(nil, vectorSplitFunction, uint8(flowNumber))
+        segmentInsert(IN, split, true, context, 2)
+        OutArray = make([](*Flow), flowNumber, flowNumber)
+        for i := range OutArray {
+                OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
+        }
+        return OutArray, nil
 }
 
 // SetStopper adds stop function to flow graph.
