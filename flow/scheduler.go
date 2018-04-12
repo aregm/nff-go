@@ -347,12 +347,13 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			}
 			// Secondly we check adding clones. We can add one clone if:
 			// 1. scheduler is switched on
-			if scheduler.off == false {
+			// 2. ouput ring is quite empty
+			if scheduler.off == false && ff.checkOutputRingClonable(scheduler.maxPacketsToClone) {
 				switch ff.fType {
 				case segmentCopy:
-					// 2. check function signals that we need to clone
-					// 3. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
-					if (ff.checkInputRing() > scheduler.maxPacketsToClone) &&
+					// 3. check function signals that we need to clone
+					// 4. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
+					if (ff.checkInputRingClonable() > scheduler.maxPacketsToClone) &&
 						(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*ff.currentSpeed) {
 						// Save current speed as speed of flow function with this number of clones before adding
 						ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
@@ -376,7 +377,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						ff.previousSpeed[ff.cloneNumber+1] = 0
 					}
 				case fastGenerate:
-					// 2. speed is not enough
+					// 3. speed is not enough
 					if float64(convertPKTS(ff.currentSpeed, schedTime)) < (ff.Parameters.(*generateParameters)).targetSpeed {
 						if ff.pause != 0 {
 							ff.updatePause(int((1 - generatePauseStep) * float64(ff.pause)))
@@ -394,7 +395,8 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					if recC == -1 {
 						recC = low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port)
 					}
-					if recC > 39 && ff.checkOutputRing() <= scheduler.maxPacketsToClone {
+					// 3. Number of packets in RSS is big enogh to cause overwrite (drop) problems
+					if recC > 39 {
 						if low.IncreaseRSS((ff.Parameters.(*receiveParameters)).port) {
 							if scheduler.startFF(ff) != nil {
 								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
@@ -435,7 +437,7 @@ func (ff *flowFunction) printDebug(schedTime uint) {
 	switch ff.fType {
 	case segmentCopy:
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
-		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, queue length is", ff.checkInputRing(), "packets")
+		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, queue length is", ff.checkInputRingClonable(), "packets")
 	case fastGenerate:
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
@@ -484,7 +486,7 @@ func (scheduler *scheduler) getCore() (int, int, error) {
 	return 0, 0, common.WrapWithNFError(nil, "Requested number of cores isn't enough.", common.NotEnoughCores)
 }
 
-func (ff *flowFunction) checkInputRing() (n uint32) {
+func (ff *flowFunction) checkInputRingClonable() (n uint32) {
 	switch ff.Parameters.(type) {
 	case *segmentParameters:
 		n = ff.Parameters.(*segmentParameters).in.GetRingCount()
@@ -494,10 +496,28 @@ func (ff *flowFunction) checkInputRing() (n uint32) {
 	return n
 }
 
-func (ff *flowFunction) checkOutputRing() (n uint32) {
+func (ff *flowFunction) checkOutputRingClonable(max uint32) bool {
 	switch ff.Parameters.(type) {
 	case *receiveParameters:
-		n = ff.Parameters.(*receiveParameters).out.GetRingCount()
+		if ff.Parameters.(*receiveParameters).out.GetRingCount() <= max {
+			return true
+		}
+	case *generateParameters:
+		if ff.Parameters.(*generateParameters).out.GetRingCount() <= max {
+                        return true
+                }
+	case *copyParameters:
+		if ff.Parameters.(*copyParameters).out.GetRingCount() <= max ||
+		   ff.Parameters.(*copyParameters).outCopy.GetRingCount() <= max {
+                        return true
+                }
+	case *segmentParameters:
+		p := *(ff.Parameters.(*segmentParameters).out)
+		for i := range p {
+			if p[i].GetRingCount() <= max {
+				return true
+			}
+		}
 	}
-	return n
+	return false
 }
