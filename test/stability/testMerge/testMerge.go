@@ -195,7 +195,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
 
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }

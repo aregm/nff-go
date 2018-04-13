@@ -6,8 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/intel-go/nff-go/flow"
@@ -24,13 +22,6 @@ var (
 	outport2 uint
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	var err error
@@ -44,31 +35,31 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Start regular updating forwarding rules
 	l2Rules, err = packet.GetL2ACLFromJSON("demoL2_ACL.json")
-	CheckFatal(err)
+	flow.CheckFatal(err)
 	l3Rules, err = packet.GetL3ACLFromJSON("demoL3_ACL.json")
-	CheckFatal(err)
+	flow.CheckFatal(err)
 	go updateSeparateRules()
 
 	// Receive packets from zero port. One queue will be added automatically.
 	firstFlow, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Separate packets for additional flow due to some rules
 	secondFlow, err := flow.SetSeparator(firstFlow, l3Separator, nil)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Handle second flow via some heavy function
-	CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
+	flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
-	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func l3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
@@ -88,8 +79,8 @@ func updateSeparateRules() {
 		time.Sleep(time.Second * 5)
 		var err error
 		l2Rules, err = packet.GetL2ACLFromJSON("demoL2_ACL.json")
-		CheckFatal(err)
+		flow.CheckFatal(err)
 		l3Rules, err = packet.GetL3ACLFromJSON("demoL3_ACL.json")
-		CheckFatal(err)
+		flow.CheckFatal(err)
 	}
 }

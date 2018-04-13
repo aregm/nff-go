@@ -21,14 +21,6 @@ var (
 	cloneNumber uint
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	flag.UintVar(&outport, "outport", 1, "port for sender")
 	flag.UintVar(&inport, "inport", 0, "port for receiver")
@@ -38,19 +30,19 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-9",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue will be added automatically.
 	f1, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	var pdp pcapdumperParameters
-	CheckFatal(flow.SetHandler(f1, pcapdumper, &pdp))
+	flow.CheckFatal(flow.SetHandler(f1, pcapdumper, &pdp))
 
 	// Send packets to control speed. One queue will be added automatically.
-	CheckFatal(flow.SetSender(f1, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(f1, uint8(outport)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 type pcapdumperParameters struct {

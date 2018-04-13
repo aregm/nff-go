@@ -9,19 +9,9 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/intel-go/nff-go/flow"
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	config := flow.Config{
@@ -30,16 +20,16 @@ func main() {
 		CPUList: "0-7",
 	}
 
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 	// (port of device, core (not from NFF-GO set) which will handle device, name of device)
 	kni := flow.CreateKniDevice(1, 20, "myKNI")
 
 	fromEthFlow, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
-	CheckFatal(flow.SetSenderKNI(fromEthFlow, kni))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetSenderKNI(fromEthFlow, kni))
 
 	fromKNIFlow := flow.SetReceiverKNI(kni)
-	CheckFatal(flow.SetSender(fromKNIFlow, uint8(1)))
+	flow.CheckFatal(flow.SetSender(fromKNIFlow, uint8(1)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }

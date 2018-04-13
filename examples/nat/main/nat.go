@@ -14,14 +14,6 @@ import (
 	"github.com/intel-go/nff-go/flow"
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	// Parse arguments
 	cores := flag.String("cores", "", "Specify CPU cores to use")
@@ -36,7 +28,7 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	// Read config
-	CheckFatal(nat.ReadConfig(*configFile))
+	flow.CheckFatal(nat.ReadConfig(*configFile))
 
 	// Init NFF-GO system at 16 available cores
 	nffgoconfig := flow.Config{
@@ -45,14 +37,14 @@ func main() {
 		DPDKArgs:     []string{*dpdkLogLevel},
 	}
 
-	CheckFatal(flow.SystemInit(&nffgoconfig))
+	flow.CheckFatal(flow.SystemInit(&nffgoconfig))
 
 	// Initialize flows and necessary state
 	nat.InitFlows()
 
 	// Start flow scheduler
 	go func() {
-		CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStart())
 	}()
 
 	// Wait for interrupt

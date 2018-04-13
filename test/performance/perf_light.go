@@ -6,8 +6,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -20,14 +18,6 @@ var (
 	outport2    uint
 	noscheduler bool
 )
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
@@ -43,29 +33,29 @@ func main() {
 		DisableScheduler: noscheduler,
 		DPDKArgs:         []string{dpdkLogLevel},
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
 	firstFlow, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Handle second flow via some heavy function
 	if mode == 0 {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc0, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc0, nil))
 	} else if mode == 1 {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc1, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc1, nil))
 	} else {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
 	}
 
 	// Split for two senders and send
 	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
-	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
-	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {

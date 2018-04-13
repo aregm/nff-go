@@ -5,22 +5,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 )
 
 var l3Rules *packet.L3Rules
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 // Main function for constructing packet processing graph.
 func main() {
@@ -29,31 +19,31 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get splitting rules from access control file.
 	l3Rules, err = packet.GetL3ACLFromORIG("Forwarding.conf")
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Split packet flow based on ACL.
 	flowsNumber := 5
 	outputFlows, err := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// "0" flow is used for dropping packets without sending them.
-	CheckFatal(flow.SetStopper(outputFlows[0]))
+	flow.CheckFatal(flow.SetStopper(outputFlows[0]))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
 	for i := 1; i < flowsNumber; i++ {
-		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
+		flow.CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
 	}
 
 	// Begin to process packets.
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 // User defined function for splitting packets

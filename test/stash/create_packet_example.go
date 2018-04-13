@@ -7,8 +7,6 @@ package main
 import (
 	"encoding/hex"
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -16,14 +14,6 @@ import (
 
 var firstFlow *flow.Flow
 var buffer []byte
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	var err error
@@ -37,19 +27,19 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {
 		firstFlow, err = flow.SetFastGenerator(generatePacket, 1000, nil)
-		CheckFatal(err)
+		flow.CheckFatal(err)
 	} else {
 		buffer, _ = hex.DecodeString("00112233445501112131415108004500002ebffd00000406747a7f0000018009090504d2162e123456781234569050102000ffe60000")
 		firstFlow, err = flow.SetFastGenerator(generatePacketFromByte, 1000, nil)
-		CheckFatal(err)
+		flow.CheckFatal(err)
 	}
 	// Send all generated packets to the output
-	CheckFatal(flow.SetSender(firstFlow, uint8(1)))
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SetSender(firstFlow, uint8(1)))
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {

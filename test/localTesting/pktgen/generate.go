@@ -35,14 +35,6 @@ var (
 	totalPackets uint64
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	flag.StringVar(&outFile, "outfile", "pkts_generated.pcap", "file to write output to")
 	flag.StringVar(&inFile, "infile", "config.json", "file with configurations for generator")
@@ -59,20 +51,20 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
 	generator, err := getGenerator()
-	CheckFatal(err)
+	flow.CheckFatal(err)
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generator, nil)
 
-	CheckFatal(flow.SetSenderFile(outputFlow, outFile))
+	flow.CheckFatal(flow.SetSenderFile(outputFlow, outFile))
 	// Start pipeline
 	go func() {
-		CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStart())
 	}()
 
 	// Wait for enough packets to arrive
