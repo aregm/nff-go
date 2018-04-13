@@ -42,13 +42,15 @@ const (
 	separate uint = iota
 	split
 	partition
+	pcopy
+	handle
+	dhandle
 )
 
 var (
 	totalPackets uint64 = 10000000
 	payloadSize  uint   = 16
 	speed        uint64 = 1000000
-	passedLimit  uint64 = 85
 
 	recvPacketsGroup1 uint64
 	recvPacketsGroup2 uint64
@@ -79,20 +81,20 @@ var (
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
 	fixMACAddrs2 func(*packet.Packet, flow.UserContext)
 
-	passed      int32 = 1
-	l3Rules     *packet.L3Rules
+	passed  int32 = 1
+	l3Rules *packet.L3Rules
 
 	gTestType   uint
-	lessPercent uint
-	eps         uint
+	lessPercent int
+	eps         int    = 3
+	passedLimit uint64 = 85
 )
 
 func main() {
 	var testScenario uint
 	var testType uint
 	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1 as GENERATE part, 2 to use as RECEIVE part, 0 to use as ONE-MACHINE variant")
-	flag.UintVar(&testType, "testType", 0, "0 to use Separate test, 1 to use Split test, 2 to use Partition test")
-	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
+	flag.UintVar(&testType, "testType", 0, "0 - Separate test, 1 - Split test, 2 - Partition test, 3 - pCopy test, 4 - Handle test, 5 - DHandle test")
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
 	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
 	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
@@ -114,22 +116,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
 	gTestType = testType
-	var rulesString string
-	if testType == separate {
-		rulesString = "test-separate-l3rules.conf"
-		// Test expects to receive 33% of packets on 0 port and 66% on 1 port
-		lessPercent = 33
-		eps = 2
-	} else if testType == split {
-		rulesString = "test-split.conf"
-		// Test expects to receive 20% of packets on 0 port and 80% on 1 port
-		lessPercent = 20
-		eps = 4
-	} else if testType == partition {
-		// Test expects to receive 10% of packets on 0 port and 90% on 1 port
-		lessPercent = 10
-		eps = 3
-	}
+
 	// Init NFF-GO system
 	config := flow.Config{
 		DPDKArgs: []string{dpdkLogLevel},
@@ -142,15 +129,8 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
 
-	var flow1 *flow.Flow
-	var flow2 *flow.Flow
-	if testType != partition && testScenario != generatePart {
-		var err error
-		// Get splitting rules from access control file.
-		l3Rules, err = packet.GetL3ACLFromORIG(rulesString)
-		if err != nil {
-			return err
-		}
+	if err := setParameters(testScenario); err != nil {
+		return err
 	}
 
 	if testScenario == receivePart {
@@ -159,33 +139,8 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 			return err
 		}
 
-		if testType == separate {
-			// Separate packet flow based on ACL.
-			flow2, err = flow.SetSeparator(inputFlow, l3Separator, nil)
-			flow1 = inputFlow
-		} else if testType == split {
-			// Split packet flow based on ACL.
-			var splittedFlows []*flow.Flow
-			splittedFlows, err = flow.SetSplitter(inputFlow, l3Splitter, 3, nil)
-			// "0" flow is used for dropping packets without sending them.
-			if err1 := flow.SetStopper(splittedFlows[0]); err1 != nil {
-				return err1
-			}
-			flow1 = splittedFlows[1]
-			flow2 = splittedFlows[2]
-		} else if testType == partition {
-			// Parition flow
-			flow2, err = flow.SetPartitioner(inputFlow, 100, 1000)
-			flow1 = inputFlow
-		}
-		if err != nil {
-			return err
-		}
-
-		if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil {
-			return err
-		}
-		if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil {
+		var flow1, flow2 *flow.Flow
+		if flow1, flow2, err = setMainTest(inputFlow); err != nil {
 			return err
 		}
 
@@ -193,15 +148,19 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		if err := flow.SetSender(flow1, uint8(outport1)); err != nil {
 			return err
 		}
-		if err := flow.SetSender(flow2, uint8(outport2)); err != nil {
-			return err
+		if testType != handle && testType != dhandle {
+			if err := flow.SetSender(flow2, uint8(outport2)); err != nil {
+				return err
+			}
 		}
 
 		// Begin to process packets.
 		if err := flow.SystemStart(); err != nil {
 			return err
 		}
-	} else {
+	}
+
+	if testScenario == generatePart || testScenario == gotest {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
@@ -210,6 +169,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		if err != nil {
 			return err
 		}
+
 		var flow1, flow2 *flow.Flow
 		if testScenario == generatePart {
 			if err := flow.SetSender(generatedFlow, uint8(outport1)); err != nil {
@@ -221,52 +181,31 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 			if err != nil {
 				return err
 			}
-			flow2, err = flow.SetReceiver(uint8(inport2))
-			if err != nil {
-				return err
-			}
-		} else {
-			if testType == separate {
-				// Separate packet flow based on ACL.
-				flow2, err = flow.SetSeparator(generatedFlow, l3Separator, nil)
-				flow1 = generatedFlow
-			} else if testType == split {
-				// Split packet flow based on ACL.
-				var splittedFlows []*flow.Flow
-				splittedFlows, err = flow.SetSplitter(generatedFlow, l3Splitter, 3, nil)
-				// "0" flow is used for dropping packets without sending them.
-				if err1 := flow.SetStopper(splittedFlows[0]); err1 != nil {
-					return err1
+			if testType != handle && testType != dhandle {
+				flow2, err = flow.SetReceiver(uint8(inport2))
+				if err != nil {
+					return err
 				}
-				flow1 = splittedFlows[1]
-				flow2 = splittedFlows[2]
-			} else if testType == partition {
-				// Partition flow
-				flow2, err = flow.SetPartitioner(generatedFlow, 100, 1000)
-				flow1 = generatedFlow
 			}
-			if err != nil {
-				return err
-			}
-			if err := flow.SetHandler(flow1, fixPackets1, nil); err != nil {
-				return err
-			}
-			if err := flow.SetHandler(flow2, fixPackets2, nil); err != nil {
+		}
+		if testScenario == gotest {
+			if flow1, flow2, err = setMainTest(generatedFlow); err != nil {
 				return err
 			}
 		}
 		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil {
 			return err
 		}
-		if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
-			return err
-		}
-
 		if err := flow.SetStopper(flow1); err != nil {
 			return err
 		}
-		if err := flow.SetStopper(flow2); err != nil {
-			return err
+		if testType != handle && testType != dhandle {
+			if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
+				return err
+			}
+			if err := flow.SetStopper(flow2); err != nil {
+				return err
+			}
 		}
 
 		// Start pipeline
@@ -287,6 +226,85 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	return nil
 }
 
+func setParameters(testScenario uint) (err error) {
+	switch gTestType {
+	case separate:
+		if testScenario != generatePart {
+			l3Rules, err = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
+		}
+		// Test expects to receive 33% of packets on 0 port and 66% on 1 port
+		lessPercent = 33
+	case split:
+		if testScenario != generatePart {
+			l3Rules, err = packet.GetL3ACLFromORIG("test-split.conf")
+		}
+		// Test expects to receive 20% of packets on 0 port and 80% on 1 port
+		lessPercent = 20
+		eps = 4
+	case partition:
+		// Test expects to receive 10% of packets on 0 port and 90% on 1 port
+		lessPercent = 10
+	case pcopy:
+		// Test expects to receive 50% of packets on 0 port and 50% on 1 port (200% total)
+		lessPercent = 50
+		passedLimit = 150 // ~85 * 2
+	case handle:
+		// Test expects to receive 100% of packets on 0 port and 0% on 1 port
+		lessPercent = 100
+	case dhandle:
+		if testScenario != generatePart {
+			l3Rules, err = packet.GetL3ACLFromORIG("test-handle-l3rules.conf")
+		}
+		// Test expects to receive 100% of packets on 0 port and 0% on 1 port (33% total)
+		lessPercent = 100
+		passedLimit = 28 // 85 * 0.33
+	}
+
+	return err
+}
+
+func setMainTest(inFlow *flow.Flow) (*flow.Flow, *flow.Flow, error) {
+	var flow2 *flow.Flow
+	var err error
+	switch gTestType {
+	case separate:
+		// Separate packet flow based on ACL.
+		flow2, err = flow.SetSeparator(inFlow, l3Separator, nil)
+	case split:
+		// Split packet flow based on ACL.
+		var splittedFlows []*flow.Flow
+		splittedFlows, err = flow.SetSplitter(inFlow, l3Splitter, 3, nil)
+		// "0" flow is used for dropping packets without sending them.
+		if err1 := flow.SetStopper(splittedFlows[0]); err1 != nil {
+			return nil, nil, err1
+		}
+		inFlow = splittedFlows[1]
+		flow2 = splittedFlows[2]
+	case partition:
+		// Parition flow
+		flow2, err = flow.SetPartitioner(inFlow, 100, 1000)
+	case pcopy:
+		flow2, err = flow.SetCopier(inFlow)
+	case handle:
+		err = flow.SetHandler(inFlow, l3Handler, nil)
+	case dhandle:
+		err = flow.SetHandlerDrop(inFlow, l3dHandler, nil)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = flow.SetHandler(inFlow, fixPackets1, nil); err != nil {
+		return nil, nil, err
+	}
+	if gTestType != handle && gTestType != dhandle {
+		if err = flow.SetHandler(flow2, fixPackets2, nil); err != nil {
+			return nil, nil, err
+		}
+	}
+	return inFlow, flow2, err
+}
+
 func composeStatistics() error {
 	// Compose statistics
 	sent := atomic.LoadUint64(&countRes)
@@ -295,11 +313,11 @@ func composeStatistics() error {
 	recv2 := atomic.LoadUint64(&recvPacketsGroup2)
 	received := recv1 + recv2
 
-	var p1 uint
-	var p2 uint
+	var p1 int
+	var p2 int
 	if received != 0 {
-		p1 = uint(recv1 * 100 / received)
-		p2 = uint(recv2 * 100 / received)
+		p1 = int(recv1 * 100 / received)
+		p2 = int(recv2 * 100 / received)
 	}
 	broken := atomic.LoadUint64(&brokenPackets)
 
@@ -337,7 +355,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
 
-	if gTestType == separate {
+	if gTestType == separate || gTestType == dhandle {
 		// Generate packets of 3 groups
 		if count%3 == 0 {
 			udp.DstPort = packet.SwapBytesUint16(dstPort1)
@@ -353,7 +371,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 		} else {
 			udp.DstPort = packet.SwapBytesUint16(dstPort2)
 		}
-	} else if gTestType == partition {
+	} else if gTestType == partition || gTestType == handle || gTestType == pcopy {
 		// Generate identical packets
 		udp.DstPort = packet.SwapBytesUint16(dstPort1)
 	}
@@ -420,7 +438,7 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 		udp.DstPort != packet.SwapBytesUint16(dstPort3) ||
 		gTestType == split &&
 			udp.DstPort != packet.SwapBytesUint16(dstPort2) ||
-		gTestType == partition &&
+		(gTestType == partition || gTestType == pcopy) &&
 			udp.DstPort != packet.SwapBytesUint16(dstPort1) {
 		println("Unexpected packet in inputFlow2")
 		println("TEST FAILED")
@@ -438,6 +456,13 @@ func l3Separator(pkt *packet.Packet, context flow.UserContext) bool {
 func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
 	// Return number of flow to which put this packet. Based on ACL rules.
 	return currentPacket.L3ACLPort(l3Rules)
+}
+
+func l3Handler(pkt *packet.Packet, context flow.UserContext) {
+}
+
+func l3dHandler(pkt *packet.Packet, context flow.UserContext) bool {
+	return pkt.L3ACLPermit(l3Rules)
 }
 
 func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {

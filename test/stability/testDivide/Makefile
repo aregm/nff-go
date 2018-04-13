@@ -14,5 +14,8 @@ testing:
 	go test separate_test.go testDivide.go
 	go test split_test.go testDivide.go
 	go test partition_test.go testDivide.go
+	go test pcopy_test.go testDivide.go
+	go test handle_test.go testDivide.go
+	go test dhandle_test.go testDivide.go
 
 include $(PATH_TO_MK)/leaf.mk
