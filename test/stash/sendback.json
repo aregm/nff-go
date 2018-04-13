@@ -18,7 +18,7 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-performance",
+                    "image-name": "nff-go-stash",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./sendback", "-inport", "0", "-outport", "0", "-cores", "16"
@@ -46,7 +46,7 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-performance",
+                    "image-name": "nff-go-stash",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./sendback", "-inport", "0", "-outport", "0", "-cores", "16"
