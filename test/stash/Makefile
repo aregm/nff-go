@@ -4,6 +4,6 @@
 
 PATH_TO_MK = ../../mk
 IMAGENAME = nff-go-stash
-EXECUTABLES =  create_packet_example forwardingTestL3 send_fixed_number rw_example
+EXECUTABLES =  create_packet_example forwardingTestL3 send_fixed_number rw_example sendback
 
 include $(PATH_TO_MK)/leaf.mk
