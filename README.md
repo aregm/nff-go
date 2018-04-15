@@ -137,7 +137,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
 ### environment variables
     
-        export PATH="$PATH:$GOPATH"/bin
+        export PATH="$PATH:$GOPATH/bin"
     
 ## Building NFF-GO
 
