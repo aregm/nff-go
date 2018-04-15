@@ -90,7 +90,7 @@ build.
 
 If you are working on a fork, then the **go get** command will not put nff-go in
 $GOPATH/src/github.com/intel-go. However, imports will continue to reference
-githb.com/intel-go. This is a feature of Go and not a problem in the way nff-go
+github.com/intel-go. This is a feature of Go and not a problem in the way nff-go
 is written. See [stackoverflow
 article](https://stackoverflow.com/questions/14323872/using-forked-package-import-in-go)
 for a discussion. A simple way to resolve the problem is to use a symlink. If
