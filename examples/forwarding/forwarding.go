@@ -11,7 +11,6 @@ import (
 
 var l3Rules *packet.L3Rules
 
-
 // Main function for constructing packet processing graph.
 func main() {
 	var err error
@@ -22,7 +21,7 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get splitting rules from access control file.
-	l3Rules, err = packet.GetL3ACLFromORIG("Forwarding.conf")
+	l3Rules, err = packet.GetL3ACLFromORIG("forwarding.conf")
 	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
