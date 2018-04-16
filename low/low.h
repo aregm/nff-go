@@ -353,14 +353,14 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 	}
 }
 
-void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int coreId) {
+void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
 	// Run until the application is quit. Send can't be stopped now.
-	for (;;) {
+	while (*flag == 1) {
 		// Get packets for TX from ring
 		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
@@ -386,13 +386,13 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int core
 	}
 }
 
-void nff_go_stop(struct rte_ring *in_ring, int coreId) {
+void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Run until the application is quit. Stop can't be stopped now.
-	for (;;) {
+	while (*flag == 1) {
 		// Get packets for freeing from ring
 		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 

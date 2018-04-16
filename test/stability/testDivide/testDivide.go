@@ -54,11 +54,10 @@ var (
 
 	recvPacketsGroup1 uint64
 	recvPacketsGroup2 uint64
-
-	count         uint64
-	countRes      uint64
-	recvPackets   uint64
-	brokenPackets uint64
+	count             uint64
+	countRes          uint64
+	recvPackets       uint64
+	brokenPackets     uint64
 
 	dstPort1 uint16 = 111
 	dstPort2 uint16 = 222
@@ -86,8 +85,8 @@ var (
 
 	gTestType   uint
 	lessPercent int
-	eps         int    = 3
-	passedLimit uint64 = 85
+	eps         int
+	passedLimit uint64
 )
 
 func main() {
@@ -106,9 +105,23 @@ func main() {
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
 	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
 	flag.Parse()
+	if err := initDPDK; err != nil {
+		fmt.Printf("fail: %+v\n", err)
+	}
 	if err := executeTest(*configFile, *target, testScenario, testType); err != nil {
 		fmt.Printf("fail: %+v\n", err)
 	}
+}
+
+func initDPDK() error {
+	// Init NFF-GO system
+	config := flow.Config{
+		DPDKArgs: []string{dpdkLogLevel},
+	}
+	if err := flow.SystemInit(&config); err != nil {
+		return err
+	}
+	return nil
 }
 
 func executeTest(configFile, target string, testScenario uint, testType uint) error {
@@ -117,13 +130,6 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	}
 	gTestType = testType
 
-	// Init NFF-GO system
-	config := flow.Config{
-		DPDKArgs: []string{dpdkLogLevel},
-	}
-	if err := flow.SystemInit(&config); err != nil {
-		return err
-	}
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
 	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
@@ -208,6 +214,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 			}
 		}
 
+		progStart = time.Now()
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
@@ -215,7 +222,6 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		if err != nil {
 			return err
 		}
-		progStart = time.Now()
 
 		// Wait for enough packets to arrive
 		testDoneEvent.L.Lock()
@@ -227,6 +233,8 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 }
 
 func setParameters(testScenario uint) (err error) {
+	eps = 3
+	passedLimit = 85
 	switch gTestType {
 	case separate:
 		if testScenario != generatePart {
@@ -313,13 +321,24 @@ func composeStatistics() error {
 	recv2 := atomic.LoadUint64(&recvPacketsGroup2)
 	received := recv1 + recv2
 
+	broken := atomic.LoadUint64(&brokenPackets)
+	pass := atomic.LoadInt32(&passed)
+
 	var p1 int
 	var p2 int
 	if received != 0 {
 		p1 = int(recv1 * 100 / received)
 		p2 = int(recv2 * 100 / received)
 	}
-	broken := atomic.LoadUint64(&brokenPackets)
+
+	flow.SystemStop()
+	countRes = 0
+	recvPacketsGroup1 = 0
+	recvPacketsGroup2 = 0
+	recvPackets = 0
+	count = 0
+	brokenPackets = 0
+	passed = 1
 
 	// Print report
 	println("Sent", sent, "packets")
@@ -329,17 +348,17 @@ func composeStatistics() error {
 	println("On port", inport2, "received=", recv2, "packets")
 	println("Proportion of packets received on", inport1, "port =", p1, "%")
 	println("Proportion of packets received on", inport2, "port =", p2, "%")
-
 	println("Broken = ", broken, "packets")
 
 	// Test is passed, if p1 is ~lessPercent% and p2 is ~100 - lessPercent%
 	// and if total receive/send rate is high
-	if atomic.LoadInt32(&passed) != 0 &&
+	if pass != 0 &&
 		p1 <= lessPercent+eps && p2 <= 100-lessPercent+eps &&
 		p1 >= lessPercent-eps && p2 >= 100-lessPercent-eps && received*100/sent > passedLimit {
 		println("TEST PASSED")
 		return nil
 	}
+	println(pass, lessPercent-eps, p1, lessPercent+eps, 100-lessPercent-eps, p2, 100-lessPercent+eps, received*100/sent, passedLimit)
 	println("TEST FAILED")
 	return errors.New("final statistics check failed")
 }
