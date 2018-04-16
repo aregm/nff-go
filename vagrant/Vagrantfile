@@ -16,9 +16,11 @@ Vagrant.configure(2) do |config|
   vm_group_size = ENV.fetch('VM_GROUP_SIZE', 3).to_i
   vm_total_number = ENV.fetch("VM_TOTAL_NUMBER", 3).to_i
   vm_links_number = ENV.fetch("VM_LINKS_NUMBER", 2).to_i
+  vm_port_base = ENV.fetch("VM_TUNNEL_PORT_BASE", 12345).to_i
+  vm_second_port_base = vm_port_base + (vm_links_number + 1) * vm_total_number
 
 #  config.vm.box = "ubuntu/xenial64"
-  config.vm.box = "generic/fedora27"
+  config.vm.box = "fedora/27-cloud-base"
 
   # Docker server port
   config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
@@ -27,6 +29,13 @@ Vagrant.configure(2) do |config|
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
   config.vm.box_check_update = false
+
+  config.vm.provider "libvirt" do |lv|
+    lv.driver = "kvm"
+    lv.memory = "4096"
+    lv.cpus = 8
+    lv.storage_pool_name = "images"
+  end
 
   config.vm.provider "virtualbox" do |vb|
     vb.gui = false
@@ -38,13 +47,11 @@ Vagrant.configure(2) do |config|
   end
 
 $provision_fedora = <<SHELL
-echo Fixing bootloader to use consistent interface names
-sudo sed -i -e 's,biosdevname=0 net.ifnames=0 ,,' /etc/default/grub
-sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-
 echo Installing system packages
-sudo dnf update
-sudo dnf install -y redhat-lsb-core net-tools numactl-devel libpcap-devel elfutils-libelf-devel
+sudo dnf update -y
+sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim
+sudo systemctl enable NetworkManager
+sudo systemctl start NetworkManager
 SHELL
 
 $provision_ubuntu = <<SHELL
@@ -57,7 +64,7 @@ SHELL
 
 $provision_common = <<SHELL
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.9.4.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.10.1.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
@@ -77,10 +84,13 @@ SHELL
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  config.vm.provision "shell", privileged: false, inline: $provision_fedora + $provision_common
+  config.vm.provision "shell", privileged: false, inline: $provision_fedora
   # Optional Ubuntu provisioning, use if you want to work in Ubuntu
   # environment.
-  config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu + $provision_common
+  config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu
+  # Reboot VM after distro specific provisioning
+  config.vm.provision :reload
+  config.vm.provision "shell", privileged: false, inline: $provision_common
   # Reboot VM after provisioning
   config.vm.provision :reload
 
@@ -94,9 +104,27 @@ SHELL
       if i % vm_group_size != 0
         # Define backward inter-VM virtual network links
         (1..vm_links_number).each do |j|
-          node.vm.network "private_network",
-                          auto_config: false,
-                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}"
+          if (i % vm_group_size) == vm_group_size - 1 && j == 1
+            # Workaround hardcoded MAC address for server VM until we implement ARP completely
+            node.vm.network "private_network",
+                            auto_config: false,
+                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
+                            :mac => '3cfdfea4ddf0',
+                            :model_type => 'e1000',
+                            :libvirt__forward_mode => 'none',
+                            :libvirt__tunnel_type => 'udp',
+                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
+                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
+          else
+            node.vm.network "private_network",
+                            auto_config: false,
+                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
+                            :model_type => 'e1000',
+                            :libvirt__forward_mode => 'none',
+                            :libvirt__tunnel_type => 'udp',
+                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
+                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
+          end
         end
       end
 
@@ -105,7 +133,12 @@ SHELL
         (1..vm_links_number).each do |j|
           node.vm.network "private_network",
                           auto_config: false,
-                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i + 1}-#{j}"
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i + 1}-#{j}",
+                          :model_type => 'e1000',
+                          :libvirt__forward_mode => 'none',
+                          :libvirt__tunnel_type => 'udp',
+                          :libvirt__tunnel_local_port => vm_port_base + (i + 1) * vm_links_number + j,
+                          :libvirt__tunnel_port => vm_second_port_base + (i + 1) * vm_links_number + j
         end
       end
     end
