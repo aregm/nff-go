@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-IMAGENAME = nff-go-stash
-EXECUTABLES = forwardingTestL3 sendback
+IMAGENAME = nff-go-example-firewall
+EXECUTABLES = firewall
 
 include $(PATH_TO_MK)/leaf.mk

@@ -23,8 +23,8 @@ var (
 )
 
 func main() {
-	flag.StringVar(&inFile, "infile", "rw_example_in.pcap", "Input pcap file")
-	flag.StringVar(&outFile, "outfile", "rw_example_out.pcap", "Output pcap file")
+	flag.StringVar(&inFile, "infile", "fileReadWriteIn.pcap", "Input pcap file")
+	flag.StringVar(&outFile, "outfile", "fileReadWriteOut.pcap", "Output pcap file")
 
 	flag.BoolVar(&useReader, "reader", false, "Enable Reader")
 	flag.BoolVar(&useWriter, "writer", false, "Enable Writer")
