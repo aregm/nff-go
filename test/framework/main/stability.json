@@ -13,27 +13,6 @@
     },
     "tests": [
         {
-            "name": "generate",
-            "test-time": 60000000000,
-            "test-type": "TestTypeScenario",
-            "test-apps": [
-                {
-                    "image-name": "nff-go-test-resend",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./testResend", "-number=100000", "-testScenario=1", "-inport=1", "-outport=0"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-test-resend",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./testResend", "-testScenario=2", "-inport=0", "-outport=1"
-                    ]
-                }
-            ]
-        },
-        {
             "name": "merge",
             "test-time": 60000000000,
             "test-type": "TestTypeScenario",
