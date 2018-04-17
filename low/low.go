@@ -437,7 +437,7 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // Receive - get packets and enqueue on a Ring.
-func Receive(port uint8, queue int16, OUT *Ring, flag *int, coreID int) {
+func Receive(port uint8, queue int16, OUT *Ring, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
@@ -446,17 +446,17 @@ func Receive(port uint8, queue int16, OUT *Ring, flag *int, coreID int) {
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue int16, IN *Ring, coreID int) {
+func Send(port uint8, queue int16, IN *Ring, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, C.int(coreID))
+	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Ring, coreID int) {
-	C.nff_go_stop(IN.DPDK_ring, C.int(coreID))
+func Stop(IN *Ring, flag *int32, coreID int) {
+	C.nff_go_stop(IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -478,6 +478,22 @@ func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCa
 
 	mbufNumberT = mbufNumber
 	mbufCacheSizeT = mbufCacheSize
+}
+
+func StopDPDK() {
+	C.rte_eal_cleanup()
+}
+
+func FreeMempools() {
+	for i := range usedMempools {
+		C.rte_mempool_free(usedMempools[i])
+	}
+	usedMempools = nil
+}
+
+func StopPort(port uint8) {
+	// TODO check that receive and send are stopped
+	C.rte_eth_dev_stop(C.uint16_t(port))
 }
 
 // GetPortsNumber gets total number of available Ethernet devices.

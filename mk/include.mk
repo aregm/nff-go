@@ -39,7 +39,8 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_PCLMULQDQ		\
 	-DRTE_MACHINE_CPUFLAG_RDRAND		\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
-	-include rte_config.h
+	-include rte_config.h			\
+	-Wno-deprecated-declarations
 # DEBUG flags
 # export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -mno-fsgsbase -mno-f16c -include rte_config.h
 

@@ -498,6 +498,30 @@ func SystemStart() error {
 	return nil
 }
 
+// SystemStop stops the system. All Flow functions plus resource releasing
+// Doesn't cleanup DPDK
+func SystemStop() {
+	schedState.systemStop()
+	for i := range createdPorts {
+		if createdPorts[i].wasRequested {
+			low.StopPort(createdPorts[i].port)
+			createdPorts[i].wasRequested = false
+			createdPorts[i].txQueuesNumber = 0
+			createdPorts[i].willReceive = false
+		}
+	}
+	low.FreeMempools()
+}
+
+// SystemReset stops whole framework plus cleanup DPDK
+// TODO DPDK cleanup is now incomplete at DPDK side
+// It is n't able to re-init after it and also is
+// under deprecated pragma. Need to fix after DPDK changes.
+func SystemReset() {
+	SystemStop()
+	low.StopDPDK()
+}
+
 func generateRingName() string {
 	s := strconv.Itoa(ringName)
 	ringName++
@@ -701,16 +725,16 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 // Each packet from input flow will be sent to one of new flows based on
 // user defined function output for this packet.
 func SetVectorSplitter(IN *Flow, vectorSplitFunction VectorSplitFunction, flowNumber uint, context UserContext) (OutArray [](*Flow), err error) {
-        if err := checkFlow(IN); err != nil {
-                return nil, err
-        }
-        split := makeSplitter(nil, vectorSplitFunction, uint8(flowNumber))
-        segmentInsert(IN, split, true, context, 2)
-        OutArray = make([](*Flow), flowNumber, flowNumber)
-        for i := range OutArray {
-                OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
-        }
-        return OutArray, nil
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
+	split := makeSplitter(nil, vectorSplitFunction, uint8(flowNumber))
+	segmentInsert(IN, split, true, context, 2)
+	OutArray = make([](*Flow), flowNumber, flowNumber)
+	for i := range OutArray {
+		OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
+	}
+	return OutArray, nil
 }
 
 // SetStopper adds stop function to flow graph.
@@ -982,27 +1006,34 @@ func segmentProcess(parameters interface{}, stopper chan int, report chan uint64
 	}
 }
 
-func recvRSS(parameters interface{}, flag *int, coreID int) {
+func recvRSS(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
 	low.Receive(uint8(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
 }
 
-func recvKNI(parameters interface{}, flag *int, coreID int) {
+func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
 	low.Receive(uint8(srp.port.PortId), -1, srp.out, flag, coreID)
 }
 
-func generateOne(parameters interface{}) {
+func generateOne(parameters interface{}, stopper chan int) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
 	for {
-		tempPacket, err := packet.NewPacket()
-		if err != nil {
-			common.LogFatal(common.Debug, err)
+		select {
+		case <-stopper:
+			// It is time to close this clone
+			close(stopper)
+			return
+		default:
+			tempPacket, err := packet.NewPacket()
+			if err != nil {
+				common.LogFatal(common.Debug, err)
+			}
+			generateFunction(tempPacket, nil)
+			safeEnqueueOne(OUT, tempPacket.ToUintptr())
 		}
-		generateFunction(tempPacket, nil)
-		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 
@@ -1123,9 +1154,9 @@ func pcopy(parameters interface{}, stopper chan int, report chan uint64, context
 	}
 }
 
-func send(parameters interface{}, flag *int, coreID int) {
+func send(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.queue, srp.in, coreID)
+	low.Send(srp.port, srp.queue, srp.in, flag, coreID)
 }
 
 func merge(from *low.Ring, to *low.Ring) {
@@ -1224,7 +1255,7 @@ func vConstructSlice(packets []*packet.Packet, mask *[burstSize]bool, answers *[
 	answers[0] = uint8(ve.bufIndex)
 }
 
-func write(parameters interface{}) {
+func write(parameters interface{}, stopper chan int) {
 	wp := parameters.(*writeParameters)
 	IN := wp.in
 	filename := wp.filename
@@ -1243,20 +1274,27 @@ func write(parameters interface{}) {
 		common.LogFatal(common.Debug, err)
 	}
 	for {
-		n := IN.DequeueBurst(bufIn, 1)
-		if n == 0 {
-			continue
+		select {
+		case <-stopper:
+			// It is time to close this clone
+			close(stopper)
+			return
+		default:
+			n := IN.DequeueBurst(bufIn, 1)
+			if n == 0 {
+				continue
+			}
+			tempPacket = packet.ExtractPacket(bufIn[0])
+			err := tempPacket.WritePcapOnePacket(f)
+			if err != nil {
+				common.LogFatal(common.Debug, err)
+			}
+			low.DirectStop(1, bufIn)
 		}
-		tempPacket = packet.ExtractPacket(bufIn[0])
-		err := tempPacket.WritePcapOnePacket(f)
-		if err != nil {
-			common.LogFatal(common.Debug, err)
-		}
-		low.DirectStop(1, bufIn)
 	}
 }
 
-func read(parameters interface{}) {
+func read(parameters interface{}, stopper chan int) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
@@ -1277,29 +1315,36 @@ func read(parameters interface{}) {
 	count := int32(0)
 
 	for {
-		tempPacket, err := packet.NewPacket()
-		if err != nil {
-			common.LogFatal(common.Debug, err)
-		}
-		isEOF, err := tempPacket.ReadPcapOnePacket(f)
-		if err != nil {
-			common.LogFatal(common.Debug, err)
-		}
-		if isEOF {
-			atomic.AddInt32(&count, 1)
-			if count == repcount {
-				break
-			}
-			if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+		select {
+		case <-stopper:
+			// It is time to close this clone
+			close(stopper)
+			return
+		default:
+			tempPacket, err := packet.NewPacket()
+			if err != nil {
 				common.LogFatal(common.Debug, err)
 			}
-			if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
+			isEOF, err := tempPacket.ReadPcapOnePacket(f)
+			if err != nil {
 				common.LogFatal(common.Debug, err)
 			}
+			if isEOF {
+				atomic.AddInt32(&count, 1)
+				if count == repcount {
+					break
+				}
+				if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+					common.LogFatal(common.Debug, err)
+				}
+				if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
+					common.LogFatal(common.Debug, err)
+				}
+			}
+			// TODO we need packet reassembly here. However we don't
+			// use mbuf packet_type here, so it is impossible.
+			safeEnqueueOne(OUT, tempPacket.ToUintptr())
 		}
-		// TODO we need packet reassembly here. However we don't
-		// use mbuf packet_type here, so it is impossible.
-		safeEnqueueOne(OUT, tempPacket.ToUintptr())
 	}
 }
 

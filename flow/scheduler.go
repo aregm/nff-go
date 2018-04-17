@@ -22,6 +22,7 @@ package flow
 import (
 	"runtime"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/intel-go/nff-go/common"
@@ -38,7 +39,7 @@ const generatePauseStep = 0.1
 type clonePair struct {
 	index   int
 	channel chan int
-	flag    int
+	flag    int32
 }
 
 // UserContext is used inside flow packet and is going for user via it
@@ -48,9 +49,9 @@ type UserContext interface {
 }
 
 // Function types which are used inside flow functions
-type uncloneFlowFunction func(interface{})
+type uncloneFlowFunction func(interface{}, chan int)
 type cloneFlowFunction func(interface{}, chan int, chan uint64, []UserContext)
-type cFlowFunction func(interface{}, *int, int)
+type cFlowFunction func(interface{}, *int32, int)
 
 type ffType int
 
@@ -72,8 +73,6 @@ type flowFunction struct {
 	cFunction cFlowFunction
 	// Main body of clonable flow function
 	cloneFunction cloneFlowFunction
-	// Pause channel of function itself (not clones)
-	channel chan int
 	// Number of clones of this function
 	cloneNumber int
 	// Clones of this function. They are determined
@@ -124,6 +123,7 @@ type scheduler struct {
 	Dropped           uint
 	ffCount           int
 	maxPacketsToClone uint32
+	stopFlag          int32
 }
 
 type core struct {
@@ -152,8 +152,9 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
 }
 
 func (scheduler *scheduler) systemStart() (err error) {
+	scheduler.stopFlag = 1
 	var core int
-	if core, err = scheduler.getCore(); err != nil {
+	if core, _, err = scheduler.getCore(); err != nil {
 		return err
 	}
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
@@ -161,7 +162,7 @@ func (scheduler *scheduler) systemStart() (err error) {
 		common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 	}
 	if scheduler.stopDedicatedCore {
-		if core, err = scheduler.getCore(); err != nil {
+		if core, _, err = scheduler.getCore(); err != nil {
 			return err
 		}
 		common.LogDebug(common.Initialization, "Start STOP at", core, "core")
@@ -169,12 +170,10 @@ func (scheduler *scheduler) systemStart() (err error) {
 		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
 	}
 	go func() {
-		low.Stop(scheduler.StopRing, core)
+		low.Stop(scheduler.StopRing, &scheduler.stopFlag, core)
 	}()
 	for i := range scheduler.ff {
-		if core, err := scheduler.getCore(); err != nil {
-			return err
-		} else if err = scheduler.startFF(scheduler.ff[i], core); err != nil {
+		if err = scheduler.startFF(scheduler.ff[i]); err != nil {
 			return err
 		}
 	}
@@ -183,26 +182,59 @@ func (scheduler *scheduler) systemStart() (err error) {
 	return nil
 }
 
-func (scheduler *scheduler) startFF(ff1 *flowFunction, core int) (err error) {
-	ff := ff1
-	common.LogDebug(common.Initialization, "Start FlowFunction", ff.name, "at", core, "core")
-	stopFlag := int(1)
+func (scheduler *scheduler) startFF(ff *flowFunction) (err error) {
+	core, index, err := scheduler.getCore()
+	if err != nil {
+		return err
+	}
+	common.LogDebug(common.Initialization, "Start new FlowFunction or clone for", ff.name, "at", core, "core")
+	ff.clone = append(ff.clone, &clonePair{index, nil, 1})
+	ff.cloneNumber++
+	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
+		ff.clone[ff.cloneNumber-1].channel = make(chan int)
+	}
 	go func() {
 		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
 			if err := low.SetAffinity(core); err != nil {
 				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 			}
 			if ff.fType == segmentCopy || ff.fType == fastGenerate {
-				ff.channel = make(chan int)
-				ff.cloneFunction(ff.Parameters, ff.channel, ff.report, cloneContext(ff.context))
+				ff.cloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel, ff.report, cloneContext(ff.context))
 			} else {
-				ff.uncloneFunction(ff.Parameters)
+				ff.uncloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel)
 			}
 		} else {
-			ff.cFunction(ff.Parameters, &stopFlag, core)
+			ff.cFunction(ff.Parameters, &ff.clone[ff.cloneNumber-1].flag, core)
 		}
 	}()
 	return nil
+}
+
+func (scheduler *scheduler) stopFF(ff *flowFunction) {
+	atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, 0)
+	if ff.clone[ff.cloneNumber-1].channel != nil {
+		ff.clone[ff.cloneNumber-1].channel <- -1
+	} else {
+		atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, 0)
+	}
+	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
+	ff.clone = ff.clone[:len(ff.clone)-1]
+	ff.cloneNumber--
+}
+
+func (scheduler *scheduler) systemStop() {
+	atomic.StoreInt32(&scheduler.stopFlag, 0)
+	for i := range scheduler.ff {
+		for scheduler.ff[i].cloneNumber != 0 {
+			scheduler.stopFF(scheduler.ff[i])
+		}
+	}
+	scheduler.setCoreByIndex(0) // scheduler
+	if scheduler.stopDedicatedCore {
+		scheduler.setCoreByIndex(1) // stop
+	}
+	scheduler.ff = nil
+	scheduler.ffCount = 0
 }
 
 // Main loop after framework was started
@@ -210,7 +242,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 	tick := time.Tick(time.Duration(scheduler.checkTime) * time.Millisecond)
 	debugTick := time.Tick(time.Duration(scheduler.debugTime) * time.Millisecond)
 	checkRequired := false
-	for {
+	for atomic.LoadInt32(&scheduler.stopFlag) != 0 {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
 		select {
 		case <-tick:
@@ -242,14 +274,14 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			// Firstly we check removing clones. We can remove one clone if:
 			// 1. flow function has clones
 			// 2. scheduler removing is switched on
-			if (ff.cloneNumber != 0) && (scheduler.offRemove == false) {
+			if (ff.cloneNumber > 1) && (scheduler.offRemove == false) {
 				switch ff.fType {
 				case segmentCopy:
 					// 3. current speed of flow function is lower, than saved speed with less number of clones
 					if ff.currentSpeed < speedDelta*ff.previousSpeed[ff.cloneNumber-1] {
 						// Save current speed as speed of flow function with this number of clones before removing
 						ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
-						scheduler.removeClone(ff)
+						scheduler.stopFF(ff)
 						ff.updatePause(ff.cloneNumber)
 						// After removing a clone we don't want to try to add clone immediately
 						continue
@@ -261,7 +293,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					if speedPKTS > 1.1*targetSpeed {
 						// 4. TODO strange heuristic, it is required to check this
 						if targetSpeed/float64(ff.cloneNumber+1)*float64(ff.cloneNumber) > speedPKTS {
-							scheduler.removeClone(ff)
+							scheduler.stopFF(ff)
 							ff.updatePause(0)
 							continue
 						} else {
@@ -281,7 +313,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					recC = low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port)
 					// TODO "5" and "39" constants below derived empirically. Need to investigate more elegant thresholds.
 					if recC < 5 {
-						scheduler.removeClone(ff)
+						scheduler.stopFF(ff)
 						low.DecreaseRSS((ff.Parameters.(*receiveParameters)).port)
 						continue
 					}
@@ -299,9 +331,11 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						(ff.previousSpeed[ff.cloneNumber+1] == 0 || ff.previousSpeed[ff.cloneNumber+1] > speedDelta*ff.currentSpeed) {
 						// Save current speed as speed of flow function with this number of clones before adding
 						ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
-						if scheduler.startClone(ff) == true {
+						if scheduler.startFF(ff) == nil {
 							// Add a pause to all clones. This pause depends on the number of clones.
 							ff.updatePause(ff.cloneNumber)
+						} else {
+							common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
 						}
 						continue
 					}
@@ -323,8 +357,11 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							ff.updatePause(int((1 - generatePauseStep) * float64(ff.pause)))
 						} else {
 							// 3. there is no pause
-							scheduler.startClone(ff)
-							ff.updatePause(0)
+							if scheduler.startFF(ff) == nil {
+								ff.updatePause(0)
+							} else {
+								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
+							}
 							continue
 						}
 					}
@@ -334,7 +371,9 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					}
 					if recC > 39 && ff.checkOutputRing() <= scheduler.maxPacketsToClone {
 						if low.IncreaseRSS((ff.Parameters.(*receiveParameters)).port) {
-							scheduler.startClone(ff)
+							if scheduler.startFF(ff) != nil {
+								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
+							}
 						}
 					}
 				case other, sendReceiveKNI:
@@ -344,46 +383,6 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		checkRequired = false
 		runtime.Gosched()
 	}
-}
-
-func (scheduler *scheduler) startClone(ff *flowFunction) bool {
-	index := scheduler.getCoreIndex()
-	if index == -1 {
-		common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
-		return false
-	}
-	core := scheduler.cores[index].id
-	cp := new(clonePair)
-	cp.index = index
-	if ff.fType == segmentCopy || ff.fType == fastGenerate {
-		cp.channel = make(chan int)
-	}
-	cp.flag = 1
-	ff.clone = append(ff.clone, cp)
-	ff.cloneNumber++
-	go func() {
-		if ff.fType == segmentCopy || ff.fType == fastGenerate {
-			err := low.SetAffinity(core)
-			if err != nil {
-				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
-			}
-			ff.cloneFunction(ff.Parameters, cp.channel, ff.report, cloneContext(ff.context))
-		} else {
-			ff.cFunction(ff.Parameters, &cp.flag, core)
-		}
-	}()
-	return true
-}
-
-func (scheduler *scheduler) removeClone(ff *flowFunction) {
-	if ff.fType == segmentCopy || ff.fType == fastGenerate {
-		ff.clone[ff.cloneNumber-1].channel <- -1
-	} else {
-		ff.clone[ff.cloneNumber-1].flag = 0
-	}
-	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
-	ff.clone = ff.clone[:len(ff.clone)-1]
-	ff.cloneNumber--
 }
 
 func cloneContext(ctx *[]UserContext) []UserContext {
@@ -401,7 +400,6 @@ func cloneContext(ctx *[]UserContext) []UserContext {
 
 func (ff *flowFunction) updatePause(pause int) {
 	ff.pause = pause
-	ff.channel <- ff.pause
 	for j := 0; j < ff.cloneNumber; j++ {
 		ff.clone[j].channel <- ff.pause
 	}
@@ -435,11 +433,11 @@ func (ff *flowFunction) updateCurrentSpeed() {
 	// Gather and sum current speeds from all clones of current flow function
 	// Flow function itself and all clones put their speeds in one channel
 	currentSpeed := uint64(0)
-	t := len(ff.report) - ff.cloneNumber - 1
+	t := len(ff.report) - ff.cloneNumber
 	for k := 0; k < t; k++ {
 		<-ff.report
 	}
-	for k := 0; k < ff.cloneNumber+1; k++ {
+	for k := 0; k < ff.cloneNumber; k++ {
 		currentSpeed += <-ff.report
 	}
 	ff.currentSpeed = float64(currentSpeed)
@@ -450,23 +448,15 @@ func (scheduler *scheduler) setCoreByIndex(i int) {
 	scheduler.usedCores--
 }
 
-func (scheduler *scheduler) getCoreIndex() int {
+func (scheduler *scheduler) getCore() (int, int, error) {
 	for i := range scheduler.cores {
 		if scheduler.cores[i].isfree == true {
 			scheduler.cores[i].isfree = false
 			scheduler.usedCores++
-			return i
+			return scheduler.cores[i].id, i, nil
 		}
 	}
-	return -1
-}
-
-func (scheduler *scheduler) getCore() (int, error) {
-	index := scheduler.getCoreIndex()
-	if index == -1 {
-		return 0, common.WrapWithNFError(nil, "Requested number of cores isn't enough. System needs at least one core per each Set function (except Merger and Stopper) plus one additional core.", common.NotEnoughCores)
-	}
-	return scheduler.cores[index].id, nil
+	return 0, 0, common.WrapWithNFError(nil, "Requested number of cores isn't enough.", common.NotEnoughCores)
 }
 
 func (ff *flowFunction) checkInputRing() (n uint32) {
