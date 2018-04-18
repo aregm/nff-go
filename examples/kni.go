@@ -1,4 +1,4 @@
-// Call insmod ./dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/rte_kni.ko lo_mode=lo_mode_fifo_skb
+// Call insmod ./x86_64-native-linuxapp-gcc/kmod/rte_kni.ko lo_mode=lo_mode_fifo_skb from DPDK directory
 // before this. It will make a loop of packets inside KNI device and "send" will send received packets.
 // Other variants of rte_kni.ko configuration can be found here:
 // http://dpdk.org/doc/guides/sample_app_ug/kernel_nic_interface.html
