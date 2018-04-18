@@ -19,6 +19,10 @@
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
+#define process 1
+#define stopRequest 2
+#define wasStopped 9
+
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
@@ -294,8 +298,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 	death_row.cnt = 0; // DPDK doesn't initialize this field. It is probably a bug.
 	struct rte_mbuf *temp;
 #endif
-	// Run until the application is quit. Recv can't be stopped now.
-	while (*flag == 1) {
+	while (*flag == process) {
 		// Get RX packets from port
 		if (queue != -1) {
 			rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
@@ -351,6 +354,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 		receive_pushed += pushed_pkts_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
 void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
@@ -359,8 +363,7 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, volatile
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
-	// Run until the application is quit. Send can't be stopped now.
-	while (*flag == 1) {
+	while (*flag == process) {
 		// Get packets for TX from ring
 		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
@@ -384,6 +387,7 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, volatile
 		send_sent += tx_pkts_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
 void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
@@ -391,8 +395,9 @@ void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
-	// Run until the application is quit. Stop can't be stopped now.
-	while (*flag == 1) {
+	// Flag is used for both scheduler and stop.
+	// stopRequest will stop scheduler and this loop will stop with stopRequest+1
+	while (*flag == process || *flag == stopRequest) {
 		// Get packets for freeing from ring
 		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
@@ -408,6 +413,7 @@ void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 		stop_freed += pkts_for_free_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
 void directStop(int pkts_for_free_number, struct rte_mbuf **bufs) {

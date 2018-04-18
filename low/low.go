@@ -492,7 +492,6 @@ func FreeMempools() {
 }
 
 func StopPort(port uint8) {
-	// TODO check that receive and send are stopped
 	C.rte_eth_dev_stop(C.uint16_t(port))
 }
 

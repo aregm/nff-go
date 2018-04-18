@@ -456,8 +456,6 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
-	// Init low performance mempool
-	packet.SetNonPerfMempool(low.CreateMempool())
 	for i := 0; i < 10; i++ {
 		for j := 0; j < burstSize; j++ {
 			vEach[i][j] = uint8(i)
@@ -490,6 +488,8 @@ func SystemStart() error {
 	time.Sleep(time.Second * 2)
 
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
+	// Init low performance mempool
+	packet.SetNonPerfMempool(low.CreateMempool())
 	if err := schedState.systemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
@@ -888,7 +888,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 	return nil
 }
 
-func segmentProcess(parameters interface{}, stopper chan int, report chan uint64, context []UserContext) {
+func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
 	// For scalar and vector parts
 	lp := parameters.(*segmentParameters)
 	IN := lp.in
@@ -920,17 +920,15 @@ func segmentProcess(parameters interface{}, stopper chan int, report chan uint64
 
 	for {
 		select {
-		case pause = <-stopper:
+		case pause = <-stopper[0]:
 			if pause == -1 {
 				// It is time to close this clone
-				close(stopper)
 				for i := range context {
 					if context[i] != nil {
 						context[i].Delete()
 					}
 				}
-				// We don't close report channel because all clones of one function use it.
-				// As one function entity will be working endlessly we don't close it anywhere.
+				stopper[1] <- 1
 				return
 			}
 		case <-tick:
@@ -1016,15 +1014,15 @@ func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	low.Receive(uint8(srp.port.PortId), -1, srp.out, flag, coreID)
 }
 
-func generateOne(parameters interface{}, stopper chan int) {
+func generateOne(parameters interface{}, stopper [2]chan int) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
 	for {
 		select {
-		case <-stopper:
+		case <-stopper[0]:
 			// It is time to close this clone
-			close(stopper)
+			stopper[1] <- 1
 			return
 		default:
 			tempPacket, err := packet.NewPacket()
@@ -1037,7 +1035,7 @@ func generateOne(parameters interface{}, stopper chan int) {
 	}
 }
 
-func generatePerf(parameters interface{}, stopper chan int, report chan uint64, context []UserContext) {
+func generatePerf(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
@@ -1051,18 +1049,15 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 	var currentSpeed uint64
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
-
 	for {
 		select {
-		case pause = <-stopper:
+		case pause = <-stopper[0]:
 			if pause == -1 {
 				// It is time to close this clone
-				close(stopper)
 				if context[0] != nil {
 					context[0].Delete()
 				}
-				// We don't close report channel because all clones of one function use it.
-				// As one function entity will be working endlessly we don't close it anywhere.
+				stopper[1] <- 1
 				return
 			}
 		case <-tick:
@@ -1098,7 +1093,7 @@ func generatePerf(parameters interface{}, stopper chan int, report chan uint64, 
 }
 
 // TODO reassembled packets are not supported
-func pcopy(parameters interface{}, stopper chan int, report chan uint64, context []UserContext) {
+func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
 	cp := parameters.(*copyParameters)
 	IN := cp.in
 	OUT := cp.out
@@ -1115,12 +1110,10 @@ func pcopy(parameters interface{}, stopper chan int, report chan uint64, context
 
 	for {
 		select {
-		case pause = <-stopper:
+		case pause = <-stopper[0]:
 			if pause == -1 {
-				// It is time to close this clone
-				close(stopper)
-				// We don't close report channel because all clones of one function use it.
-				// As one function entity will be working endlessly we don't close it anywhere.
+				// It is time to remove this clone
+				stopper[1] <- 1
 				return
 			}
 		case <-tick:
@@ -1255,7 +1248,7 @@ func vConstructSlice(packets []*packet.Packet, mask *[burstSize]bool, answers *[
 	answers[0] = uint8(ve.bufIndex)
 }
 
-func write(parameters interface{}, stopper chan int) {
+func write(parameters interface{}, stopper [2]chan int) {
 	wp := parameters.(*writeParameters)
 	IN := wp.in
 	filename := wp.filename
@@ -1275,9 +1268,9 @@ func write(parameters interface{}, stopper chan int) {
 	}
 	for {
 		select {
-		case <-stopper:
+		case <-stopper[0]:
 			// It is time to close this clone
-			close(stopper)
+			stopper[1] <- 1
 			return
 		default:
 			n := IN.DequeueBurst(bufIn, 1)
@@ -1294,7 +1287,7 @@ func write(parameters interface{}, stopper chan int) {
 	}
 }
 
-func read(parameters interface{}, stopper chan int) {
+func read(parameters interface{}, stopper [2]chan int) {
 	rp := parameters.(*readParameters)
 	OUT := rp.out
 	filename := rp.filename
@@ -1316,9 +1309,9 @@ func read(parameters interface{}, stopper chan int) {
 
 	for {
 		select {
-		case <-stopper:
+		case <-stopper[0]:
 			// It is time to close this clone
-			close(stopper)
+			stopper[1] <- 1
 			return
 		default:
 			tempPacket, err := packet.NewPacket()
