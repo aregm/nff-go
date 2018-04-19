@@ -34,11 +34,17 @@ import (
 const speedDelta = 1
 const generatePauseStep = 0.1
 
+// These consts are used for freeing resources.
+// They are NOT pass to
+const process = 1
+const stopRequest = 2
+const wasStopped = 9
+
 // Clones of flow functions. They are determined
 // by their core and their stopper channel
 type clonePair struct {
 	index   int
-	channel chan int
+	channel [2]chan int
 	flag    int32
 }
 
@@ -49,8 +55,8 @@ type UserContext interface {
 }
 
 // Function types which are used inside flow functions
-type uncloneFlowFunction func(interface{}, chan int)
-type cloneFlowFunction func(interface{}, chan int, chan uint64, []UserContext)
+type uncloneFlowFunction func(interface{}, [2]chan int)
+type cloneFlowFunction func(interface{}, [2]chan int, chan uint64, []UserContext)
 type cFlowFunction func(interface{}, *int32, int)
 
 type ffType int
@@ -152,7 +158,7 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
 }
 
 func (scheduler *scheduler) systemStart() (err error) {
-	scheduler.stopFlag = 1
+	scheduler.stopFlag = process
 	var core int
 	if core, _, err = scheduler.getCore(); err != nil {
 		return err
@@ -188,10 +194,11 @@ func (scheduler *scheduler) startFF(ff *flowFunction) (err error) {
 		return err
 	}
 	common.LogDebug(common.Initialization, "Start new FlowFunction or clone for", ff.name, "at", core, "core")
-	ff.clone = append(ff.clone, &clonePair{index, nil, 1})
+	ff.clone = append(ff.clone, &clonePair{index, [2]chan int{nil, nil}, process})
 	ff.cloneNumber++
 	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
-		ff.clone[ff.cloneNumber-1].channel = make(chan int)
+		ff.clone[ff.cloneNumber-1].channel[0] = make(chan int)
+		ff.clone[ff.cloneNumber-1].channel[1] = make(chan int)
 	}
 	go func() {
 		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
@@ -211,11 +218,15 @@ func (scheduler *scheduler) startFF(ff *flowFunction) (err error) {
 }
 
 func (scheduler *scheduler) stopFF(ff *flowFunction) {
-	atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, 0)
-	if ff.clone[ff.cloneNumber-1].channel != nil {
-		ff.clone[ff.cloneNumber-1].channel <- -1
+	if ff.clone[ff.cloneNumber-1].channel[0] != nil {
+		ff.clone[ff.cloneNumber-1].channel[0] <- -1
+		<-ff.clone[ff.cloneNumber-1].channel[1]
+		close(ff.clone[ff.cloneNumber-1].channel[0])
+		close(ff.clone[ff.cloneNumber-1].channel[1])
 	} else {
-		atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, 0)
+		atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, stopRequest)
+		for atomic.LoadInt32(&ff.clone[ff.cloneNumber-1].flag) != wasStopped {
+		}
 	}
 	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
 	ff.clone = ff.clone[:len(ff.clone)-1]
@@ -223,10 +234,16 @@ func (scheduler *scheduler) stopFF(ff *flowFunction) {
 }
 
 func (scheduler *scheduler) systemStop() {
-	atomic.StoreInt32(&scheduler.stopFlag, 0)
+	atomic.StoreInt32(&scheduler.stopFlag, stopRequest)
+	for atomic.LoadInt32(&scheduler.stopFlag) != wasStopped {
+		// We need to wait because scheduler can sleep at this moment
+	}
 	for i := range scheduler.ff {
 		for scheduler.ff[i].cloneNumber != 0 {
 			scheduler.stopFF(scheduler.ff[i])
+		}
+		if scheduler.ff[i].report != nil {
+			close(scheduler.ff[i].report)
 		}
 	}
 	scheduler.setCoreByIndex(0) // scheduler
@@ -242,7 +259,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 	tick := time.Tick(time.Duration(scheduler.checkTime) * time.Millisecond)
 	debugTick := time.Tick(time.Duration(scheduler.debugTime) * time.Millisecond)
 	checkRequired := false
-	for atomic.LoadInt32(&scheduler.stopFlag) != 0 {
+	for atomic.LoadInt32(&scheduler.stopFlag) == process {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
 		select {
 		case <-tick:
@@ -383,6 +400,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		checkRequired = false
 		runtime.Gosched()
 	}
+	atomic.StoreInt32(&scheduler.stopFlag, stopRequest + 1)
 }
 
 func cloneContext(ctx *[]UserContext) []UserContext {
@@ -401,7 +419,7 @@ func cloneContext(ctx *[]UserContext) []UserContext {
 func (ff *flowFunction) updatePause(pause int) {
 	ff.pause = pause
 	for j := 0; j < ff.cloneNumber; j++ {
-		ff.clone[j].channel <- ff.pause
+		ff.clone[j].channel[0] <- ff.pause
 	}
 }
 

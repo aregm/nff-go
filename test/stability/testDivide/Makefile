@@ -11,6 +11,6 @@ all:
 
 # We can't test them together because our system won't stop handlers between tests
 testing:
-	go test divide_test.go testDivide.go
+	go test
 
 include $(PATH_TO_MK)/leaf.mk
