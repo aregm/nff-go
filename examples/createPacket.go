@@ -38,7 +38,7 @@ func main() {
 		flow.CheckFatal(err)
 	}
 	// Send all generated packets to the output
-	flow.CheckFatal(flow.SetSender(firstFlow, uint8(1)))
+	flow.CheckFatal(flow.SetSender(firstFlow, 1))
 	flow.CheckFatal(flow.SystemStart())
 }
 

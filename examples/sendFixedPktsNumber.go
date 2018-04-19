@@ -14,20 +14,17 @@ import (
 )
 
 var totalPackets int64
-var packetSize uint
-var outport uint
 var count int64
-
-// Total packet size is 14+20+20+payload_size+4(crc)
 var payloadSize uint
-var hdrsSize uint = 14 + 20 + 20 + 4
 
 func main() {
 	flag.Int64Var(&totalPackets, "totalPackets", 1234, "Number of packets to send")
-	flag.UintVar(&packetSize, "packetSize", 128, "Size of generated packet")
-	flag.UintVar(&outport, "outport", 0, "port for sender")
+	packetSize := *flag.Uint("packetSize", 128, "Size of generated packet")
+	outport := uint16(*flag.Uint("outport", 0, "port for sender"))
 	flag.Parse()
 
+	// Total packet size is 14+20+20+payload_size+4(crc)
+	hdrsSize := uint(14 + 20 + 20 + 4)
 	payloadSize = packetSize - hdrsSize
 
 	// Initialize NFF-GO library at 16 cores by default
@@ -45,8 +42,8 @@ func main() {
 	flow.CheckFatal(err)
 
 	// Send all generated packets to the output
-	flow.CheckFatal(flow.SetSender(f1, uint8(outport)))
-	flow.CheckFatal(flow.SetSender(f2, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(f1, outport))
+	flow.CheckFatal(flow.SetSender(f2, outport))
 
 	flow.CheckFatal(flow.SystemStart())
 }

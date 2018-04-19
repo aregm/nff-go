@@ -53,7 +53,7 @@ type portMapEntry struct {
 
 // Type describing a network port
 type ipv4Port struct {
-	Index         uint8      `json:"index"`
+	Index         uint16      `json:"index"`
 	DstMACAddress macAddress `json:"dst-mac"`
 	Subnet        ipv4Subnet `json:"subnet"`
 	Vlan          uint16     `json:"vlan-tag"`

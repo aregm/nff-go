@@ -10,16 +10,13 @@ import (
 	"github.com/intel-go/nff-go/flow"
 )
 
-var inport, outport uint
-var cores string
-
 // This is a test for pure send/receive performance measurements. No
 // other functions used here.
 func main() {
-	flag.UintVar(&inport, "inport", 0, "Input port number")
-	flag.UintVar(&outport, "outport", 0, "Output port number")
-	flag.StringVar(&cores, "cores", "", "Specifies CPU cores to be used by NFF-GO library")
-	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	inport := uint16(*flag.Uint("inport", 0, "Input port number"))
+	outport := uint16(*flag.Uint("outport", 0, "Output port number"))
+	cores := *flag.String("cores", "", "Specifies CPU cores to be used by NFF-GO library")
+	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Initialize NFF-GO library
@@ -30,10 +27,10 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from input port. One queue will be added automatically.
-	f, err := flow.SetReceiver(uint8(inport))
+	f, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSender(f, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(f, outport))
 
 	flow.CheckFatal(flow.SystemStart())
 }

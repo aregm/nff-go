@@ -11,26 +11,15 @@ import (
 	"github.com/intel-go/nff-go/packet"
 )
 
-var (
-	inFile  string
-	outFile string
-
-	outport  uint
-	repcount int
-
-	useReader bool
-	useWriter bool
-)
-
 func main() {
-	flag.StringVar(&inFile, "infile", "fileReadWriteIn.pcap", "Input pcap file")
-	flag.StringVar(&outFile, "outfile", "fileReadWriteOut.pcap", "Output pcap file")
+	inFile := *flag.String("infile", "fileReadWriteIn.pcap", "Input pcap file")
+	outFile := *flag.String("outfile", "fileReadWriteOut.pcap", "Output pcap file")
 
-	flag.BoolVar(&useReader, "reader", false, "Enable Reader")
-	flag.BoolVar(&useWriter, "writer", false, "Enable Writer")
+	useReader := *flag.Bool("reader", false, "Enable Reader")
+	useWriter := *flag.Bool("writer", false, "Enable Writer")
 
-	flag.IntVar(&repcount, "repcnt", 1, "Number of times for reader to read infile")
-	flag.UintVar(&outport, "outport", 0, "Port for sender")
+	repcount := *flag.Int("repcnt", 1, "Number of times for reader to read infile")
+	outport := uint16(*flag.Uint("outport", 0, "Port for sender"))
 	flag.Parse()
 
 	// Initialize NFF-GO library at 16 cores by default
@@ -53,7 +42,7 @@ func main() {
 		flow.CheckFatal(flow.SetSenderFile(f1, outFile))
 	} else {
 		println("Send to port", outport)
-		flow.CheckFatal(flow.SetSender(f1, uint8(outport)))
+		flow.CheckFatal(flow.SetSender(f1, uint16(outport)))
 	}
 
 	flow.CheckFatal(flow.SystemStart())

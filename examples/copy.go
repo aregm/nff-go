@@ -14,14 +14,14 @@ func main() {
 	// Initialize NFF-GO library at 15 cores by default
 	flow.CheckFatal(flow.SystemInit(&config))
 
-	a, err := flow.SetReceiver(uint8(0))
+	a, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)
 
 	b, err := flow.SetCopier(a)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSender(a, uint8(1)))
-	flow.CheckFatal(flow.SetSender(b, uint8(2)))
+	flow.CheckFatal(flow.SetSender(a, 1))
+	flow.CheckFatal(flow.SetSender(b, 2))
 
 	flow.CheckFatal(flow.SystemStart())
 }

@@ -41,8 +41,6 @@ var (
 	// we received totalPackets number of pkts
 	exampleDoneEvent *sync.Cond
 
-	outPort int
-	inPort  int
 	// addresses imitating users sending non flood
 	// flooding user's addresses will be generated
 	goodAddresses = [goodDataListSize]uint32{packet.SwapBytesUint32(1235),
@@ -58,8 +56,8 @@ var (
 
 func main() {
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
-	flag.IntVar(&outPort, "outPort", 0, "port to send")
-	flag.IntVar(&inPort, "inPort", 0, "port to receive")
+	outPort := uint16(*flag.Uint("outPort", 0, "port to send"))
+	inPort := uint16(*flag.Uint("inPort", 0, "port to receive"))
 	flag.Uint64Var(&totalPackets, "totalPackets", 100000000, "finish work when total number of packets received")
 	flag.Parse()
 	// Init NFF-GO system at requested number of cores.
@@ -73,8 +71,8 @@ func main() {
 	// Create first packet flow
 	outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
 	flow.CheckFatal(err)
-	flow.CheckFatal(flow.SetSender(outputFlow, uint8(outPort)))
-	inputFlow, err := flow.SetReceiver(uint8(inPort))
+	flow.CheckFatal(flow.SetSender(outputFlow, outPort))
+	inputFlow, err := flow.SetReceiver(inPort)
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetHandler(inputFlow, checkInputFlow, nil))
 	flow.CheckFatal(flow.SetStopper(inputFlow))

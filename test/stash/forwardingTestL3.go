@@ -31,9 +31,8 @@ import (
 var l3Rules *packet.L3Rules
 
 func main() {
-	var mode string
 	var err error
-	flag.StringVar(&mode, "mode", "orig", "Format of rules file")
+	mode := *flag.String("mode", "orig", "Format of rules file")
 	flag.Parse()
 
 	// Initialize NFF-GO library at 16 available cores
@@ -53,9 +52,9 @@ func main() {
 	}
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow0, err := flow.SetReceiver(uint8(0))
+	firstFlow0, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)
-	firstFlow1, err := flow.SetReceiver(uint8(1))
+	firstFlow1, err := flow.SetReceiver(1)
 	flow.CheckFatal(err)
 
 	// Merge flows with TCP and UDP packets
@@ -68,10 +67,10 @@ func main() {
 
 	// Send each flow to corresponding port
 	// It is test. So we don't stop "0" packets, we count them as others.
-	flow.CheckFatal(flow.SetSender(Flows[0], uint8(0)))
-	flow.CheckFatal(flow.SetSender(Flows[1], uint8(1)))
-	flow.CheckFatal(flow.SetSender(Flows[2], uint8(2)))
-	flow.CheckFatal(flow.SetSender(Flows[3], uint8(3)))
+	flow.CheckFatal(flow.SetSender(Flows[0], 0))
+	flow.CheckFatal(flow.SetSender(Flows[1], 1))
+	flow.CheckFatal(flow.SetSender(Flows[2], 2))
+	flow.CheckFatal(flow.SetSender(Flows[3], 3))
 
 	flow.CheckFatal(flow.SystemStart())
 }

@@ -13,22 +13,17 @@ import (
 
 var (
 	load        uint
-	mode        uint
-	inport      uint
-	outport1    uint
-	outport2    uint
-	noscheduler bool
 )
 
 func main() {
 	var err error
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
-	flag.UintVar(&mode, "mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
-	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
-	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	mode := *flag.Uint("mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
+	outport1 := uint16(*flag.Uint("outport1", 1, "port for 1st sender"))
+	outport2 := uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
+	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Initialize NFF-GO library
@@ -42,7 +37,7 @@ func main() {
 	var afterFlow *flow.Flow
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow, err := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	if mode > 10 {
@@ -77,8 +72,8 @@ func main() {
 	flow.CheckFatal(err)
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	flow.CheckFatal(flow.SetSender(afterFlow, uint8(outport1)))
-	flow.CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(afterFlow, outport1))
+	flow.CheckFatal(flow.SetSender(secondFlow, outport2))
 
 	flow.CheckFatal(flow.SystemStart())
 }

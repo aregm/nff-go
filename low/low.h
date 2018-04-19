@@ -75,7 +75,7 @@ static int kni_config_network_interface(uint16_t port_id, uint8_t if_up);
 uint32_t BURST_SIZE;
 
 struct cPort {
-	uint8_t PortId;
+	uint16_t PortId;
 	uint8_t QueuesNumber;
 };
 
@@ -91,7 +91,7 @@ void setAffinity(int coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
-void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf_pool) {
+void create_kni(uint16_t port, uint8_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
@@ -100,7 +100,7 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	memset(&conf_default, 0, sizeof(conf_default));
 	snprintf(conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
 	conf_default.core_id = core; // Core ID to bind kernel thread on
-	conf_default.group_id = (uint16_t)port;
+	conf_default.group_id = port;
 	conf_default.mbuf_size = 2048;
 	conf_default.addr = dev_info.pci_dev->addr;
 	conf_default.id = dev_info.pci_dev->id;
@@ -285,7 +285,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void nff_go_recv(uint16_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -357,7 +357,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];

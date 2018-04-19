@@ -22,14 +22,14 @@ func main() {
 
 	flow.CheckFatal(flow.SystemInit(&config))
 	// (port of device, core (not from NFF-GO set) which will handle device, name of device)
-	kni := flow.CreateKniDevice(1, 20, "myKNI")
+	kni := flow.CreateKniDevice(0, 20, "myKNI")
 
-	fromEthFlow, err := flow.SetReceiver(uint8(0))
+	fromEthFlow, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetSenderKNI(fromEthFlow, kni))
 
 	fromKNIFlow := flow.SetReceiverKNI(kni)
-	flow.CheckFatal(flow.SetSender(fromKNIFlow, uint8(1)))
+	flow.CheckFatal(flow.SetSender(fromKNIFlow, 1))
 
 	flow.CheckFatal(flow.SystemStart())
 }

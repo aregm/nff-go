@@ -15,15 +15,12 @@ import (
 )
 
 var (
-	outport uint
-	inport  uint
-
 	cloneNumber uint
 )
 
 func main() {
-	flag.UintVar(&outport, "outport", 1, "port for sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
 	flag.Parse()
 
 	// Initialize NFF-GO library at 10 available cores
@@ -33,14 +30,14 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue will be added automatically.
-	f1, err := flow.SetReceiver(uint8(inport))
+	f1, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	var pdp pcapdumperParameters
 	flow.CheckFatal(flow.SetHandler(f1, pcapdumper, &pdp))
 
 	// Send packets to control speed. One queue will be added automatically.
-	flow.CheckFatal(flow.SetSender(f1, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(f1, outport))
 
 	flow.CheckFatal(flow.SystemStart())
 }

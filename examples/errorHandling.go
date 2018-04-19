@@ -62,12 +62,12 @@ func main() {
 	fmt.Printf("error from SetReceiver was: %+v\n", err)
 	if common.GetNFErrorCode(err) == common.BadArgument {
 		fmt.Printf("changing port type\n")
-		inputFlow, err = flow.SetReceiver(uint8(0))
+		inputFlow, err = flow.SetReceiver(0)
 		CheckFatal(err)
 	}
 
 	// Split packet flow based on ACL.
-	flowsNumber := 2
+	flowsNumber := uint16(2)
 	outputFlows, err := flow.SetSplitter(nil, l3Splitter, uint(flowsNumber), nil)
 	fmt.Printf("error from SetSplitter was: %+v\n", err)
 	if common.GetNFErrorCode(err) == common.UseNilFlowErr {
@@ -80,8 +80,8 @@ func main() {
 	CheckFatal(flow.SetStopper(outputFlows[0]))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
-	for i := 1; i < flowsNumber; i++ {
-		CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
+	for i := uint16(1); i < flowsNumber; i++ {
+		CheckFatal(flow.SetSender(outputFlows[i], i-1))
 	}
 
 	// Begin to process packets.
