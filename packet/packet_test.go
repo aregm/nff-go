@@ -586,3 +586,70 @@ func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	}
 
 }
+
+func TestGetPacketPayload(t *testing.T) {
+	// Test packets resources: http://wiresharkbook.com/studyguide.html
+	// and https://wiki.wireshark.org/SampleCaptures
+	table := []plTest{
+		{
+			name:    "IPv4-TCP",
+			header:  "00015c31bbc1d48564a7bfa308004500003417244000800600001806addc45abe427fe61005018a91ba50000000080022000efdb0000020405b40103030201010402",
+			payload: "",
+			status:  true,
+		},
+		{
+			name:    "IPv6-UDP",
+			header:  "333300010003001b9e70104286dd60000000001e1101fe80000000000000ddbbe7d2c6d4a0f5ff020000000000000000000000010003f43b14eb001e4748",
+			payload: "a4b600000001000000000000044461647a0000010001",
+			status:  true,
+		},
+		{
+			name:    "IPv4-UDP",
+			header:  "00015c31bbc1d48564a7bfa308004500003e17210000801100001806addc44574cb6ed9b0035002a572b",
+			payload: "dac301000001000000000000037777770866616365626f6f6b03636f6d0000010001",
+			status:  true,
+		},
+		{
+			name:    "IPv4-ICMP",
+			header:  "00901a4277100018ded027d708004500005c6085000008013d755065ed55985b3e910800f7e800010016",
+			payload: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			status:  true,
+		},
+		{
+			name:    "ICMPv6 (unsupported)",
+			header:  "3333ffc8e5c80018ded027d786dd6000000000183aff00000000000000000000000000000000ff0200000000000000000001ffc8e5c887008de800000000fe8000000000000085edbc2edfc8e5c8",
+			payload: "",
+			status:  false,
+		},
+		{
+			name:    "IPv4-SCTP (unsupported)",
+			header:  "0800034a003500a080005e4608004500003009d94000ff8450e20a1c062c0a1c062b0b804000214415232bf2024e03000010280243450000200000000000",
+			payload: "",
+			status:  false,
+		},
+	}
+
+	for _, test := range table {
+		fullpacket := test.header + test.payload
+		buf, _ := hex.DecodeString(fullpacket)
+		pkt := getPacket()
+		GeneratePacketFromByte(pkt, buf)
+		pl, status := pkt.GetPacketPayload()
+
+		gtPl, _ := hex.DecodeString(test.payload)
+
+		if !reflect.DeepEqual(pl, gtPl) {
+			t.Errorf("Test %s: Incorrect payload:\ngot:  %x, \nwant: %x\n\n", test.name, pl, gtPl)
+		}
+		if status != test.status {
+			t.Errorf("Test %s: Incorrect status:\ngot:  %v, \nwant: %v\n\n", test.name, status, test.status)
+		}
+	}
+}
+
+type plTest struct {
+	name    string
+	header  string
+	payload string
+	status  bool
+}
