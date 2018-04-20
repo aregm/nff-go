@@ -13,4 +13,5 @@ COPY forwardingTestL3_ACL.conf .
 COPY forwardingTestL3_ACL.json .
 COPY sendback .
 COPY sendback.json .
-
+COPY linuxReorderTestReceive.go .
+COPY linuxReorderTestSend.go .
