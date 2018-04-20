@@ -16,17 +16,11 @@ import (
 	"github.com/intel-go/nff-go/packet"
 )
 
-var (
-	inport  uint
-	outport uint
-)
-
 func main() {
-	var noscheduler bool
-	flag.UintVar(&outport, "outport", 1, "port for sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
+	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	config := flow.Config{
@@ -35,11 +29,11 @@ func main() {
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
-	input, err := flow.SetReceiver(uint8(inport))
+	input, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
 	flow.CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
-	flow.CheckFatal(flow.SetSender(input, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(input, outport))
 
 	flow.CheckFatal(flow.SystemStart())
 }

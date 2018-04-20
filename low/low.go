@@ -55,9 +55,9 @@ var mbufNumberT uint
 var mbufCacheSizeT uint
 var usedMempools []*C.struct_rte_mempool
 
-func GetPort(n uint8) *Port {
+func GetPort(n uint16) *Port {
 	p := new(Port)
-	p.PortId = C.uint8_t(n)
+	p.PortId = C.uint16_t(n)
 	p.QueuesNumber = 1
 	return p
 }
@@ -75,7 +75,7 @@ func IncreaseRSS(p *Port) bool {
 }
 
 // GetPortMACAddress gets MAC address of given port.
-func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
+func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	var mac [common.EtherAddrLen]uint8
 	var cmac C.struct_ether_addr
 
@@ -437,21 +437,21 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // Receive - get packets and enqueue on a Ring.
-func Receive(port uint8, queue int16, OUT *Ring, flag *int32, coreID int) {
+func Receive(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_recv(C.uint8_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_recv(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint8, queue int16, IN *Ring, flag *int32, coreID int) {
+func Send(port uint16, queue int16, IN *Ring, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint8_t(port), C.int16_t(queue), IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
@@ -604,10 +604,10 @@ func ReportMempoolsState() {
 }
 
 // CreateKni creates a KNI device
-func CreateKni(portId uint8, core uint8, name string) {
+func CreateKni(portId uint16, core uint8, name string) {
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempool)
-	C.create_kni(C.uint8_t(portId), C.uint8_t(core), C.CString(name), mempool)
+	C.create_kni(C.uint16_t(portId), C.uint8_t(core), C.CString(name), mempool)
 }
 
 // CreateLPM creates LPM table

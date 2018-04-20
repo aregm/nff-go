@@ -112,11 +112,11 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 	if testScenario == 2 {
 		// Receive packets from 0 and 1 ports
-		inputFlow1, err := flow.SetReceiver(uint8(inport1))
+		inputFlow1, err := flow.SetReceiver(uint16(inport1))
 		if err != nil {
 			return err
 		}
-		inputFlow2, err := flow.SetReceiver(uint8(inport2))
+		inputFlow2, err := flow.SetReceiver(uint16(inport2))
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 		if err := flow.SetHandler(outputFlow, fixPackets, nil); err != nil {
 			return err
 		}
-		if err := flow.SetSender(outputFlow, uint8(outport1)); err != nil {
+		if err := flow.SetSender(outputFlow, uint16(outport1)); err != nil {
 			return err
 		}
 
@@ -153,14 +153,14 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
-			if err := flow.SetSender(firstFlow, uint8(outport1)); err != nil {
+			if err := flow.SetSender(firstFlow, uint16(outport1)); err != nil {
 				return err
 			}
-			if err := flow.SetSender(secondFlow, uint8(outport2)); err != nil {
+			if err := flow.SetSender(secondFlow, uint16(outport2)); err != nil {
 				return err
 			}
 			// Create receiving flow and set a checking function for it
-			finalFlow, err = flow.SetReceiver(uint8(inport1))
+			finalFlow, err = flow.SetReceiver(uint16(inport1))
 			if err != nil {
 				return err
 			}

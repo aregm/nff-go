@@ -12,16 +12,10 @@ import (
 	"github.com/intel-go/nff-go/packet"
 )
 
-var (
-	outport uint
-	inport  uint
-)
-
-
 func main() {
 	dumptype := flag.Uint("dumptype", 0, "dumping format type (0 - dumper function, 1 - hex, 2 - pcap file)")
-	flag.UintVar(&outport, "outport", 1, "port for sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
+	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
 	flag.Parse()
 
 	// Initialize NFF-GO library at 10 available cores
@@ -31,7 +25,7 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow, err := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	// Separate each 50000000th packet for dumping
@@ -57,7 +51,7 @@ func main() {
 		output, err = flow.SetMerger(firstFlow, secondFlow)
 		flow.CheckFatal(err)
 	}
-	flow.CheckFatal(flow.SetSender(output, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(output, outport))
 
 	flow.CheckFatal(flow.SystemStart())
 }

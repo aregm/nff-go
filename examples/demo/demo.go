@@ -16,19 +16,15 @@ var (
 	l2Rules *packet.L2Rules
 	l3Rules *packet.L3Rules
 	load    uint
-
-	inport   uint
-	outport1 uint
-	outport2 uint
 )
 
 
 func main() {
 	var err error
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
-	flag.UintVar(&outport2, "outport2", 2, "port for 2nd sender")
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
+	outport1 := uint16(*flag.Uint("outport1", 1, "port for 1st sender"))
+	outport2 := uint16(*flag.Uint("outport2", 2, "port for 2nd sender"))
 	flag.Parse()
 
 	// Initialize NFF-GO library at 16 cores by default
@@ -45,7 +41,7 @@ func main() {
 	go updateSeparateRules()
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow, err := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	// Separate packets for additional flow due to some rules
@@ -56,8 +52,8 @@ func main() {
 	flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	flow.CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
-	flow.CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, outport1))
+	flow.CheckFatal(flow.SetSender(secondFlow, outport2))
 
 	flow.CheckFatal(flow.SystemStart())
 }

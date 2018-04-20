@@ -70,10 +70,10 @@ var (
 	// During timeout packets are skipped and not counted
 	T = 10 * time.Second
 
-	outport1     uint
-	outport2     uint
-	inport1      uint
-	inport2      uint
+	outport1     uint16
+	outport2     uint16
+	inport1      uint16
+	inport2      uint16
 	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
@@ -99,10 +99,10 @@ func main() {
 	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1 as GENERATE part, 2 to use as RECEIVE part, 0 to use as ONE-MACHINE variant")
 	flag.UintVar(&testType, "testType", 0, "0 - Separate test, 1 - Split test, 2 - Partition test, 3 - pCopy test, 4 - Handle test, 5 - DHandle test")
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
-	flag.UintVar(&outport1, "outport1", 0, "port for 1st sender")
-	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
-	flag.UintVar(&inport2, "inport2", 1, "port for 2nd receiver")
+	outport1 = uint16(*flag.Uint("outport1", 0, "port for 1st sender"))
+	outport2 = uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
+	inport1 = uint16(*flag.Uint("inport1", 0, "port for 1st receiver"))
+	inport2 = uint16(*flag.Uint("inport2", 1, "port for 2nd receiver"))
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
@@ -151,7 +151,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	}
 
 	if testScenario == receivePart {
-		inputFlow, err := flow.SetReceiver(uint8(inport1))
+		inputFlow, err := flow.SetReceiver(inport1)
 		if err != nil {
 			return err
 		}
@@ -162,11 +162,11 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		}
 
 		// Send each flow to corresponding port. Send queues will be added automatically.
-		if err := flow.SetSender(flow1, uint8(outport1)); err != nil {
+		if err := flow.SetSender(flow1, outport1); err != nil {
 			return err
 		}
 		if testType != handle && testType != dhandle {
-			if err := flow.SetSender(flow2, uint8(outport2)); err != nil {
+			if err := flow.SetSender(flow2, outport2); err != nil {
 				return err
 			}
 		}
@@ -189,17 +189,17 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 
 		var flow1, flow2 *flow.Flow
 		if testScenario == generatePart {
-			if err := flow.SetSender(generatedFlow, uint8(outport1)); err != nil {
+			if err := flow.SetSender(generatedFlow, outport1); err != nil {
 				return err
 			}
 
 			// Create receiving flows and set a checking function for it
-			flow1, err = flow.SetReceiver(uint8(inport1))
+			flow1, err = flow.SetReceiver(inport1)
 			if err != nil {
 				return err
 			}
 			if testType != handle && testType != dhandle {
-				flow2, err = flow.SetReceiver(uint8(inport2))
+				flow2, err = flow.SetReceiver(inport2)
 				if err != nil {
 					return err
 				}

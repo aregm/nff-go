@@ -42,9 +42,6 @@ var (
 
 	dstPort1 uint16 = 111
 	dstPort2 uint16 = 222
-
-	outport uint
-	inport  uint
 )
 
 var (
@@ -81,9 +78,9 @@ func main() {
 	flag.Uint64Var(&passedLimit, "passedLimit", passedLimit, "received/sent minimum ratio to pass test")
 	flag.Uint64Var(&packetSize, "packetSize", packetSize, "size of packet")
 
-	flag.UintVar(&outport, "outport", 0, "port for sender")
-	flag.UintVar(&inport, "inport", 1, "port for receiver")
-	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	outport := uint16(*flag.Uint("outport", 0, "port for sender"))
+	inport := uint16(*flag.Uint("inport", 1, "port for receiver"))
+	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 
 	latencies = make(chan time.Duration)
 	stop = make(chan string)
@@ -107,11 +104,11 @@ func main() {
 	outputFlow2, err := flow.SetPartitioner(outputFlow, 350, 350)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSender(outputFlow, uint8(outport)))
-	flow.CheckFatal(flow.SetSender(outputFlow2, uint8(outport)))
+	flow.CheckFatal(flow.SetSender(outputFlow, outport))
+	flow.CheckFatal(flow.SetSender(outputFlow2, outport))
 
 	// Create receiving flow and set a checking function for it
-	inputFlow, err := flow.SetReceiver(uint8(inport))
+	inputFlow, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	// Calculate latency only for 1 of skipNumber packets.

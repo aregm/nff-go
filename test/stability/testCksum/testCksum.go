@@ -150,7 +150,7 @@ func executeTest(testScenario uint) error {
 
 	if testScenario == 2 {
 		// Receive packets from zero port. Receive queue will be added automatically.
-		inputFlow, err := flow.SetReceiver(uint8(inport))
+		inputFlow, err := flow.SetReceiver(uint16(inport))
 		if err != nil {
 			return err
 		}
@@ -163,7 +163,7 @@ func executeTest(testScenario uint) error {
 		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil {
 			return err
 		}
-		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil {
+		if err := flow.SetSender(inputFlow, uint16(outport)); err != nil {
 			return err
 		}
 
@@ -184,11 +184,11 @@ func executeTest(testScenario uint) error {
 		var err error
 		if testScenario == 1 {
 			// Send all generated packets to the output
-			if err := flow.SetSender(generatedFlow, uint8(outport)); err != nil {
+			if err := flow.SetSender(generatedFlow, uint16(outport)); err != nil {
 				return err
 			}
 			// Create receiving flow and set a checking function for it
-			finalFlow, err = flow.SetReceiver(uint8(inport))
+			finalFlow, err = flow.SetReceiver(uint16(inport))
 			if err != nil {
 				return err
 			}

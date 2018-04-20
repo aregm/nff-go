@@ -135,7 +135,7 @@ type VectorSplitFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]ui
 // in C memory in low.c and is defined by its port which is equal to port
 // in this structure
 type Kni struct {
-	portId uint8
+	portId uint16
 }
 
 type receiveParameters struct {
@@ -144,7 +144,7 @@ type receiveParameters struct {
 	kni  bool
 }
 
-func addReceiver(portId uint8, kni bool, out *low.Ring) {
+func addReceiver(portId uint16, kni bool, out *low.Ring) {
 	par := new(receiveParameters)
 	par.port = low.GetPort(portId)
 	par.out = out
@@ -187,10 +187,10 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 type sendParameters struct {
 	in    *low.Ring
 	queue int16
-	port  uint8
+	port  uint16
 }
 
-func addSender(port uint8, queue int16, in *low.Ring) {
+func addSender(port uint16, queue int16, in *low.Ring) {
 	par := new(sendParameters)
 	par.port = port
 	par.queue = queue
@@ -553,8 +553,8 @@ func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
 // Gets port number from which packets will be received.
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
-func SetReceiver(portId uint8) (OUT *Flow, err error) {
-	if portId >= uint8(len(createdPorts)) {
+func SetReceiver(portId uint16) (OUT *Flow, err error) {
+	if portId >= uint16(len(createdPorts)) {
 		return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
 	if createdPorts[portId].willReceive {
@@ -619,11 +619,11 @@ func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT
 // SetSender adds send function to flow graph.
 // Gets flow which will be closed and its packets will be send and port number for which packets will be sent.
 // Send queue will be added to port automatically.
-func SetSender(IN *Flow, portId uint8) error {
+func SetSender(IN *Flow, portId uint16) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	if portId >= uint8(len(createdPorts)) {
+	if portId >= uint16(len(createdPorts)) {
 		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
 	createdPorts[portId].wasRequested = true
@@ -818,7 +818,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
-func GetPortMACAddress(port uint8) [common.EtherAddrLen]uint8 {
+func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
@@ -1006,12 +1006,12 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 
 func recvRSS(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(uint8(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
+	low.Receive(uint16(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
 }
 
 func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(uint8(srp.port.PortId), -1, srp.out, flag, coreID)
+	low.Receive(uint16(srp.port.PortId), -1, srp.out, flag, coreID)
 }
 
 func generateOne(parameters interface{}, stopper [2]chan int) {
@@ -1381,7 +1381,7 @@ func checkFlow(f *Flow) error {
 
 // CreateKniDevice creates KNI device for using in receive or send functions.
 // Gets port, core (not from NFF-GO list), and unique name of future KNI device.
-func CreateKniDevice(portId uint8, core uint8, name string) *Kni {
+func CreateKniDevice(portId uint16, core uint8, name string) *Kni {
 	low.CreateKni(portId, core, name)
 	kni := new(Kni)
 	// Port will be identifier of this KNI

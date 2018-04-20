@@ -15,19 +15,15 @@ import (
 
 var (
 	printOn     bool
-	inport      uint
-	outport1    uint
-	outport2    uint
-	noscheduler bool
 )
 
 
 func main() {
 	flag.BoolVar(&printOn, "print", false, "enable print of parsed layers")
-	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
-	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	outport1 := uint16(*flag.Uint("outport1", 1, "port for 1st sender"))
+	outport2 := uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
+	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
+	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
 	flag.Parse()
 
 	// Initialize NFF-GO library at 15 cores by default
@@ -38,7 +34,7 @@ func main() {
 	flow.SystemInit(&config)
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow, err := flow.SetReceiver(uint8(inport))
+	firstFlow, err := flow.SetReceiver(inport)
 	flow.CheckFatal(err)
 
 	var ctx gopacketContext
@@ -48,8 +44,8 @@ func main() {
 	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
-	flow.CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, outport1))
+	flow.CheckFatal(flow.SetSender(secondFlow, outport2))
 
 	flow.SystemStart()
 }

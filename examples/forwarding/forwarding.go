@@ -25,11 +25,11 @@ func main() {
 	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow, err := flow.SetReceiver(uint8(0))
+	inputFlow, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)
 
 	// Split packet flow based on ACL.
-	flowsNumber := 5
+	flowsNumber := uint16(5)
 	outputFlows, err := flow.SetSplitter(inputFlow, l3Splitter, uint(flowsNumber), nil)
 	flow.CheckFatal(err)
 
@@ -37,8 +37,8 @@ func main() {
 	flow.CheckFatal(flow.SetStopper(outputFlows[0]))
 
 	// Send each flow to corresponding port. Send queues will be added automatically.
-	for i := 1; i < flowsNumber; i++ {
-		flow.CheckFatal(flow.SetSender(outputFlows[i], uint8(i-1)))
+	for i := uint16(1); i < flowsNumber; i++ {
+		flow.CheckFatal(flow.SetSender(outputFlows[i], i-1))
 	}
 
 	// Begin to process packets.
