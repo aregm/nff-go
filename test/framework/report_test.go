@@ -86,6 +86,8 @@ func testManyApps(t *testing.T, testtype TestType) {
 				appConfig[iii].Type = TestAppPktgen
 			} else if iii == 0 && testtype == TestTypeApacheBenchmark {
 				appConfig[iii].Type = TestAppApacheBenchmark
+			} else if iii == 0 && testtype == TestTypeLatency {
+				appConfig[iii].Type = TestAppLatency
 			} else {
 				appConfig[iii].Type = TestAppGo
 			}
@@ -132,6 +134,10 @@ func testManyApps(t *testing.T, testtype TestType) {
 				apps[iii].abs = &ApacheBenchmarkStats{
 					Stats: [4]float32{111.111, 222.222, 333.333, 444.444},
 				}
+			} else if appConfig[iii].Type == TestAppLatency {
+				apps[iii].lats = &LatencyStats{
+					Stats: [5]float32{111.111, 1000000, 222.222, 333.333, 444.444},
+				}
 			} else { // appConfig[iii].Type == TestAppGo
 				apps[iii].CoresStats = make([]CoresInfo, NUM_MEASUREMENTS)
 
@@ -170,6 +176,13 @@ func testManyApps(t *testing.T, testtype TestType) {
 					break
 				}
 			}
+		} else if testtype == TestTypeLatency {
+			for iii := range apps {
+				if apps[iii].config.Type == TestAppLatency {
+					tests[jjj].LatStats = apps[iii].lats
+					break
+				}
+			}
 		}
 	}
 
@@ -186,4 +199,8 @@ func TestScenarioManyApps(t *testing.T) {
 
 func TestApacheBenchmarkManyApps(t *testing.T) {
 	testManyApps(t, TestTypeApacheBenchmark)
+}
+
+func TestLatencyManyApps(t *testing.T) {
+	testManyApps(t, TestTypeLatency)
 }
