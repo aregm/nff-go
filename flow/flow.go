@@ -117,7 +117,7 @@ type VectorHandleFunction func([]*packet.Packet, *[burstSize]bool, UserContext)
 type SeparateFunction func(*packet.Packet, UserContext) bool
 
 // VectorSeparateFunction is a function type like SeparateFunction for vector separation
-type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]uint8, UserContext)
+type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]bool, UserContext)
 
 // SplitFunction is a function type for user defined function which splits packets
 // based in some rule for multiple flows. Function receives a packet from
@@ -671,7 +671,7 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 	ctx := new(partitionCtx)
 	ctx.N = N
 	ctx.M = M
-	if err := segmentInsert(IN, partition, false, *ctx, 0); err != nil {
+	if err := segmentInsert(IN, partition, false, *ctx, 0, 0); err != nil {
 		return nil, err
 	}
 	return newFlowSegment(IN.segment, &partition.next[1]), nil
@@ -683,10 +683,10 @@ func SetPartitioner(IN *Flow, N uint64, M uint64) (OUT *Flow, err error) {
 // user defined function returns "true" and is sent to new flow otherwise.
 func SetSeparator(IN *Flow, separateFunction SeparateFunction, context UserContext) (OUT *Flow, err error) {
 	separate := makeSeparator(separateFunction, nil)
-	if err := segmentInsert(IN, separate, false, context, 1); err != nil {
+	if err := segmentInsert(IN, separate, false, context, 1, 1); err != nil {
 		return nil, err
 	}
-	return newFlowSegment(IN.segment, &separate.next[1]), nil
+	return newFlowSegment(IN.segment, &separate.next[0]), nil
 }
 
 // SetVectorSeparator adds vector separate function to flow graph.
@@ -695,10 +695,10 @@ func SetSeparator(IN *Flow, separateFunction SeparateFunction, context UserConte
 // user defined function returns "true" and is sent to new flow otherwise.
 func SetVectorSeparator(IN *Flow, vectorSeparateFunction VectorSeparateFunction, context UserContext) (OUT *Flow, err error) {
 	separate := makeSeparator(nil, vectorSeparateFunction)
-	if err := segmentInsert(IN, separate, false, context, 2); err != nil {
+	if err := segmentInsert(IN, separate, false, context, 2, 1); err != nil {
 		return nil, err
 	}
-	return newFlowSegment(IN.segment, &separate.next[1]), nil
+	return newFlowSegment(IN.segment, &separate.next[0]), nil
 }
 
 // SetSplitter adds split function to flow graph.
@@ -711,7 +711,7 @@ func SetSplitter(IN *Flow, splitFunction SplitFunction, flowNumber uint, context
 		return nil, err
 	}
 	split := makeSplitter(splitFunction, nil, uint8(flowNumber))
-	segmentInsert(IN, split, true, context, 1)
+	segmentInsert(IN, split, true, context, 1, 0)
 	OutArray = make([](*Flow), flowNumber, flowNumber)
 	for i := range OutArray {
 		OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
@@ -729,7 +729,7 @@ func SetVectorSplitter(IN *Flow, vectorSplitFunction VectorSplitFunction, flowNu
 		return nil, err
 	}
 	split := makeSplitter(nil, vectorSplitFunction, uint8(flowNumber))
-	segmentInsert(IN, split, true, context, 2)
+	segmentInsert(IN, split, true, context, 2, 0)
 	OutArray = make([](*Flow), flowNumber, flowNumber)
 	for i := range OutArray {
 		OutArray[i] = newFlowSegment(IN.segment, &split.next[i])
@@ -748,7 +748,7 @@ func SetStopper(IN *Flow) error {
 		closeFlow(IN)
 	} else {
 		ms := makeSlice(schedState.StopRing, IN.segment)
-		segmentInsert(IN, ms, true, nil, 0)
+		segmentInsert(IN, ms, true, nil, 0, 0)
 	}
 	return nil
 }
@@ -759,7 +759,7 @@ func SetStopper(IN *Flow) error {
 // and sent further in the same flow.
 func SetHandler(IN *Flow, handleFunction HandleFunction, context UserContext) error {
 	handle := makeHandler(handleFunction, nil)
-	return segmentInsert(IN, handle, false, context, 1)
+	return segmentInsert(IN, handle, false, context, 1, 0)
 }
 
 // SetVectorHandler adds vector handle function to flow graph.
@@ -768,7 +768,7 @@ func SetHandler(IN *Flow, handleFunction HandleFunction, context UserContext) er
 // and sent further in the same flow.
 func SetVectorHandler(IN *Flow, vectorHandleFunction VectorHandleFunction, context UserContext) error {
 	handle := makeHandler(nil, vectorHandleFunction)
-	return segmentInsert(IN, handle, false, context, 2)
+	return segmentInsert(IN, handle, false, context, 2, 0)
 }
 
 // SetHandlerDrop adds vector handle function to flow graph.
@@ -777,10 +777,10 @@ func SetVectorHandler(IN *Flow, vectorHandleFunction VectorHandleFunction, conte
 // If user function returns false after handling a packet it is dropped automatically.
 func SetHandlerDrop(IN *Flow, separateFunction SeparateFunction, context UserContext) error {
 	separate := makeSeparator(separateFunction, nil)
-	if err := segmentInsert(IN, separate, false, context, 1); err != nil {
+	if err := segmentInsert(IN, separate, false, context, 1, 1); err != nil {
 		return err
 	}
-	return SetStopper(newFlowSegment(IN.segment, &separate.next[1]))
+	return SetStopper(newFlowSegment(IN.segment, &separate.next[0]))
 }
 
 // SetVectorHandlerDrop adds vector handle function to flow graph.
@@ -789,10 +789,10 @@ func SetHandlerDrop(IN *Flow, separateFunction SeparateFunction, context UserCon
 // If user function returns false after handling a packet it is dropped automatically.
 func SetVectorHandlerDrop(IN *Flow, vectorSeparateFunction VectorSeparateFunction, context UserContext) error {
 	separate := makeSeparator(nil, vectorSeparateFunction)
-	if err := segmentInsert(IN, separate, false, context, 2); err != nil {
+	if err := segmentInsert(IN, separate, false, context, 2, 1); err != nil {
 		return err
 	}
-	return SetStopper(newFlowSegment(IN.segment, &separate.next[1]))
+	return SetStopper(newFlowSegment(IN.segment, &separate.next[0]))
 }
 
 // SetMerger adds merge function to flow graph.
@@ -811,7 +811,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 		} else {
 			// TODO merge finishes segment even if this is merge inside it. Need to optimize.
 			ms := makeSlice(ring, InArray[i].segment)
-			segmentInsert(InArray[i], ms, true, nil, 0)
+			segmentInsert(InArray[i], ms, true, nil, 0, 0)
 		}
 	}
 	return newFlow(ring), nil
@@ -845,7 +845,7 @@ func finishFlow(IN *Flow) *low.Ring {
 	} else {
 		ring = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 		ms := makeSlice(ring, IN.segment)
-		segmentInsert(IN, ms, true, nil, 0)
+		segmentInsert(IN, ms, true, nil, 0, 0)
 	}
 	return ring
 }
@@ -856,7 +856,7 @@ func closeFlow(IN *Flow) {
 	openFlowsNumber--
 }
 
-func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setType uint8) error {
+func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setType uint8, nextBranch uint8) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
@@ -867,10 +867,10 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 		if setType > 0 && IN.segment.stype > 0 && setType != IN.segment.stype {
 			ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 			ms := makeSlice(ring, IN.segment)
-			segmentInsert(IN, ms, false, nil, 0)
+			segmentInsert(IN, ms, false, nil, 0, 0)
 			IN.segment = nil
 			IN.current = ring
-			segmentInsert(IN, f, willClose, context, setType)
+			segmentInsert(IN, f, willClose, context, setType, nextBranch)
 			return nil
 		}
 		if setType > 0 && IN.segment.stype == 0 {
@@ -881,7 +881,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 	if willClose {
 		closeFlow(IN)
 	} else if f.next != nil {
-		IN.previous = &f.next[0]
+		IN.previous = &f.next[nextBranch]
 	}
 	IN.segment.contexts = append(IN.segment.contexts, context)
 	f.contextIndex = len(IN.segment.contexts) - 1
@@ -916,6 +916,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 		mask [burstSize]bool
 	}
 	def := make([]pair, 30, 30)
+	var currentMask [burstSize]bool
 	var answers [burstSize]uint8
 
 	for {
@@ -988,10 +989,11 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 						st++
 					} else {
 						step := 0
-						for i := int(cur.followingNumber - 1); i >= 0; i-- {
-							cont := asm.GenerateMask(&answers, &(vEach[i]), &def[st].mask, &def[st+i].mask)
+						currentMask = def[st].mask
+						for i := uint8(0); i < cur.followingNumber; i++ {
+							cont := asm.GenerateMask(&answers, &(vEach[i]), &currentMask, &def[st+step].mask)
 							if !cont {
-								def[st+i].f = cur.next[i]
+								def[st+step].f = cur.next[i]
 								step++
 							}
 						}
@@ -1185,14 +1187,11 @@ func merge(from *low.Ring, to *low.Ring) {
 }
 
 func separate(packet *packet.Packet, sc *Func, ctx UserContext) uint {
-	if sc.sSeparateFunction(packet, ctx) == true {
-		return 0
-	}
-	return 1
+	return uint(low.BoolToInt(sc.sSeparateFunction(packet, ctx)))
 }
 
 func vSeparate(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
-	ve.vSeparateFunction(packets, mask, answers, ctx)
+	ve.vSeparateFunction(packets, mask, low.IntArrayToBool(answers), ctx)
 }
 
 // partition doesn't need packets - just mbufs. However it will probably be

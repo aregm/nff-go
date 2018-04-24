@@ -41,7 +41,7 @@ func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
 }
 
 func myHandler(curV []*packet.Packet, mask *[vecSize]bool, ctx flow.UserContext) {
-	for i := uint(0); i < 32; i++ {
+	for i := uint(0); i < vecSize; i++ {
 		if (*mask)[i] == true {
 			cur := curV[i]
 			cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
