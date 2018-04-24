@@ -421,7 +421,7 @@ func SystemInit(args *Config) error {
 	}
 
 	if debugTime < schedTime {
-		common.LogFatal(common.Initialization, "debugTime should be larger or equal to schedTime")
+		return common.WrapWithNFError(nil, "debugTime should be larger or equal to schedTime", common.Fail)
 	}
 
 	needKNI := 0
@@ -1405,6 +1405,9 @@ func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr)
 // makes os.Exit in case of non nil error. Any other error handler can be used instead.
 func CheckFatal(err error) {
 	if err != nil {
-		common.LogFatal(common.Debug, "fail with error: %+v\n", err)
+		if nfErr := common.GetNFError(err); nfErr != nil {
+			common.LogFatalf(common.Debug, "failed with message and code: %+v\n", nfErr)
+		}
+		common.LogFatalf(common.Debug, "failed with message: %s\n", err.Error())
 	}
 }
