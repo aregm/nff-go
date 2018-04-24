@@ -636,3 +636,11 @@ func DeleteLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8) int {
 func FreeLPM(lpm unsafe.Pointer) {
 	C.lpm_free(lpm)
 }
+
+func BoolToInt(value bool) uint8 {
+	return *((*uint8)(unsafe.Pointer(&value)))
+}
+
+func IntArrayToBool(value *[32]uint8) *[32]bool {
+        return (*[32]bool)(unsafe.Pointer(value))
+}
