@@ -3,23 +3,23 @@ export GOROOT=/opt/go
 export NFF_GO="$GOPATH"/src/github.com/intel-go/nff-go
 export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
 export MAKEFLAGS="-j 4"
-export NFF_GO_CARDS="00:08.0 00:09.0"
+export NFF_GO_CARDS="00:06.0 00:07.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
-export CARD1=enp0s8
-export CARD2=enp0s9
+export CARD1=eth1
+export CARD2=eth2
 
 # Bind ports to DPDK driver
 bindports ()
 {
     sudo modprobe uio
-    sudo insmod "$NFF_GO"/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    sudo "$NFF_GO"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
+    sudo insmod "$NFF_GO"/dpdk/dpdk-18.02/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo "$NFF_GO"/dpdk/dpdk-18.02/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
 }
 
 # Bind ports to Linux kernel driver
 unbindports ()
 {
-    sudo "$NFF_GO"/dpdk/dpdk-17.08/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
+    sudo "$NFF_GO"/dpdk/dpdk-18.02/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
 }
 
 # Run pktgen
@@ -65,18 +65,16 @@ setupnatclient ()
 natmiddle ()
 {
     export NFF_GO_CARDS="00:08.0 00:0a.0"
-    export CARD1=enp0s9
-    export CARD2=enp0s16
+    export CARD1=eth2
+    export CARD2=eth4
 
     bindports
 
     sudo sysctl -w net.ipv4.ip_forward=1
 
-    if [ $DISTRO == Ubuntu ]; then
-        sudo iptables -t nat -A POSTROUTING -o $CARD2 -j MASQUERADE
-        sudo iptables -A FORWARD -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo iptables -A FORWARD -i $CARD1 -o $CARD2 -j ACCEPT
-    fi
+    sudo iptables -t nat -A POSTROUTING -o $CARD2 -j MASQUERADE
+    sudo iptables -A FORWARD -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
+    sudo iptables -A FORWARD -i $CARD1 -o $CARD2 -j ACCEPT
 }
 
 # Perform one-time configuration needed for NAT middle machine. On
@@ -90,15 +88,6 @@ setupnatmiddle ()
     sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.1/24
     sudo nmcli c up $CARD1
     sudo nmcli c up $CARD2
-
-    if [ $DISTRO == Fedora ]; then
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo firewall-cmd --permanent --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
-        sudo firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o $CARD2 -j MASQUERADE
-        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-        sudo firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i $CARD1 -o $CARD2 -j ACCEPT
-    fi
 }
 
 # Perform one-time configuration needed for NAT server side
@@ -116,8 +105,6 @@ setupnatserver ()
         sudo systemctl start apache2
     elif [ $DISTRO == Fedora ]; then
         sudo dnf -y install httpd
-        sudo firewall-cmd --permanent --add-service=http
-        sudo firewall-cmd --add-service=http
         sudo systemctl enable httpd
         sudo systemctl start httpd
     fi
@@ -141,8 +128,6 @@ setupdocker ()
         sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
         sudo dnf -y install docker-ce
         sudo gpasswd -a vagrant docker
-        sudo firewall-cmd --permanent --add-port=2375/tcp
-        sudo firewall-cmd --add-port=2375/tcp
     fi
 
     sudo mkdir /etc/docker
