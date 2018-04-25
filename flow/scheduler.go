@@ -226,6 +226,7 @@ func (scheduler *scheduler) stopFF(ff *flowFunction) {
 	} else {
 		atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, stopRequest)
 		for atomic.LoadInt32(&ff.clone[ff.cloneNumber-1].flag) != wasStopped {
+			runtime.Gosched()
 		}
 	}
 	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
@@ -237,6 +238,7 @@ func (scheduler *scheduler) systemStop() {
 	atomic.StoreInt32(&scheduler.stopFlag, stopRequest)
 	for atomic.LoadInt32(&scheduler.stopFlag) != wasStopped {
 		// We need to wait because scheduler can sleep at this moment
+		runtime.Gosched()
 	}
 	for i := range scheduler.ff {
 		for scheduler.ff[i].cloneNumber != 0 {
