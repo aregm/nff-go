@@ -7,11 +7,11 @@ package main
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
@@ -40,17 +40,26 @@ const (
 
 const (
 	separate uint = iota
+	vseparate
 	split
+	vsplit
 	partition
+	vpartition
 	pcopy
+	handles
 	handle
+	vhandle
 	dhandle
+	vdhandle
 )
 
+const vecSize = 32
+
 var (
-	totalPackets uint64 = 10000000
-	payloadSize  uint   = 16
-	speed        uint64 = 1000000
+	totalPackets     uint64
+	userTotalPackets uint64 = 10000000
+	payloadSize      uint   = 16
+	speed            uint64 = 1000000
 
 	recvPacketsGroup1 uint64
 	recvPacketsGroup2 uint64
@@ -103,7 +112,7 @@ func main() {
 	outport2 = uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
 	inport1 = uint16(*flag.Uint("inport1", 0, "port for 1st receiver"))
 	inport2 = uint16(*flag.Uint("inport2", 1, "port for 2nd receiver"))
-	flag.Uint64Var(&totalPackets, "number", totalPackets, "total number of packets to receive by test")
+	flag.Uint64Var(&userTotalPackets, "number", userTotalPackets, "total number of packets to receive by test")
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
@@ -139,7 +148,8 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	recvPackets = 0
 	count = 0
 	brokenPackets = 0
-	checkSlice = make([]uint8, totalPackets*2, totalPackets*2)
+
+	checkSlice = make([]uint8, userTotalPackets*2, userTotalPackets*2)
 
 	stabilityCommon.InitCommonState(configFile, target)
 	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
@@ -165,7 +175,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		if err := flow.SetSender(flow1, outport1); err != nil {
 			return err
 		}
-		if testType != handle && testType != dhandle {
+		if testType < handles {
 			if err := flow.SetSender(flow2, outport2); err != nil {
 				return err
 			}
@@ -198,7 +208,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 			if err != nil {
 				return err
 			}
-			if testType != handle && testType != dhandle {
+			if testType < handles {
 				flow2, err = flow.SetReceiver(inport2)
 				if err != nil {
 					return err
@@ -216,7 +226,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		if err := flow.SetStopper(flow1); err != nil {
 			return err
 		}
-		if testType != handle && testType != dhandle {
+		if testType < handles {
 			if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
 				return err
 			}
@@ -248,39 +258,40 @@ func setParameters(testScenario uint) (err error) {
 	eps = 3
 	passedLimit = 85
 	shift = 0
+	totalPackets = userTotalPackets
 	switch gTestType {
-	case separate:
+	case separate, vseparate:
 		if testScenario != generatePart {
 			l3Rules, err = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
 		}
 		// Test expects to receive 33% of packets on 0 port and 66% on 1 port
 		lessPercent = 33
 		shift = 1
-	case split:
+	case split, vsplit:
 		if testScenario != generatePart {
 			l3Rules, err = packet.GetL3ACLFromORIG("test-split.conf")
 		}
 		// Test expects to receive 20% of packets on 0 port and 80% on 1 port
 		lessPercent = 20
 		eps = 4
-	case partition:
+	case partition, vpartition:
 		// Test expects to receive 10% of packets on 0 port and 90% on 1 port
 		lessPercent = 10
 	case pcopy:
 		// Test expects to receive 50% of packets on 0 port and 50% on 1 port (200% total)
 		lessPercent = 50
 		passedLimit = 150 // ~85 * 2
-	case handle:
+	case handle, vhandle:
 		// Test expects to receive 100% of packets on 0 port and 0% on 1 port
 		lessPercent = 100
 		shift = 3
-	case dhandle:
+	case dhandle, vdhandle:
 		if testScenario != generatePart {
 			l3Rules, err = packet.GetL3ACLFromORIG("test-handle-l3rules.conf")
 		}
 		// Test expects to receive 100% of packets on 0 port and 0% on 1 port (33% total)
 		lessPercent = 100
-		passedLimit = 28       // 85 * 0.33
+		passedLimit = 28 // 85 * 0.33
 		totalPackets = totalPackets / 3
 		shift = 4
 	}
@@ -294,10 +305,14 @@ func setMainTest(inFlow *flow.Flow) (*flow.Flow, *flow.Flow, error) {
 	case separate:
 		// Separate packet flow based on ACL.
 		flow2, err = flow.SetSeparator(inFlow, l3Separator, nil)
-	case split:
+	case split, vsplit:
 		// Split packet flow based on ACL.
 		var splittedFlows []*flow.Flow
-		splittedFlows, err = flow.SetSplitter(inFlow, l3Splitter, 3, nil)
+		if gTestType == split {
+			splittedFlows, err = flow.SetSplitter(inFlow, l3Splitter, 3, nil)
+		} else {
+			splittedFlows, err = flow.SetVectorSplitter(inFlow, vectorL3Splitter, 3, nil)
+		}
 		// "0" flow is used for dropping packets without sending them.
 		if err1 := flow.SetStopper(splittedFlows[0]); err1 != nil {
 			return nil, nil, err1
@@ -313,6 +328,20 @@ func setMainTest(inFlow *flow.Flow) (*flow.Flow, *flow.Flow, error) {
 		err = flow.SetHandler(inFlow, l3Handler, nil)
 	case dhandle:
 		err = flow.SetHandlerDrop(inFlow, l3dHandler, nil)
+	case vseparate:
+		// Separate packet flow based on ACL.
+		flow2, err = flow.SetVectorSeparator(inFlow, vectorL3Separator, nil)
+	case vpartition:
+		// We need vector handler to switch to vector mode
+		err = flow.SetVectorHandler(inFlow, vectorL3Handler, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		flow2, err = flow.SetPartitioner(inFlow, 100, 1000)
+	case vhandle:
+		err = flow.SetVectorHandler(inFlow, vectorL3Handler, nil)
+	case vdhandle:
+		err = flow.SetVectorHandlerDrop(inFlow, vectorL3dHandler, nil)
 	}
 	if err != nil {
 		return nil, nil, err
@@ -321,7 +350,7 @@ func setMainTest(inFlow *flow.Flow) (*flow.Flow, *flow.Flow, error) {
 	if err = flow.SetHandler(inFlow, fixPackets1, nil); err != nil {
 		return nil, nil, err
 	}
-	if gTestType != handle && gTestType != dhandle {
+	if gTestType < handles {
 		if err = flow.SetHandler(flow2, fixPackets2, nil); err != nil {
 			return nil, nil, err
 		}
@@ -379,7 +408,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ipv4 := pkt.GetIPv4()
 	udp := pkt.GetUDPForIPv4()
 
-	if gTestType == separate || gTestType == dhandle {
+	if gTestType == separate || gTestType == dhandle || gTestType == vseparate || gTestType == vdhandle {
 		// Generate packets of 3 groups
 		if count%3 == 0 {
 			udp.DstPort = packet.SwapBytesUint16(dstPort1)
@@ -388,14 +417,14 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 		} else {
 			udp.DstPort = packet.SwapBytesUint16(dstPort3)
 		}
-	} else if gTestType == split {
+	} else if gTestType == split || gTestType == vsplit {
 		// Generate packets of 2 groups
 		if count%5 == 0 {
 			udp.DstPort = packet.SwapBytesUint16(dstPort1)
 		} else {
 			udp.DstPort = packet.SwapBytesUint16(dstPort2)
 		}
-	} else if gTestType == partition || gTestType == handle || gTestType == pcopy {
+	} else {
 		// Generate identical packets
 		udp.DstPort = packet.SwapBytesUint16(dstPort1)
 	}
@@ -441,7 +470,7 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 		udp.DstPort != packet.SwapBytesUint16(dstPort3) ||
 		gTestType == split &&
 			udp.DstPort != packet.SwapBytesUint16(dstPort2) ||
-		(gTestType == partition || gTestType == pcopy) &&
+		(gTestType == partition || gTestType == vpartition || gTestType == pcopy) &&
 			udp.DstPort != packet.SwapBytesUint16(dstPort1) {
 		println("Unexpected packet in inputFlow2", udp.DstPort)
 		atomic.AddUint64(&brokenPackets, 1)
@@ -470,6 +499,10 @@ func commonCheck(pkt *packet.Packet) bool {
 	recvUDPCksum := packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 	ptr := (*packetData)(pkt.Data)
 	ptr.F2 -= shift
+	if ptr.F1 >= userTotalPackets*2 {
+		println("Test generated a number of packet which exceed planned two times")
+		return false
+	}
 	if recvIPv4Cksum != ipv4.HdrChecksum || recvUDPCksum != udp.DgramCksum ||
 		ptr.F2 != 2 && ptr.F2 != 7 ||
 		ptr.F2 == 2 && ptr.F1 != 1 ||
@@ -490,18 +523,54 @@ func l3Separator(pkt *packet.Packet, context flow.UserContext) bool {
 	return pkt.L3ACLPermit(l3Rules)
 }
 
-func l3Splitter(currentPacket *packet.Packet, context flow.UserContext) uint {
+func vectorL3Separator(pkts []*packet.Packet, mask *[vecSize]bool, answers *[vecSize]bool, context flow.UserContext) {
+	// Return whether packet is accepted.
+	for i := 0; i < vecSize; i++ {
+		if (*mask)[i] == true {
+			addF2(pkts[i])
+			answers[i] = pkts[i].L3ACLPermit(l3Rules)
+		}
+	}
+}
+
+func l3Splitter(pkt *packet.Packet, context flow.UserContext) uint {
 	// Return number of flow to which put this packet. Based on ACL rules.
-	return currentPacket.L3ACLPort(l3Rules)
+	return pkt.L3ACLPort(l3Rules)
+}
+
+func vectorL3Splitter(pkts []*packet.Packet, mask *[vecSize]bool, answers *[vecSize]uint8, context flow.UserContext) {
+	// Return number of flow to which put this packet. Based on ACL rules.
+	for i := 0; i < vecSize; i++ {
+		if (*mask)[i] == true {
+			answers[i] = uint8(pkts[i].L3ACLPort(l3Rules))
+		}
+	}
 }
 
 func l3Handler(pkt *packet.Packet, context flow.UserContext) {
 	addF2(pkt)
 }
 
+func vectorL3Handler(pkts []*packet.Packet, mask *[vecSize]bool, context flow.UserContext) {
+	for i := uint(0); i < vecSize; i++ {
+		if (*mask)[i] == true {
+			addF2(pkts[i])
+		}
+	}
+}
+
 func l3dHandler(pkt *packet.Packet, context flow.UserContext) bool {
 	addF2(pkt)
 	return pkt.L3ACLPermit(l3Rules)
+}
+
+func vectorL3dHandler(pkts []*packet.Packet, mask *[vecSize]bool, answers *[vecSize]bool, context flow.UserContext) {
+	for i := uint(0); i < vecSize; i++ {
+		if (*mask)[i] == true {
+			addF2(pkts[i])
+			answers[i] = pkts[i].L3ACLPermit(l3Rules)
+		}
+	}
 }
 
 func fixPackets1(pkt *packet.Packet, ctx flow.UserContext) {

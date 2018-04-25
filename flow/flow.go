@@ -984,7 +984,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 						safeEnqueue(OUT[answers[0]], OutputMbufs[0], uint(count))
 						currentSpeed += uint64(count)
 					} else if cur.followingNumber == 1 {
-						// We have simple handle. Mask will remain the same, currect function will be changed
+						// We have simple handle. Mask will remain the same, current function will be changed
 						def[st].f = cur.next[0]
 						st++
 					} else {
@@ -1216,8 +1216,8 @@ func vPartition(packets []*packet.Packet, mask *[burstSize]bool, answers *[burst
 				context.currentAnswer = context.currentAnswer ^ 1
 				context.currentCompare = context.N + context.M - context.currentCompare
 				context.currentPacketNumber = 0
-				answers[i] = context.currentAnswer
 			}
+			answers[i] = context.currentAnswer
 		}
 	}
 }
