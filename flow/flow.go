@@ -1127,7 +1127,7 @@ func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, cont
 				if err := low.AllocateMbufs(bufs2, mempool, n); err != nil {
 					common.LogFatal(common.Debug, err)
 				}
-				for i := range bufs1 {
+				for i := uint(0); i < n; i++ {
 					// TODO Maybe we need to prefetcht here?
 					tempPacket1 = packet.ExtractPacket(bufs1[i])
 					tempPacket2 = packet.ExtractPacket(bufs2[i])
