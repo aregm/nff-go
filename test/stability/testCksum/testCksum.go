@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
@@ -44,14 +45,23 @@ var (
 	totalPackets uint64 = 10
 
 	// Packet should hold at least two int64 fields
-	minPayloadSize = int(unsafe.Sizeof(sentPackets) * 2)
-	maxPayloadSize = 1400
+	minPayloadSize        = int(unsafe.Sizeof(sentPackets) * 2)
+	maxPayloadSize        = 1400
+	speed          uint64 = 1000000
 
 	sentPackets     uint64
 	receivedPackets uint64
 	testDoneEvent   *sync.Cond
-	passed          int32 = 1
-	rnd             *rand.Rand
+	progStart       time.Time
+
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T                     = 10 * time.Second
+	lastPacketGeneratedAt time.Time
+	interPacketInterval   time.Duration
+
+	passed int32 = 1
+	rnd    *rand.Rand
 
 	hwol         bool
 	inport       uint
@@ -75,8 +85,10 @@ func main() {
 	var testScenario uint
 	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
 	flag.BoolVar(&hwol, "hwol", false, "Use Hardware offloading for TX checksums calculation")
+	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
 	flag.UintVar(&inport, "inport", 1, "Input port number")
 	flag.UintVar(&outport, "outport", 0, "Output port number")
+	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	flag.BoolVar(&useUDP, "udp", false, "Generate UDP packets")
 	flag.BoolVar(&useTCP, "tcp", false, "Generate TCP packets")
 	flag.BoolVar(&useICMP, "icmp", false, "Generate ICMP Echo Request packets")
@@ -86,6 +98,8 @@ func main() {
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "Number of packets to send")
 	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	vbwo := flag.Bool("virtualbox-workaround", false, "Use this if you run on VirtualBox with hardware acceleration which has bug in checksum calculation for UDP packets")
+	kvmwo := flag.Bool("kvm-workaround", false, "Use this if you run on Qemu/KVM with hardware acceleration which has bug in checksum calculation for TCP packets")
 	flag.Parse()
 
 	if useIPv4 {
@@ -127,6 +141,11 @@ func main() {
 			println("Can't calculate anything for configuration: ipv6 + icmp + hw mode, exiting")
 			os.Exit(1)
 		}
+	}
+
+	if hwol {
+		testCksumCommon.VirtualBoxWorkaround = *vbwo
+		testCksumCommon.KVMWorkaround = *kvmwo
 	}
 
 	if err := executeTest(testScenario); err != nil {
@@ -175,13 +194,13 @@ func executeTest(testScenario uint) error {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
-		// Use here usual generator (enabled if speed = 0).
-		// High performance generator (enabled if speed != 0) is not used here, as it
-		// can send fully only number of packets N which is multiple of burst size (default 32),
-		// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
+		interPacketInterval = time.Second / time.Duration(speed)
+		lastPacketGeneratedAt = time.Now()
+		// Create packet flow
 		generatedFlow := flow.SetGenerator(generatePacket, nil)
-		var finalFlow *flow.Flow
+
 		var err error
+		var finalFlow *flow.Flow
 		if testScenario == 1 {
 			// Send all generated packets to the output
 			if err := flow.SetSender(generatedFlow, uint16(outport)); err != nil {
@@ -208,6 +227,7 @@ func executeTest(testScenario uint) error {
 			return err
 		}
 
+		progStart = time.Now()
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
@@ -303,6 +323,11 @@ func generatePayloadLength() uint16 {
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
+	now := time.Now()
+	if now.Sub(lastPacketGeneratedAt) < interPacketInterval {
+		time.Sleep(lastPacketGeneratedAt.Add(interPacketInterval).Sub(now))
+	}
+
 	if randomL3 {
 		if rnd.Int()%2 == 0 {
 			ipVersion = 6
@@ -344,7 +369,10 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 		}
 	}
 
-	atomic.AddUint64(&sentPackets, 1)
+	if time.Since(progStart) >= T && atomic.LoadUint64(&receivedPackets) < totalPackets {
+		atomic.AddUint64(&sentPackets, 1)
+	}
+	lastPacketGeneratedAt = time.Now()
 }
 
 func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
@@ -504,7 +532,14 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 }
 
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	newValue := atomic.AddUint64(&receivedPackets, 1)
+	if time.Since(progStart) < T {
+		return
+	}
+	if atomic.AddUint64(&receivedPackets, 1) >= totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
+
 	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
@@ -526,9 +561,5 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 			println("TEST FAILED")
 			atomic.StoreInt32(&passed, 0)
 		}
-	}
-
-	if newValue >= totalPackets {
-		testDoneEvent.Signal()
 	}
 }
