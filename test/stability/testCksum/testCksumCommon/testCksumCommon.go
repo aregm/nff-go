@@ -14,6 +14,11 @@ type Packetdata struct {
 	F1, F2 uint64
 }
 
+var (
+	VirtualBoxWorkaround bool = false
+	KVMWorkaround        bool = false
+)
+
 // CheckPacketChecksums calculates and checks checksum for packet.
 func CheckPacketChecksums(p *packet.Packet) bool {
 	status := false
@@ -30,7 +35,7 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			pUDP := p.GetUDPForIPv4()
 			csum := packet.CalculateIPv4UDPChecksum(pIPv4, pUDP, p.Data)
 			if packet.SwapBytesUint16(pUDP.DgramCksum) != csum {
-				if pUDP.DgramCksum == 0 {
+				if pUDP.DgramCksum == 0 && csum == 0xffff && VirtualBoxWorkaround {
 					println("WARNING! IPv4 UDP datagram checksum value 0 means that checksum is not specified. This should not appear in this test, but ignoring for now because this is how VirtualBox works.")
 					status = l3status
 				} else {
@@ -43,7 +48,12 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			pTCP := p.GetTCPForIPv4()
 			csum := packet.CalculateIPv4TCPChecksum(pIPv4, pTCP, p.Data)
 			if packet.SwapBytesUint16(pTCP.Cksum) != csum {
-				println("IPv4 TCP checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
+				if pTCP.Cksum == 0xffff && csum == 0 && KVMWorkaround {
+					println("WARNING! TCP checksum has value 0xffff while it should be zero. This inversion should happen only for UDP packets, not for TCP, but this is how KVM works.")
+					status = l3status
+				} else {
+					println("IPv4 TCP checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
+				}
 			} else {
 				status = l3status
 			}
@@ -77,7 +87,12 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			pTCP := p.GetTCPForIPv6()
 			csum := packet.CalculateIPv6TCPChecksum(pIPv6, pTCP, p.Data)
 			if packet.SwapBytesUint16(pTCP.Cksum) != csum {
-				println("IPv6 TCP checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
+				if pTCP.Cksum == 0xffff && csum == 0 && KVMWorkaround {
+					println("WARNING! TCP checksum has value 0xffff while it should be zero. This inversion should happen only for UDP packets, not for TCP, but this is how KVM works.")
+					status = true
+				} else {
+					println("IPv6 TCP checksum mismatch", packet.SwapBytesUint16(pTCP.Cksum), "should be", csum)
+				}
 			} else {
 				status = true
 			}
