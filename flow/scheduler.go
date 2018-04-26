@@ -66,7 +66,8 @@ const (
 	fastGenerate
 	receiveRSS     // receive from port
 	sendReceiveKNI // send to port, send to KNI, receive from KNI
-	other
+	generate
+	readWrite
 )
 
 // Flow function representation
@@ -205,7 +206,7 @@ func (scheduler *scheduler) startFF(ff *flowFunction) (err error) {
 			if err := low.SetAffinity(core); err != nil {
 				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
 			}
-			if ff.fType == segmentCopy || ff.fType == fastGenerate {
+			if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
 				ff.cloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel, ff.report, cloneContext(ff.context))
 			} else {
 				ff.uncloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel)
@@ -336,7 +337,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						low.DecreaseRSS((ff.Parameters.(*receiveParameters)).port)
 						continue
 					}
-				case other, sendReceiveKNI:
+				case readWrite, generate, sendReceiveKNI:
 				}
 			}
 			// Secondly we check adding clones. We can add one clone if:
@@ -395,7 +396,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							}
 						}
 					}
-				case other, sendReceiveKNI:
+				case readWrite, generate, sendReceiveKNI:
 				}
 			}
 		}
@@ -435,7 +436,7 @@ func (ff *flowFunction) printDebug(schedTime uint) {
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
 		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, target speed is", int64(targetSpeed), "PKT/S")
-	case other, sendReceiveKNI, receiveRSS:
+	case readWrite, generate, sendReceiveKNI, receiveRSS:
 	}
 }
 

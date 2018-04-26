@@ -164,11 +164,13 @@ type generateParameters struct {
 	targetSpeed            float64
 }
 
-func addGenerator(out *low.Ring, generateFunction GenerateFunction) {
+func addGenerator(out *low.Ring, generateFunction GenerateFunction, context UserContext) {
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	schedState.addFF("generator", generateOne, nil, nil, par, nil, nil, other)
+	ctx := make([]UserContext, 1, 1)
+	ctx[0] = context
+	schedState.addFF("generator", nil, nil, pGenerate, par, nil, &ctx, generate)
 }
 
 func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
@@ -181,7 +183,7 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("fast generator", nil, nil, generatePerf, par, make(chan uint64, 50), &ctx, fastGenerate)
+	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, make(chan uint64, 50), &ctx, fastGenerate)
 }
 
 type sendParameters struct {
@@ -265,7 +267,7 @@ func addWriter(filename string, in *low.Ring) {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
-	schedState.addFF("writer", write, nil, nil, par, nil, nil, other)
+	schedState.addFF("writer", write, nil, nil, par, nil, nil, readWrite)
 }
 
 type readParameters struct {
@@ -279,7 +281,7 @@ func addReader(filename string, out *low.Ring, repcount int32) {
 	par.out = out
 	par.filename = filename
 	par.repcount = repcount
-	schedState.addFF("reader", read, nil, nil, par, nil, nil, other)
+	schedState.addFF("reader", read, nil, nil, par, nil, nil, readWrite)
 }
 
 func makeSlice(out *low.Ring, segment *processSegment) *Func {
@@ -612,7 +614,7 @@ func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetS
 // input user packets.
 func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	addGenerator(ring, GenerateFunction(f))
+	addGenerator(ring, GenerateFunction(f), context)
 	return newFlow(ring)
 }
 
@@ -1016,7 +1018,8 @@ func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	low.Receive(uint16(srp.port.PortId), -1, srp.out, flag, coreID)
 }
 
-func generateOne(parameters interface{}, stopper [2]chan int) {
+func pGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+	// Function is unclonable, report is always nil
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
@@ -1024,6 +1027,9 @@ func generateOne(parameters interface{}, stopper [2]chan int) {
 		select {
 		case <-stopper[0]:
 			// It is time to close this clone
+                        if context[0] != nil {
+                                context[0].Delete()
+                        }
 			stopper[1] <- 1
 			return
 		default:
@@ -1031,13 +1037,13 @@ func generateOne(parameters interface{}, stopper [2]chan int) {
 			if err != nil {
 				common.LogFatal(common.Debug, err)
 			}
-			generateFunction(tempPacket, nil)
+			generateFunction(tempPacket, context[0])
 			safeEnqueueOne(OUT, tempPacket.ToUintptr())
 		}
 	}
 }
 
-func generatePerf(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
