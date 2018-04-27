@@ -6,7 +6,10 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = dpi
 EXECUTABLES = dpi
 
-dpi: ../pattern
+dpi: ../pattern gohs
+
+gohs:
+	go get -v github.com/flier/gohs/hyperscan
 
 COMMON_FILES = handlers.go
 
