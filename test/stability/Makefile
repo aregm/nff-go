@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-SUBDIRS = testMerge testDivide testCksum
+SUBDIRS = testMerge testSingleWorkingFF testCksum
 
 testing:
 	for dir in $(SUBDIRS); do \
