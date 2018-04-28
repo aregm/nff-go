@@ -32,7 +32,7 @@ var l3Rules *packet.L3Rules
 
 func main() {
 	var err error
-	mode := *flag.String("mode", "orig", "Format of rules file")
+	mode := flag.String("mode", "orig", "Format of rules file")
 	flag.Parse()
 
 	// Initialize NFF-GO library at 16 available cores
@@ -42,7 +42,7 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Start regular updating forwarding rules
-	switch mode {
+	switch *mode {
 	case "json":
 		l3Rules, err = packet.GetL3ACLFromJSON("forwardingTestL3_ACL.json")
 		flow.CheckFatal(err)

@@ -65,7 +65,7 @@ var (
 	outport2     uint
 	inport1      uint
 	inport2      uint
-	dpdkLogLevel = "--log-level=0"
+	dpdkLogLevel string
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)
@@ -86,7 +86,7 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
-	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	flag.StringVar(&dpdkLogLevel, "dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
 		fmt.Printf("fail: %+v\n", err)

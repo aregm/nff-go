@@ -12,23 +12,24 @@ import (
 )
 
 func main() {
-	mode := *flag.Uint("mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
-	outport1 := uint16(*flag.Uint("outport1", 1, "port for 1st sender"))
-	outport2 := uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
-	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
-	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	var mode uint
+	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
+	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
+	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		DisableScheduler: noscheduler,
-		DPDKArgs:         []string{dpdkLogLevel},
+		DisableScheduler: *noscheduler,
+		DPDKArgs:         []string{*dpdkLogLevel},
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow, err := flow.SetReceiver(inport)
+	firstFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
 
 	// Handle second flow via some heavy function
@@ -44,8 +45,8 @@ func main() {
 	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSender(firstFlow, outport1))
-	flow.CheckFatal(flow.SetSender(secondFlow, outport2))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
 
 	flow.CheckFatal(flow.SystemStart())
 }

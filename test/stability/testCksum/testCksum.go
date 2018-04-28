@@ -77,8 +77,8 @@ var (
 	packetLength int
 	ipVersion    uint   = 4
 	tci          uint16 = 2
-	dpdkLogLevel        = "--log-level=0"
-	protocol            = stabilityCommon.TypeUdp
+	dpdkLogLevel string
+	protocol     = stabilityCommon.TypeUdp
 )
 
 func main() {
@@ -97,7 +97,7 @@ func main() {
 	flag.BoolVar(&useVLAN, "vlan", false, "Add VLAN tag to all packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "Number of packets to send")
-	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	flag.StringVar(&dpdkLogLevel, "dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	vbwo := flag.Bool("virtualbox-workaround", false, "Use this if you run on VirtualBox with hardware acceleration which has bug in checksum calculation for UDP packets")
 	kvmwo := flag.Bool("kvm-workaround", false, "Use this if you run on Qemu/KVM with hardware acceleration which has bug in checksum calculation for TCP packets")
 	flag.Parse()

@@ -12,22 +12,23 @@ import (
 
 // Main function for constructing packet processing graph.
 func main() {
-	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
-	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
-	cores := *flag.String("cores", "", "Specifies CPU cores to be used by NFF-GO library")
-	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	outport := flag.Uint("outport", 1, "port for sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	cores := flag.String("cores", "", "Specifies CPU cores to be used by NFF-GO library")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	flag.Parse()
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList:  cores,
-		DPDKArgs: []string{dpdkLogLevel},
+		CPUList:  *cores,
+		DPDKArgs: []string{*dpdkLogLevel},
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from 0 port and send to 1 port.
-	flow1, err := flow.SetReceiver(inport)
+	flow1, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
-	flow.CheckFatal(flow.SetSender(flow1, outport))
+	flow.CheckFatal(flow.SetSender(flow1, uint16(*outport)))
 
 	// Begin to process packets.
 	flow.CheckFatal(flow.SystemStart())
