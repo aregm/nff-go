@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	load        uint
+	load uint
 )
 
 func main() {

@@ -12,7 +12,6 @@ import (
 	"github.com/intel-go/nff-go/flow"
 )
 
-
 func main() {
 	config := flow.Config{
 		// Is required for KNI
