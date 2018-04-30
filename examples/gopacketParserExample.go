@@ -14,9 +14,8 @@ import (
 )
 
 var (
-	printOn     bool
+	printOn bool
 )
-
 
 func main() {
 	flag.BoolVar(&printOn, "print", false, "enable print of parsed layers")

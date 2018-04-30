@@ -18,7 +18,6 @@ var (
 	load    uint
 )
 
-
 func main() {
 	var err error
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")

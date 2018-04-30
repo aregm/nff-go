@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	load        uint
-	loadRW      uint
+	load   uint
+	loadRW uint
 )
 
 func main() {

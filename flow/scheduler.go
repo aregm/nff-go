@@ -403,7 +403,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		checkRequired = false
 		runtime.Gosched()
 	}
-	atomic.StoreInt32(&scheduler.stopFlag, stopRequest + 1)
+	atomic.StoreInt32(&scheduler.stopFlag, stopRequest+1)
 }
 
 func cloneContext(ctx *[]UserContext) []UserContext {

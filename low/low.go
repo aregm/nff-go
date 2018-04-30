@@ -642,5 +642,5 @@ func BoolToInt(value bool) uint8 {
 }
 
 func IntArrayToBool(value *[32]uint8) *[32]bool {
-        return (*[32]bool)(unsafe.Pointer(value))
+	return (*[32]bool)(unsafe.Pointer(value))
 }

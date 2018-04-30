@@ -1027,9 +1027,9 @@ func pGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, 
 		select {
 		case <-stopper[0]:
 			// It is time to close this clone
-                        if context[0] != nil {
-                                context[0].Delete()
-                        }
+			if context[0] != nil {
+				context[0].Delete()
+			}
 			stopper[1] <- 1
 			return
 		default:
