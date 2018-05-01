@@ -329,7 +329,7 @@ type port struct {
 	txQueuesNumber int16
 	willReceive    bool // will this port receive packets
 	willKNI        bool // will this port has assigned KNI device
-	port           uint8
+	port           uint16
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -453,7 +453,7 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
 	for i := range createdPorts {
-		createdPorts[i].port = uint8(i)
+		createdPorts[i].port = uint16(i)
 	}
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")

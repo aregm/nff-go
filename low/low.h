@@ -163,7 +163,7 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint8_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
+int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
         struct rte_eth_dev_info dev_info;
@@ -427,7 +427,7 @@ void directStop(int pkts_for_free_number, struct rte_mbuf **bufs) {
 	}
 }
 
-bool directSend(struct rte_mbuf *mbuf, uint8_t port) {
+bool directSend(struct rte_mbuf *mbuf, uint16_t port) {
 	// try to send one packet to specified port, zero queue
 	if (rte_eth_tx_burst(port, 0, &mbuf, 1) == 1) {
 		return true;
