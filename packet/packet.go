@@ -824,7 +824,7 @@ func NewPacket() (*Packet, error) {
 // Sending simultaneously to one port is permitted in DPDK.
 // Is very inefficient.
 // Should be used only for testing or single events like ARP or ICMP answers
-func (p *Packet) SendPacket(port uint8) bool {
+func (p *Packet) SendPacket(port uint16) bool {
 	return low.DirectSend(p.CMbuf, port)
 }
 
