@@ -150,7 +150,7 @@ func addReceiver(portId uint16, kni bool, out *low.Ring) {
 	par.out = out
 	par.kni = kni
 	if kni {
-		schedState.addFF("receiver", nil, recvKNI, nil, par, nil, nil, sendReceiveKNI)
+		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, nil, sendReceiveKNI)
 	} else {
 		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, nil, receiveRSS)
 	}
@@ -197,7 +197,11 @@ func addSender(port uint16, queue int16, in *low.Ring) {
 	par.port = port
 	par.queue = queue
 	par.in = in
-	schedState.addFF("sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
+	if queue != -1 {
+		schedState.addFF("sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
+	} else {
+		schedState.addFF("KNI sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
+	}
 }
 
 type copyParameters struct {
@@ -324,6 +328,7 @@ type port struct {
 	wasRequested   bool // has user requested any send/receive operations at this port
 	txQueuesNumber int16
 	willReceive    bool // will this port receive packets
+	willKNI        bool // will this port has assigned KNI device
 	port           uint8
 }
 
@@ -1385,14 +1390,25 @@ func checkFlow(f *Flow) error {
 }
 
 // CreateKniDevice creates KNI device for using in receive or send functions.
-// Gets port, core (not from NFF-GO list), and unique name of future KNI device.
-func CreateKniDevice(portId uint16, core uint8, name string) *Kni {
-	low.CreateKni(portId, core, name)
+// Gets unique port, and unique name of future KNI device.
+func CreateKniDevice(portId uint16, name string) (*Kni, error) {
+	if portId >= uint16(len(createdPorts)) {
+		return nil, common.WrapWithNFError(nil, "Requested KNI port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
+	}
+	if createdPorts[portId].willKNI {
+		return nil, common.WrapWithNFError(nil, "Requested KNI port already has KNI. Two KNIs for one port are prohibited.", common.MultipleKNIPort)
+	}
+	if core, _, err := schedState.getCore(); err != nil {
+		return nil, err
+	} else {
+		low.CreateKni(portId, uint(core), name)
+	}
 	kni := new(Kni)
 	// Port will be identifier of this KNI
 	// KNI structure itself is stored inside low.c
 	kni.portId = portId
-	return kni
+	createdPorts[portId].willKNI = true
+	return kni, nil
 }
 
 func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr) uint8 {

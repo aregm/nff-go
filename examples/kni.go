@@ -20,8 +20,9 @@ func main() {
 	}
 
 	flow.CheckFatal(flow.SystemInit(&config))
-	// (port of device, core (not from NFF-GO set) which will handle device, name of device)
-	kni := flow.CreateKniDevice(0, 20, "myKNI")
+	// (port of device, name of device)
+	kni, err := flow.CreateKniDevice(0, "myKNI")
+	flow.CheckFatal(err)
 
 	fromEthFlow, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)

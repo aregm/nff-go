@@ -70,7 +70,10 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
-static int kni_config_network_interface(uint16_t port_id, uint8_t if_up);
+static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu);
+static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up);
+static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]);
+static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on);
 
 uint32_t BURST_SIZE;
 
@@ -91,7 +94,7 @@ void setAffinity(int coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
-void create_kni(uint16_t port, uint8_t core, char *name, struct rte_mempool *mbuf_pool) {
+void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
@@ -109,9 +112,10 @@ void create_kni(uint16_t port, uint8_t core, char *name, struct rte_mempool *mbu
 	struct rte_kni_ops ops;
 	memset(&ops, 0, sizeof(ops));
 	ops.port_id = port;
-	// TODO Add handling of changing MTU here
-	ops.config_network_if = kni_config_network_interface;
-
+	ops.change_mtu = KNI_change_mtu;
+	ops.config_network_if = KNI_config_network_interface;
+	ops.config_mac_address = KNI_config_mac_address;
+	ops.config_promiscusity = KNI_config_promiscusity;
 	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
@@ -573,27 +577,30 @@ void lpm_free(void *lpm) {
 	rte_lpm_free((struct rte_lpm *)lpm);
 }
 
-// Callback for request of configuring KNI up/down
-// Copy of DPDK kni_config_network_interface from examples/kni/main.c
-static int kni_config_network_interface(uint16_t port_id, uint8_t if_up) {
-	int ret = 0;
-	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
-		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");
-                return -EINVAL;
-        }
+// Callbacks for multiple KNI requests
+// If you would like to change this:
+//     1. It is not recomended
+//     2. You should check if there are new callbacks in DPDK
+//     3. You should check examples/kni/main.c file for callbacks examples
+//     4. You should understand that calling rte_eth_dev_stop in the same time of rte_eth_rx_burst will result to errors
+//         4a. One of these errors can be overloading of receive mempool
+//     5. You should understand that calling rte_eth_dev_start should include receive ring handling as in port_init
+static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu) {
+	fprintf(stderr, "DEBUG: KNI: Change MTU of port %d to %u\n", port_id, new_mtu);
+	return 0;
+}
 
-	fprintf(stderr, "DEBUG: Configure network interface of %d %s\n", port_id, if_up ? "up" : "down");
+static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up) {
+	fprintf(stderr, "DEBUG: KNI: Configure network interface of port %d %s\n", port_id, if_up ? "up" : "down");
+	return 0;
+}
 
-        if (if_up != 0) { // Configure network interface up
-                rte_eth_dev_stop(port_id);
-                ret = rte_eth_dev_start(port_id);
-        } else { // Configure network interface down
-                rte_eth_dev_stop(port_id);
-	}
+static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]) {
+	fprintf(stderr, "DEBUG: KNI: Configure new MAC address of port %d\n");
+	return 0;
+}
 
-        if (ret < 0) {
-		rte_exit(EXIT_FAILURE, "Failed to start port while KNI configuring\n");
-	}
-
-        return ret;
+static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on) {
+	fprintf(stderr, "DEBUG: KNI: Promiscusity mode of port %d %s\n", port_id, to_on ? "on" : "off");
+	return 0;
 }
