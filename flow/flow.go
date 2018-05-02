@@ -178,7 +178,7 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	par.mempool = low.CreateMempool()
+	par.mempool = low.CreateMempool("Fast generate")
 	par.vectorGenerateFunction = vectorGenerateFunction
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
@@ -216,7 +216,7 @@ func addCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) {
 	par.in = in
 	par.out = out
 	par.outCopy = outCopy
-	par.mempool = low.CreateMempool()
+	par.mempool = low.CreateMempool("Copy")
 	schedState.addFF("copy", nil, nil, pcopy, par, make(chan uint64, 50), nil, segmentCopy)
 }
 
@@ -496,7 +496,7 @@ func SystemStart() error {
 
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	// Init low performance mempool
-	packet.SetNonPerfMempool(low.CreateMempool())
+	packet.SetNonPerfMempool(low.CreateMempool("Slow operations"))
 	if err := schedState.systemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
