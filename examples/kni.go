@@ -1,5 +1,12 @@
-// Call insmod ./x86_64-native-linuxapp-gcc/kmod/rte_kni.ko lo_mode=lo_mode_fifo_skb from DPDK directory
-// before this. It will make a loop of packets inside KNI device and "send" will send received packets.
+// For forwarding testing call
+// "insmod ./x86_64-native-linuxapp-gcc/kmod/rte_kni.ko lo_mode=lo_mode_fifo_skb"
+// from DPDK directory before compiling this test. It will make a loop of packets
+// inside KNI device and receive from KNI will receive all packets that were sent to KNI.
+
+// For ping testing call
+// "insmod ./x86_64-native-linuxapp-gcc/kmod/rte_kni.ko"
+// from DPDK directory before compiling this test. Use --ping option.
+
 // Other variants of rte_kni.ko configuration can be found here:
 // http://dpdk.org/doc/guides/sample_app_ug/kernel_nic_interface.html
 
@@ -9,10 +16,22 @@
 package main
 
 import (
+	"flag"
+
+	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
+var ping bool
+
 func main() {
+	inport := flag.Uint("inport", 0, "port for receiver")
+	outport := flag.Uint("outport", 0, "port for sender")
+	kniport := flag.Uint("kniport", 0, "port for kni")
+	flag.BoolVar(&ping, "ping", false, "use this for pushing only ARP and ICMP packets to KNI")
+	flag.Parse()
+
 	config := flow.Config{
 		// Is required for KNI
 		NeedKNI: true,
@@ -20,16 +39,43 @@ func main() {
 	}
 
 	flow.CheckFatal(flow.SystemInit(&config))
-	// (port of device, name of device)
-	kni, err := flow.CreateKniDevice(0, "myKNI")
+	// port of device, name of device
+	kni, err := flow.CreateKniDevice(uint16(*kniport), "myKNI")
 	flow.CheckFatal(err)
 
-	fromEthFlow, err := flow.SetReceiver(0)
+	inputFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
-	flow.CheckFatal(flow.SetSenderKNI(fromEthFlow, kni))
 
+	toKNIFlow, err := flow.SetSeparator(inputFlow, pingSeparator, nil)
+	flow.CheckFatal(err)
+
+	flow.CheckFatal(flow.SetSenderKNI(toKNIFlow, kni))
 	fromKNIFlow := flow.SetReceiverKNI(kni)
-	flow.CheckFatal(flow.SetSender(fromKNIFlow, 1))
+
+	outputFlow, err := flow.SetMerger(inputFlow, fromKNIFlow)
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetSender(outputFlow, uint16(*outport)))
 
 	flow.CheckFatal(flow.SystemStart())
+}
+
+func pingSeparator(current *packet.Packet, ctx flow.UserContext) bool {
+	if ping == false {
+		// All packets will go to KNI.
+		// You should use lo_mode=lo_mode_fifo_skb for looping back these packets.
+		return false
+	}
+	ipv4, ipv6, arp := current.ParseAllKnownL3()
+	if arp != nil {
+		return false
+	} else if ipv4 != nil {
+		if ipv4.NextProtoID == common.ICMPNumber {
+			return false
+		}
+	} else if ipv6 != nil {
+		if ipv6.Proto == common.ICMPNumber {
+			return false
+		}
+	}
+	return true
 }
