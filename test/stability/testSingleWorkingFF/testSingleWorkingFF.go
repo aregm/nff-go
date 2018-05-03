@@ -92,8 +92,8 @@ var (
 	l3Rules     *packet.L3Rules
 	gTestType   uint
 	lessPercent int
-	eps         int
 	passedLimit uint64
+	delta       int = 2
 	checkSlice  []uint8
 	shift       uint64
 )
@@ -256,8 +256,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 }
 
 func setParameters(testScenario uint) (err error) {
-	eps = 3
-	passedLimit = 85
+	passedLimit = 98
 	shift = 0
 	totalPackets = userTotalPackets
 	switch gTestType {
@@ -274,14 +273,13 @@ func setParameters(testScenario uint) (err error) {
 		}
 		// Test expects to receive 20% of packets on 0 port and 80% on 1 port
 		lessPercent = 20
-		eps = 4
 	case partition, vpartition:
 		// Test expects to receive 10% of packets on 0 port and 90% on 1 port
 		lessPercent = 10
 	case pcopy:
 		// Test expects to receive 50% of packets on 0 port and 50% on 1 port (200% total)
 		lessPercent = 50
-		passedLimit = 150 // ~85 * 2
+		passedLimit = 196 // ~98 * 2
 	case handle, vhandle:
 		// Test expects to receive 100% of packets on 0 port and 0% on 1 port
 		lessPercent = 100
@@ -292,7 +290,7 @@ func setParameters(testScenario uint) (err error) {
 		}
 		// Test expects to receive 100% of packets on 0 port and 0% on 1 port (33% total)
 		lessPercent = 100
-		passedLimit = 28 // 85 * 0.33
+		passedLimit = 31 // 98 * 0.33
 		totalPackets = totalPackets / 3
 		shift = 4
 	}
@@ -389,8 +387,8 @@ func composeStatistics() error {
 	// Test is passed, if p1 is ~lessPercent% and p2 is ~100 - lessPercent%
 	// and if total receive/send rate is high
 	if broken == 0 &&
-		p1 <= lessPercent+eps && p2 <= 100-lessPercent+eps &&
-		p1 >= lessPercent-eps && p2 >= 100-lessPercent-eps && received*100/sent > passedLimit {
+		p1 <= lessPercent+delta && p2 <= 100-lessPercent+delta &&
+		p1 >= lessPercent-delta && p2 >= 100-lessPercent-delta && received*100/sent > passedLimit {
 		println("TEST PASSED")
 		return nil
 	}

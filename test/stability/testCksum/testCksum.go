@@ -43,6 +43,7 @@ import (
 
 var (
 	totalPackets uint64 = 10
+	passedLimit  uint64 = 98
 
 	// Packet should hold at least two int64 fields
 	minPayloadSize        = int(unsafe.Sizeof(sentPackets) * 2)
@@ -307,7 +308,7 @@ func composeStatistics() error {
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 	println("Ratio = ", ratio, "%")
-	if atomic.LoadInt32(&passed) != 0 && ratio >= 90 {
+	if atomic.LoadInt32(&passed) != 0 && ratio >= passedLimit {
 		println("TEST PASSED")
 		return nil
 	}
