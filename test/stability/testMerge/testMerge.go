@@ -65,7 +65,7 @@ var (
 	outport2     uint
 	inport1      uint
 	inport2      uint
-	dpdkLogLevel string
+	dpdkLogLevel = "--log-level=0"
 
 	fixMACAddrs  func(*packet.Packet, flow.UserContext)
 	fixMACAddrs1 func(*packet.Packet, flow.UserContext)

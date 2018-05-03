@@ -77,7 +77,7 @@ var (
 	packetLength int
 	ipVersion    uint   = 4
 	tci          uint16 = 2
-	dpdkLogLevel string
+	dpdkLogLevel = "--log-level=0"
 	protocol     = stabilityCommon.TypeUdp
 )
 
