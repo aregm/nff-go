@@ -104,8 +104,16 @@ type flowFunction struct {
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
 	par interface{}, report chan uint64, context *[]UserContext, fType ffType) {
 	ff := new(flowFunction)
-	scheduler.ffCount++
-	ff.name = name + " " + strconv.Itoa(scheduler.ffCount)
+	nameC := 0
+	for i := range scheduler.ff {
+		if scheduler.ff[i].name == name {
+			nameC++
+		}
+	}
+	if nameC != 0 {
+		name = name + " " + strconv.Itoa(nameC)
+	}
+	ff.name = name
 	ff.uncloneFunction = ucfn
 	ff.cFunction = Cfn
 	ff.cloneFunction = cfn
@@ -128,7 +136,6 @@ type scheduler struct {
 	checkTime         uint
 	debugTime         uint
 	Dropped           uint
-	ffCount           int
 	maxPacketsToClone uint32
 	stopFlag          int32
 }
@@ -254,7 +261,6 @@ func (scheduler *scheduler) systemStop() {
 		scheduler.setCoreByIndex(1) // stop
 	}
 	scheduler.ff = nil
-	scheduler.ffCount = 0
 }
 
 // Main loop after framework was started
