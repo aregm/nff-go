@@ -596,7 +596,7 @@ static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up) {
 }
 
 static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]) {
-	fprintf(stderr, "DEBUG: KNI: Configure new MAC address of port %d\n");
+	fprintf(stderr, "DEBUG: KNI: Configure new MAC address of port %d\n", port_id);
 	return 0;
 }
 
