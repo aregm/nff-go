@@ -298,9 +298,9 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 				ff.updateCurrentSpeed()
 			}
 			// Firstly we check removing clones. We can remove one clone if:
-			// 1. flow function has clones
+			// 1. flow function has clones or it is fastGenerate
 			// 2. scheduler removing is switched on
-			if (ff.cloneNumber > 1) && (scheduler.offRemove == false) {
+			if (ff.cloneNumber > 1 || ff.fType == fastGenerate) && (scheduler.offRemove == false) {
 				switch ff.fType {
 				case segmentCopy:
 					// 3. current speed of flow function is lower, than saved speed with less number of clones
@@ -318,7 +318,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					// 3. Current speed is much bigger than target speed
 					if speedPKTS > 1.1*targetSpeed {
 						// 4. TODO strange heuristic, it is required to check this
-						if targetSpeed/float64(ff.cloneNumber+1)*float64(ff.cloneNumber) > speedPKTS {
+						if ff.cloneNumber > 1 && targetSpeed/float64(ff.cloneNumber+1)*float64(ff.cloneNumber) > speedPKTS {
 							scheduler.stopFF(ff)
 							ff.updatePause(0)
 							continue
