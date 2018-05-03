@@ -39,7 +39,8 @@ var (
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 16
 	speed       uint64 = 1000000
-	passedLimit uint64 = 85
+	passedLimit uint64 = 98
+	delta       int    = 2
 
 	sentPacketsGroup1 uint64
 	sentPacketsGroup2 uint64
@@ -227,7 +228,7 @@ func composeStatistics() error {
 	// Test is passed, if p1 and p2 do not differ too much: |p1-p2| < 4%
 	// and enough packets received back
 	if atomic.LoadInt32(&passed) != 0 &&
-		(p1-p2 < 4 && p1-p2 > -4) && received*100/sent > passedLimit {
+		(p1-p2 < delta && p1-p2 > -delta) && received*100/sent > passedLimit {
 		println("TEST PASSED")
 		return nil
 	}

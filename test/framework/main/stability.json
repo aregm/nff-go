@@ -39,14 +39,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=2"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=2"
@@ -60,14 +60,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=3"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=3"
@@ -81,14 +81,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=0"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=0"
@@ -102,14 +102,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=1"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=1"
@@ -123,14 +123,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=4"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=4"
@@ -144,14 +144,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=5"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=5"
@@ -165,14 +165,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=0", "-outport1=0", "-inport2=1", "-testType=6"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=0", "-outport2=1", "-testType=6"
@@ -186,14 +186,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=8"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=8"
@@ -207,14 +207,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=9"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=9"
@@ -228,14 +228,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=10"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=10"
@@ -249,14 +249,14 @@
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-speed=10000", "-number=100000", "-testScenario=1", "-inport1=1", "-outport1=0", "-testType=11"
                     ]
                 },
                 {
-                    "image-name": "nff-go-test-singleWorkingFF",
+                    "image-name": "nff-go-test-singleworkingff",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testSingleWorkingFF", "-testScenario=2", "-inport1=0", "-outport1=1", "-testType=11"

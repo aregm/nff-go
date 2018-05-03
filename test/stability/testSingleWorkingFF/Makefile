@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nff-go-test-singleWorkingFF
+IMAGENAME = nff-go-test-singleworkingff
 EXECUTABLES = testSingleWorkingFF
 
 all:
