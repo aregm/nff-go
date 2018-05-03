@@ -12,14 +12,14 @@ import (
 )
 
 func main() {
-	inFile := *flag.String("infile", "fileReadWriteIn.pcap", "Input pcap file")
-	outFile := *flag.String("outfile", "fileReadWriteOut.pcap", "Output pcap file")
+	inFile := flag.String("infile", "fileReadWriteIn.pcap", "Input pcap file")
+	outFile := flag.String("outfile", "fileReadWriteOut.pcap", "Output pcap file")
 
-	useReader := *flag.Bool("reader", false, "Enable Reader")
-	useWriter := *flag.Bool("writer", false, "Enable Writer")
+	useReader := flag.Bool("reader", false, "Enable Reader")
+	useWriter := flag.Bool("writer", false, "Enable Writer")
 
-	repcount := *flag.Int("repcnt", 1, "Number of times for reader to read infile")
-	outport := uint16(*flag.Uint("outport", 0, "Port for sender"))
+	repcount := flag.Int("repcnt", 1, "Number of times for reader to read infile")
+	outport := flag.Uint("outport", 0, "Port for sender")
 	flag.Parse()
 
 	// Initialize NFF-GO library at 16 cores by default
@@ -29,20 +29,20 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	var f1 *flow.Flow
-	if useReader {
-		print("Enabled Read from file ", inFile, " and ")
-		f1 = flow.SetReceiverFile(inFile, int32(repcount))
+	if *useReader {
+		print("Enabled Read from file ", *inFile, " and ")
+		f1 = flow.SetReceiverFile(*inFile, int32(*repcount))
 	} else {
 		print("Enabled Generate and ")
 		f1 = flow.SetGenerator(generatePacket, nil)
 	}
 
-	if useWriter {
-		println("Write to file", outFile)
-		flow.CheckFatal(flow.SetSenderFile(f1, outFile))
+	if *useWriter {
+		println("Write to file", *outFile)
+		flow.CheckFatal(flow.SetSenderFile(f1, *outFile))
 	} else {
 		println("Send to port", outport)
-		flow.CheckFatal(flow.SetSender(f1, uint16(outport)))
+		flow.CheckFatal(flow.SetSender(f1, uint16(*outport)))
 	}
 
 	flow.CheckFatal(flow.SystemStart())

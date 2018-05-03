@@ -17,23 +17,23 @@ import (
 )
 
 func main() {
-	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
-	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
-	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	outport := flag.Uint("outport", 1, "port for sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	config := flow.Config{
-		DisableScheduler: noscheduler,
-		DPDKArgs:         []string{dpdkLogLevel},
+		DisableScheduler: *noscheduler,
+		DPDKArgs:         []string{*dpdkLogLevel},
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
-	input, err := flow.SetReceiver(inport)
+	input, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
 	flow.CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
-	flow.CheckFatal(flow.SetSender(input, outport))
+	flow.CheckFatal(flow.SetSender(input, uint16(*outport)))
 
 	flow.CheckFatal(flow.SystemStart())
 }

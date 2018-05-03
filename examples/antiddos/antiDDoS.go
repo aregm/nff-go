@@ -71,8 +71,8 @@ func flowHash(srcAddr []byte, srcAddrLen int, srcPort uint32) uint32 {
 
 // Main function for constructing packet processing graph.
 func main() {
-	outPort := uint16(*flag.Uint("outPort", 0, "port to send"))
-	inPort := uint16(*flag.Uint("inPort", 0, "port to receive"))
+	outPort := flag.Uint("outPort", 0, "port to send")
+	inPort := flag.Uint("inPort", 0, "port to receive")
 	flag.Parse()
 
 	// Init NFF-GO system at requested number of cores.
@@ -82,10 +82,10 @@ func main() {
 
 	flow.CheckFatal(flow.SystemInit(&config))
 
-	inputFlow, err := flow.SetReceiver(inPort)
+	inputFlow, err := flow.SetReceiver(uint16(*inPort))
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetHandlerDrop(inputFlow, handle, nil))
-	flow.CheckFatal(flow.SetSender(inputFlow, outPort))
+	flow.CheckFatal(flow.SetSender(inputFlow, uint16(*outPort)))
 	// Var isDdos is calculated in separate goroutine.
 	go calculateMetrics()
 	// Begin to process packets.

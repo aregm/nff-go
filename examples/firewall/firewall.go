@@ -18,8 +18,8 @@ var (
 // Main function for constructing packet processing graph.
 func main() {
 	var err error
-	outport := uint16(*flag.Uint("outport", 1, "port for sender"))
-	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
+	outport := flag.Uint("outport", 1, "port for sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
 	flag.Parse()
 
 	// Initialize NFF-GO library at 8 cores by default
@@ -33,7 +33,7 @@ func main() {
 	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
-	inputFlow, err := flow.SetReceiver(inport)
+	inputFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
 
 	// Separate packet flow based on ACL.
@@ -44,7 +44,7 @@ func main() {
 	flow.CheckFatal(flow.SetStopper(rejectFlow))
 
 	// Send accepted packets to first port. Send queue will be added automatically.
-	flow.CheckFatal(flow.SetSender(inputFlow, outport))
+	flow.CheckFatal(flow.SetSender(inputFlow, uint16(*outport)))
 
 	// Begin to process packets.
 	flow.CheckFatal(flow.SystemStart())

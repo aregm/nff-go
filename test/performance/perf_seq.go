@@ -17,19 +17,20 @@ var (
 
 func main() {
 	var err error
+	var mode uint
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
-	mode := *flag.Uint("mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
-	outport1 := uint16(*flag.Uint("outport1", 1, "port for 1st sender"))
-	outport2 := uint16(*flag.Uint("outport2", 1, "port for 2nd sender"))
-	inport := uint16(*flag.Uint("inport", 0, "port for receiver"))
-	noscheduler := *flag.Bool("no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := *flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	flag.UintVar(&mode, "mode", 2, "Benching mode: 2, 12 - two handles; 3, 13 - tree handles; 4, 14 - four handles. 2,3,4 - one flow; 12,13,14 - two flows")
+	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
+	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		DisableScheduler: noscheduler,
-		DPDKArgs:         []string{dpdkLogLevel},
+		DisableScheduler: *noscheduler,
+		DPDKArgs:         []string{*dpdkLogLevel},
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
@@ -37,7 +38,7 @@ func main() {
 	var afterFlow *flow.Flow
 
 	// Receive packets from zero port. One queue will be added automatically.
-	firstFlow, err := flow.SetReceiver(inport)
+	firstFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
 
 	if mode > 10 {
@@ -72,8 +73,8 @@ func main() {
 	flow.CheckFatal(err)
 
 	// Send both flows each one to one port. Queues will be added automatically.
-	flow.CheckFatal(flow.SetSender(afterFlow, outport1))
-	flow.CheckFatal(flow.SetSender(secondFlow, outport2))
+	flow.CheckFatal(flow.SetSender(afterFlow, uint16(*outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
 
 	flow.CheckFatal(flow.SystemStart())
 }
