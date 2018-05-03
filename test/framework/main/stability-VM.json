@@ -273,7 +273,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-kvm-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-kvm-workaround"
                     ]
                 },
                 {
@@ -294,7 +294,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-virtualbox-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-virtualbox-workaround"
                     ]
                 },
                 {
@@ -315,7 +315,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -336,7 +336,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-kvm-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-kvm-workaround"
                     ]
                 },
                 {
@@ -357,7 +357,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-virtualbox-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-virtualbox-workaround"
                     ]
                 },
                 {
@@ -378,7 +378,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-number=50000", "-speed=4000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-number=500000", "-speed=20000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -399,7 +399,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-vlan", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-kvm-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-vlan", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-kvm-workaround"
                     ]
                 },
                 {
@@ -420,7 +420,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-vlan", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-virtualbox-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-vlan", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-virtualbox-workaround"
                     ]
                 },
                 {
@@ -441,7 +441,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-vlan",  "-number=50000", "-speed=4000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-vlan",  "-number=500000", "-speed=20000", "-inport=0", "-outport=1"
                     ]
                 },
                 {
@@ -462,7 +462,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-vlan", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-kvm-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-vlan", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-kvm-workaround"
                     ]
                 },
                 {
@@ -483,7 +483,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-vlan", "-number=50000", "-speed=4000", "-inport=0", "-outport=1", "-virtualbox-workaround"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-vlan", "-number=500000", "-speed=20000", "-inport=0", "-outport=1", "-virtualbox-workaround"
                     ]
                 },
                 {
@@ -504,7 +504,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-vlan",  "-number=50000", "-speed=4000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-vlan",  "-number=500000", "-speed=20000", "-inport=0", "-outport=1"
                     ]
                 },
                 {

@@ -56,9 +56,7 @@ var (
 
 	// T second timeout is used to let generator reach required speed
 	// During timeout packets are skipped and not counted
-	T                     = 10 * time.Second
-	lastPacketGeneratedAt time.Time
-	interPacketInterval   time.Duration
+	T = 10 * time.Second
 
 	passed int32 = 1
 	rnd    *rand.Rand
@@ -194,12 +192,9 @@ func executeTest(testScenario uint) error {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
-		interPacketInterval = time.Second / time.Duration(speed)
-		lastPacketGeneratedAt = time.Now()
 		// Create packet flow
-		generatedFlow := flow.SetGenerator(generatePacket, nil)
+		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
 
-		var err error
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
 			// Send all generated packets to the output
@@ -323,11 +318,6 @@ func generatePayloadLength() uint16 {
 }
 
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
-	now := time.Now()
-	if now.Sub(lastPacketGeneratedAt) < interPacketInterval {
-		time.Sleep(lastPacketGeneratedAt.Add(interPacketInterval).Sub(now))
-	}
-
 	if randomL3 {
 		if rnd.Int()%2 == 0 {
 			ipVersion = 6
@@ -372,7 +362,6 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	if time.Since(progStart) >= T && atomic.LoadUint64(&receivedPackets) < totalPackets {
 		atomic.AddUint64(&sentPackets, 1)
 	}
-	lastPacketGeneratedAt = time.Now()
 }
 
 func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
