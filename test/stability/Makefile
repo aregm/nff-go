@@ -5,9 +5,9 @@
 PATH_TO_MK = ../../mk
 SUBDIRS = testMerge testSingleWorkingFF testCksum
 
+include $(PATH_TO_MK)/intermediate.mk
+
 testing:
 	for dir in $(SUBDIRS); do \
 		cd $$dir && make testing; cd -; \
 	done
-
-include $(PATH_TO_MK)/intermediate.mk

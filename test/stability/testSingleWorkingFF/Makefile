@@ -9,8 +9,7 @@ EXECUTABLES = testSingleWorkingFF
 all:
 	cp ../../framework/main/config.json .
 
-# We can't test them together because our system won't stop handlers between tests
-testing:
+testing: check-pktgen
 	go test
 
 include $(PATH_TO_MK)/leaf.mk
