@@ -60,7 +60,6 @@ var (
 	T = 10 * time.Second
 
 	passed int32 = 1
-	rnd    *rand.Rand
 
 	hwol         bool
 	inport       uint
@@ -156,7 +155,6 @@ func executeTest(testScenario uint) error {
 	if testScenario > 3 || testScenario < 0 {
 		return errors.New("testScenario should be in interval [0, 3]")
 	}
-	rnd = rand.New(rand.NewSource(13))
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
 		HWTXChecksum: hwol,
@@ -194,7 +192,7 @@ func executeTest(testScenario uint) error {
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create packet flow
-		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
+		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, initGenerator(13))
 
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
@@ -311,14 +309,32 @@ func composeStatistics() error {
 	return errors.New("final statistics check failed")
 }
 
-func generatePayloadLength() uint16 {
+func generatePayloadLength(rnd *rand.Rand) uint16 {
 	if packetLength == 0 {
 		return uint16(rnd.Intn(maxPayloadSize-minPayloadSize) + minPayloadSize)
 	}
 	return uint16(packetLength)
 }
 
+type generatorParameters struct {
+	seed   int64
+	rnd    *rand.Rand
+}
+
+func initGenerator(s int64) *generatorParameters {
+	return &generatorParameters{seed: s, rnd: rand.New(rand.NewSource(s))}
+}
+
+func (p generatorParameters) Copy() interface{} {
+	return initGenerator(p.seed)
+}
+
+func (p generatorParameters) Delete() {
+}
+
+
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
+	rnd := (context.(*generatorParameters)).rnd
 	if randomL3 {
 		if rnd.Int()%2 == 0 {
 			ipVersion = 6
@@ -336,19 +352,19 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 
 	if ipVersion == 4 {
 		if protocol == stabilityCommon.TypeUdp {
-			generateIPv4UDP(emptyPacket)
+			generateIPv4UDP(emptyPacket, rnd)
 		} else if protocol == stabilityCommon.TypeIcmp {
-			generateIPv4ICMP(emptyPacket)
+			generateIPv4ICMP(emptyPacket, rnd)
 		} else {
-			generateIPv4TCP(emptyPacket)
+			generateIPv4TCP(emptyPacket, rnd)
 		}
 	} else {
 		if protocol == stabilityCommon.TypeUdp {
-			generateIPv6UDP(emptyPacket)
+			generateIPv6UDP(emptyPacket, rnd)
 		} else if protocol == stabilityCommon.TypeIcmp {
-			generateIPv6ICMP(emptyPacket)
+			generateIPv6ICMP(emptyPacket, rnd)
 		} else {
-			generateIPv6TCP(emptyPacket)
+			generateIPv6TCP(emptyPacket, rnd)
 		}
 	}
 
@@ -365,7 +381,7 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 	}
 }
 
-func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
+func initPacketCommon(emptyPacket *packet.Packet, length uint16, rnd *rand.Rand) {
 	// Initialize ethernet addresses
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xea, 0xad, 0xbe, 0xee, 0xef}
 	emptyPacket.Ether.SAddr = [6]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
@@ -417,11 +433,11 @@ func initPacketICMP(emptyPacket *packet.Packet) {
 	emptyPacketICMP.SeqNum = 0xbeef
 }
 
-func generateIPv4UDP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4UDP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketUDP(emptyPacket)
 
@@ -435,11 +451,11 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv4TCP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4TCP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4TCPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketTCP(emptyPacket)
 
@@ -453,11 +469,11 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv4ICMP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4ICMPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketICMP(emptyPacket)
 	pIPv4 := emptyPacket.GetIPv4()
@@ -472,11 +488,11 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 		unsafe.Pointer(uintptr(unsafe.Pointer(pICMP))+common.ICMPLen)))
 }
 
-func generateIPv6UDP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6UDP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6UDPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketUDP(emptyPacket)
 
@@ -489,11 +505,11 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv6TCP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6TCP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6TCPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketTCP(emptyPacket)
 
@@ -506,11 +522,11 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv6ICMP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6ICMPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketICMP(emptyPacket)
 
