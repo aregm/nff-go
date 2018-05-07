@@ -47,6 +47,18 @@ Vagrant.configure(2) do |config|
   end
 
 $provision_fedora = <<SHELL
+echo Fixing bootloader to use consistent interface names
+sudo sed -i -e 's,biosdevname=0,biosdevname=1,' /etc/default/grub
+sudo sed -i -e 's,net.ifnames=0,net.ifnames=1,' /etc/default/grub
+sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+
+if [ $(readlink /etc/udev/rules.d/80-net-setup-link.rules) == /dev/null ]
+then
+    echo Fixing udev to use consistent interface names
+    sudo rm /etc/udev/rules.d/80-net-setup-link.rules
+    sudo cp /usr/lib/udev/rules.d/80-net-setup-link.rules /etc/udev/rules.d/
+fi
+
 echo Installing system packages
 sudo dnf update -y
 sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim

@@ -5,8 +5,8 @@ export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
 export MAKEFLAGS="-j 4"
 export NFF_GO_CARDS="00:06.0 00:07.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
-export CARD1=eth1
-export CARD2=eth2
+export CARD1=ens6
+export CARD2=ens7
 
 # Bind ports to DPDK driver
 bindports ()
@@ -65,8 +65,8 @@ setupnatclient ()
 natmiddle ()
 {
     export NFF_GO_CARDS="00:08.0 00:0a.0"
-    export CARD1=eth2
-    export CARD2=eth4
+    export CARD1=ens7
+    export CARD2=ens9
 
     bindports
 
