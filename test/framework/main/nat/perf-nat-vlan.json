@@ -28,7 +28,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
@@ -49,7 +49,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
@@ -70,7 +70,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
@@ -91,7 +91,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
@@ -112,7 +112,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
@@ -133,7 +133,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-config", "config.json"
+                        "./nat", "-config", "config-vlan.json"
                     ]
                 }
             ]
