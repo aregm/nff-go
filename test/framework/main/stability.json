@@ -273,7 +273,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -294,7 +294,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -315,7 +315,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -336,7 +336,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -357,7 +357,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -378,7 +378,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -399,7 +399,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-vlan", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-tcp", "-vlan", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -420,7 +420,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-vlan", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-udp", "-vlan", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -441,7 +441,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-vlan",  "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv4", "-icmp", "-vlan",  "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -462,7 +462,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-vlan", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-tcp", "-vlan", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -483,7 +483,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-vlan", "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-hwol", "-ipv6", "-udp", "-vlan", "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
@@ -504,7 +504,7 @@
                     "image-name": "nff-go-test-cksum",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-vlan",  "-number=1000000", "-inport=0", "-outport=1"
+                        "./testCksum", "-testScenario=1", "-ipv6", "-icmp", "-vlan",  "-number=1000000", "-inport=0", "-outport=1", "-speed=1000000"
                     ]
                 },
                 {
