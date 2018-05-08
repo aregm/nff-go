@@ -12,3 +12,5 @@ func RteCompilerWmb()
 
 // Prefetcht0 is prefetch
 func Prefetcht0(addr uintptr)
+
+func GenerateMask(v1 *([32]uint8), v2 *([32]uint8), previousMask *([32]bool), result *([32]bool)) bool

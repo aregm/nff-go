@@ -1,38 +1,31 @@
-language:
-  - go
-
 os:
   - linux
-
-env:
-  global:
-    - MAKEFLAGS="-j2"
 
 dist:
   - trusty
 
 sudo:
-  - required 
+  - required
 
-go: 
- - 1.9.x
+services:
+  - docker
 
 before_script:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y libnuma-dev
-  - sudo apt-get install -y libpcap-dev
   - sudo apt-get install -y linux-headers-$(uname -r)
-  - sudo apt-get install -y hugepages 
-  - sudo apt-get install -y libelf-dev
-  - export PATH=$GOROOT/bin:$PATH
+  - docker pull ubuntu:bionic
+  - docker build -t test-bionic .
+  - docker run -it -d --privileged -v /usr/src:/usr/src -v /lib/modules:/lib/modules -v /sys/devices/system/node:/sys/devices/system/node --name test-nff-go test-bionic /bin/bash
 
 script:
-  - ./scripts/get-depends.sh
-  - make
-  - cd examples && make gopacket_parser_example && cd ..
-  - cd test/localTesting && make && cd -
-  - sudo sysctl -w vm.nr_hugepages=1024
-  - sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
-  - sudo mkdir /mnt/huge
-  - sudo mount -t hugetlbfs nodev /mnt/huge
-  - sudo -E env "PATH=$PATH GOROOT=$GOROOT GOPATH=$GOPATH" make citesting
+  - docker exec -i test-nff-go ./scripts/get-depends.sh
+  - docker exec -i test-nff-go make
+  # Build standalone examples
+  - docker exec -i test-nff-go bash -c "cd examples && make gopacketParserExample && cd .."
+  - docker exec -i test-nff-go bash -c "cd test/localTesting && make && cd -"
+  - docker exec -i test-nff-go make -C examples/dpi
+  # Run unit tests
+  - docker exec -i test-nff-go sysctl -w vm.nr_hugepages=1024
+  - docker exec -i test-nff-go sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
+  - docker exec -i test-nff-go mkdir /mnt/huge
+  - docker exec -i test-nff-go mount -t hugetlbfs nodev /mnt/huge
+  - docker exec -i test-nff-go make citesting

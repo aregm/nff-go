@@ -710,6 +710,18 @@ func (packet *Packet) GetPacketSegmentLen() uint {
 	return low.GetDataLenMbuf(packet.CMbuf)
 }
 
+// GetPacketPayload returns extracted packet payload as byte array and bool status.
+// Works only for protocols, supported by ParseData (IPv4, IPv6, TCP, UDP, ICMP). Not zero-copy.
+func (packet *Packet) GetPacketPayload() ([]byte, bool) {
+	pktStartAddr := packet.StartAtOffset(0)
+	pktBytes := packet.GetRawPacketBytes()
+	if packet.ParseData() == -1 {
+		return []byte{}, false
+	}
+	hdrsLen := uintptr(packet.Data) - uintptr(pktStartAddr)
+	return pktBytes[hdrsLen:], true
+}
+
 // EncapsulateHead adds bytes to packet. start - number of beginning byte, length - number of
 // added bytes. This function should be used to add bytes to the first half
 // of packet. Return false if error.
@@ -812,7 +824,7 @@ func NewPacket() (*Packet, error) {
 // Sending simultaneously to one port is permitted in DPDK.
 // Is very inefficient.
 // Should be used only for testing or single events like ARP or ICMP answers
-func (p *Packet) SendPacket(port uint8) bool {
+func (p *Packet) SendPacket(port uint16) bool {
 	return low.DirectSend(p.CMbuf, port)
 }
 

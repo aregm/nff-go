@@ -6,7 +6,7 @@ PATH_TO_MK = ../../../mk
 IMAGENAME = nff-go-test-cksum
 EXECUTABLES = testCksum
 
-testing:
-	go test
+testing: check-pktgen
+	go test -v -test.timeout 0
 
 include $(PATH_TO_MK)/leaf.mk

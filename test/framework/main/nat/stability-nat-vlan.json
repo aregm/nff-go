@@ -1,0 +1,86 @@
+{
+    "docker-config": {
+        "request-timeout": 10000000000,
+        "docker-client-version": "1.24",
+        "privileged": true,
+        "map-volumes": [
+            "/sys/bus/pci/drivers:/sys/bus/pci/drivers",
+            "/sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages",
+            "/sys/devices/system/node:/sys/devices/system/node",
+            "/dev:/dev"
+        ],
+        "pktgen-port": 22022
+    },
+    "tests": [
+        {
+            "name": "PingNAT-VLANFromPrivate",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "sleep 10; ping -c 5 192.168.114.1 && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./nat", "-config", "config-vlan.json"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "PingNAT-VLANFromPublic",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sleep", "60"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./nat", "-config", "config-vlan.json"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "sleep 10; ping -c 5 192.168.116.1 && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "NAT-VLANDownloadFile",
+            "test-time": 60000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "sh", "-c", "sleep 10; wget --no-proxy http://192.168.116.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-nat",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./nat", "-config", "config-vlan.json"
+                    ]
+                }
+            ]
+        }
+    ]
+}

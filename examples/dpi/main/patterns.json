@@ -1,0 +1,32 @@
+[
+    {
+        "name": "AllowService",
+        "regexp": "Host: [a-z-]*.service.com",
+        "allow": true
+    },
+    {
+        "name": "AllowOtherService",
+        "regexp": "Host: [0-9a-z.]*.otherservice.com",
+        "allow": true
+    },
+    {
+        "name": "VideoDownl",
+        "regexp": "Content-Type: video",
+        "allow": true
+    },
+    {
+        "name": "GoodHTTP",
+        "regexp": "Content-Type: (text/html|text/css|image)",
+        "allow": true
+    },
+    {
+        "name": "BlockJavaScriptAppType",
+        "regexp": "Content-Type: application/(x-|)javascript",
+        "allow": false
+    },
+    {
+        "name": "BlockJavaScriptInHTML",
+        "regexp": "((<[\\s\\/]*script\\b[^>]*>)([^>]*)(<\\/script>))",
+        "allow": false
+    }
+]

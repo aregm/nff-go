@@ -4,18 +4,18 @@ import "github.com/intel-go/nff-go/flow"
 
 func main() {
 	config := flow.Config{}
-	checkFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
 	firstFlow, err := flow.SetReceiver(0)
-	checkFatal(err)
+	flow.CheckFatal(err)
 	secondFlow, err := flow.SetPartitioner(firstFlow, 300, 300)
-	checkFatal(err)
-	checkFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
-	checkFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
-	checkFatal(flow.SetSender(firstFlow, 0))
-	checkFatal(flow.SetSender(secondFlow, 1))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	flow.CheckFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
+	flow.CheckFatal(flow.SetSender(firstFlow, 0))
+	flow.CheckFatal(flow.SetSender(secondFlow, 1))
 
-	checkFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }

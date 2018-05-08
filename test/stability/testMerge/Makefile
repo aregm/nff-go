@@ -9,7 +9,7 @@ EXECUTABLES = testMerge
 all:
 	cp ../../framework/main/config.json .
 
-testing:
+testing: check-pktgen
 	go test
 
 include $(PATH_TO_MK)/leaf.mk
