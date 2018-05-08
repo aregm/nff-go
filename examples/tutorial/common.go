@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -22,14 +21,6 @@ var modifyPacket = []func(pkt *packet.Packet, ctx flow.UserContext){modifyPacket
 var direct = "direct"
 
 const flowN = 3
-
-// checkFatal is an error handling function
-func checkFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 // readConfig function reads and parses config file
 func readConfig(fileName string) error {

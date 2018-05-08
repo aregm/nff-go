@@ -9,9 +9,9 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
@@ -40,18 +40,32 @@ import (
 // Test with testScenario=0:
 // makes all it in one pipeline without actual send and receive.
 
+const (
+	gotest uint = iota
+	generatePart
+	receivePart
+)
+
 var (
 	totalPackets uint64 = 10
+	passedLimit  uint64 = 98
 
 	// Packet should hold at least two int64 fields
-	minPayloadSize = int(unsafe.Sizeof(sentPackets) * 2)
-	maxPayloadSize = 1400
+	minPayloadSize        = int(unsafe.Sizeof(sentPackets) * 2)
+	maxPayloadSize        = 1400
+	speed          uint64 = 10000
 
 	sentPackets     uint64
 	receivedPackets uint64
 	testDoneEvent   *sync.Cond
-	passed          int32 = 1
-	rnd             *rand.Rand
+	progStart       time.Time
+
+	testWasInited = false
+	// T second timeout is used to let generator reach required speed
+	// During timeout packets are skipped and not counted
+	T = 10 * time.Second
+
+	passed int32 = 1
 
 	hwol         bool
 	inport       uint
@@ -73,10 +87,12 @@ var (
 
 func main() {
 	var testScenario uint
-	flag.UintVar(&testScenario, "testScenario", 0, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
+	flag.UintVar(&testScenario, "testScenario", gotest, "1 to use 1st part scenario, 2 snd, 0 to use one-machine test")
 	flag.BoolVar(&hwol, "hwol", false, "Use Hardware offloading for TX checksums calculation")
+	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
 	flag.UintVar(&inport, "inport", 1, "Input port number")
 	flag.UintVar(&outport, "outport", 0, "Output port number")
+	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	flag.BoolVar(&useUDP, "udp", false, "Generate UDP packets")
 	flag.BoolVar(&useTCP, "tcp", false, "Generate TCP packets")
 	flag.BoolVar(&useICMP, "icmp", false, "Generate ICMP Echo Request packets")
@@ -85,9 +101,32 @@ func main() {
 	flag.BoolVar(&useVLAN, "vlan", false, "Add VLAN tag to all packets")
 	flag.IntVar(&packetLength, "size", 0, "Specify length of packets to be generated")
 	flag.Uint64Var(&totalPackets, "number", totalPackets, "Number of packets to send")
-	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	flag.StringVar(&dpdkLogLevel, "dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	vbwo := flag.Bool("virtualbox-workaround", false, "Use this if you run on VirtualBox with hardware acceleration which has bug in checksum calculation for UDP packets")
+	kvmwo := flag.Bool("kvm-workaround", false, "Use this if you run on Qemu/KVM with hardware acceleration which has bug in checksum calculation for TCP packets")
 	flag.Parse()
 
+	if hwol {
+		testCksumCommon.VirtualBoxWorkaround = *vbwo
+		testCksumCommon.KVMWorkaround = *kvmwo
+	}
+	flow.CheckFatal(initTest())
+	flow.CheckFatal(executeTest(testScenario, useIPv4, useIPv6, useUDP, useTCP, useICMP, useVLAN))
+}
+
+func configTest(shouldUseIPv4, shouldUseIPv6, shouldUseUDP, shouldUseTCP, shouldUseICMP, shouldUseVLAN bool) error {
+	useIPv4 = shouldUseIPv4
+	useIPv6 = shouldUseIPv6
+	useICMP = shouldUseICMP
+	useTCP = shouldUseTCP
+	useUDP = shouldUseUDP
+	useVLAN = shouldUseVLAN
+	if hwol {
+		print("hardware cksums and ")
+	}
+	if useVLAN {
+		print("vlan tag and ")
+	}
 	if useIPv4 {
 		if useIPv6 {
 			print("IPv4 and IPv6 L3 and ")
@@ -124,33 +163,51 @@ func main() {
 	if useICMP && hwol {
 		println("Warning: cannot use HW offloading with ICMP protocol, only for L3 ipv4")
 		if useIPv6 {
-			println("Can't calculate anything for configuration: ipv6 + icmp + hw mode, exiting")
-			os.Exit(1)
+			return errors.New("Can't calculate anything for configuration: ipv6 + icmp + hw mode, exiting")
 		}
 	}
-
-	if err := executeTest(testScenario); err != nil {
-		fmt.Printf("fail: %+v\n", err)
-	}
+	return nil
 }
 
-func executeTest(testScenario uint) error {
-	if testScenario > 3 || testScenario < 0 {
-		return errors.New("testScenario should be in interval [0, 3]")
+func resetState() {
+	flow.SystemStop()
+	sentPackets = 0
+	receivedPackets = 0
+	passed = 1
+	randomL3 = false
+	randomL4 = false
+	ipVersion = 4
+	tci = 2
+	protocol = stabilityCommon.TypeUdp
+}
+
+func initTest() error {
+	if testWasInited {
+		return errors.New("hwol flag was already set and system init was called, cant do it again")
 	}
-	rnd = rand.New(rand.NewSource(13))
-	// Init NFF-GO system at 16 available cores
+	testWasInited = true
+	// Init NFF-GO system
 	config := flow.Config{
 		HWTXChecksum: hwol,
 		DPDKArgs:     []string{dpdkLogLevel},
 	}
-	if err := flow.SystemInit(&config); err != nil {
+	return flow.SystemInit(&config)
+}
+
+func executeTest(testScenario uint, shouldUseIPv4, shouldUseIPv6, shouldUseUDP, shouldUseTCP, shouldUseICMP, shouldUseVLAN bool) error {
+	if !testWasInited {
+		return errors.New("Test initialization should be called before test execution")
+	}
+	if err := configTest(shouldUseIPv4, shouldUseIPv6, shouldUseUDP, shouldUseTCP, shouldUseICMP, shouldUseVLAN); err != nil {
 		return err
 	}
+	if testScenario > 3 || testScenario < 0 {
+		return errors.New("testScenario should be in interval [0, 3]")
+	}
 
-	if testScenario == 2 {
+	if testScenario == receivePart {
 		// Receive packets from zero port. Receive queue will be added automatically.
-		inputFlow, err := flow.SetReceiver(uint8(inport))
+		inputFlow, err := flow.SetReceiver(uint16(inport))
 		if err != nil {
 			return err
 		}
@@ -163,7 +220,7 @@ func executeTest(testScenario uint) error {
 		if err := flow.SetHandler(inputFlow, fixPacket, nil); err != nil {
 			return err
 		}
-		if err := flow.SetSender(inputFlow, uint8(outport)); err != nil {
+		if err := flow.SetSender(inputFlow, uint16(outport)); err != nil {
 			return err
 		}
 
@@ -175,20 +232,17 @@ func executeTest(testScenario uint) error {
 		var m sync.Mutex
 		testDoneEvent = sync.NewCond(&m)
 
-		// Use here usual generator (enabled if speed = 0).
-		// High performance generator (enabled if speed != 0) is not used here, as it
-		// can send fully only number of packets N which is multiple of burst size (default 32),
-		// otherwise last N%burstSize packets are not sent, and cannot send N less than burstSize.
-		generatedFlow := flow.SetGenerator(generatePacket, nil)
+		// Create packet flow
+		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, initGenerator(13))
+
 		var finalFlow *flow.Flow
-		var err error
-		if testScenario == 1 {
+		if testScenario == generatePart {
 			// Send all generated packets to the output
-			if err := flow.SetSender(generatedFlow, uint8(outport)); err != nil {
+			if err := flow.SetSender(generatedFlow, uint16(outport)); err != nil {
 				return err
 			}
 			// Create receiving flow and set a checking function for it
-			finalFlow, err = flow.SetReceiver(uint8(inport))
+			finalFlow, err = flow.SetReceiver(uint16(inport))
 			if err != nil {
 				return err
 			}
@@ -208,6 +262,7 @@ func executeTest(testScenario uint) error {
 			return err
 		}
 
+		progStart = time.Now()
 		// Start pipeline
 		go func() {
 			err = flow.SystemStart()
@@ -250,7 +305,7 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 	if ptr.F2 != 0 {
 		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
-		println("TEST FAILED")
+		failTest()
 		return
 	}
 
@@ -268,12 +323,11 @@ func checkChecksum(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
 		println("ParseDataCheckVLAN returned negative value", offset)
-		println("TEST FAILED")
+		failTest()
 		return
 	}
 	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		println("TEST FAILED")
-		atomic.StoreInt32(&passed, 0)
+		failTest()
 	}
 }
 
@@ -287,7 +341,7 @@ func composeStatistics() error {
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 	println("Ratio = ", ratio, "%")
-	if atomic.LoadInt32(&passed) != 0 && ratio >= 90 {
+	if atomic.LoadInt32(&passed) != 0 && ratio >= passedLimit {
 		println("TEST PASSED")
 		return nil
 	}
@@ -295,14 +349,31 @@ func composeStatistics() error {
 	return errors.New("final statistics check failed")
 }
 
-func generatePayloadLength() uint16 {
+func generatePayloadLength(rnd *rand.Rand) uint16 {
 	if packetLength == 0 {
 		return uint16(rnd.Intn(maxPayloadSize-minPayloadSize) + minPayloadSize)
 	}
 	return uint16(packetLength)
 }
 
+type generatorParameters struct {
+	seed int64
+	rnd  *rand.Rand
+}
+
+func initGenerator(s int64) *generatorParameters {
+	return &generatorParameters{seed: s, rnd: rand.New(rand.NewSource(s))}
+}
+
+func (p generatorParameters) Copy() interface{} {
+	return initGenerator(p.seed)
+}
+
+func (p generatorParameters) Delete() {
+}
+
 func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
+	rnd := (context.(*generatorParameters)).rnd
 	if randomL3 {
 		if rnd.Int()%2 == 0 {
 			ipVersion = 6
@@ -320,19 +391,19 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 
 	if ipVersion == 4 {
 		if protocol == stabilityCommon.TypeUdp {
-			generateIPv4UDP(emptyPacket)
+			generateIPv4UDP(emptyPacket, rnd)
 		} else if protocol == stabilityCommon.TypeIcmp {
-			generateIPv4ICMP(emptyPacket)
+			generateIPv4ICMP(emptyPacket, rnd)
 		} else {
-			generateIPv4TCP(emptyPacket)
+			generateIPv4TCP(emptyPacket, rnd)
 		}
 	} else {
 		if protocol == stabilityCommon.TypeUdp {
-			generateIPv6UDP(emptyPacket)
+			generateIPv6UDP(emptyPacket, rnd)
 		} else if protocol == stabilityCommon.TypeIcmp {
-			generateIPv6ICMP(emptyPacket)
+			generateIPv6ICMP(emptyPacket, rnd)
 		} else {
-			generateIPv6TCP(emptyPacket)
+			generateIPv6TCP(emptyPacket, rnd)
 		}
 	}
 
@@ -344,10 +415,12 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 		}
 	}
 
-	atomic.AddUint64(&sentPackets, 1)
+	if time.Since(progStart) >= T && atomic.LoadUint64(&receivedPackets) < totalPackets {
+		atomic.AddUint64(&sentPackets, 1)
+	}
 }
 
-func initPacketCommon(emptyPacket *packet.Packet, length uint16) {
+func initPacketCommon(emptyPacket *packet.Packet, length uint16, rnd *rand.Rand) {
 	// Initialize ethernet addresses
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xea, 0xad, 0xbe, 0xee, 0xef}
 	emptyPacket.Ether.SAddr = [6]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
@@ -399,11 +472,11 @@ func initPacketICMP(emptyPacket *packet.Packet) {
 	emptyPacketICMP.SeqNum = 0xbeef
 }
 
-func generateIPv4UDP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4UDP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4UDPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketUDP(emptyPacket)
 
@@ -417,11 +490,11 @@ func generateIPv4UDP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv4TCP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4TCP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4TCPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketTCP(emptyPacket)
 
@@ -435,11 +508,11 @@ func generateIPv4TCP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv4ICMP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv4ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv4ICMPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv4(emptyPacket)
 	initPacketICMP(emptyPacket)
 	pIPv4 := emptyPacket.GetIPv4()
@@ -454,11 +527,11 @@ func generateIPv4ICMP(emptyPacket *packet.Packet) {
 		unsafe.Pointer(uintptr(unsafe.Pointer(pICMP))+common.ICMPLen)))
 }
 
-func generateIPv6UDP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6UDP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6UDPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketUDP(emptyPacket)
 
@@ -471,11 +544,11 @@ func generateIPv6UDP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv6TCP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6TCP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6TCPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketTCP(emptyPacket)
 
@@ -488,11 +561,11 @@ func generateIPv6TCP(emptyPacket *packet.Packet) {
 	}
 }
 
-func generateIPv6ICMP(emptyPacket *packet.Packet) {
-	length := generatePayloadLength()
+func generateIPv6ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
+	length := generatePayloadLength(rnd)
 	packet.InitEmptyIPv6ICMPPacket(emptyPacket, uint(length))
 
-	initPacketCommon(emptyPacket, length)
+	initPacketCommon(emptyPacket, length, rnd)
 	initPacketIPv6(emptyPacket)
 	initPacketICMP(emptyPacket)
 
@@ -503,32 +576,36 @@ func generateIPv6ICMP(emptyPacket *packet.Packet) {
 	}
 }
 
+func failTest() {
+	println("TEST FAILED")
+	atomic.StoreInt32(&passed, 0)
+}
+
 func checkPackets(pkt *packet.Packet, context flow.UserContext) {
-	newValue := atomic.AddUint64(&receivedPackets, 1)
+	if time.Since(progStart) < T {
+		return
+	}
+	if atomic.AddUint64(&receivedPackets, 1) >= totalPackets {
+		testDoneEvent.Signal()
+		return
+	}
+
 	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
 		println("ParseL4 returned negative value", offset)
-		println("TEST FAILED")
-		atomic.StoreInt32(&passed, 0)
+		failTest()
 	} else {
 		if !testCksumCommon.CheckPacketChecksums(pkt) {
-			println("TEST FAILED")
-			atomic.StoreInt32(&passed, 0)
+			failTest()
 		}
 		ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {
 			fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)
-			println("TEST FAILED")
-			atomic.StoreInt32(&passed, 0)
+			failTest()
 		} else if ptr.F1 == 0 {
 			println("Zero data value encountered in the packet")
-			println("TEST FAILED")
-			atomic.StoreInt32(&passed, 0)
+			failTest()
 		}
-	}
-
-	if newValue >= totalPackets {
-		testDoneEvent.Signal()
 	}
 }

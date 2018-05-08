@@ -39,7 +39,8 @@ var (
 	// Payload is 16 byte md5 hash sum of headers
 	payloadSize uint   = 16
 	speed       uint64 = 1000000
-	passedLimit uint64 = 85
+	passedLimit uint64 = 98
+	delta       int    = 2
 
 	sentPacketsGroup1 uint64
 	sentPacketsGroup2 uint64
@@ -86,7 +87,7 @@ func main() {
 	flag.DurationVar(&T, "timeout", T, "test start delay, needed to stabilize speed. Packets sent during timeout do not affect test result")
 	configFile := flag.String("config", "", "Specify json config file name (mandatory for VM)")
 	target := flag.String("target", "", "Target host name from config file (mandatory for VM)")
-	dpdkLogLevel = *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	flag.StringVar(&dpdkLogLevel, "dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 	if err := executeTest(*configFile, *target, testScenario); err != nil {
 		fmt.Printf("fail: %+v\n", err)
@@ -112,11 +113,11 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 	if testScenario == 2 {
 		// Receive packets from 0 and 1 ports
-		inputFlow1, err := flow.SetReceiver(uint8(inport1))
+		inputFlow1, err := flow.SetReceiver(uint16(inport1))
 		if err != nil {
 			return err
 		}
-		inputFlow2, err := flow.SetReceiver(uint8(inport2))
+		inputFlow2, err := flow.SetReceiver(uint16(inport2))
 		if err != nil {
 			return err
 		}
@@ -128,7 +129,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 		if err := flow.SetHandler(outputFlow, fixPackets, nil); err != nil {
 			return err
 		}
-		if err := flow.SetSender(outputFlow, uint8(outport1)); err != nil {
+		if err := flow.SetSender(outputFlow, uint16(outport1)); err != nil {
 			return err
 		}
 
@@ -153,14 +154,14 @@ func executeTest(configFile, target string, testScenario uint) error {
 
 		var finalFlow *flow.Flow
 		if testScenario == 1 {
-			if err := flow.SetSender(firstFlow, uint8(outport1)); err != nil {
+			if err := flow.SetSender(firstFlow, uint16(outport1)); err != nil {
 				return err
 			}
-			if err := flow.SetSender(secondFlow, uint8(outport2)); err != nil {
+			if err := flow.SetSender(secondFlow, uint16(outport2)); err != nil {
 				return err
 			}
 			// Create receiving flow and set a checking function for it
-			finalFlow, err = flow.SetReceiver(uint8(inport1))
+			finalFlow, err = flow.SetReceiver(uint16(inport1))
 			if err != nil {
 				return err
 			}
@@ -195,7 +196,7 @@ func executeTest(configFile, target string, testScenario uint) error {
 		testDoneEvent.Wait()
 		testDoneEvent.L.Unlock()
 
-		composeStatistics()
+		return composeStatistics()
 	}
 	return nil
 }
@@ -227,7 +228,7 @@ func composeStatistics() error {
 	// Test is passed, if p1 and p2 do not differ too much: |p1-p2| < 4%
 	// and enough packets received back
 	if atomic.LoadInt32(&passed) != 0 &&
-		(p1-p2 < 4 && p1-p2 > -4) && received*100/sent > passedLimit {
+		(p1-p2 < delta && p1-p2 > -delta) && received*100/sent > passedLimit {
 		println("TEST PASSED")
 		return nil
 	}

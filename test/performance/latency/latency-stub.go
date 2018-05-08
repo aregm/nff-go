@@ -6,45 +6,30 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 )
 
-var (
-	outport uint
-	inport  uint
-	cores   string
-)
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 // Main function for constructing packet processing graph.
 func main() {
-	flag.UintVar(&outport, "outport", 1, "port for sender")
-	flag.UintVar(&inport, "inport", 0, "port for receiver")
-	flag.StringVar(&cores, "cores", "", "Specifies CPU cores to be used by NFF-GO library")
-	dpdkLogLevel := *(flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL"))
+	outport := flag.Uint("outport", 1, "port for sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	cores := flag.String("cores", "", "Specifies CPU cores to be used by NFF-GO library")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	flag.Parse()
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList:  cores,
-		DPDKArgs: []string{dpdkLogLevel},
+		CPUList:  *cores,
+		DPDKArgs: []string{*dpdkLogLevel},
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from 0 port and send to 1 port.
-	flow1, err := flow.SetReceiver(uint8(inport))
-	CheckFatal(err)
-	CheckFatal(flow.SetSender(flow1, uint8(outport)))
+	flow1, err := flow.SetReceiver(uint16(*inport))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetSender(flow1, uint16(*outport)))
 
 	// Begin to process packets.
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }

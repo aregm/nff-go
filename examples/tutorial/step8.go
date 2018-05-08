@@ -10,25 +10,25 @@ var rulesp unsafe.Pointer
 
 func main() {
 	config := flow.Config{}
-	checkFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
 	l3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
-	checkFatal(err)
+	flow.CheckFatal(err)
 	rulesp = unsafe.Pointer(&l3Rules)
 	go updateSeparateRules()
 
 	firstFlow, err := flow.SetReceiver(0)
-	checkFatal(err)
+	flow.CheckFatal(err)
 	outputFlows, err := flow.SetSplitter(firstFlow, mySplitter, flowN, nil)
-	checkFatal(err)
-	checkFatal(flow.SetStopper(outputFlows[0]))
-	for i := uint8(1); i < flowN; i++ {
-		checkFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
-		checkFatal(flow.SetSender(outputFlows[i], i-1))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetStopper(outputFlows[0]))
+	for i := uint16(1); i < flowN; i++ {
+		flow.CheckFatal(flow.SetHandler(outputFlows[i], modifyPacket[i-1], nil))
+		flow.CheckFatal(flow.SetSender(outputFlows[i], i-1))
 	}
-	checkFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
@@ -40,7 +40,7 @@ func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
 		locall3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
-		checkFatal(err)
+		flow.CheckFatal(err)
 		atomic.StorePointer(&rulesp, unsafe.Pointer(locall3Rules))
 	}
 }

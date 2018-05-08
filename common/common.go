@@ -139,6 +139,7 @@ const (
 	InvalidCPURangeErr
 	SetAffinityErr
 	MultipleReceivePort
+	MultipleKNIPort
 )
 
 // NFError is error type returned by nff-go functions
@@ -247,6 +248,11 @@ func LogFatal(logType LogType, v ...interface{}) {
 		log.Fatal("ERROR: ", t)
 	}
 	os.Exit(1)
+}
+
+// LogFatalf is a wrapper at LogFatal which makes formatting before logger.
+func LogFatalf(logType LogType, format string, v ...interface{}) {
+	LogFatal(logType, fmt.Sprintf(format, v...))
 }
 
 // LogError internal, used in all packages

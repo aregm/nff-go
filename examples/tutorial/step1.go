@@ -5,9 +5,9 @@ import "github.com/intel-go/nff-go/flow"
 func main() {
 	// Init NFF-GO system
 	config := flow.Config{}
-	checkFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	initCommonState()
 
-	checkFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }

@@ -6,5 +6,5 @@ PATH_TO_MK = ../mk
 include $(PATH_TO_MK)/include.mk
 
 .PHONY: testing
-testing:
+testing: check-pktgen
 	go test

@@ -19,6 +19,10 @@
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
+#define process 1
+#define stopRequest 2
+#define wasStopped 9
+
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
@@ -66,12 +70,15 @@ const float multiplier = 84.0 * 8.0 / 1000.0 / 1000.0;
 
 #define MAX_KNI 50
 struct rte_kni* kni[MAX_KNI];
-static int kni_config_network_interface(uint16_t port_id, uint8_t if_up);
+static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu);
+static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up);
+static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]);
+static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on);
 
 uint32_t BURST_SIZE;
 
 struct cPort {
-	uint8_t PortId;
+	uint16_t PortId;
 	uint8_t QueuesNumber;
 };
 
@@ -87,7 +94,7 @@ void setAffinity(int coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
-void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf_pool) {
+void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
@@ -96,7 +103,7 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	memset(&conf_default, 0, sizeof(conf_default));
 	snprintf(conf_default.name, RTE_KNI_NAMESIZE, "%s", name);
 	conf_default.core_id = core; // Core ID to bind kernel thread on
-	conf_default.group_id = (uint16_t)port;
+	conf_default.group_id = port;
 	conf_default.mbuf_size = 2048;
 	conf_default.addr = dev_info.pci_dev->addr;
 	conf_default.id = dev_info.pci_dev->id;
@@ -105,9 +112,10 @@ void create_kni(uint8_t port, uint8_t core, char *name, struct rte_mempool *mbuf
 	struct rte_kni_ops ops;
 	memset(&ops, 0, sizeof(ops));
 	ops.port_id = port;
-	// TODO Add handling of changing MTU here
-	ops.config_network_if = kni_config_network_interface;
-
+	ops.change_mtu = KNI_change_mtu;
+	ops.config_network_if = KNI_config_network_interface;
+	ops.config_mac_address = KNI_config_mac_address;
+	ops.config_promiscusity = KNI_config_promiscusity;
 	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
@@ -155,7 +163,7 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint8_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
+int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
         struct rte_eth_dev_info dev_info;
@@ -281,7 +289,7 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 	return buf;
 }
 
-void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void nff_go_recv(uint16_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -294,8 +302,7 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 	death_row.cnt = 0; // DPDK doesn't initialize this field. It is probably a bug.
 	struct rte_mbuf *temp;
 #endif
-	// Run until the application is quit. Recv can't be stopped now.
-	while (*flag == 1) {
+	while (*flag == process) {
 		// Get RX packets from port
 		if (queue != -1) {
 			rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
@@ -351,16 +358,16 @@ void nff_go_recv(uint8_t port, int16_t queue, struct rte_ring *out_ring, volatil
 		receive_pushed += pushed_pkts_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
-void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int coreId) {
+void nff_go_send(uint16_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
-	// Run until the application is quit. Send can't be stopped now.
-	for (;;) {
+	while (*flag == process) {
 		// Get packets for TX from ring
 		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
@@ -384,15 +391,17 @@ void nff_go_send(uint8_t port, int16_t queue, struct rte_ring *in_ring, int core
 		send_sent += tx_pkts_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
-void nff_go_stop(struct rte_ring *in_ring, int coreId) {
+void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
-	// Run until the application is quit. Stop can't be stopped now.
-	for (;;) {
+	// Flag is used for both scheduler and stop.
+	// stopRequest will stop scheduler and this loop will stop with stopRequest+1
+	while (*flag == process || *flag == stopRequest) {
 		// Get packets for freeing from ring
 		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
 
@@ -408,6 +417,7 @@ void nff_go_stop(struct rte_ring *in_ring, int coreId) {
 		stop_freed += pkts_for_free_number;
 #endif
 	}
+	*flag = wasStopped;
 }
 
 void directStop(int pkts_for_free_number, struct rte_mbuf **bufs) {
@@ -417,7 +427,7 @@ void directStop(int pkts_for_free_number, struct rte_mbuf **bufs) {
 	}
 }
 
-bool directSend(struct rte_mbuf *mbuf, uint8_t port) {
+bool directSend(struct rte_mbuf *mbuf, uint16_t port) {
 	// try to send one packet to specified port, zero queue
 	if (rte_eth_tx_burst(port, 0, &mbuf, 1) == 1) {
 		return true;
@@ -567,27 +577,30 @@ void lpm_free(void *lpm) {
 	rte_lpm_free((struct rte_lpm *)lpm);
 }
 
-// Callback for request of configuring KNI up/down
-// Copy of DPDK kni_config_network_interface from examples/kni/main.c
-static int kni_config_network_interface(uint16_t port_id, uint8_t if_up) {
-	int ret = 0;
-	if (port_id >= rte_eth_dev_count() || port_id >= RTE_MAX_ETHPORTS) {
-		rte_exit(EXIT_FAILURE, "Invalid port id while KNI configuring\n");
-                return -EINVAL;
-        }
+// Callbacks for multiple KNI requests
+// If you would like to change this:
+//     1. It is not recomended
+//     2. You should check if there are new callbacks in DPDK
+//     3. You should check examples/kni/main.c file for callbacks examples
+//     4. You should understand that calling rte_eth_dev_stop in the same time of rte_eth_rx_burst will result to errors
+//         4a. One of these errors can be overloading of receive mempool
+//     5. You should understand that calling rte_eth_dev_start should include receive ring handling as in port_init
+static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu) {
+	fprintf(stderr, "DEBUG: KNI: Change MTU of port %d to %u\n", port_id, new_mtu);
+	return 0;
+}
 
-	fprintf(stderr, "DEBUG: Configure network interface of %d %s\n", port_id, if_up ? "up" : "down");
+static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up) {
+	fprintf(stderr, "DEBUG: KNI: Configure network interface of port %d %s\n", port_id, if_up ? "up" : "down");
+	return 0;
+}
 
-        if (if_up != 0) { // Configure network interface up
-                rte_eth_dev_stop(port_id);
-                ret = rte_eth_dev_start(port_id);
-        } else { // Configure network interface down
-                rte_eth_dev_stop(port_id);
-	}
+static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]) {
+	fprintf(stderr, "DEBUG: KNI: Configure new MAC address of port %d\n", port_id);
+	return 0;
+}
 
-        if (ret < 0) {
-		rte_exit(EXIT_FAILURE, "Failed to start port while KNI configuring\n");
-	}
-
-        return ret;
+static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on) {
+	fprintf(stderr, "DEBUG: KNI: Promiscusity mode of port %d %s\n", port_id, to_on ? "on" : "off");
+	return 0;
 }

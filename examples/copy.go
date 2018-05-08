@@ -5,34 +5,23 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/intel-go/nff-go/flow"
 )
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
 
 func main() {
 	config := flow.Config{}
 
 	// Initialize NFF-GO library at 15 cores by default
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
-	a, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+	a, err := flow.SetReceiver(0)
+	flow.CheckFatal(err)
 
 	b, err := flow.SetCopier(a)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
-	CheckFatal(flow.SetSender(a, uint8(1)))
-	CheckFatal(flow.SetSender(b, uint8(2)))
+	flow.CheckFatal(flow.SetSender(a, 1))
+	flow.CheckFatal(flow.SetSender(b, 2))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
