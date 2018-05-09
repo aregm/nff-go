@@ -105,9 +105,13 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	conf_default.core_id = core; // Core ID to bind kernel thread on
 	conf_default.group_id = port;
 	conf_default.mbuf_size = 2048;
-	conf_default.addr = dev_info.pci_dev->addr;
-	conf_default.id = dev_info.pci_dev->id;
+	if (dev_info.pci_dev) {
+		conf_default.addr = dev_info.pci_dev->addr;
+		conf_default.id = dev_info.pci_dev->id;
+	}
 	conf_default.force_bind = 1; // Flag to bind kernel thread
+	rte_eth_macaddr_get(port, (struct ether_addr *)&conf_default.mac_addr);
+	rte_eth_dev_get_mtu(port, &conf_default.mtu);
 
 	struct rte_kni_ops ops;
 	memset(&ops, 0, sizeof(ops));
@@ -116,6 +120,10 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	ops.config_network_if = KNI_config_network_interface;
 	ops.config_mac_address = KNI_config_mac_address;
 	ops.config_promiscusity = KNI_config_promiscusity;
+
+	// Both rte_kni_conf and rte_kni_ops structures are changed in DPDK
+	// We should always compare our initialization with current DPDK
+	// version of these structures
 	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
