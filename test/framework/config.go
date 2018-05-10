@@ -10,23 +10,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
-
-type hostPort struct {
-	host string
-	port int
-}
-
-// HostsList is a slice of host:port pairs that are used to replace
-// values read from JSON config file.
-type HostsList []hostPort
-
-func (hl *HostsList) String() string {
-	return fmt.Sprint(*hl)
-}
 
 // BenchmarkConfig struct has settings controlling benchmark
 // parameters, usually for tests with type TestTypeBenchmark.
@@ -113,12 +101,14 @@ type DockerConfig struct {
 type TestsuiteConfig struct {
 	// Settings which control docker daemon functionality.
 	Config DockerConfig `json:"docker-config"`
+	// A set of variables for tests command lines
+	Variables map[string]string
 	// Array of test cases.
 	Tests []TestConfig `json:"tests"`
 }
 
 // ReadConfig function reads and parses config file.
-func ReadConfig(fileName string, hl HostsList) (*TestsuiteConfig, error) {
+func ReadConfig(fileName string, hl HostsList, vl VariablesList) (*TestsuiteConfig, error) {
 	var config TestsuiteConfig
 
 	file, err := os.Open(fileName)
@@ -145,7 +135,47 @@ func ReadConfig(fileName string, hl HostsList) (*TestsuiteConfig, error) {
 		}
 	}
 
+	// Merge variables from command line into default variable values
+	// from JSON configuration
+	for kkk, vvv := range vl {
+		config.Variables[kkk] = vvv
+	}
+
+	// Replace variables in test command lines
+	for ttt := range config.Tests {
+		for aaa := range config.Tests[ttt].Apps {
+			app := &config.Tests[ttt].Apps[aaa]
+			cmd := app.CommandLine
+
+			for kkk, vvv := range config.Variables {
+				for ccc := 0; ccc < len(cmd); {
+					newparam := strings.Replace(cmd[ccc], kkk, vvv, -1)
+					if newparam == "" {
+						cmd = append(cmd[:ccc], cmd[ccc+1:]...)
+					} else {
+						cmd[ccc] = newparam
+						ccc++
+					}
+				}
+			}
+			app.CommandLine = cmd
+		}
+	}
+
 	return &config, nil
+}
+
+type hostPort struct {
+	host string
+	port int
+}
+
+// HostsList is a slice of host:port pairs that are used to replace
+// values read from JSON config file.
+type HostsList []hostPort
+
+func (hl *HostsList) String() string {
+	return fmt.Sprint(*hl)
 }
 
 func (hl *HostsList) Set(value string) error {
@@ -168,5 +198,38 @@ func (hl *HostsList) Set(value string) error {
 			port: int(port),
 		})
 	}
+	return nil
+}
+
+// Variable is a string in a form of NAME=VALUE pair which is replaced
+// inside of tests command lines.
+type VariablesList map[string]string
+
+func (vl *VariablesList) String() string {
+	return fmt.Sprint(*vl)
+}
+
+func (vl *VariablesList) Set(value string) error {
+	parts := strings.SplitAfterN(value, "=", 2)
+	if len(parts) != 2 {
+		return errors.New("Bad variable format: " + value)
+	}
+
+	(*vl)[strings.TrimRight(parts[0], "=")] = parts[1]
+	return nil
+}
+
+type TestsList []*regexp.Regexp
+
+func (tl *TestsList) String() string {
+	return fmt.Sprint(*tl)
+}
+
+func (tl *TestsList) Set(value string) error {
+	r, err := regexp.Compile(value)
+	if err != nil {
+		return err
+	}
+	*tl = append(*tl, r)
 	return nil
 }
