@@ -11,6 +11,12 @@
         ],
         "pktgen-port": 22022
     },
+    "variables": {
+        "INPORT1": "0",
+        "OUTPORT1_1": "1",
+        "OUTPORT1_2": "1",
+        "PKTGENPORT": "[1:2-3].0, [4-5:6].1"
+    },
     "tests": [
         {
             "name": "perf_light_empty_off_64",
@@ -21,14 +27,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0", "--no-scheduler"
+                        "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -56,14 +62,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0"
+                        "./perf_light", "-mode=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -91,14 +97,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0", "--no-scheduler"
+                        "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -126,14 +132,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0"
+                        "./perf_light", "-mode=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -161,14 +167,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0", "--no-scheduler"
+                        "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -196,14 +202,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=0"
+                        "./perf_light", "-mode=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -231,14 +237,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1", "--no-scheduler"
+                        "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -266,14 +272,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1"
+                        "./perf_light", "-mode=1", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -301,14 +307,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1", "--no-scheduler"
+                        "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -336,14 +342,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1"
+                        "./perf_light", "-mode=1", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -371,14 +377,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1", "--no-scheduler"
+                        "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -406,14 +412,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=1"
+                        "./perf_light", "-mode=1", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -441,14 +447,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2", "--no-scheduler"
+                        "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -476,14 +482,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2"
+                        "./perf_light", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -511,14 +517,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2", "--no-scheduler"
+                        "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -546,14 +552,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2"
+                        "./perf_light", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -581,14 +587,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2", "--no-scheduler"
+                        "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -616,14 +622,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_light", "-mode=2"
+                        "./perf_light", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -651,14 +657,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -686,14 +692,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50"
+                        "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -721,14 +727,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -756,14 +762,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50"
+                        "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -791,14 +797,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -826,14 +832,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50"
+                        "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -861,14 +867,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -896,14 +902,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=50"
+                        "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -931,14 +937,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -966,14 +972,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0"
+                        "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1001,14 +1007,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1036,14 +1042,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0"
+                        "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1071,14 +1077,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1106,14 +1112,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0"
+                        "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1141,14 +1147,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1176,14 +1182,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=1000", "-loadRW=0"
+                        "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1211,14 +1217,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1246,14 +1252,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0"
+                        "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1281,14 +1287,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1316,14 +1322,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0"
+                        "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1351,14 +1357,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1386,14 +1392,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0"
+                        "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1421,14 +1427,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1456,14 +1462,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=500", "-loadRW=0"
+                        "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1491,14 +1497,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1526,14 +1532,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0"
+                        "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1561,14 +1567,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1596,14 +1602,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0"
+                        "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1631,14 +1637,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1666,14 +1672,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0"
+                        "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1701,14 +1707,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler"
+                        "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1736,14 +1742,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_main", "-load=250", "-loadRW=0"
+                        "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1771,14 +1777,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1806,14 +1812,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2"
+                        "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1841,14 +1847,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1876,14 +1882,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2"
+                        "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1911,14 +1917,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1946,14 +1952,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2"
+                        "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1981,14 +1987,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2016,14 +2022,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=250", "-mode=2"
+                        "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2051,14 +2057,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2086,14 +2092,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2"
+                        "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2121,14 +2127,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2156,14 +2162,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2"
+                        "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2191,14 +2197,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2226,14 +2232,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2"
+                        "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2261,14 +2267,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2296,14 +2302,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=2"
+                        "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2331,14 +2337,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2366,14 +2372,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3"
+                        "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2401,14 +2407,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2436,14 +2442,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3"
+                        "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2471,14 +2477,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2506,14 +2512,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3"
+                        "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2541,14 +2547,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2576,14 +2582,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=50", "-mode=3"
+                        "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2611,14 +2617,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2646,14 +2652,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3"
+                        "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2681,14 +2687,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2716,14 +2722,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3"
+                        "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2751,14 +2757,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2786,14 +2792,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3"
+                        "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2821,14 +2827,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2856,14 +2862,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=3"
+                        "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2891,14 +2897,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2926,14 +2932,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13"
+                        "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2961,14 +2967,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2996,14 +3002,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13"
+                        "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3031,14 +3037,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3066,14 +3072,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13"
+                        "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3101,14 +3107,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3136,14 +3142,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=13"
+                        "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3171,14 +3177,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3206,14 +3212,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4"
+                        "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3241,14 +3247,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3276,14 +3282,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4"
+                        "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3311,14 +3317,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3346,14 +3352,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4"
+                        "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3381,14 +3387,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3416,14 +3422,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=4"
+                        "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3451,14 +3457,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3486,14 +3492,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14"
+                        "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3521,14 +3527,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3556,14 +3562,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14"
+                        "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3591,14 +3597,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3626,14 +3632,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14"
+                        "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3661,14 +3667,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler"
+                        "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3696,14 +3702,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_seq", "-load=25", "-mode=14"
+                        "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3731,14 +3737,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec", "--no-scheduler"
+                        "./ipsec", "--no-scheduler", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3766,14 +3772,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec"
+                        "./ipsec", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3801,14 +3807,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec", "--no-scheduler"
+                        "./ipsec", "--no-scheduler", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3836,14 +3842,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec"
+                        "./ipsec", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3871,14 +3877,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec", "--no-scheduler"
+                        "./ipsec", "--no-scheduler", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3906,14 +3912,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec"
+                        "./ipsec", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3941,14 +3947,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec", "--no-scheduler"
+                        "./ipsec", "--no-scheduler", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3976,14 +3982,14 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./ipsec"
+                        "./ipsec", "-inport=INPORT1", "-outport=OUTPORT1_1"
                     ]
                 },
                 {
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1:2-3].0, [4-5:6].1", "-G"
+                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -4011,7 +4017,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4121,7 +4127,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4231,7 +4237,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4341,7 +4347,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4451,7 +4457,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4569,7 +4575,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4687,7 +4693,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {
@@ -4805,7 +4811,7 @@
                     "image-name": "nff-go-nat",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./nat", "-cores=7"
+                        "./nat", "--no-scheduler"
                     ]
                 },
                 {

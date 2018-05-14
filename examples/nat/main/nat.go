@@ -20,6 +20,7 @@ func main() {
 	configFile := flag.String("config", "config.json", "Specify config file name")
 	flag.BoolVar(&nat.NoCalculateChecksum, "nocsum", false, "Specify whether to calculate checksums in modified packets")
 	flag.BoolVar(&nat.NoHWTXChecksum, "nohwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
 	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
@@ -32,9 +33,10 @@ func main() {
 
 	// Init NFF-GO system at 16 available cores
 	nffgoconfig := flow.Config{
-		CPUList:      *cores,
-		HWTXChecksum: !nat.NoHWTXChecksum,
-		DPDKArgs:     []string{*dpdkLogLevel},
+		CPUList:          *cores,
+		HWTXChecksum:     !nat.NoHWTXChecksum,
+		DPDKArgs:         []string{*dpdkLogLevel},
+		DisableScheduler: *noscheduler,
 	}
 
 	flow.CheckFatal(flow.SystemInit(&nffgoconfig))
