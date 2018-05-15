@@ -4,7 +4,7 @@
 
 all: tf
 
-tf: tf.go ../config.go ../dockerlauncher.go ../logging.go ../testsuite.go ../types.go ../report.go
+tf: tf.go ../apptype_string.go ../config.go ../dockerlauncher.go ../logging.go ../testsuite.go ../types.go ../report.go
 	go build $<
 	go build perf_compare.go
 

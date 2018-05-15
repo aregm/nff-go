@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package test_test
+package test
 
 import (
-	"github.com/intel-go/nff-go/test"
-
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -24,7 +23,8 @@ const (
 )
 
 func makeLogDir(t *testing.T) string {
-	timestr := "TEST-" + time.Now().Format(time.RFC3339Nano)
+	timestr := "TEST-" + t.Name() + "-" +
+		strings.Replace(time.Now().Format(time.RFC3339Nano), ":", "\ua789", -1)
 	err := os.Mkdir(timestr, os.ModeDir|os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
@@ -32,8 +32,8 @@ func makeLogDir(t *testing.T) string {
 	return timestr
 }
 
-func makeDockerConfig() test.DockerConfig {
-	return test.DockerConfig{
+func makeDockerConfig() DockerConfig {
+	return DockerConfig{
 		RequestTimeout: time.Duration(10 * time.Second),
 		DockerVersion:  "1.24",
 		Privileged:     true,
@@ -43,13 +43,12 @@ func makeDockerConfig() test.DockerConfig {
 			"/sys/devices/system/node:/sys/devices/system/node",
 			"/dev:/dev",
 		},
-		DockerPort: 2375,
 		PktgenPort: 22022,
 	}
 }
 
-func testScenarios(t *testing.T, logdir string, tests []test.TestcaseReportInfo) {
-	report := test.StartReport(logdir)
+func testScenarios(t *testing.T, logdir string, tests []TestcaseReportInfo) {
+	report := StartReport(logdir)
 	if report == nil {
 		t.Fatal("Could not initialize report")
 	}
@@ -66,34 +65,40 @@ func testScenarios(t *testing.T, logdir string, tests []test.TestcaseReportInfo)
 	report.FinishReport()
 }
 
-func testManyApps(t *testing.T, testtype test.TestType) {
+func testManyApps(t *testing.T, testtype TestType) {
 	logdir := makeLogDir(t)
 	dc := makeDockerConfig()
-	tests := make([]test.TestcaseReportInfo, NUM_TESTS)
+	tests := make([]TestcaseReportInfo, NUM_TESTS)
 
 	for jjj := range tests {
-		appConfig := make([]test.AppConfig, NUM_APPS)
+		appConfig := make([]AppConfig, NUM_APPS)
 
 		for iii := range appConfig {
-			appConfig[iii] = test.AppConfig{
-				HostName:  "hostname",
-				ImageName: "nff-go-tests",
+			appConfig[iii] = AppConfig{
+				hp: hostPort{
+					host: "hostname",
+					port: 1234,
+				},
+				ImageName:   "nff-go-tests",
+				CommandLine: []string{"testapp", strconv.Itoa(iii)},
 			}
-			if iii == 0 && testtype == test.TestTypeBenchmark {
-				appConfig[iii].Type = test.TestAppPktgen
+			if iii == 0 && testtype == TestTypeBenchmark {
+				appConfig[iii].Type = TestAppPktgen
+			} else if iii == 0 && testtype == TestTypeApacheBenchmark {
+				appConfig[iii].Type = TestAppApacheBenchmark
 			} else {
-				appConfig[iii].Type = test.TestAppGo
+				appConfig[iii].Type = TestAppGo
 			}
 		}
 
-		ttt := test.TestConfig{
+		ttt := TestConfig{
 			Name:     "test-" + strconv.Itoa(jjj),
 			TestTime: time.Duration(30 * time.Second),
 			Type:     testtype,
 			Apps:     appConfig,
 		}
 
-		apps := make([]test.RunningApp, NUM_APPS)
+		apps := make([]RunningApp, NUM_APPS)
 
 		for iii := range apps {
 			logpath := logdir + string(os.PathSeparator) + ttt.Name + "-" + strconv.Itoa(iii) + ".log"
@@ -104,27 +109,31 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 				t.Fatal("Error running test application", &apps[iii], ":", err)
 			}
 
-			logger := test.NewLogger(file)
+			logger := NewLogger(file)
 			apps[iii].InitTest(logger, iii, &ttt.Apps[iii], &dc, &ttt)
 			if err != nil {
 				t.Fatal("Error running test application", &apps[iii], ":", err)
 			}
 
-			apps[iii].Status = test.TestReportedPassed
-			if appConfig[iii].Type == test.TestAppPktgen {
-				apps[iii].Benchmarks = make([][]test.Measurement, NUM_MEASUREMENTS)
-				for jjj := range apps[iii].Benchmarks {
-					bencdata := make([]test.Measurement, NUM_PORTS)
+			apps[iii].Status = TestReportedPassed
+			if appConfig[iii].Type == TestAppPktgen {
+				apps[iii].PktgenBenchdata = make([][]PktgenMeasurement, NUM_MEASUREMENTS)
+				for jjj := range apps[iii].PktgenBenchdata {
+					bencdata := make([]PktgenMeasurement, NUM_PORTS)
 					for iii := range bencdata {
 						bencdata[iii].PktsTX = PKTS + 2
 						bencdata[iii].PktsRX = PKTS + 1
 						bencdata[iii].MbitsTX = MBITS + 2
 						bencdata[iii].MbitsRX = MBITS + 1
 					}
-					apps[iii].Benchmarks[jjj] = bencdata
+					apps[iii].PktgenBenchdata[jjj] = bencdata
 				}
-			} else if testtype == test.TestTypeBenchmark {
-				apps[iii].CoresStats = make([]test.CoresInfo, NUM_MEASUREMENTS)
+			} else if appConfig[iii].Type == TestAppApacheBenchmark {
+				apps[iii].abs = &ApacheBenchmarkStats{
+					Stats: [4]float32{111.111, 222.222, 333.333, 444.444},
+				}
+			} else { // appConfig[iii].Type == TestAppGo
+				apps[iii].CoresStats = make([]CoresInfo, NUM_MEASUREMENTS)
 
 				for jjj := range apps[iii].CoresStats {
 					apps[iii].CoresStats[jjj].CoresUsed = 10
@@ -133,23 +142,34 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 			}
 		}
 
-		tests[jjj].Status = test.TestReportedPassed
+		tests[jjj].Status = TestReportedPassed
 		tests[jjj].Apps = apps
 
-		if testtype == test.TestTypeBenchmark {
-			bencdata := make([]test.Measurement, NUM_PORTS)
+		if testtype == TestTypeBenchmark {
+			bencdata := make([]PktgenMeasurement, NUM_PORTS)
 			for iii := range bencdata {
 				bencdata[iii].PktsTX = PKTS + 2
 				bencdata[iii].PktsRX = PKTS + 1
 				bencdata[iii].MbitsTX = MBITS + 2
 				bencdata[iii].MbitsRX = MBITS + 1
 			}
-			tests[jjj].Benchdata = bencdata
+			tests[jjj].PktgenBenchdata = bencdata
 
-			tests[jjj].CoresStats.CoresUsed = 10
-			tests[jjj].CoresStats.CoresFree = 6
-			tests[jjj].CoreLastValue = 5
-			tests[jjj].CoreDecreased = true
+			tests[jjj].CoresStats = &ReportCoresInfo{
+				CoresInfo: CoresInfo{
+					CoresUsed: 10,
+					CoresFree: 6,
+				},
+				CoreLastValue: 5,
+				CoreDecreased: true,
+			}
+		} else if testtype == TestTypeApacheBenchmark {
+			for iii := range apps {
+				if apps[iii].config.Type == TestAppApacheBenchmark {
+					tests[jjj].ABStats = apps[iii].abs
+					break
+				}
+			}
 		}
 	}
 
@@ -157,9 +177,13 @@ func testManyApps(t *testing.T, testtype test.TestType) {
 }
 
 func TestBenchmarkManyApps(t *testing.T) {
-	testManyApps(t, test.TestTypeBenchmark)
+	testManyApps(t, TestTypeBenchmark)
 }
 
 func TestScenarioManyApps(t *testing.T) {
-	testManyApps(t, test.TestTypeScenario)
+	testManyApps(t, TestTypeScenario)
+}
+
+func TestApacheBenchmarkManyApps(t *testing.T) {
+	testManyApps(t, TestTypeApacheBenchmark)
 }

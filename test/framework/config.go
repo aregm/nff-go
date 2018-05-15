@@ -71,7 +71,10 @@ type TestConfig struct {
 }
 
 func (test *TestConfig) String() string {
-	return fmt.Sprintf("%s:%s", test.Name, test.Type.String())
+	if test != nil {
+		return fmt.Sprintf("%s:%s", test.Name, test.Type.String())
+	}
+	return "nil"
 }
 
 // DockerConfig struct has settings controlling
