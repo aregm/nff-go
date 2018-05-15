@@ -658,7 +658,15 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 	}
 	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	addCopier(IN.current, ringFirst, ringSecond)
+	if IN.segment == nil {
+		addCopier(IN.current, ringFirst, ringSecond)
+	} else {
+		tRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+		ms := makeSlice(tRing, IN.segment)
+		segmentInsert(IN, ms, false, nil, 0, 0)
+		addCopier(tRing, ringFirst, ringSecond)
+		IN.segment = nil
+	}
 	IN.current = ringFirst
 	return newFlow(ringSecond), nil
 }
