@@ -119,7 +119,7 @@ func (pkt *Packet) ReadPcapOnePacket(f io.Reader) (bool, error) {
 	}
 	bytes, err := readPacketBytes(f, hdr.InclLen)
 	if err != nil {
-		return false, common.WrapWithNFError(err, "read packet bytes failed", common.PcapReadFail)
+		return false, err
 	}
 	GeneratePacketFromByte(pkt, bytes)
 	return false, nil

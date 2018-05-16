@@ -508,7 +508,7 @@ func commonCheck(pkt *packet.Packet) bool {
 		gTestType != pcopy && ptr.F2 == 7 && checkSlice[ptr.F1] != 0 ||
 		gTestType == pcopy && ptr.F2 == 7 && checkSlice[ptr.F1] > 1 {
 		println("Packet contents are incorrect")
-		println(ptr.F2, ptr.F1, checkSlice[ptr.F1], recvIPv4Cksum, recvIPv4Cksum, recvUDPCksum, udp.DgramCksum)
+		println(ptr.F2, ptr.F1, checkSlice[ptr.F1], recvIPv4Cksum, ipv4.HdrChecksum, recvUDPCksum, udp.DgramCksum)
 		atomic.AddUint64(&brokenPackets, 1)
 		return false
 	}

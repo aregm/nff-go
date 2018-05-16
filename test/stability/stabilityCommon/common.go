@@ -2,12 +2,13 @@ package stabilityCommon
 
 import (
 	"encoding/json"
-	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/flow"
-	"github.com/intel-go/nff-go/packet"
 	"log"
 	"net"
 	"os"
+
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 var (
@@ -23,22 +24,24 @@ var (
 
 // ShouldBeSkipped return true for packets which are not expected to receive by test.
 // Return false only for expected IPv4 UDP packets.
-func ShouldBeSkipped(pkt *packet.Packet) bool {
+func ShouldBeSkipped(pkt *packet.Packet, l4Number int) bool {
 	if packet.SwapBytesUint16(pkt.Ether.EtherType) != common.IPV4Number {
 		println("Not IPv4 packet, skip")
 		return true
 	}
 	pkt.ParseL3()
 	pkt.ParseL4ForIPv4()
-	if pkt.GetUDPForIPv4() == nil {
-		println("Not UDP packet, skip")
-		return true
+	skip := true
+	if l4Number == common.TCPNumber && pkt.GetTCPForIPv4() != nil {
+		skip = false
+	} else if l4Number == common.UDPNumber && pkt.GetUDPForIPv4() != nil {
+		if packet.SwapBytesUint16(pkt.GetUDPForIPv4().DstPort) == uint16(5353) {
+			println("MDNS protocol over UDP, skip")
+		} else {
+			skip = false
+		}
 	}
-	if packet.SwapBytesUint16(pkt.GetUDPForIPv4().DstPort) == uint16(5353) {
-		println("MDNS protocol over UDP, skip")
-		return true
-	}
-	return false
+	return skip
 }
 
 // ProtocolType used to determine which protocols should not

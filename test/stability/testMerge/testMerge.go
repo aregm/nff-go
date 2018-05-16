@@ -292,7 +292,7 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 	}
 	if atomic.AddUint64(&recvPackets, 1) >= totalPackets {
 		testDoneEvent.Signal()
-		return
+		return // Last packet is not checked?
 	}
 
 	pkt.ParseData()

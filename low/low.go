@@ -57,8 +57,9 @@ var mbufCacheSizeT uint
 
 type mempoolPair struct {
 	mempool *C.struct_rte_mempool
-	name string
+	name    string
 }
+
 var usedMempools []mempoolPair
 
 func GetPort(n uint16) *Port {
@@ -528,14 +529,14 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchec
 // CreateMempool creates and returns a new memory pool.
 func CreateMempool(name string) *Mempool {
 	nameC := 0
-        for i := range usedMempools {
-                if usedMempools[i].name == name {
-                        nameC++
-                }
-        }
-        if nameC != 0 {
-                name = name + " " + strconv.Itoa(nameC)
-        }
+	for i := range usedMempools {
+		if usedMempools[i].name == name {
+			nameC++
+		}
+	}
+	if nameC != 0 {
+		name = name + " " + strconv.Itoa(nameC)
+	}
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempoolPair{mempool, name})
 	return (*Mempool)(mempool)
@@ -620,6 +621,10 @@ func ReportMempoolsState() {
 func CreateKni(portId uint16, core uint, name string) {
 	mempool := (*C.struct_rte_mempool)(CreateMempool("KNI"))
 	C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool)
+}
+
+func DeleteKni(portId uint16) {
+	C.delete_kni(C.uint16_t(portId))
 }
 
 // CreateLPM creates LPM table

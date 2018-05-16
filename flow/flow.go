@@ -517,7 +517,7 @@ func SystemStop() {
 			createdPorts[i].willReceive = false
 		}
 	}
-	low.FreeMempools()
+	//low.FreeMempools()
 }
 
 // SystemReset stops whole framework plus cleanup DPDK
@@ -1274,7 +1274,7 @@ func write(parameters interface{}, stopper [2]chan int) {
 
 	err = packet.WritePcapGlobalHdr(f)
 	if err != nil {
-		common.LogFatal(common.Debug, err)
+		common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
 	}
 	for {
 		select {
@@ -1290,12 +1290,14 @@ func write(parameters interface{}, stopper [2]chan int) {
 			tempPacket = packet.ExtractPacket(bufIn[0])
 			err := tempPacket.WritePcapOnePacket(f)
 			if err != nil {
-				common.LogFatal(common.Debug, err)
+				common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
 			}
 			low.DirectStop(1, bufIn)
 		}
 	}
 }
+
+var enqCount uint64 = 0
 
 func read(parameters interface{}, stopper [2]chan int) {
 	rp := parameters.(*readParameters)
@@ -1312,7 +1314,7 @@ func read(parameters interface{}, stopper [2]chan int) {
 	// Read pcap global header once
 	var glHdr packet.PcapGlobHdr
 	if err := packet.ReadPcapGlobalHdr(f, &glHdr); err != nil {
-		common.LogFatal(common.Debug, err)
+		common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
 	}
 
 	count := int32(0)
@@ -1324,29 +1326,30 @@ func read(parameters interface{}, stopper [2]chan int) {
 			stopper[1] <- 1
 			return
 		default:
-			tempPacket, err := packet.NewPacket()
-			if err != nil {
-				common.LogFatal(common.Debug, err)
-			}
-			isEOF, err := tempPacket.ReadPcapOnePacket(f)
-			if err != nil {
-				common.LogFatal(common.Debug, err)
-			}
-			if isEOF {
-				atomic.AddInt32(&count, 1)
-				if count == repcount {
-					break
+			if count < repcount {
+				tempPacket, err := packet.NewPacket()
+				if err != nil {
+					common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
 				}
-				if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
-					common.LogFatal(common.Debug, err)
+				isEOF, err := tempPacket.ReadPcapOnePacket(f)
+				if err != nil {
+					common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
 				}
-				if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
-					common.LogFatal(common.Debug, err)
+				if isEOF {
+					if atomic.AddInt32(&count, 1) == repcount {
+						break
+					}
+					if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+						common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
+					}
+					if _, err := tempPacket.ReadPcapOnePacket(f); err != nil {
+						common.LogFatalf(common.Debug, "failed with message and code: %+v\n", err)
+					}
 				}
+				// TODO we need packet reassembly here. However we don't
+				// use mbuf packet_type here, so it is impossible.
+				safeEnqueueOne(OUT, tempPacket.ToUintptr())
 			}
-			// TODO we need packet reassembly here. However we don't
-			// use mbuf packet_type here, so it is impossible.
-			safeEnqueueOne(OUT, tempPacket.ToUintptr())
 		}
 	}
 }
@@ -1409,6 +1412,13 @@ func CreateKniDevice(portId uint16, name string) (*Kni, error) {
 	kni.portId = portId
 	createdPorts[portId].willKNI = true
 	return kni, nil
+}
+
+func DeleteKniDevice(portId uint16) {
+	if createdPorts[portId].willKNI == true {
+		createdPorts[portId].willKNI = false
+		low.DeleteKni(portId)
+	}
 }
 
 func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr) uint8 {

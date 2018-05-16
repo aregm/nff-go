@@ -130,6 +130,15 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	}
 }
 
+static int delete_kni(uint16_t port) {
+	if (rte_kni_release(kni[port])) {
+		rte_exit(EXIT_FAILURE, "Error with KNI delete\n");
+	}
+	kni[port] = NULL;
+	rte_eth_dev_stop(port);
+	return 0;
+}
+
 int checkRSSPacketCount(struct cPort *port) {
 	return rte_eth_rx_queue_count(port->PortId, port->QueuesNumber-1);
 }
