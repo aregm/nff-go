@@ -104,16 +104,15 @@ type flowFunction struct {
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
 	par interface{}, report chan uint64, context *[]UserContext, fType ffType) {
 	ff := new(flowFunction)
-	nameC := 0
+	nameC := 1
+	tName := name
 	for i := range scheduler.ff {
-		if scheduler.ff[i].name == name {
+		if scheduler.ff[i].name == tName {
+			tName = name + strconv.Itoa(nameC)
 			nameC++
 		}
 	}
-	if nameC != 0 {
-		name = name + " " + strconv.Itoa(nameC)
-	}
-	ff.name = name
+	ff.name = tName
 	ff.uncloneFunction = ucfn
 	ff.cFunction = Cfn
 	ff.cloneFunction = cfn
@@ -275,7 +274,6 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			checkRequired = true
 		case <-debugTick:
 			// Report current state of system
-			common.LogDebug(common.Debug, "---------------")
 			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.cores))-scheduler.usedCores, "cores are left available.")
 			low.Statistics(float32(scheduler.debugTime) / 1000)
 			for i := range scheduler.ff {
@@ -288,6 +286,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 				scheduler.Dropped = 0
 			}
 			low.ReportMempoolsState()
+			common.LogDebug(common.Debug, "---------------")
 		default:
 		}
 		// Procced with each flow function
@@ -435,9 +434,8 @@ func (ff *flowFunction) updatePause(pause int) {
 func (ff *flowFunction) printDebug(schedTime uint) {
 	switch ff.fType {
 	case segmentCopy:
-		common.LogDebug(common.Debug, "Number of packets in queue", ff.name, ":", ff.checkInputRing())
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)
-		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S")
+		common.LogDebug(common.Debug, "Current speed of", ff.name, "is", speedPKTS, "PKT/S, queue length is", ff.checkInputRing(), "packets")
 	case fastGenerate:
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
 		speedPKTS := convertPKTS(ff.currentSpeed, schedTime)

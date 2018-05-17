@@ -511,7 +511,7 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchec
 	addr := make([]byte, C.ETHER_ADDR_LEN)
 	var mempool *C.struct_rte_mempool
 	if willReceive {
-		mempool = (*C.struct_rte_mempool)(CreateMempool("Receive"))
+		mempool = (*C.struct_rte_mempool)(CreateMempool("receive"))
 	} else {
 		mempool = nil
 	}
@@ -527,17 +527,16 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchec
 
 // CreateMempool creates and returns a new memory pool.
 func CreateMempool(name string) *Mempool {
-	nameC := 0
+	nameC := 1
+        tName := name
         for i := range usedMempools {
-                if usedMempools[i].name == name {
+                if usedMempools[i].name == tName {
+                        tName = name + strconv.Itoa(nameC)
                         nameC++
                 }
         }
-        if nameC != 0 {
-                name = name + " " + strconv.Itoa(nameC)
-        }
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
-	usedMempools = append(usedMempools, mempoolPair{mempool, name})
+	usedMempools = append(usedMempools, mempoolPair{mempool, tName})
 	return (*Mempool)(mempool)
 }
 
@@ -609,7 +608,7 @@ func Statistics(N float32) {
 func ReportMempoolsState() {
 	for _, m := range usedMempools {
 		use := C.getMempoolSpace(m.mempool)
-		common.LogDebug(common.Debug, m.name, "mempool used", use, "from", mbufNumberT)
+		common.LogDebug(common.Debug, "Mempool usage", m.name, use, "from", mbufNumberT)
 		if float32(mbufNumberT-uint(use))/float32(mbufNumberT)*100 < 10 {
 			common.LogDrop(common.Debug, m.name, "mempool has less than 10% free space. This can lead to dropping packets while receive.")
 		}

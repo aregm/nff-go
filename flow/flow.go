@@ -178,7 +178,7 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
-	par.mempool = low.CreateMempool("Fast generate")
+	par.mempool = low.CreateMempool("fast generate")
 	par.vectorGenerateFunction = vectorGenerateFunction
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
@@ -216,7 +216,7 @@ func addCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) {
 	par.in = in
 	par.out = out
 	par.outCopy = outCopy
-	par.mempool = low.CreateMempool("Copy")
+	par.mempool = low.CreateMempool("copy")
 	schedState.addFF("copy", nil, nil, pcopy, par, make(chan uint64, 50), nil, segmentCopy)
 }
 
@@ -450,7 +450,6 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
 	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI)
 	// Init Ports
-	common.LogTitle(common.Initialization, "------------***-------- Initializing ports -------***------------")
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
 	for i := range createdPorts {
 		createdPorts[i].port = uint16(i)
@@ -460,7 +459,6 @@ func SystemInit(args *Config) error {
 	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone)
-	common.LogTitle(common.Initialization, "------------***------ Filling FlowFunctions ------***------------")
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
 	for i := 0; i < 10; i++ {
@@ -475,7 +473,6 @@ func SystemInit(args *Config) error {
 // This functions should be always called after flow graph construction.
 // Function can panic during execution.
 func SystemStart() error {
-	common.LogTitle(common.Initialization, "------------***--------- Checking system ---------***------------")
 	if openFlowsNumber != 0 {
 		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
 	}
@@ -488,19 +485,13 @@ func SystemStart() error {
 			}
 		}
 	}
-	// Timeout is needed for ports to start up. This way is used in pktgen.
-	// Pktgen also has checks for link status for all ports, but we compensate it
-	// by additional time.
-	// Timeout prevents loss of starting packets in generated flow.
-	time.Sleep(time.Second * 2)
-
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	// Init low performance mempool
-	packet.SetNonPerfMempool(low.CreateMempool("Slow operations"))
+	packet.SetNonPerfMempool(low.CreateMempool("slow operations"))
 	if err := schedState.systemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
-	common.LogTitle(common.Initialization, "------------***--------- NFF-GO-GO Started --------***------------")
+	common.LogTitle(common.Initialization, "------------***---------- NFF-GO Started ---------***------------")
 	schedState.schedule(schedTime)
 	return nil
 }
