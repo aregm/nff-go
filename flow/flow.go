@@ -45,6 +45,7 @@ import (
 var openFlowsNumber = uint32(0)
 var ringName = 1
 var createdPorts []port
+var portPair map[uint32](*port)
 var schedState *scheduler
 var vEach [10][burstSize]uint8
 
@@ -330,6 +331,7 @@ type port struct {
 	willReceive    bool // will this port receive packets
 	willKNI        bool // will this port has assigned KNI device
 	port           uint16
+	MAC            [common.EtherAddrLen]uint8
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -454,6 +456,7 @@ func SystemInit(args *Config) error {
 	for i := range createdPorts {
 		createdPorts[i].port = uint16(i)
 	}
+	portPair = make(map[uint32](*port))
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
@@ -480,10 +483,12 @@ func SystemStart() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				uint16(createdPorts[i].txQueuesNumber), hwtxchecksum); err != nil {
+				uint16(createdPorts[i].txQueuesNumber), true, hwtxchecksum); err != nil {
 				return err
 			}
 		}
+		createdPorts[i].MAC = GetPortMACAddress(createdPorts[i].port)
+		common.LogDebug(common.Initialization, "Port", createdPorts[i].port, "MAC address:", packet.MACToString(createdPorts[i].MAC))
 	}
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	// Init low performance mempool
@@ -759,6 +764,14 @@ func SetStopper(IN *Flow) error {
 	return nil
 }
 
+// DealARPICMP is predefined function which will generate
+// replies to ARP and ICMP requests and automatically extract
+// corresponding packets from input flow.
+// If used after merge, function answers packets received on all input ports.
+func DealARPICMP(IN *Flow) error {
+	return SetHandlerDrop(IN, handleARPICMPRequests, nil)
+}
+
 // SetHandler adds handle function to flow graph.
 // Gets flow, user defined handle function and context.
 // Each packet from input flow will be handle inside user defined function
@@ -826,6 +839,18 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 // GetPortMACAddress returns default MAC address of an Ethernet port.
 func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
+}
+
+// SetIPForPort sets IP for specified port if it was created. Not thread safe.
+// Return error if requested port isn't exist or wasn't previously requested.
+func SetIPForPort(port uint16, ip uint32) error {
+	for i := range createdPorts {
+		if createdPorts[i].port == port && createdPorts[i].wasRequested {
+			portPair[ip] = &createdPorts[i]
+			return nil
+		}
+	}
+	return common.WrapWithNFError(nil, "Port number in wrong or port was not requested", common.WrongPort)
 }
 
 // Service functions for Flow

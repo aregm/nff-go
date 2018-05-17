@@ -76,11 +76,14 @@ type EtherHdr struct {
 
 func (hdr *EtherHdr) String() string {
 	r0 := fmt.Sprintf("L2 protocol: Ethernet\nEtherType: 0x%02x\n", hdr.EtherType)
-	s := hdr.SAddr
-	r1 := fmt.Sprintf("Ethernet Source: %02x:%02x:%02x:%02x:%02x:%02x\n", s[0], s[1], s[2], s[3], s[4], s[5])
-	d := hdr.DAddr
-	r2 := fmt.Sprintf("Ethernet Destination: %02x:%02x:%02x:%02x:%02x:%02x\n", d[0], d[1], d[2], d[3], d[4], d[5])
+	r1 := "Ethernet Source: " + MACToString(hdr.SAddr) + "\n"
+	r2 := "Ethernet Source: " + MACToString(hdr.DAddr) + "\n"
 	return r0 + r1 + r2
+}
+
+// MACToString return MAC address like string
+func MACToString(mac [EtherAddrLen]uint8) string {
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 }
 
 // IPv4Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
@@ -798,6 +801,11 @@ func (packet *Packet) PacketBytesChange(start uint, bytes []byte) bool {
 // BytesToIPv4 converts four element address to uint32 representation
 func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
 	return uint32(d)<<24 | uint32(c)<<16 | uint32(b)<<8 | uint32(a)
+}
+
+// ArrayToIPv4 converts four element array to uint32 representation
+func ArrayToIPv4(a [IPv4AddrLen]byte) uint32 {
+        return uint32(a[3])<<24 | uint32(a[2])<<16 | uint32(a[1])<<8 | uint32(a[0])
 }
 
 // IPv4ToBytes converts four element address to uint32 representation

@@ -19,7 +19,6 @@ package low
 import "C"
 
 import (
-	"encoding/hex"
 	"os"
 	"runtime"
 	"strconv"
@@ -507,8 +506,7 @@ func GetPortsNumber() int {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchecksum bool) error {
-	addr := make([]byte, C.ETHER_ADDR_LEN)
+func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool) error {
 	var mempool *C.struct_rte_mempool
 	if willReceive {
 		mempool = (*C.struct_rte_mempool)(CreateMempool("receive"))
@@ -516,12 +514,10 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchec
 		mempool = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
-		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
+		mempool, C._Bool(promiscuous), C._Bool(hwtxchecksum)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
-	t := hex.Dump(addr)
-	common.LogDebug(common.Initialization, "Port", port, "MAC address:", t[10:27])
 	return nil
 }
 
