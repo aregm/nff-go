@@ -33,6 +33,7 @@ type AppType int
 const (
 	TestAppGo AppType = iota
 	TestAppPktgen
+	TestAppApacheBenchmark
 )
 
 // UnmarshalJSON unmarshals data and checks app type validity.
@@ -44,7 +45,11 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]AppType{"TestAppGo": TestAppGo, "TestAppPktgen": TestAppPktgen}[s]
+	got, ok := map[string]AppType{
+		"TestAppGo":              TestAppGo,
+		"TestAppPktgen":          TestAppPktgen,
+		"TestAppApacheBenchmark": TestAppApacheBenchmark,
+	}[s]
 	if !ok {
 		return fmt.Errorf("invalid AppType %q", s)
 	}
@@ -58,6 +63,7 @@ type TestType int
 // Constants for different test types.
 const (
 	TestTypeBenchmark TestType = iota
+	TestTypeApacheBenchmark
 	TestTypeScenario
 )
 
@@ -70,10 +76,52 @@ func (at *TestType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]TestType{"TestTypeBenchmark": TestTypeBenchmark, "TestTypeScenario": TestTypeScenario}[s]
+	got, ok := map[string]TestType{
+		"TestTypeBenchmark":       TestTypeBenchmark,
+		"TestTypeApacheBenchmark": TestTypeApacheBenchmark,
+		"TestTypeScenario":        TestTypeScenario,
+	}[s]
 	if !ok {
 		return fmt.Errorf("invalid TestType %q", s)
 	}
 	*at = got
 	return nil
+}
+
+// PktgenMeasurement has measured by pktgen benchmark values.
+type PktgenMeasurement struct {
+	PktsTX, MbitsTX, PktsRX, MbitsRX int64
+}
+
+// CoresInfo has info about used and free cores.
+type CoresInfo struct {
+	CoresUsed, CoresFree int
+}
+
+// ReportCoresInfo has info about cores for final report
+type ReportCoresInfo struct {
+	CoresInfo
+	CoreLastValue int
+	CoreDecreased bool
+}
+
+// Indexes in array of Apache Benchmark stats ApacheBenchmarkStats
+const (
+	RequestsPerSecond = iota
+	TimePerRequest
+	TimePerRequestConcurrent
+	TransferRate
+)
+
+// ApacheBenchmarkStats has info about running Apache Benchmark web
+// client.
+type ApacheBenchmarkStats struct {
+	Stats [4]float32
+}
+
+// TestReport has info about test status and application.
+type TestReport struct {
+	AppIndex  int
+	AppStatus TestStatus
+	msg       string
 }

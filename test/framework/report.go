@@ -14,12 +14,14 @@ import (
 
 // TestcaseReportInfo has all info about test.
 type TestcaseReportInfo struct {
-	Status        TestStatus
-	Benchdata     []Measurement
-	CoresStats    CoresInfo
-	CoreLastValue int
-	CoreDecreased bool
-	Apps          []RunningApp
+	Status TestStatus
+	// Pktgen type tests
+	PktgenBenchdata []PktgenMeasurement
+	CoresStats      *ReportCoresInfo
+	// Apache benchmark type tests
+	ABStats *ApacheBenchmarkStats
+	// Per application statistics
+	Apps []RunningApp
 }
 
 // Report represents test report.
@@ -65,6 +67,10 @@ const (
             td.thinrborder {
                 border-right: 1pt solid grey;
             }
+            td.thinrborderstatnames {
+                border-right: 1pt solid grey;
+                text-align: left;
+            }
         </style>
         <script>
             function toggleVisibility(buttonID, idArray) {
@@ -98,7 +104,7 @@ const (
         {{with $buttonid := genbuttonid $testindex}}<input onclick="toggleVisibility('{{$buttonid}}', [{{range $appindex, $appelement := $testelement.Apps}}'{{genappid $testindex $appindex}}', {{end}}])" type="button" value="Show details" id="{{$buttonid}}"></input>{{end}}
         {{testid .}}
     </td><td>
-        {{block "statusLine" .Status}}{{end}}{{if .Benchdata}}{{with .Benchdata}}
+        {{block "statusLine" .Status}}{{end}}{{if .PktgenBenchdata}}{{with .PktgenBenchdata}}
         <table class="bench">
             <tr>
                 <th class="rbborder">Port</th>
@@ -109,17 +115,28 @@ const (
                 {{range .}}<th class="thinrborder">Pkts TX</th><th class="thinrborder">Mbit TX</th><th class="thinrborder">Pkts RX</th><th class="rbborder">Mbit RX</th>{{end}}
                 <th class="thinrborder">Used</th><th class="thinrborder">Free</th><th class="thinrborder">Last</th><th class="rbborder">Decreased</th>
             </tr><tr>
-                <td class="rborder">Average</td>{{range .}}<td>{{.PktsTX}}</td><td>{{.MbitsTX}}</td><td>{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{end}}{{/* end with .Benchdata */}}
-                <td class="thinrborder">{{.CoresStats.CoresUsed}}</td><td class="thinrborder">{{.CoresStats.CoresFree}}</td><td class="thinrborder">{{.CoreLastValue}}</td><td class="rborder">{{if .CoreDecreased}}YES{{else}}NO{{end}}</td>
+                <td class="rborder">Average</td>{{range .}}<td>{{.PktsTX}}</td><td>{{.MbitsTX}}</td><td>{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{end}}{{/* end with .PktgenBenchdata */}}
+                <td class="thinrborder">{{.CoresStats.CoresUsed}}</td><td class="thinrborder">{{.CoresStats.CoresFree}}</td><td class="thinrborder">{{.CoresStats.CoreLastValue}}</td><td class="rborder">{{if .CoresStats.CoreDecreased}}YES{{else}}NO{{end}}</td>
             </tr>
-        </table>{{end}}{{/* end if .Benchdata */}}
+        </table>{{end}}{{/* end if .PktgenBenchdata */}}{{if .ABStats}}{{with .ABStats}}
+        <table class="bench">
+            <tr>
+                <td class="thinrborderstatnames">Requests per second [#/sec] (mean)</td><td>{{index .Stats 0}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Time per request [ms] (mean)</td><td>{{index .Stats 1}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Time per request [ms] (mean, across all concurrent requests)</td><td>{{index .Stats 2}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Transfer rate [Kbytes/sec] received</td><td>{{index .Stats 3}}</td>
+            </tr>
+        </table>{{end}}{{/* end with .ABStats */}}{{end}}{{/* end if .ABStats */}}
     </td>
 </tr>{{range $appindex, $appelement := .Apps}}<tr style='display:none' id='{{genappid $testindex $appindex}}'>
     <td>
         <a {{getloggerfile .}}>{{.String}}</a>
     </td>
     <td>
-        {{block "statusLine" .Status}}{{end}}{{with .Benchmarks}}<table class="bench">{{range $index, $element := .}}{{if eq $index 0}}<tr>
+        {{block "statusLine" .Status}}{{end}}{{with .PktgenBenchdata}}<table class="bench">{{range $index, $element := .}}{{if eq $index 0}}<tr>
                 <th class="rbborder">Port</th>
                 {{range $port, $e := $element}}<th colspan="4" class="rbborder">{{$port}}</th>{{end}}
             </tr><tr>
@@ -128,7 +145,7 @@ const (
             </tr>{{end}}{{/* end of table header */}}<tr>
                 <td class="rborder">{{$index}}</td>{{range $element}}<td class="thinrborder">{{.PktsTX}}</td><td class="thinrborder">{{.MbitsTX}}</td><td class="thinrborder">{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}
             </tr>
-        {{end}}</table>{{end}}{{/* end with .Benchmarks */}}{{with .CoresStats}}<table class="bench">
+        {{end}}</table>{{end}}{{/* end with .PktgenBenchdata */}}{{with .CoresStats}}<table class="bench">
             <tr>
                 <th class="rbborder"></th>
                 <th colspan="2" class="rbborder">Cores</th>
@@ -140,7 +157,7 @@ const (
                 <td class="rborder">{{$index}}</td>
                 <td class="thinrborder">{{.CoresUsed}}</td><td class="thinrborder">{{.CoresFree}}</td>
             </tr>{{end}}
-        </table>{{end}}{{/* end with .Benchmarks */}}
+        </table>{{end}}{{/* end with .CoresStats */}}
     </td>
 </tr>{{end}}{{end}}`
 

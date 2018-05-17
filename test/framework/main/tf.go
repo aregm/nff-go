@@ -9,6 +9,7 @@ import "github.com/intel-go/nff-go/test/framework"
 import (
 	"flag"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -37,7 +38,7 @@ func main() {
 	test.LogDebug(config)
 
 	if directory == "" {
-		directory = time.Now().Format(time.RFC3339)
+		directory = strings.Replace(time.Now().Format(time.RFC3339), ":", "\ua789", -1)
 	}
 	err = os.Mkdir(directory, os.ModeDir|os.ModePerm)
 	if err != nil {

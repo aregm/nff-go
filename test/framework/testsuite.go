@@ -115,55 +115,74 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 
 	LogInfo("\\--- Finished test", test.Name, "--- status:", testStatus)
 
-	var b []Measurement
-	if test.Type == TestTypeBenchmark && pktgenAppIndex >= 0 && apps[pktgenAppIndex].Benchmarks != nil {
-		ports := len(apps[pktgenAppIndex].Benchmarks[0])
-		b = make([]Measurement, ports)
-		for _, m := range apps[pktgenAppIndex].Benchmarks {
+	tri := TestcaseReportInfo{
+		Status: testStatus,
+		Apps:   apps,
+	}
+
+	if test.Type == TestTypeBenchmark {
+		// Fill up pktgen transfer rate stats
+		if pktgenAppIndex >= 0 && apps[pktgenAppIndex].PktgenBenchdata != nil {
+			ports := len(apps[pktgenAppIndex].PktgenBenchdata[0])
+			b := make([]PktgenMeasurement, ports)
+			for _, m := range apps[pktgenAppIndex].PktgenBenchdata {
+				for p := 0; p < ports; p++ {
+					b[p].PktsTX += m[p].PktsTX
+					b[p].MbitsTX += m[p].MbitsTX
+					b[p].PktsRX += m[p].PktsRX
+					b[p].MbitsRX += m[p].MbitsRX
+				}
+			}
+
+			number := int64(len(apps[pktgenAppIndex].PktgenBenchdata))
 			for p := 0; p < ports; p++ {
-				b[p].PktsTX += m[p].PktsTX
-				b[p].MbitsTX += m[p].MbitsTX
-				b[p].PktsRX += m[p].PktsRX
-				b[p].MbitsRX += m[p].MbitsRX
+				b[p].PktsTX /= number
+				b[p].MbitsTX /= number
+				b[p].PktsRX /= number
+				b[p].MbitsRX /= number
+			}
+
+			tri.PktgenBenchdata = b
+		}
+
+		// Fill up used cores stats
+		if coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
+			clv := 0
+			cd := false
+			cu := 0
+			cf := 0
+			for _, cs := range apps[coresAppIndex].CoresStats {
+				cu += cs.CoresUsed
+				cf += cs.CoresFree
+
+				if !cd && cs.CoresUsed < clv {
+					cd = true
+				}
+				clv = cs.CoresUsed
+			}
+
+			number := len(apps[coresAppIndex].CoresStats)
+
+			tri.CoresStats = &ReportCoresInfo{
+				CoresInfo: CoresInfo{
+					CoresUsed: cu / number,
+					CoresFree: cf / number,
+				},
+				CoreLastValue: clv,
+				CoreDecreased: cd,
 			}
 		}
-
-		number := int64(len(apps[pktgenAppIndex].Benchmarks))
-		for p := 0; p < ports; p++ {
-			b[p].PktsTX /= number
-			b[p].MbitsTX /= number
-			b[p].PktsRX /= number
-			b[p].MbitsRX /= number
-		}
-	}
-
-	var c CoresInfo
-	var clv int
-	var cd = false
-	if test.Type == TestTypeBenchmark && coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
-		for _, cs := range apps[coresAppIndex].CoresStats {
-			c.CoresUsed += cs.CoresUsed
-			c.CoresFree += cs.CoresFree
-
-			if !cd && cs.CoresUsed < clv {
-				cd = true
+	} else if test.Type == TestTypeApacheBenchmark {
+		// Find which app has Apache Benchmark statistics report
+		for iii := range apps {
+			if apps[iii].config.Type == TestAppApacheBenchmark {
+				tri.ABStats = apps[iii].abs
+				break
 			}
-			clv = cs.CoresUsed
 		}
-
-		number := len(apps[coresAppIndex].CoresStats)
-		c.CoresUsed /= number
-		c.CoresFree /= number
 	}
 
-	return &TestcaseReportInfo{
-		Status:        testStatus,
-		Benchdata:     b,
-		CoresStats:    c,
-		CoreLastValue: clv,
-		CoreDecreased: cd,
-		Apps:          apps,
-	}
+	return &tri
 }
 
 func isTestInList(test *TestConfig, tl TestsList) bool {

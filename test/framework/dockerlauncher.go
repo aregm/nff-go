@@ -37,6 +37,12 @@ var (
 	TestPassedRegexp = regexp.MustCompile(`^TEST PASSED$`)
 	TestFailedRegexp = regexp.MustCompile(`^TEST FAILED$`)
 	TestCoresRegexp  = regexp.MustCompile(`^DEBUG: System is using (\d+) cores now\. (\d+) cores are left available\.$`)
+	ABStatsRegexps   = [4]*regexp.Regexp{
+		regexp.MustCompile(`^Requests per second: *(\d+\.\d+) \[#/sec\] \(mean\)$`),
+		regexp.MustCompile(`^Time per request: *(\d+\.\d+) \[ms\] \(mean\)$`),
+		regexp.MustCompile(`^Time per request: *(\d+\.\d+) \[ms\] \(mean, across all concurrent requests\)$`),
+		regexp.MustCompile(`^Transfer rate: *(\d+\.\d+) \[Kbytes/sec\] received$`),
+	}
 
 	NoDeleteContainersOnExit = false
 	username                 string
@@ -51,41 +57,28 @@ func init() {
 	}
 }
 
-// Measurement has measured by benchmark values.
-type Measurement struct {
-	PktsTX, MbitsTX, PktsRX, MbitsRX int64
-}
-
-// CoresInfo has info about used and free cores.
-type CoresInfo struct {
-	CoresUsed, CoresFree int
-}
-
-// TestReport has info about test status and application.
-type TestReport struct {
-	AppIndex  int
-	AppStatus TestStatus
-	msg       string
-}
-
 // RunningApp structure represents the app being run.
 type RunningApp struct {
-	index          int
-	config         *AppConfig
-	test           *TestConfig
-	Status         TestStatus
-	cl             *client.Client
-	containerID    string
-	dockerConfig   *DockerConfig
-	Benchmarks     [][]Measurement
-	CoresStats     []CoresInfo
-	Logger         *Logger
-	benchStartTime time.Time
-	benchEndTime   time.Time
+	index           int
+	config          *AppConfig
+	test            *TestConfig
+	Status          TestStatus
+	cl              *client.Client
+	containerID     string
+	dockerConfig    *DockerConfig
+	PktgenBenchdata [][]PktgenMeasurement
+	CoresStats      []CoresInfo
+	abs             *ApacheBenchmarkStats
+	Logger          *Logger
+	benchStartTime  time.Time
+	benchEndTime    time.Time
 }
 
 func (app *RunningApp) String() string {
-	return fmt.Sprintf("%v:%v:%s", app.test, app.config, app.containerID)
+	if app != nil {
+		return fmt.Sprintf("%v:%v:%s", app.test, app.config, app.containerID)
+	}
+	return "nil"
 }
 
 func (app *RunningApp) sendMessageOrFinish(str string, status TestStatus, report chan<- TestReport, done <-chan struct{}) (finish bool) {
@@ -135,6 +128,9 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 		return
 	}
 	app.Status = TestRunning
+	if app.config.Type == TestAppApacheBenchmark {
+		app.abs = &ApacheBenchmarkStats{}
+	}
 
 	scanner := bufio.NewScanner(logs)
 
@@ -149,16 +145,32 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 		} else if TestFailedRegexp.FindStringIndex(str) != nil {
 			status = TestReportedFailed
 		} else {
-			t := time.Now()
-			if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
-				matches := TestCoresRegexp.FindStringSubmatch(str)
-				if len(matches) == 3 {
-					var c CoresInfo
-					c.CoresUsed, err = strconv.Atoi(matches[1])
-					if err == nil {
-						c.CoresFree, err = strconv.Atoi(matches[2])
+			// Scan for strings specific to test application type
+			if app.config.Type == TestAppGo {
+				// Get cores number information for NFF-Go application
+				t := time.Now()
+				if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
+					matches := TestCoresRegexp.FindStringSubmatch(str)
+					if len(matches) == 3 {
+						var c CoresInfo
+						c.CoresUsed, err = strconv.Atoi(matches[1])
 						if err == nil {
-							app.CoresStats = append(app.CoresStats, c)
+							c.CoresFree, err = strconv.Atoi(matches[2])
+							if err == nil {
+								app.CoresStats = append(app.CoresStats, c)
+							}
+						}
+					}
+				}
+			} else if app.config.Type == TestAppApacheBenchmark {
+				// Get Apache Benchmark output
+				for iii := range ABStatsRegexps {
+					matches := ABStatsRegexps[iii].FindStringSubmatch(str)
+					if len(matches) == 2 {
+						var value float32
+						n, err := fmt.Sscanf(matches[1], "%f", &value)
+						if err == nil && n == 1 {
+							app.abs.Stats[iii] = value
 						}
 					}
 				}
@@ -278,7 +290,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 			return
 		}
 
-		bench := make([]Measurement, numberOfPorts)
+		bench := make([]PktgenMeasurement, numberOfPorts)
 		for iii := 0; iii < numberOfPorts; iii++ {
 			// Print rate for every port from the stat array
 			str = fmt.Sprintf(PktgenPrintPortStatsCommand, iii, iii, iii, iii)
@@ -303,7 +315,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 		t := time.Now()
 		if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
 			// Put a new measurement into measurement array
-			app.Benchmarks = append(app.Benchmarks, bench)
+			app.PktgenBenchdata = append(app.PktgenBenchdata, bench)
 		}
 
 		select {

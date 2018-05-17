@@ -15,11 +15,11 @@
         {
             "name": "NFFGoNAT-VLAN-10k-1c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 1 -n 10000 http://192.168.116.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
@@ -36,11 +36,11 @@
         {
             "name": "NFFGoNAT-VLAN-100k-1c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 1 -n 1000 http://192.168.116.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
@@ -57,11 +57,11 @@
         {
             "name": "NFFGoNAT-VLAN-1M-1c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 1 -n 1000 http://192.168.116.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
@@ -78,11 +78,11 @@
         {
             "name": "NFFGoNAT-VLAN-10k-10c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 10 -n 10000 http://192.168.116.2/10k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
@@ -99,11 +99,11 @@
         {
             "name": "NFFGoNAT-VLAN-100k-10c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 10 -n 1000 http://192.168.116.2/100k.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
@@ -120,11 +120,11 @@
         {
             "name": "NFFGoNAT-VLAN-1M-10c",
             "test-time": 90000000000,
-            "test-type": "TestTypeScenario",
+            "test-type": "TestTypeApacheBenchmark",
             "test-apps": [
                 {
                     "image-name": "nff-go-nat",
-                    "app-type": "TestAppGo",
+                    "app-type": "TestAppApacheBenchmark",
                     "exec-cmd": [
                         "sh", "-c", "sleep 20; ab -c 10 -n 1000 http://192.168.116.2/1m.bin && echo TEST PASSED || echo TEST FAILED"
                     ]
