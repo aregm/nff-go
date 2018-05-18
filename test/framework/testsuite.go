@@ -115,8 +115,9 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 	LogInfo("\\--- Finished test", test.Name, "--- status:", testStatus)
 
 	tri := TestcaseReportInfo{
-		Status: testStatus,
-		Apps:   apps,
+		TestName: test.Name,
+		Status:   testStatus,
+		Apps:     apps,
 	}
 
 	if test.Type == TestTypeBenchmark {
@@ -222,7 +223,7 @@ func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList) int {
 
 		if isTestInList(test, tl) {
 			tr := config.executeOneTest(test, logdir, sichan)
-			report.Pipe <- *tr
+			report.AddTestResult(tr)
 
 			totalTests = append(totalTests, test.Name)
 			if tr.Status == TestReportedPassed {
