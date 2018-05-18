@@ -171,7 +171,7 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
+int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, bool promiscuous, bool hwtxchecksum) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
         struct rte_eth_dev_info dev_info;
@@ -184,6 +184,10 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 			rx_rings = 16;
 		} else {
 			rx_rings = dev_info.max_rx_queues;
+		}
+		if (tx_rings == 0) {
+			// All receive ports should have at least one send queue to handle ARP
+			tx_rings = 1;
 		}
 	} else {
 		rx_rings = 0;
@@ -233,11 +237,10 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	if (retval < 0)
 		return retval;
 
-	/* Get the port MAC address. */
-	rte_eth_macaddr_get(port, addr);
-
-	/* Enable RX in promiscuous mode for the Ethernet device. */
-	rte_eth_promiscuous_enable(port);
+	if (promiscuous == true) {
+		/* Enable RX in promiscuous mode for the Ethernet device. */
+		rte_eth_promiscuous_enable(port);
+	}
 
 	// Not to use .rx_deferred_start = 0 in custom configuration
 	// and use default configuration instead

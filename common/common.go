@@ -140,6 +140,7 @@ const (
 	SetAffinityErr
 	MultipleReceivePort
 	MultipleKNIPort
+	WrongPort
 )
 
 // NFError is error type returned by nff-go functions

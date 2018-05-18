@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
 )
 
 // ARPHdr is protocol structure used in Address Resolution Protocol
@@ -58,13 +57,9 @@ func (hdr *ARPHdr) String() string {
 // initARPCommonData allocates ARP packet, fills ether header and
 // arp hrd, pro, hln, pln with values for ether and IPv4
 func initARPCommonData(packet *Packet) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "Cannot append mbuf")
+	if InitEmptyARPPacket(packet) == false {
 		return false
 	}
-
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
 
 	packet.ParseL3()
 	arp := packet.GetARP()
