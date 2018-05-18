@@ -28,15 +28,15 @@
     },
     "tests": [
         {
-            "name": "merge",
-            "test-time": 60000000000,
+            "name": "merge 0",
+            "test-time": 100000000000,
             "test-type": "TestTypeScenario",
             "test-apps": [
                 {
                     "image-name": "nff-go-test-merge",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./testMerge", "-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2"
                     ]
                 },
                 {
@@ -44,6 +44,132 @@
                     "app-type": "TestAppGo",
                     "exec-cmd": [
                         "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 1",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=1"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=1"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 2",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=2"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=2"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 3",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=3"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=3"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 4",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=4"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=4"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 5",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=5"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=5"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "merge 6",
+            "test-time": 100000000000,
+            "test-type": "TestTypeScenario",
+            "test-apps": [
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge","-speed=SPEED", "-number=NUMBER", "-testScenario=1", "-inport1=INPORT1_1", "-outport1=OUTPORT1_1", "-outport2=OUTPORT1_2", "-pipelineType=6"
+                    ]
+                },
+                {
+                    "image-name": "nff-go-test-merge",
+                    "app-type": "TestAppGo",
+                    "exec-cmd": [
+                        "./testMerge", "-testScenario=2", "-inport1=INPORT2_1", "-inport2=INPORT2_2", "-outport1=OUTPORT2_1", "-pipelineType=6"
                     ]
                 }
             ]
