@@ -153,9 +153,9 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 	checkSlice = make([]uint8, userTotalPackets*2, userTotalPackets*2)
 
 	stabilityCommon.InitCommonState(configFile, target)
-	fixMACAddrs = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
-	fixMACAddrs1 = stabilityCommon.ModifyPacket[outport1].(func(*packet.Packet, flow.UserContext))
-	fixMACAddrs2 = stabilityCommon.ModifyPacket[outport2].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs = stabilityCommon.ModifyPacket[0].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs1 = stabilityCommon.ModifyPacket[0].(func(*packet.Packet, flow.UserContext))
+	fixMACAddrs2 = stabilityCommon.ModifyPacket[1].(func(*packet.Packet, flow.UserContext))
 
 	if err := setParameters(testScenario); err != nil {
 		return err
