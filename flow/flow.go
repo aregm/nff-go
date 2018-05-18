@@ -1164,7 +1164,7 @@ func send(parameters interface{}, flag *int32, coreID int) {
 	low.Send(srp.port, srp.queue, srp.in, flag, coreID)
 }
 
-func merge(from *low.Ring, to *low.Ring) {
+func merge(from, to *low.Ring) {
 	// We should change out rings in all flow functions which we added before
 	// and change them to one "after merge" ring.
 	// We don't proceed stop and send functions here because they don't have
@@ -1172,25 +1172,25 @@ func merge(from *low.Ring, to *low.Ring) {
 	// strictly one after another. The next merge will change previous "after merge"
 	// ring automatically.
 	for i := range schedState.ff {
-		switch schedState.ff[i].Parameters.(type) {
+		switch parameters := schedState.ff[i].Parameters.(type) {
 		case *receiveParameters:
-			if schedState.ff[i].Parameters.(*receiveParameters).out == from {
-				schedState.ff[i].Parameters.(*receiveParameters).out = to
+			if parameters.out == from {
+				parameters.out = to
 			}
 		case *generateParameters:
-			if schedState.ff[i].Parameters.(*generateParameters).out == from {
-				schedState.ff[i].Parameters.(*generateParameters).out = to
+			if parameters.out == from {
+				parameters.out = to
 			}
 		case *readParameters:
-			if schedState.ff[i].Parameters.(*readParameters).out == from {
-				schedState.ff[i].Parameters.(*readParameters).out = to
+			if parameters.out == from {
+				parameters.out = to
 			}
 		case *copyParameters:
-			if schedState.ff[i].Parameters.(*copyParameters).out == from {
-				schedState.ff[i].Parameters.(*copyParameters).out = to
+			if parameters.out == from {
+				parameters.out = to
 			}
-			if schedState.ff[i].Parameters.(*copyParameters).outCopy == from {
-				schedState.ff[i].Parameters.(*copyParameters).outCopy = to
+			if parameters.outCopy == from {
+				parameters.outCopy = to
 			}
 		}
 	}
