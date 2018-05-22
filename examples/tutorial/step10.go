@@ -12,8 +12,7 @@ var rulesp unsafe.Pointer
 const vecSize = 32
 
 func main() {
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 

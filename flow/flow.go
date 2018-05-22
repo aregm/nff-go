@@ -383,6 +383,9 @@ type Config struct {
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
 func SystemInit(args *Config) error {
+	if args == nil {
+		args = &Config{}
+	}
 	CPUCoresNumber := runtime.NumCPU()
 	var cpus []int
 	var err error

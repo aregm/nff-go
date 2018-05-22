@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	flow.SystemInit(&(flow.Config{}))
+	flow.SystemInit(nil)
 
 	mainFlow := flow.SetGenerator(generate, nil)
 	flow.SetHandler(mainFlow, dump, nil)

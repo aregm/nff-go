@@ -70,8 +70,7 @@ func main() {
 	flag.Parse()
 
 	// Initialize NFF-Go library
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	var err error
 	patterns, err = pattern.GetPatternsFromFile(pfile)
