@@ -15,6 +15,7 @@
         "INPORT1": "0",
         "OUTPORT1_1": "1",
         "OUTPORT1_2": "1",
+        "PKTGENCOREMASK": "0x1ff",
         "PKTGENPORT": "[1:2-3].0, [4-5:6].1"
     },
     "tests": [
@@ -34,7 +35,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -69,7 +70,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -104,7 +105,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -139,7 +140,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -174,7 +175,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -209,7 +210,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -244,7 +245,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -279,7 +280,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -314,7 +315,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -349,7 +350,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -384,7 +385,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -419,7 +420,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -454,7 +455,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -489,7 +490,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -524,7 +525,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -559,7 +560,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -594,7 +595,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -629,7 +630,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -664,7 +665,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -699,7 +700,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -734,7 +735,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -769,7 +770,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -804,7 +805,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -839,7 +840,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -874,7 +875,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -909,7 +910,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -944,7 +945,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -979,7 +980,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1014,7 +1015,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1049,7 +1050,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1084,7 +1085,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1119,7 +1120,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1154,7 +1155,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1189,7 +1190,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1224,7 +1225,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1259,7 +1260,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1294,7 +1295,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1329,7 +1330,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1364,7 +1365,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1399,7 +1400,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1434,7 +1435,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1469,7 +1470,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1504,7 +1505,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1539,7 +1540,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1574,7 +1575,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1609,7 +1610,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1644,7 +1645,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1679,7 +1680,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1714,7 +1715,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1749,7 +1750,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1784,7 +1785,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1819,7 +1820,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1854,7 +1855,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1889,7 +1890,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1924,7 +1925,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1959,7 +1960,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -1994,7 +1995,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2029,7 +2030,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2064,7 +2065,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2099,7 +2100,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2134,7 +2135,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2169,7 +2170,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2204,7 +2205,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2239,7 +2240,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2274,7 +2275,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2309,7 +2310,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2344,7 +2345,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2379,7 +2380,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2414,7 +2415,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2449,7 +2450,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2484,7 +2485,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2519,7 +2520,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2554,7 +2555,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2589,7 +2590,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2624,7 +2625,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2659,7 +2660,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2694,7 +2695,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2729,7 +2730,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2764,7 +2765,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2799,7 +2800,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2834,7 +2835,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2869,7 +2870,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2904,7 +2905,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2939,7 +2940,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -2974,7 +2975,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3009,7 +3010,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3044,7 +3045,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3079,7 +3080,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3114,7 +3115,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3149,7 +3150,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3184,7 +3185,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3219,7 +3220,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3254,7 +3255,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3289,7 +3290,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3324,7 +3325,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3359,7 +3360,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3394,7 +3395,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3429,7 +3430,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3464,7 +3465,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3499,7 +3500,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3534,7 +3535,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3569,7 +3570,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3604,7 +3605,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3639,7 +3640,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3674,7 +3675,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3709,7 +3710,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3744,7 +3745,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3779,7 +3780,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3814,7 +3815,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3849,7 +3850,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3884,7 +3885,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3919,7 +3920,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3954,7 +3955,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -3989,7 +3990,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
                     ]
                 }
             ],
@@ -4024,7 +4025,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4079,7 +4080,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4134,7 +4135,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4189,7 +4190,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4244,7 +4245,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4299,7 +4300,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4354,7 +4355,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4409,7 +4410,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4464,7 +4465,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4523,7 +4524,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4582,7 +4583,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4641,7 +4642,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4700,7 +4701,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4759,7 +4760,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4818,7 +4819,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
@@ -4877,7 +4878,7 @@
                     "image-name": "nff-go-pktgen",
                     "app-type": "TestAppPktgen",
                     "exec-cmd": [
-                        "./pktgen", "-c", "0x1ff", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
+                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "[1-2:3-4].0, [5-6:7-8].1", "-G"
                     ]
                 }
             ],
