@@ -1,79 +1,2257 @@
 {
-    "docker-config": {
-        "request-timeout": 10000000000,
-        "docker-client-version": "1.24",
-        "privileged": true,
-        "map-volumes": [
-            "/sys/bus/pci/drivers:/sys/bus/pci/drivers",
-            "/sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages",
-            "/sys/devices/system/node:/sys/devices/system/node",
-            "/dev:/dev"
-        ],
-        "pktgen-port": 22022
-    },
-    "tests": [
+"docker-config": {
+    "request-timeout": 10000000000,
+    "docker-client-version": "1.24",
+    "privileged": true,
+    "map-volumes": [
+      "/sys/bus/pci/drivers:/sys/bus/pci/drivers",
+      "/sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages",
+      "/sys/devices/system/node:/sys/devices/system/node",
+      "/dev:/dev"
+    ],
+    "pktgen-port": 22022
+  },
+  "variables": {
+    "INPORT1": "1",
+    "INPORT2": "0",
+    "OUTPORT1": "0",
+    "OUTPORT2_1": "1",
+    "OUTPORT2_2": "1",
+    "SKIPNUMBER1": "10000",
+    "SKIPNUMBER2": "1000",
+    "LATNUMBER1": "1000",
+    "LATNUMBER2": "500",
+    "SPEED1": "1000000",
+    "SPEED2": "700000",
+    "TIMEOUT_SCHED_OFF": "4s",
+    "TIMEOUT_SCHED_ON": "8s"
+  },
+  "tests": [
+    {
+      "name": "latency_perf_light_empty_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
         {
-            "name": "latency-test-light",
-            "test-time": 60000000000,
-            "test-type": "TestTypeBenchmark",
-            "test-apps": [
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./latency-part1"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./perf_light"
-                    ]
-                }
-            ]
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
         },
-		{
-            "name": "latency-test-seq",
-            "test-time": 60000000000,
-            "test-type": "TestTypeBenchmark",
-            "test-apps": [
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./latency-part1", "-LAT_NUMBER=1000"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./perf_seq"
-                    ]
-                }
-            ]
-        },
-		{
-            "name": "latency-test-main",
-            "test-time": 60000000000,
-            "test-type": "TestTypeBenchmark",
-            "test-apps": [
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./latency-part1", "-LAT_NUMBER=1000"
-                    ]
-                },
-                {
-                    "image-name": "nff-go-performance",
-                    "app-type": "TestAppGo",
-                    "exec-cmd": [
-                        "./perf_main"
-                    ]
-                }
-            ]
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
         }
-    ]
+      ]
+    },
+    {
+      "name": "latency_perf_light_empty_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_empty_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_empty_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_empty_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_empty_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_light_parsing_reading_writing_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER2", "-skipNumber=SKIPNUMBER2", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED2", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER2", "-skipNumber=SKIPNUMBER2", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED2", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER2", "-skipNumber=SKIPNUMBER2", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED2", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER2", "-skipNumber=SKIPNUMBER2", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED2", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_50_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_1000_0_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_500_0_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_main_250_0_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_250_2_posl_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_2_posl_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_50_3_posl_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_posl_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_3_par_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_posl_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_off_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_on_64",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=64", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_off_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_on_128",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=128", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_off_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_on_256",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=256", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_off_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_OFF", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "--no-scheduler", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "latency_perf_seq_25_4_par_on_1518",
+      "test-time": 60000000000,
+      "test-type": "TestTypeLatency",
+      "test-apps": [
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppLatency",
+          "exec-cmd": [
+            "./latency", "-latNumber=LATNUMBER1", "-skipNumber=SKIPNUMBER1", "-packetSize=1518", "-timeout=TIMEOUT_SCHED_ON", "-speed=SPEED1", "-inport=INPORT1", "-outport=OUTPORT1"
+          ]
+        },
+        {
+          "image-name": "nff-go-performance",
+          "app-type": "TestAppGo",
+          "exec-cmd": [
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+          ]
+        }
+      ]
+    }
+  ]
 }

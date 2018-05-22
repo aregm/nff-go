@@ -43,6 +43,13 @@ var (
 		regexp.MustCompile(`^Time per request: *(\d+\.\d+) \[ms\] \(mean, across all concurrent requests\)$`),
 		regexp.MustCompile(`^Transfer rate: *(\d+\.\d+) \[Kbytes/sec\] received$`),
 	}
+	LatStatsRegexps = [5]*regexp.Regexp{
+		regexp.MustCompile(`received\/sent= *(\d+\.?\d*) %$`),
+		regexp.MustCompile(`speed= *(\d+\.?\d*)$`),
+		regexp.MustCompile(`median= *(\d+\.?\d*) μs$`),
+		regexp.MustCompile(`average= *(\d+\.?\d*) μs$`),
+		regexp.MustCompile(`stddev= *(\d+\.?\d*) μs$`),
+	}
 
 	NoDeleteContainersOnExit = false
 	username                 string
@@ -69,6 +76,7 @@ type RunningApp struct {
 	PktgenBenchdata [][]PktgenMeasurement
 	CoresStats      []CoresInfo
 	abs             *ApacheBenchmarkStats
+	lats            *LatencyStats
 	Logger          *Logger
 	benchStartTime  time.Time
 	benchEndTime    time.Time
@@ -131,6 +139,9 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 	if app.config.Type == TestAppApacheBenchmark {
 		app.abs = &ApacheBenchmarkStats{}
 	}
+	if app.config.Type == TestAppLatency {
+		app.lats = &LatencyStats{}
+	}
 
 	scanner := bufio.NewScanner(logs)
 
@@ -171,6 +182,18 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 						n, err := fmt.Sscanf(matches[1], "%f", &value)
 						if err == nil && n == 1 {
 							app.abs.Stats[iii] = value
+						}
+					}
+				}
+			} else if app.config.Type == TestAppLatency {
+				// Get Latency perf test output
+				for iii := range LatStatsRegexps {
+					matches := LatStatsRegexps[iii].FindStringSubmatch(str)
+					if len(matches) == 2 {
+						var value float32
+						n, err := fmt.Sscanf(matches[1], "%f", &value)
+						if err == nil && n == 1 {
+							app.lats.Stats[iii] = value
 						}
 					}
 				}

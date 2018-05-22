@@ -77,7 +77,6 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 				apps[r.AppIndex].Logger.LogInfo(r.AppIndex, r.msg)
 				if r.AppStatus == TestReportedFailed || r.AppStatus == TestReportedPassed {
 					apps[r.AppIndex].Logger.LogDebug("Finished with code", r.AppStatus)
-
 					killAllRunningAndRemoveData(apps)
 					apps[r.AppIndex].Status = r.AppStatus
 					if r.AppStatus == TestReportedPassed {
@@ -177,6 +176,14 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 		for iii := range apps {
 			if apps[iii].config.Type == TestAppApacheBenchmark {
 				tri.ABStats = apps[iii].abs
+				break
+			}
+		}
+	} else if test.Type == TestTypeLatency {
+		// Find which app has Latency statistics report
+		for iii := range apps {
+			if apps[iii].config.Type == TestAppLatency {
+				tri.LatStats = apps[iii].lats
 				break
 			}
 		}

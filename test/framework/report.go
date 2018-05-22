@@ -20,6 +20,8 @@ type TestcaseReportInfo struct {
 	CoresStats      *ReportCoresInfo
 	// Apache benchmark type tests
 	ABStats *ApacheBenchmarkStats
+	// Latency type tests
+	LatStats *LatencyStats
 	// Per application statistics
 	Apps []RunningApp
 }
@@ -129,7 +131,20 @@ const (
             </tr><tr>
                 <td class="thinrborderstatnames">Transfer rate [Kbytes/sec] received</td><td>{{index .Stats 3}}</td>
             </tr>
-        </table>{{end}}{{/* end with .ABStats */}}{{end}}{{/* end if .ABStats */}}
+        </table>{{end}}{{/* end with .ABStats */}}{{end}}{{/* end if .ABStats */}}{{if .LatStats}}{{with .LatStats}}
+        <table class="bench">
+            <tr>
+                <td class="thinrborderstatnames">Received/sent [%]</td><td>{{index .Stats 0}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Median [us]</td><td>{{index .Stats 2}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Average [us]</td><td>{{index .Stats 3}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Stddev [us]</td><td>{{index .Stats 4}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Requested speed [Pkts/sec]</td><td>{{index .Stats 1}}</td>
+            </tr>
+        </table>{{end}}{{/* end with .LatStats */}}{{end}}{{/* end if .LatStats */}}
     </td>
 </tr>{{range $appindex, $appelement := .Apps}}<tr style='display:none' id='{{genappid $testindex $appindex}}'>
     <td>

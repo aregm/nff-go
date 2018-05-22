@@ -34,6 +34,7 @@ const (
 	TestAppGo AppType = iota
 	TestAppPktgen
 	TestAppApacheBenchmark
+	TestAppLatency
 )
 
 // UnmarshalJSON unmarshals data and checks app type validity.
@@ -49,6 +50,7 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 		"TestAppGo":              TestAppGo,
 		"TestAppPktgen":          TestAppPktgen,
 		"TestAppApacheBenchmark": TestAppApacheBenchmark,
+		"TestAppLatency":         TestAppLatency,
 	}[s]
 	if !ok {
 		return fmt.Errorf("invalid AppType %q", s)
@@ -64,6 +66,7 @@ type TestType int
 const (
 	TestTypeBenchmark TestType = iota
 	TestTypeApacheBenchmark
+	TestTypeLatency
 	TestTypeScenario
 )
 
@@ -79,6 +82,7 @@ func (at *TestType) UnmarshalJSON(data []byte) error {
 	got, ok := map[string]TestType{
 		"TestTypeBenchmark":       TestTypeBenchmark,
 		"TestTypeApacheBenchmark": TestTypeApacheBenchmark,
+		"TestTypeLatency":         TestTypeLatency,
 		"TestTypeScenario":        TestTypeScenario,
 	}[s]
 	if !ok {
@@ -117,6 +121,20 @@ const (
 // client.
 type ApacheBenchmarkStats struct {
 	Stats [4]float32
+}
+
+// Indexes in array of latency stats LatencyStats
+const (
+	ReceivedSentRatio = iota
+	Speed
+	MedianLatency
+	AverageLatency
+	Stddev
+)
+
+// LatencyStats has info about finished latency perf test
+type LatencyStats struct {
+	Stats [5]float32
 }
 
 // TestReport has info about test status and application.
