@@ -4,8 +4,7 @@ import "github.com/intel-go/nff-go/flow"
 import "github.com/intel-go/nff-go/packet"
 
 func main() {
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 

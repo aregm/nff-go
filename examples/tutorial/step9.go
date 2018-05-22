@@ -10,8 +10,7 @@ import "github.com/intel-go/nff-go/packet"
 var rulesp unsafe.Pointer
 
 func main() {
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 

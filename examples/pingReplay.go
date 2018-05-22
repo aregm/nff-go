@@ -9,7 +9,7 @@ func main() {
 	inport := flag.Uint("inport", 0, "port for receiver")
         flag.Parse()
 
-	flow.CheckFatal(flow.SystemInit(&flow.Config{}))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	inputFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
