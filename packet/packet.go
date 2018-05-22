@@ -528,6 +528,7 @@ func InitEmptyARPPacket(packet *Packet) bool {
 	}
 
 	packet.Ether.EtherType = SwapBytesUint16(ARPNumber)
+	packet.ParseL3()
 	return true
 }
 
