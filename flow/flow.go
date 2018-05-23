@@ -184,7 +184,7 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, make(chan uint64, 50), &ctx, fastGenerate)
+	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, make(chan reportPair, 50), &ctx, fastGenerate)
 }
 
 type sendParameters struct {
@@ -218,7 +218,7 @@ func addCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) {
 	par.out = out
 	par.outCopy = outCopy
 	par.mempool = low.CreateMempool("copy")
-	schedState.addFF("copy", nil, nil, pcopy, par, make(chan uint64, 50), nil, segmentCopy)
+	schedState.addFF("copy", nil, nil, pcopy, par, make(chan reportPair, 50), nil, segmentCopy)
 }
 
 func makePartitioner(N uint64, M uint64) *Func {
@@ -315,11 +315,12 @@ func addSegment(in *low.Ring, first *Func) *processSegment {
 	segment.contexts = make([](UserContext), 0, 0)
 	par.out = &segment.out
 	par.stype = &segment.stype
-	schedState.addFF("segment", nil, nil, segmentProcess, par, make(chan uint64, 50), &segment.contexts, segmentCopy)
+	schedState.addFF("segment", nil, nil, segmentProcess, par, make(chan reportPair, 50), &segment.contexts, segmentCopy)
 	return segment
 }
 
 const burstSize = 32
+const reportMbits = false
 
 var sizeMultiplier uint
 var schedTime uint
@@ -922,7 +923,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 	return nil
 }
 
-func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+func segmentProcess(parameters interface{}, stopper [2]chan int, report chan reportPair, context []UserContext) {
 	// For scalar and vector parts
 	lp := parameters.(*segmentParameters)
 	IN := lp.in
@@ -936,7 +937,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 		OutputMbufs[index] = make([]uintptr, burstSize)
 		countOfPackets[index] = 0
 	}
-	var currentSpeed uint64
+	var currentSpeed reportPair
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
 	firstFunc := lp.firstFunc
@@ -968,7 +969,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 			}
 		case <-tick:
 			report <- currentSpeed
-			currentSpeed = 0
+			currentSpeed = reportPair{}
 		default:
 			n := IN.DequeueBurst(InputMbufs, burstSize)
 			if n == 0 {
@@ -989,6 +990,9 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 							// We have constructSlice -> put packets to output slices
 							OutputMbufs[nextIndex][countOfPackets[nextIndex]] = InputMbufs[i]
 							countOfPackets[nextIndex]++
+							if reportMbits {
+								currentSpeed.Bytes += uint64(tempPacket.GetPacketLen())
+							}
 							break
 						}
 						currentFunc = currentFunc.next[nextIndex]
@@ -999,7 +1003,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 						continue
 					}
 					safeEnqueue(OUT[index], OutputMbufs[index], uint(countOfPackets[index]))
-					currentSpeed += uint64(countOfPackets[index])
+					currentSpeed.Packets += uint64(countOfPackets[index])
 					countOfPackets[index] = 0
 				}
 			} else { // Vector code
@@ -1016,7 +1020,7 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan uin
 						// We have constructSlice -> put packets inside ring, it is an end of segment
 						count := FillSliceFromMask(InputMbufs, &def[st].mask, OutputMbufs[0])
 						safeEnqueue(OUT[answers[0]], OutputMbufs[0], uint(count))
-						currentSpeed += uint64(count)
+						currentSpeed.Packets += uint64(count)
 					} else if cur.followingNumber == 1 {
 						// We have simple handle. Mask will remain the same, current function will be changed
 						def[st].f = cur.next[0]
@@ -1050,7 +1054,7 @@ func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	low.Receive(uint16(srp.port.PortId), -1, srp.out, flag, coreID)
 }
 
-func pGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+func pGenerate(parameters interface{}, stopper [2]chan int, report chan reportPair, context []UserContext) {
 	// Function is unclonable, report is always nil
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
@@ -1075,7 +1079,7 @@ func pGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, 
 	}
 }
 
-func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan reportPair, context []UserContext) {
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
@@ -1086,7 +1090,7 @@ func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint
 	bufs := make([]uintptr, burstSize)
 	var tempPacket *packet.Packet
 	tempPackets := make([]*packet.Packet, burstSize)
-	var currentSpeed uint64
+	var currentSpeed reportPair
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
 	for {
@@ -1102,7 +1106,7 @@ func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint
 			}
 		case <-tick:
 			report <- currentSpeed
-			currentSpeed = 0
+			currentSpeed = reportPair{}
 		default:
 			err := low.AllocateMbufs(bufs, mempool, burstSize)
 			if err != nil {
@@ -1113,13 +1117,16 @@ func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint
 					// TODO Maybe we need to prefetcht here?
 					tempPacket = packet.ExtractPacket(bufs[i])
 					generateFunction(tempPacket, context[0])
+					if reportMbits {
+						currentSpeed.Bytes += uint64(tempPacket.GetPacketLen())
+					}
 				}
 			} else {
 				packet.ExtractPackets(tempPackets, bufs, burstSize)
 				vectorGenerateFunction(tempPackets, context[0])
 			}
 			safeEnqueue(OUT, bufs, burstSize)
-			currentSpeed = currentSpeed + uint64(burstSize)
+			currentSpeed.Packets += uint64(burstSize)
 			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 			// we just want to slow goroutine down without parking, so loop is OK for this.
 			// time.Now lasts approximately 70ns and this satisfies us
@@ -1133,7 +1140,7 @@ func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint
 }
 
 // TODO reassembled packets are not supported
-func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, context []UserContext) {
+func pcopy(parameters interface{}, stopper [2]chan int, report chan reportPair, context []UserContext) {
 	cp := parameters.(*copyParameters)
 	IN := cp.in
 	OUT := cp.out
@@ -1144,7 +1151,7 @@ func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, cont
 	bufs2 := make([]uintptr, burstSize)
 	var tempPacket1 *packet.Packet
 	var tempPacket2 *packet.Packet
-	var currentSpeed uint64
+	var currentSpeed reportPair
 	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
 
@@ -1158,7 +1165,7 @@ func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, cont
 			}
 		case <-tick:
 			report <- currentSpeed
-			currentSpeed = 0
+			currentSpeed = reportPair{}
 		default:
 			n := IN.DequeueBurst(bufs1, burstSize)
 			if n != 0 {
@@ -1170,10 +1177,13 @@ func pcopy(parameters interface{}, stopper [2]chan int, report chan uint64, cont
 					tempPacket1 = packet.ExtractPacket(bufs1[i])
 					tempPacket2 = packet.ExtractPacket(bufs2[i])
 					packet.GeneratePacketFromByte(tempPacket2, tempPacket1.GetRawPacketBytes())
+					if reportMbits {
+						currentSpeed.Bytes += uint64(tempPacket1.GetPacketLen())
+					}
 				}
 				safeEnqueue(OUT, bufs1, uint(n))
 				safeEnqueue(OUTCopy, bufs2, uint(n))
-				currentSpeed = currentSpeed + uint64(n)
+				currentSpeed.Packets += uint64(n)
 			}
 			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 			// we just want to slow goroutine down without parking, so loop is OK for this.
