@@ -26,6 +26,32 @@ const (
 	TestInterrupted
 )
 
+// UnmarshalJSON unmarshals data and checks app type validity.
+func (at *TestStatus) UnmarshalJSON(data []byte) error {
+	// Extract the string from data.
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("TestStatus should be a string, got %s", data)
+	}
+
+	// Use map to get int keys for string values
+	got, ok := map[string]TestStatus{
+		"TestCreated":        TestCreated,
+		"TestInitialized":    TestInitialized,
+		"TestInvalid":        TestInvalid,
+		"TestRunning":        TestRunning,
+		"TestReportedPassed": TestReportedPassed,
+		"TestReportedFailed": TestReportedFailed,
+		"TestTimedOut":       TestTimedOut,
+		"TestInterrupted":    TestInterrupted,
+	}[s]
+	if !ok {
+		return fmt.Errorf("invalid TestStatus %q", s)
+	}
+	*at = got
+	return nil
+}
+
 // AppType is a type of application.
 type AppType int
 
