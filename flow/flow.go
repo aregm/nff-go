@@ -100,7 +100,7 @@ type Func struct {
 type GenerateFunction func(*packet.Packet, UserContext)
 
 // VectorGenerateFunction is a function type like GenerateFunction for vector generating
-type VectorGenerateFunction func([]*packet.Packet, uint, UserContext)
+type VectorGenerateFunction func([]*packet.Packet, UserContext)
 
 // HandleFunction is a function type for user defined function which handles packets.
 // Function receives a packet from flow. User should parse it
@@ -587,10 +587,10 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Gets user-defined generate function, target speed of generation user wants to achieve and context.
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
-func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	if targetSpeed > 0 {
-		addFastGenerator(ring, GenerateFunction(f), nil, targetSpeed, context)
+		addFastGenerator(ring, f, nil, targetSpeed, context)
 	} else {
 		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
@@ -601,10 +601,10 @@ func SetFastGenerator(f func(*packet.Packet, UserContext), targetSpeed uint64, c
 // Gets user-defined vector generate function, target speed of generation user wants to achieve and context.
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
-func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
 	if targetSpeed > 0 {
-		addFastGenerator(ring, nil, VectorGenerateFunction(f), targetSpeed, context)
+		addFastGenerator(ring, nil, f, targetSpeed, context)
 	} else {
 		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
 	}
@@ -616,9 +616,9 @@ func SetVectorFastGenerator(f func([]*packet.Packet, uint, UserContext), targetS
 // Returns new open flow with generated packets.
 // Single packet non-clonable flow function will be added. It can be used for waiting of
 // input user packets.
-func SetGenerator(f func(*packet.Packet, UserContext), context UserContext) (OUT *Flow) {
+func SetGenerator(f GenerateFunction, context UserContext) (OUT *Flow) {
 	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	addGenerator(ring, GenerateFunction(f), context)
+	addGenerator(ring, f, context)
 	return newFlow(ring)
 }
 
@@ -1116,7 +1116,7 @@ func pFastGenerate(parameters interface{}, stopper [2]chan int, report chan uint
 				}
 			} else {
 				packet.ExtractPackets(tempPackets, bufs, burstSize)
-				vectorGenerateFunction(tempPackets, burstSize, context[0])
+				vectorGenerateFunction(tempPackets, context[0])
 			}
 			safeEnqueue(OUT, bufs, burstSize)
 			currentSpeed = currentSpeed + uint64(burstSize)
