@@ -189,19 +189,27 @@ func (gp geomeanProcessor) process(tr *test.TestsuiteReport, verbose bool) repor
 	geomeanCores := 1.0
 	for iii := range tr.Tests {
 		ttt := tr.Tests[iii]
+
+		cores := 0
+		if ttt.CoresStats != nil {
+			cores = ttt.CoresStats.CoresUsed
+			geomeanCores *= float64(ttt.CoresStats.CoresUsed)
+		}
+
 		pgbd := ttt.PktgenBenchdata
-		pkts := int64(0)
-		mbits := int64(0)
-		for port := range pgbd {
-			pkts += pgbd[port].PktsRX
-			mbits += pgbd[port].MbitsRX
+		if pgbd != nil {
+			pkts := int64(0)
+			mbits := int64(0)
+			for port := range pgbd {
+				pkts += pgbd[port].PktsRX
+				mbits += pgbd[port].MbitsRX
+			}
+			if verbose {
+				fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, cores)
+			}
+			geomeanPkts *= float64(pkts)
+			geomeanMbits *= float64(mbits)
 		}
-		if verbose {
-			fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, ttt.CoresStats.CoresUsed)
-		}
-		geomeanPkts *= float64(pkts)
-		geomeanMbits *= float64(mbits)
-		geomeanCores *= float64(ttt.CoresStats.CoresUsed)
 	}
 
 	return geomeanProcessorResult{
@@ -371,18 +379,26 @@ func (sp *sbsProcessor) process(tr *test.TestsuiteReport, verbose bool) reportPr
 		pgbd := ttt.PktgenBenchdata
 		pkts := int64(0)
 		mbits := int64(0)
-		for port := range pgbd {
-			pkts += pgbd[port].PktsRX
-			mbits += pgbd[port].MbitsRX
+
+		cores := 0
+		if ttt.CoresStats != nil {
+			cores = ttt.CoresStats.CoresUsed
 		}
-		if verbose {
-			fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, ttt.CoresStats.CoresUsed)
+
+		if pgbd != nil {
+			for port := range pgbd {
+				pkts += pgbd[port].PktsRX
+				mbits += pgbd[port].MbitsRX
+			}
+			if verbose {
+				fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, cores)
+			}
 		}
 		out[iii] = testResult{
 			name:  ttt.TestName,
 			pkts:  pkts,
 			mbits: mbits,
-			cores: ttt.CoresStats.CoresUsed,
+			cores: cores,
 		}
 	}
 
