@@ -1348,6 +1348,9 @@ func read(parameters interface{}, stopper [2]chan int) {
 			stopper[1] <- 1
 			return
 		default:
+			if count >= repcount {
+				break
+			}
 			tempPacket, err := packet.NewPacket()
 			if err != nil {
 				common.LogFatal(common.Debug, err)
@@ -1357,8 +1360,7 @@ func read(parameters interface{}, stopper [2]chan int) {
 				common.LogFatal(common.Debug, err)
 			}
 			if isEOF {
-				atomic.AddInt32(&count, 1)
-				if count == repcount {
+				if atomic.AddInt32(&count, 1) == repcount {
 					break
 				}
 				if _, err := f.Seek(packet.PcapGlobHdrSize, 0); err != nil {
