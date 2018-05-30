@@ -156,7 +156,7 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 		port->QueuesNumber--;
 	}
 
-        rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
+	rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
 
 	// http://dpdk.org/doc/api/examples_2ip_pipeline_2init_8c-example.html#a27
 	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
@@ -174,9 +174,9 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, bool promiscuous, bool hwtxchecksum) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
-        struct rte_eth_dev_info dev_info;
-        memset(&dev_info, 0, sizeof(dev_info));
-        rte_eth_dev_info_get(port, &dev_info);
+	struct rte_eth_dev_info dev_info;
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port, &dev_info);
 
 	if (willReceive) {
 		// TODO Investigate this
@@ -286,16 +286,16 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 		}
 	}
 	if (RTE_ETH_IS_IPV6_HDR(buf->packet_type)) { // if packet is IPv6
-	        struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
-	        struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
+		struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
+		struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
 
-	        if (frag_hdr != NULL) {
-	                buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
-	                buf->l3_len = sizeof(*ip_hdr) + sizeof(*frag_hdr); // prepare mbuf: setup l2_len/l3_len.
+		if (frag_hdr != NULL) {
+		        buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
+		        buf->l3_len = sizeof(*ip_hdr) + sizeof(*frag_hdr); // prepare mbuf: setup l2_len/l3_len.
 			// This function will return first mbuf from mbuf chain
 			// Following mbufs in a chain will be without L2 and L3 headers
-	                return rte_ipv6_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr, frag_hdr);
-	        }
+		        return rte_ipv6_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr, frag_hdr);
+		}
 	}
 	return buf;
 }
@@ -546,23 +546,23 @@ int getMempoolSpace(struct rte_mempool * m) {
 }
 
 struct nff_go_ring {
-        struct rte_ring *DPDK_ring;
-        // We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
-        void *internal_DPDK_ring;
-        uint32_t offset;
+	struct rte_ring *DPDK_ring;
+	// We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
+	void *internal_DPDK_ring;
+	uint32_t offset;
 };
 
 struct nff_go_ring *
 nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
-        struct nff_go_ring* r;
-        r = malloc(sizeof(struct nff_go_ring));
+	struct nff_go_ring* r;
+	r = malloc(sizeof(struct nff_go_ring));
 
-        r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
-        // Ring elements are located immidiately behind rte_ring structure
-        // So ring[1] is pointed to the beginning of this data
-        r->internal_DPDK_ring = &(r->DPDK_ring)[1];
-        r->offset = sizeof(void*);
-        return r;
+	r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
+	// Ring elements are located immidiately behind rte_ring structure
+	// So ring[1] is pointed to the beginning of this data
+	r->internal_DPDK_ring = &(r->DPDK_ring)[1];
+	r->offset = sizeof(void*);
+	return r;
 }
 
 void *
@@ -594,7 +594,7 @@ void lpm_free(void *lpm) {
 //     2. You should check if there are new callbacks in DPDK
 //     3. You should check examples/kni/main.c file for callbacks examples
 //     4. You should understand that calling rte_eth_dev_stop in the same time of rte_eth_rx_burst will result to errors
-//         4a. One of these errors can be overloading of receive mempool
+//	 4a. One of these errors can be overloading of receive mempool
 //     5. You should understand that calling rte_eth_dev_start should include receive ring handling as in port_init
 static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu) {
 	fprintf(stderr, "DEBUG: KNI: Change MTU of port %d to %u\n", port_id, new_mtu);
