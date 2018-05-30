@@ -16,7 +16,9 @@ var (
 	srcMac0 [common.EtherAddrLen]uint8
 	dstMac1 [common.EtherAddrLen]uint8
 	srcMac1 [common.EtherAddrLen]uint8
-	stubMac = [common.EtherAddrLen]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
+	// First byte in MAC address has to be even because otherwise it
+	// means multicast address which cannot be source address.
+	stubMac = [common.EtherAddrLen]uint8{0x10, 0x22, 0x33, 0x44, 0x55, 0x66}
 	// ModifyPacket is used to set src and dst MAC addresses for outgoing packets.
 	ModifyPacket = []interface{}{modifyPacket0, modifyPacket1}
 )

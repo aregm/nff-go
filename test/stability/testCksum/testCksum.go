@@ -423,7 +423,9 @@ func generatePacket(emptyPacket *packet.Packet, context flow.UserContext) {
 func initPacketCommon(emptyPacket *packet.Packet, length uint16, rnd *rand.Rand) {
 	// Initialize ethernet addresses
 	emptyPacket.Ether.DAddr = [6]uint8{0xde, 0xea, 0xad, 0xbe, 0xee, 0xef}
-	emptyPacket.Ether.SAddr = [6]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
+	// First byte in MAC address has to be even because otherwise it
+	// means multicast address which cannot be source address.
+	emptyPacket.Ether.SAddr = [6]uint8{0x10, 0x22, 0x33, 0x44, 0x55, 0x66}
 
 	// Fill internals with random garbage
 	data := (*[1 << 30]byte)(emptyPacket.Data)[0:length]
