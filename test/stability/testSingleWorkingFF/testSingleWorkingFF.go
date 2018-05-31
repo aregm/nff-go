@@ -167,6 +167,10 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 			return err
 		}
 
+		if err := flow.SetHandlerDrop(inputFlow, checkShouldBeSkipped, nil); err != nil {
+			return err
+		}
+
 		var flow1, flow2 *flow.Flow
 		if flow1, flow2, err = setMainTest(inputFlow); err != nil {
 			return err
@@ -221,14 +225,14 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 				return err
 			}
 		}
-		if err := flow.SetHandler(flow1, checkInputFlow1, nil); err != nil {
+		if err := flow.SetHandlerDrop(flow1, checkInputFlow1, nil); err != nil {
 			return err
 		}
 		if err := flow.SetStopper(flow1); err != nil {
 			return err
 		}
 		if testType < handles {
-			if err := flow.SetHandler(flow2, checkInputFlow2, nil); err != nil {
+			if err := flow.SetHandlerDrop(flow2, checkInputFlow2, nil); err != nil {
 				return err
 			}
 			if err := flow.SetStopper(flow2); err != nil {
@@ -446,22 +450,30 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	atomic.AddUint64(&count, 1)
 }
 
-func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) {
+func checkShouldBeSkipped(pkt *packet.Packet, context flow.UserContext) bool {
+	if stabilityCommon.ShouldBeSkipped(pkt) {
+		return false
+	}
+	return true
+}
+
+func checkInputFlow1(pkt *packet.Packet, context flow.UserContext) bool {
 	if commonCheck(pkt) == false {
-		return
+		return false
 	}
 	udp := pkt.GetUDPForIPv4()
 	if udp.DstPort != packet.SwapBytesUint16(dstPort1) {
 		println("Unexpected packet in inputFlow1", udp.DstPort)
 		atomic.AddUint64(&brokenPackets, 1)
-		return
+		return false
 	}
 	atomic.AddUint64(&recvPacketsGroup1, 1)
+	return true
 }
 
-func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
+func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) bool {
 	if commonCheck(pkt) == false {
-		return
+		return false
 	}
 	udp := pkt.GetUDPForIPv4()
 	if gTestType == separate &&
@@ -473,9 +485,10 @@ func checkInputFlow2(pkt *packet.Packet, context flow.UserContext) {
 			udp.DstPort != packet.SwapBytesUint16(dstPort1) {
 		println("Unexpected packet in inputFlow2", udp.DstPort)
 		atomic.AddUint64(&brokenPackets, 1)
-		return
+		return false
 	}
 	atomic.AddUint64(&recvPacketsGroup2, 1)
+	return true
 }
 
 func commonCheck(pkt *packet.Packet) bool {
