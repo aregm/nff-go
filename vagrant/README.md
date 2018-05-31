@@ -66,6 +66,73 @@ port number), some network connections will not work. To change
 starting port number you can define VM_TUNNEL_PORT_BASE variable
 before using 'vagrant up' command.
 
+UDP tunnels were found to be unreliable because in some cases packet
+trasmisison stopped for an unknown reason. Another way to connect VMs
+is to create virtual bridges (switches) for each pair of network
+interfaces. Unfortunatelly this has to be done by hands necause
+vagrant script doesn't allow to create multiple networks.
+
+To create a new birdge network use the folowing XML template (change
+DPDK_1 and dpdkbr1 identifiers for subsequent connections).
+
+    <network ipv6='yes'>
+      <name>DPDK_1</name>
+      <bridge name='dpdkbr1' stp='off' delay='0'/>
+    </network>
+
+use command like
+
+    virsh net-define dpdk1.xml
+    virsh net-start DPDK_1
+
+to create every bridge. After that use command like
+
+    virsh edit nff-go-0
+
+to edit every VM configuration and apply changes like this:
+
+    --- vm.udp      2018-05-31 10:05:21.265484863 -0500
+    +++ vm.bridge   2018-05-31 10:07:01.669059781 -0500
+    @@ -38,19 +38,15 @@
+           <model type='virtio'/>
+           <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+         </interface>
+    -    <interface type='udp'>
+    +    <interface type='network'>
+           <mac address='52:54:00:41:32:82'/>
+    -      <source address='127.0.0.1' port='33312'>
+    -        <local address='127.0.0.1' port='33303'/>
+    -      </source>
+    +      <source network='DPDK_1'/>
+           <model type='e1000'/>
+           <address type='pci' domain='0x0000' bus='0x00' slot='0x06' function='0x0'/>
+         </interface>
+    -    <interface type='udp'>
+    +    <interface type='network'>
+           <mac address='52:54:00:39:19:e6'/>
+    -      <source address='127.0.0.1' port='33313'>
+    -        <local address='127.0.0.1' port='33304'/>
+    -      </source>
+    +      <source network='DPDK_2'/>
+           <model type='e1000'/>
+           <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
+         </interface>
+
+For example three VMs with two connections between each pair would be
+connected like this:
+
+    +----------+<---DPDK_1--->+----------+<---DPDK_3--->+----------+
+    | nff-go-0 |              | nff-go_1 |              | nff-go-2 |
+    +----------+<---DPDK_2--->+----------+<---DPDK_4--->+----------+
+
+After all changes are done you can still use vagrant commands
+
+    vagrant up nff-go-0
+    vagrant ssh nff-go-0
+
+to start a VM and access it remotely. Vagrant doesn't interfere with
+edited VM configuration.
+
 ## VirtualBox specific section
 
 In our experience VirtualBox hangs and crashes too often. Its Intel
