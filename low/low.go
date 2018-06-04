@@ -441,13 +441,17 @@ func (ring *Ring) GetRingCount() uint32 {
 	return uint32((ring.DPDK_ring.prod.tail - ring.DPDK_ring.cons.tail) & ring.DPDK_ring.mask)
 }
 
-// Receive - get packets and enqueue on a Ring.
-func Receive(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
-	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
-	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+// ReceiveRSS - get packets from port and enqueue on a Ring.
+func ReceiveRSS(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
+	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_recv(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+}
+
+// ReceiveKNI - get packets from Linux core and enqueue on a Ring.
+func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
+        C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Send - dequeue packets and send.

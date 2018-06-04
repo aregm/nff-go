@@ -1046,12 +1046,12 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan rep
 
 func recvRSS(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(uint16(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
+	low.ReceiveRSS(uint16(srp.port.PortId), int16(srp.port.QueuesNumber-1), srp.out, flag, coreID)
 }
 
 func recvKNI(parameters interface{}, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.Receive(uint16(srp.port.PortId), -1, srp.out, flag, coreID)
+	low.ReceiveKNI(uint16(srp.port.PortId), srp.out, flag, coreID)
 }
 
 func pGenerate(parameters interface{}, stopper [2]chan int, report chan reportPair, context []UserContext) {
