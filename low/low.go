@@ -56,8 +56,9 @@ var mbufCacheSizeT uint
 
 type mempoolPair struct {
 	mempool *C.struct_rte_mempool
-	name string
+	name    string
 }
+
 var usedMempools []mempoolPair
 
 func GetPort(n uint16) *Port {
@@ -524,13 +525,13 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscu
 // CreateMempool creates and returns a new memory pool.
 func CreateMempool(name string) *Mempool {
 	nameC := 1
-        tName := name
-        for i := range usedMempools {
-                if usedMempools[i].name == tName {
-                        tName = name + strconv.Itoa(nameC)
-                        nameC++
-                }
-        }
+	tName := name
+	for i := range usedMempools {
+		if usedMempools[i].name == tName {
+			tName = name + strconv.Itoa(nameC)
+			nameC++
+		}
+	}
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempoolPair{mempool, tName})
 	return (*Mempool)(mempool)
@@ -650,4 +651,8 @@ func BoolToInt(value bool) uint8 {
 
 func IntArrayToBool(value *[32]uint8) *[32]bool {
 	return (*[32]bool)(unsafe.Pointer(value))
+}
+
+func CheckHWTXChecksumCapability(port uint16) bool {
+	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
 }

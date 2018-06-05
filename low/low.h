@@ -615,3 +615,17 @@ static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on) {
 	fprintf(stderr, "DEBUG: KNI: Promiscusity mode of port %d %s\n", port_id, to_on ? "on" : "off");
 	return 0;
 }
+
+bool check_hwtxchecksum_capability(uint16_t port_id) {
+	uint64_t flags = DEV_TX_OFFLOAD_IPV4_CKSUM |
+		DEV_TX_OFFLOAD_UDP_CKSUM |
+		DEV_TX_OFFLOAD_TCP_CKSUM;
+	struct rte_eth_dev_info dev_info;
+
+	if (port_id >= rte_eth_dev_count())
+		return false;
+
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port_id, &dev_info);
+	return (dev_info.tx_offload_capa & flags) == flags;
+}

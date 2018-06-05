@@ -121,6 +121,15 @@ func configTest(shouldUseIPv4, shouldUseIPv6, shouldUseUDP, shouldUseTCP, should
 	useTCP = shouldUseTCP
 	useUDP = shouldUseUDP
 	useVLAN = shouldUseVLAN
+
+	ports := []uint16{uint16(inport), uint16(outport)}
+	offloadingAvailable := flow.CheckHWCapability(flow.HWTXChecksumCapability, ports)
+	if hwol && !offloadingAvailable {
+		println("Warning! Requested hardware offloading is not available on all ports. Falling back to software checksum calculation.")
+		hwol = false
+		flow.SetUseHWCapability(flow.HWTXChecksumCapability, false)
+	}
+
 	if hwol {
 		print("hardware cksums and ")
 	}

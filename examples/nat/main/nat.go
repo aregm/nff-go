@@ -41,6 +41,13 @@ func main() {
 
 	flow.CheckFatal(flow.SystemInit(&nffgoconfig))
 
+	offloadingAvailable := nat.CheckHWOffloading()
+	if !nat.NoHWTXChecksum && !offloadingAvailable {
+		println("Warning! Requested hardware offloading is not available on all ports. Falling back to software checksum calculation.")
+		nat.NoHWTXChecksum = true
+		flow.SetUseHWCapability(flow.HWTXChecksumCapability, false)
+	}
+
 	// Initialize flows and necessary state
 	nat.InitFlows()
 

@@ -279,3 +279,14 @@ func InitFlows() {
 		dropsync = make([]sync.Mutex, asize)
 	}
 }
+
+func CheckHWOffloading() bool {
+	ports := []uint16{}
+
+	for i := range Natconfig.PortPairs {
+		pp := &Natconfig.PortPairs[i]
+		ports = append(ports, pp.PublicPort.Index, pp.PrivatePort.Index)
+	}
+
+	return flow.CheckHWCapability(flow.HWTXChecksumCapability, ports)
+}

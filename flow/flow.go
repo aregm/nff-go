@@ -319,6 +319,35 @@ func addSegment(in *low.Ring, first *Func) *processSegment {
 	return segment
 }
 
+type HWCapability int
+
+const (
+	HWTXChecksumCapability HWCapability = iota
+)
+
+// CheckHWCapability return true if hardware offloading capability
+// present in all ports. Otherwise it returns false.
+func CheckHWCapability(capa HWCapability, ports []uint16) bool {
+	for p := range ports {
+		switch capa {
+		case HWTXChecksumCapability:
+			if !low.CheckHWTXChecksumCapability(ports[p]) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// SetUseHWCapability enables or disables using a hardware offloading
+// capability.
+func SetUseHWCapability(capa HWCapability, use bool) {
+	switch capa {
+	case HWTXChecksumCapability:
+		packet.SetHWTXChecksumFlag(use)
+	}
+}
+
 const burstSize = 32
 const reportMbits = false
 
