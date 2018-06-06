@@ -54,8 +54,8 @@ var (
 	sentPacketsGroup1 uint64
 	sentPacketsGroup2 uint64
 
-	recvPacketsGroup1     uint64
-	recvPacketsGroup2     uint64
+	recvPacketsGroup1 uint64
+	recvPacketsGroup2 uint64
 
 	recvPackets   uint64
 	brokenPackets uint64
@@ -231,10 +231,10 @@ func buildPipeline(scenario pipelineScenario, firstFlow, secondFlow *flow.Flow) 
 func setTestingPart(scenario pipelineScenario, addSegmAfterMerge bool) error {
 	var (
 		input1, input2 uint
-		m sync.Mutex
-		checkedFlow *flow.Flow
-		err error
-		getter getScenario
+		m              sync.Mutex
+		checkedFlow    *flow.Flow
+		err            error
+		getter         getScenario
 	)
 	if testScenario != receivePart {
 		testDoneEvent = sync.NewCond(&m)

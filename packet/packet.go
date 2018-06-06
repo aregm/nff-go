@@ -806,7 +806,7 @@ func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
 
 // ArrayToIPv4 converts four element array to uint32 representation
 func ArrayToIPv4(a [IPv4AddrLen]byte) uint32 {
-        return uint32(a[3])<<24 | uint32(a[2])<<16 | uint32(a[1])<<8 | uint32(a[0])
+	return uint32(a[3])<<24 | uint32(a[2])<<16 | uint32(a[1])<<8 | uint32(a[0])
 }
 
 // IPv4ToBytes converts four element address to uint32 representation

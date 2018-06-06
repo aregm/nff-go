@@ -30,6 +30,8 @@ import (
 	"github.com/intel-go/nff-go/common"
 )
 
+var ringName = 1
+
 // DirectStop frees mbufs.
 func DirectStop(pktsForFreeNumber int, buf []uintptr) {
 	C.directStop(C.int(pktsForFreeNumber), (**C.struct_rte_mbuf)(unsafe.Pointer(&(buf[0]))))
@@ -68,8 +70,8 @@ func GetPort(n uint16) *Port {
 	return p
 }
 
-func CheckRSSPacketCount(p *Port) int {
-	return int(C.checkRSSPacketCount((*C.struct_cPort)(p)))
+func CheckRSSPacketCount(p *Port) uint32 {
+	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), C.int16_t(p.QueuesNumber-1)))
 }
 
 func DecreaseRSS(p *Port) {
@@ -232,12 +234,12 @@ const (
 )
 
 // CreateRing creates ring with given name and count.
-func CreateRing(name string, count uint) *Ring {
-	var ring *Ring
-	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
-	ring = (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+func CreateRing(count uint) *Ring {
+	name := strconv.Itoa(ringName)
+	ringName++
 
-	return ring
+	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
+	return (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 }
 
 // EnqueueBurst enqueues data to ring buffer.
@@ -452,7 +454,7 @@ func ReceiveRSS(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
 
 // ReceiveKNI - get packets from Linux core and enqueue on a Ring.
 func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
-        C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Send - dequeue packets and send.

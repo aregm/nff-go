@@ -32,7 +32,6 @@ package flow
 import (
 	"os"
 	"runtime"
-	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -43,7 +42,6 @@ import (
 )
 
 var openFlowsNumber = uint32(0)
-var ringName = 1
 var createdPorts []port
 var portPair map[uint32](*port)
 var schedState *scheduler
@@ -151,9 +149,9 @@ func addReceiver(portId uint16, kni bool, out *low.Ring) {
 	par.out = out
 	par.kni = kni
 	if kni {
-		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, nil, sendReceiveKNI)
+		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, sendReceiveKNI)
 	} else {
-		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, nil, receiveRSS)
+		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS)
 	}
 }
 
@@ -171,7 +169,7 @@ func addGenerator(out *low.Ring, generateFunction GenerateFunction, context User
 	par.generateFunction = generateFunction
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("generator", nil, nil, pGenerate, par, nil, &ctx, generate)
+	schedState.addFF("generator", nil, nil, pGenerate, par, &ctx, generate)
 }
 
 func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
@@ -184,7 +182,7 @@ func addFastGenerator(out *low.Ring, generateFunction GenerateFunction,
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, make(chan reportPair, 50), &ctx, fastGenerate)
+	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, &ctx, fastGenerate)
 }
 
 type sendParameters struct {
@@ -199,9 +197,9 @@ func addSender(port uint16, queue int16, in *low.Ring) {
 	par.queue = queue
 	par.in = in
 	if queue != -1 {
-		schedState.addFF("sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
+		schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI)
 	} else {
-		schedState.addFF("KNI sender", nil, send, nil, par, nil, nil, sendReceiveKNI)
+		schedState.addFF("KNI sender", nil, send, nil, par, nil, sendReceiveKNI)
 	}
 }
 
@@ -218,7 +216,7 @@ func addCopier(in *low.Ring, out *low.Ring, outCopy *low.Ring) {
 	par.out = out
 	par.outCopy = outCopy
 	par.mempool = low.CreateMempool("copy")
-	schedState.addFF("copy", nil, nil, pcopy, par, make(chan reportPair, 50), nil, segmentCopy)
+	schedState.addFF("copy", nil, nil, pcopy, par, nil, segmentCopy)
 }
 
 func makePartitioner(N uint64, M uint64) *Func {
@@ -272,7 +270,7 @@ func addWriter(filename string, in *low.Ring) {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
-	schedState.addFF("writer", write, nil, nil, par, nil, nil, readWrite)
+	schedState.addFF("writer", write, nil, nil, par, nil, readWrite)
 }
 
 type readParameters struct {
@@ -286,7 +284,7 @@ func addReader(filename string, out *low.Ring, repcount int32) {
 	par.out = out
 	par.filename = filename
 	par.repcount = repcount
-	schedState.addFF("reader", read, nil, nil, par, nil, nil, readWrite)
+	schedState.addFF("reader", read, nil, nil, par, nil, readWrite)
 }
 
 func makeSlice(out *low.Ring, segment *processSegment) *Func {
@@ -315,7 +313,7 @@ func addSegment(in *low.Ring, first *Func) *processSegment {
 	segment.contexts = make([](UserContext), 0, 0)
 	par.out = &segment.out
 	par.stype = &segment.stype
-	schedState.addFF("segment", nil, nil, segmentProcess, par, make(chan reportPair, 50), &segment.contexts, segmentCopy)
+	schedState.addFF("segment", nil, nil, segmentProcess, par, &segment.contexts, segmentCopy)
 	return segment
 }
 
@@ -492,7 +490,7 @@ func SystemInit(args *Config) error {
 	portPair = make(map[uint32](*port))
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	StopRing := low.CreateRing(burstSize * sizeMultiplier)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone)
 	// Init packet processing
@@ -537,6 +535,7 @@ func SystemStart() error {
 // SystemStop stops the system. All Flow functions plus resource releasing
 // Doesn't cleanup DPDK
 func SystemStop() {
+	// TODO we should release rings here
 	schedState.systemStop()
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
@@ -558,12 +557,6 @@ func SystemReset() {
 	low.StopDPDK()
 }
 
-func generateRingName() string {
-	s := strconv.Itoa(ringName)
-	ringName++
-	return s
-}
-
 // SetSenderFile adds write function to flow graph.
 // Gets flow which packets will be written to file and
 // target file name.
@@ -580,7 +573,7 @@ func SetSenderFile(IN *Flow, filename string) error {
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	addReader(filename, ring, repcount)
 	return newFlow(ring)
 }
@@ -598,7 +591,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	}
 	createdPorts[portId].wasRequested = true
 	createdPorts[portId].willReceive = true
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	addReceiver(portId, false, ring)
 	return newFlow(ring), nil
 }
@@ -608,7 +601,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	addReceiver(kni.portId, true, ring)
 	return newFlow(ring)
 }
@@ -618,7 +611,7 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	if targetSpeed > 0 {
 		addFastGenerator(ring, f, nil, targetSpeed, context)
 	} else {
@@ -632,7 +625,7 @@ func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContex
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	if targetSpeed > 0 {
 		addFastGenerator(ring, nil, f, targetSpeed, context)
 	} else {
@@ -647,7 +640,7 @@ func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, contex
 // Single packet non-clonable flow function will be added. It can be used for waiting of
 // input user packets.
 func SetGenerator(f GenerateFunction, context UserContext) (OUT *Flow) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	addGenerator(ring, f, context)
 	return newFlow(ring)
 }
@@ -685,12 +678,12 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	ringFirst := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
-	ringSecond := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ringFirst := low.CreateRing(burstSize * sizeMultiplier)
+	ringSecond := low.CreateRing(burstSize * sizeMultiplier)
 	if IN.segment == nil {
 		addCopier(IN.current, ringFirst, ringSecond)
 	} else {
-		tRing := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+		tRing := low.CreateRing(burstSize * sizeMultiplier)
 		ms := makeSlice(tRing, IN.segment)
 		segmentInsert(IN, ms, false, nil, 0, 0)
 		addCopier(tRing, ringFirst, ringSecond)
@@ -852,7 +845,7 @@ func SetVectorHandlerDrop(IN *Flow, vectorSeparateFunction VectorSeparateFunctio
 // All input flows will be closed. All packets from all these flows will be sent to new flow.
 // This function isn't use any cores. It changes output flows of other functions at initialization stage.
 func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
-	ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+	ring := low.CreateRing(burstSize * sizeMultiplier)
 	for i := range InArray {
 		if err := checkFlow(InArray[i]); err != nil {
 			return nil, err
@@ -907,7 +900,7 @@ func finishFlow(IN *Flow) *low.Ring {
 		ring = IN.current
 		closeFlow(IN)
 	} else {
-		ring = low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+		ring = low.CreateRing(burstSize * sizeMultiplier)
 		ms := makeSlice(ring, IN.segment)
 		segmentInsert(IN, ms, true, nil, 0, 0)
 	}
@@ -929,7 +922,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 		IN.segment.stype = setType
 	} else {
 		if setType > 0 && IN.segment.stype > 0 && setType != IN.segment.stype {
-			ring := low.CreateRing(generateRingName(), burstSize*sizeMultiplier)
+			ring := low.CreateRing(burstSize * sizeMultiplier)
 			ms := makeSlice(ring, IN.segment)
 			segmentInsert(IN, ms, false, nil, 0, 0)
 			IN.segment = nil
@@ -972,7 +965,6 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan rep
 	firstFunc := lp.firstFunc
 	// For scalar part
 	var tempPacket *packet.Packet
-	var tempPacketAddr uintptr
 	// For vector part
 	tempPackets := make([]*packet.Packet, burstSize)
 	type pair struct {
@@ -1007,12 +999,10 @@ func segmentProcess(parameters interface{}, stopper [2]chan int, report chan rep
 				}
 				continue
 			}
-			// TODO prefetch
 			if scalar { // Scalar code
 				for i := uint(0); i < n; i++ {
 					currentFunc := firstFunc
-					tempPacketAddr = packet.ExtractPacketAddr(InputMbufs[i])
-					tempPacket = packet.ToPacket(tempPacketAddr)
+					tempPacket = packet.ExtractPacket(InputMbufs[i])
 					for {
 						nextIndex := currentFunc.sFunc(tempPacket, currentFunc, context[currentFunc.contextIndex])
 						if currentFunc.followingNumber == 0 {
