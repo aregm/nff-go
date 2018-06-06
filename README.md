@@ -4,6 +4,8 @@
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
 
+**NFF-Go becomes part of DPDK project umbrella under Linux Foundation! Mirror repo can be found here: http://dpdk.org/browse/apps/nff-go/. We will accept patches through DPDK mail-list and standard DPDK contribution [process](http://dpdk.org/doc/guides/contributing/patches.html) too.**
+
 ## What it is
 NFF-Go is a set of libraries for creating and deploying cloud-native Network
 Functions (NFs). It simplifies the creation of network functions without
