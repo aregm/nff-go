@@ -142,8 +142,8 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	}
 }
 
-int checkRSSPacketCount(struct cPort *port) {
-	return rte_eth_rx_queue_count(port->PortId, port->QueuesNumber-1);
+int checkRSSPacketCount(struct cPort *port, int16_t queue) {
+	return rte_eth_rx_queue_count(port->PortId, queue);
 }
 
 bool changeRSSReta(struct cPort *port, bool increment) {
@@ -448,7 +448,7 @@ void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 		if (unlikely(pkts_for_free_number == 0))
 			continue;
 
-		// Free all this packets
+		// Free all these packets
 		for (buf = 0; buf < pkts_for_free_number; buf++) {
 			rte_pktmbuf_free(bufs[buf]);
 		}
@@ -583,8 +583,7 @@ struct nff_go_ring {
 
 struct nff_go_ring *
 nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
-	struct nff_go_ring* r;
-	r = malloc(sizeof(struct nff_go_ring));
+	struct nff_go_ring* r = malloc(sizeof(struct nff_go_ring));
 
 	r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
 	// Ring elements are located immidiately behind rte_ring structure

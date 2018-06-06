@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/intel-go/nff-go/flow"
 	"flag"
+	"github.com/intel-go/nff-go/flow"
 )
 
 func main() {
 	inport := flag.Uint("inport", 0, "port for receiver")
-        flag.Parse()
+	flag.Parse()
 
 	flow.CheckFatal(flow.SystemInit(nil))
 
