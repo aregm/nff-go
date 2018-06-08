@@ -10,8 +10,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"os"
+	"strings"
+)
+
+var (
+	user     = ""
+	password = ""
 )
 
 type inputReportsArray []*test.TestsuiteReport
@@ -21,17 +29,42 @@ func (ira *inputReportsArray) String() string {
 }
 
 func (ira *inputReportsArray) Set(value string) error {
-	file, err := os.Open(value)
-	if err != nil {
-		return err
+	var rc io.ReadCloser
+	var err error
+
+	if strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") {
+		resp := &http.Response{}
+		req := &http.Request{}
+		client := &http.Client{}
+		req, err = http.NewRequest("GET", value, nil)
+		if err != nil {
+			return err
+		}
+		req.SetBasicAuth(user, password)
+		resp, err = client.Do(req)
+		if err != nil {
+			return err
+		} else if resp.StatusCode >= http.StatusBadRequest {
+			return fmt.Errorf("Connection to %s returned error code %s\n", value, resp.Status)
+		}
+		rc = resp.Body
+	} else {
+		file := &os.File{}
+		file, err = os.Open(value)
+		if err != nil {
+			return err
+		}
+		rc = file
 	}
-	defer file.Close()
+	defer rc.Close()
 
 	report := test.TestsuiteReport{}
-	decoder := json.NewDecoder(file)
+	decoder := json.NewDecoder(rc)
 	err = decoder.Decode(&report)
 	if err != nil {
 		return err
+	} else if report.Timestamp == "" {
+		return fmt.Errorf("Bad report from %s contains no timestamp string", value)
 	}
 	*ira = append(*ira, &report)
 	return nil
@@ -88,7 +121,7 @@ func main() {
 		reportProcessor: geomeanProcessorMbits{},
 	}
 	flag.Usage = func() {
-		fmt.Printf(`Usage: report_compare [-v] [-m mode] -i base_report [-i new_report1] ... [-i new_reportN]
+		fmt.Printf(`Usage: report_compare [-v] [-m mode] [-u user] [-p password] -i base_report [-i new_report1] ... [-i new_reportN]
 
 Program processes report using chosen processing mode and outputs
 calculated result for every report.  If more than one report is given
@@ -113,6 +146,8 @@ error if any of new reports is worse than base report.
         sbs_recv_mbits - compares test reports side by side by received traffic
                 speed. Reports have to have the same tests.
        `)
+	flag.StringVar(&user, "u", "", "User name to authenticate with for HTTP(S) connection")
+	flag.StringVar(&password, "p", "", "Password to authenticate with for HTTP(S) connection")
 	verbose := flag.Bool("v", false, "Verbose mode")
 	flag.Parse()
 
