@@ -6,17 +6,32 @@ Pktgen parses config in json format and generates packets according to it in pca
 ### Command-line options:
 * --totalPackets sets the number of packets to generate, default value is 10000000
 * --infile sets the name of the file with packet configurations, default value is "config.json"
-* --outfile sets the name of the file to write output to, default value is "pkts_generated.pcap"
+* --outfile sets the name of the file to write output to, default value is "pkts_generated.pcap". Can be set with port (the output is copied).
+* --outport sets the port number to send output to. Can be used alone, with or instead of outfile.
+* --speed sets the speed of generator
+* --cycle sets cycle execution to generate infinite number of packets
+* --portConfig specifies config per port portNum: 'path', portNum2: 'path2'. For example: 1: 'ip4.json', 0: 'mix.json'
 
 ### Configuration syntax:
-File should be a structure containing structure with ethernet configuration:
+File should be a structure containing structure with ethernet header or mix configuration:
 ```json
 {
     "ether": {
     }
 }
 ```
-Inside each header can be either data or next level header.
+or mix following regexp "mix[0-9]*"
+```json
+{
+    "mix1": {
+    },
+    "mix2": {
+    },
+    "mix3": {
+    }
+}
+```
+Inside each packet header can be either data or next level header, inside mix is packet header and quantity.
 #### packet data configuration:
 possible options are:
 * "raw":
@@ -325,4 +340,60 @@ Ethernet source is set to sha by default, destination is broadcast.
     ]
 }
 ```
-
+#### mix config:
+Mix should contain packet configuration "ether" and "quantity".
+```json
+"mix1": {
+    "ether": {
+                "saddr": {
+                    "range": {
+                        "min": "00:25:96:FF:FE:12",
+                        "start": "00:30:00:FF:FE:12",
+                        "max": "00:FF:96:FF:FE:12",
+                        "incr": 10
+                    }
+                },
+                "daddr": "00:FF:96:FF:FE:12",
+                "randbytes":    {
+                    "size": 40,
+                    "deviation": 0
+                }   
+             },
+    "quantity": 6
+},
+"mix2": {
+    "ether": {
+                "saddr": "00:FF:96:FF:FE:12",
+                "daddr": "00:FF:96:FF:FE:12",
+                "randbytes":    {
+                    "size": 500,
+                    "deviation": 0
+                }   
+             },
+    "quantity": 3
+},
+"mix3": {
+            "ether": {
+                        "saddr": "00:25:96:FF:FE:12",
+                        "daddr": "00:00:96:FF:00:00",
+                        "ip": {
+                            "version": 4,
+                            "saddr": "1.1.127.1",
+                            "daddr": "1.1.1.3",
+                            "tcp": {
+                                "sport": 8080,
+                                "dport": 2000,
+                                "seq": "increasing",
+                                "flags": ["ack", "fin", "syn"],
+                                "randbytes":    {
+                                    "size": 1466,
+                                    "deviation": 0
+                                }
+                            }
+                        }
+                    },
+            "quantity": 1
+        }
+```
+The following sequence of packets will be generated for config above:
+6 packets "mix1" configuration, 3 packets "mix2" configuration and 1 packet "mix3" and this chain will be repeated until a needed number is generated.
