@@ -407,6 +407,9 @@ type Config struct {
 	DPDKArgs []string
 	// Is user going to use KNI
 	NeedKNI bool
+	// Maximum simultaneous receives that should handle all
+	// input at your network card
+	MaxRecv int
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -475,6 +478,11 @@ func SystemInit(args *Config) error {
 	}
 	common.SetLogType(logType)
 
+	maxRecv := 3
+	if args.MaxRecv != 0 {
+		needKNI = args.MaxRecv
+	}
+
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
@@ -492,7 +500,7 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRing(burstSize * sizeMultiplier)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
-	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone)
+	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv)
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
 	for i := 0; i < 10; i++ {

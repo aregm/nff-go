@@ -144,6 +144,7 @@ type scheduler struct {
 	Dropped           uint
 	maxPacketsToClone uint32
 	stopFlag          int32
+	maxRecv           int
 }
 
 type core struct {
@@ -152,7 +153,7 @@ type core struct {
 }
 
 func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
-	stopDedicatedCore bool, stopRing *low.Ring, checkTime uint, debugTime uint, maxPacketsToClone uint32) *scheduler {
+	stopDedicatedCore bool, stopRing *low.Ring, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int) *scheduler {
 	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(scheduler)
@@ -167,6 +168,7 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
 	scheduler.checkTime = checkTime
 	scheduler.debugTime = debugTime
 	scheduler.maxPacketsToClone = maxPacketsToClone
+	scheduler.maxRecv = maxRecv
 
 	return scheduler
 }
@@ -397,7 +399,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 					}
 				case receiveRSS:
 					// 3. Number of packets in RSS is big enogh to cause overwrite (drop) problems
-					if ff.checkInputRingClonable(RSSCloneMax) {
+					if ff.checkInputRingClonable(RSSCloneMax) && ff.cloneNumber < scheduler.maxRecv {
 						if low.IncreaseRSS((ff.Parameters.(*receiveParameters)).port) {
 							if scheduler.startFF(ff) != nil {
 								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
