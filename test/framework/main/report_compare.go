@@ -219,16 +219,16 @@ func (gp geomeanProcessor) process(tr *test.TestsuiteReport, verbose bool) repor
 	if verbose {
 		fmt.Printf("Parsing report %s\n", tr.Timestamp)
 	}
-	geomeanPkts := 1.0
-	geomeanMbits := 1.0
-	geomeanCores := 1.0
+	sumlogPkts := 0.0
+	sumlogMbits := 0.0
+	sumlogCores := 0.0
 	for iii := range tr.Tests {
 		ttt := tr.Tests[iii]
 
 		cores := 0
 		if ttt.CoresStats != nil {
 			cores = ttt.CoresStats.CoresUsed
-			geomeanCores *= float64(ttt.CoresStats.CoresUsed)
+			sumlogCores += math.Log2(float64(ttt.CoresStats.CoresUsed))
 		}
 
 		pgbd := ttt.PktgenBenchdata
@@ -242,15 +242,15 @@ func (gp geomeanProcessor) process(tr *test.TestsuiteReport, verbose bool) repor
 			if verbose {
 				fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, cores)
 			}
-			geomeanPkts *= float64(pkts)
-			geomeanMbits *= float64(mbits)
+			sumlogPkts += math.Log2(float64(pkts))
+			sumlogMbits += math.Log2(float64(mbits))
 		}
 	}
 
 	return geomeanProcessorResult{
-		geomeanPkts:  math.Pow(geomeanPkts, 1.0/float64(len(tr.Tests))),
-		geomeanMbits: math.Pow(geomeanMbits, 1.0/float64(len(tr.Tests))),
-		geomeanCores: math.Pow(geomeanCores, 1.0/float64(len(tr.Tests))),
+		geomeanPkts:  math.Exp2(sumlogPkts / float64(len(tr.Tests))),
+		geomeanMbits: math.Exp2(sumlogMbits / float64(len(tr.Tests))),
+		geomeanCores: math.Exp2(sumlogCores / float64(len(tr.Tests))),
 	}
 }
 
