@@ -24,7 +24,8 @@
     "SPEED1": "1000000",
     "SPEED2": "700000",
     "TIMEOUT_SCHED_OFF": "4s",
-    "TIMEOUT_SCHED_ON": "8s"
+    "TIMEOUT_SCHED_ON": "8s",
+    "CORES": "0-43"
   },
   "tests": [
     {
@@ -64,7 +65,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -106,7 +107,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -148,7 +149,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -190,7 +191,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -232,7 +233,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -274,7 +275,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=1", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -316,7 +317,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -358,7 +359,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -400,7 +401,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_light", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -442,7 +443,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -484,7 +485,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -526,7 +527,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -568,7 +569,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=50", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -610,7 +611,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -652,7 +653,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -694,7 +695,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -736,7 +737,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=1000", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -778,7 +779,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -820,7 +821,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -862,7 +863,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -904,7 +905,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=500", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -946,7 +947,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -988,7 +989,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1030,7 +1031,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1072,7 +1073,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_main", "-load=250", "-loadRW=0", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1114,7 +1115,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1156,7 +1157,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1198,7 +1199,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1240,7 +1241,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=250", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1282,7 +1283,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1324,7 +1325,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1366,7 +1367,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1408,7 +1409,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=2", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1450,7 +1451,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1492,7 +1493,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1534,7 +1535,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1576,7 +1577,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=50", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1618,7 +1619,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1660,7 +1661,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1702,7 +1703,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1744,7 +1745,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=3", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1786,7 +1787,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1828,7 +1829,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1870,7 +1871,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1912,7 +1913,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=13", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1954,7 +1955,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -1996,7 +1997,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2038,7 +2039,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2080,7 +2081,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=4", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2122,7 +2123,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2164,7 +2165,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2206,7 +2207,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
@@ -2248,7 +2249,7 @@
           "image-name": "nff-go-performance",
           "app-type": "TestAppGo",
           "exec-cmd": [
-            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2"
+            "./perf_seq", "-load=25", "-mode=14", "-inport=INPORT2", "-outport1=OUTPORT2_1", "-outport2=OUTPORT2_2", "-cores=CORES"
           ]
         }
       ]
