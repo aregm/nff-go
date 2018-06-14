@@ -21,11 +21,13 @@ func main() {
 	inport := flag.Uint("inport", 0, "port for receiver")
 	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
 	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	cores := flag.String("cores", "0-43", "Cores mask. Avoid hyperthreading here")
 	flag.Parse()
 
 	config := flow.Config{
 		DisableScheduler: *noscheduler,
 		DPDKArgs:         []string{*dpdkLogLevel},
+		CPUList:	  *cores,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
