@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	totalPackets uint64 = 10
+	totalPackets uint64 = 32
 	passedLimit  uint64 = 98
 
 	// Packet should hold at least two int64 fields
@@ -310,11 +310,13 @@ func filterPacketsUdpTcpIcmp(pkt *packet.Packet, context flow.UserContext) bool 
 }
 
 func fixPacket(pkt *packet.Packet, context flow.UserContext) {
-	pkt.ParseDataCheckVLAN()
+	if pkt.ParseDataCheckVLAN() < 0 {
+		failTest("parsing data with vlan check returned error")
+		return
+	}
 	ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 	if ptr.F2 != 0 {
-		fmt.Printf("Bad data found in the packet: %x\n", ptr.F2)
-		failTest()
+		failTest(fmt.Sprintf("Bad data found in the packet: %d", ptr.F2))
 		return
 	}
 
@@ -331,12 +333,11 @@ func fixPacket(pkt *packet.Packet, context flow.UserContext) {
 func checkChecksum(pkt *packet.Packet, context flow.UserContext) {
 	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
-		println("ParseDataCheckVLAN returned negative value", offset)
-		failTest()
+		failTest(fmt.Sprintf("ParseDataCheckVLAN returned negative value: %d", offset))
 		return
 	}
 	if !testCksumCommon.CheckPacketChecksums(pkt) {
-		failTest()
+		failTest("")
 	}
 }
 
@@ -344,13 +345,17 @@ func composeStatistics() error {
 	// Compose statistics
 	sent := atomic.LoadUint64(&sentPackets)
 	received := atomic.LoadUint64(&receivedPackets)
+	if sent == 0 {
+		println("TEST FAILED")
+		return errors.New("sent counter is 0")
+	}
 	ratio := received * 100 / sent
 
 	// Print report
 	println("Sent", sent, "packets")
 	println("Received", received, "packets")
 	println("Ratio = ", ratio, "%")
-	if atomic.LoadInt32(&passed) != 0 && ratio >= passedLimit {
+	if atomic.LoadInt32(&passed) == 1 && ratio >= passedLimit {
 		println("TEST PASSED")
 		return nil
 	}
@@ -359,7 +364,7 @@ func composeStatistics() error {
 }
 
 func generatePayloadLength(rnd *rand.Rand) uint16 {
-	if packetLength == 0 {
+	if packetLength < minPayloadSize || packetLength > maxPayloadSize {
 		return uint16(rnd.Intn(maxPayloadSize-minPayloadSize) + minPayloadSize)
 	}
 	return uint16(packetLength)
@@ -587,8 +592,8 @@ func generateIPv6ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
 	}
 }
 
-func failTest() {
-	println("TEST FAILED")
+func failTest(msg string) {
+	println("TEST FAILED", msg)
 	atomic.StoreInt32(&passed, 0)
 }
 
@@ -603,20 +608,17 @@ func checkPackets(pkt *packet.Packet, context flow.UserContext) {
 
 	offset := pkt.ParseDataCheckVLAN()
 	if offset < 0 {
-		println("ParseL4 returned negative value", offset)
-		failTest()
+		failTest(fmt.Sprintf("ParseL4 returned negative value: %d", offset))
 	} else {
 		if !testCksumCommon.CheckPacketChecksums(pkt) {
-			failTest()
+			failTest("")
 		}
 		ptr := (*testCksumCommon.Packetdata)(pkt.Data)
 
 		if ptr.F1 != ptr.F2 {
-			fmt.Printf("Data mismatch in the packet, read %x and %x\n", ptr.F1, ptr.F2)
-			failTest()
+			failTest(fmt.Sprintf("Data mismatch in the packet, read %x and %x", ptr.F1, ptr.F2))
 		} else if ptr.F1 == 0 {
-			println("Zero data value encountered in the packet")
-			failTest()
+			failTest("Zero data value encountered in the packet")
 		}
 	}
 }
