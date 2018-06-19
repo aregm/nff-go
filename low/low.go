@@ -44,6 +44,7 @@ func DirectSend(m *Mbuf, port uint16) bool {
 
 // Ring is a ring buffer for pointers
 type Ring C.struct_nff_go_ring
+type Rings []*Ring
 
 // Mbuf is a message buffer.
 type Mbuf C.struct_rte_mbuf
@@ -70,16 +71,8 @@ func GetPort(n uint16) *Port {
 	return p
 }
 
-func CheckRSSPacketCount(p *Port) uint32 {
-	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), C.int16_t(p.QueuesNumber-1)))
-}
-
-func DecreaseRSS(p *Port) {
-	C.changeRSSReta((*C.struct_cPort)(p), false)
-}
-
-func IncreaseRSS(p *Port) bool {
-	return bool(C.changeRSSReta((*C.struct_cPort)(p), true))
+func CheckRSSPacketCount(p *Port, queue int16) uint32 {
+	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), (C.int16_t(queue))))
 }
 
 // GetPortMACAddress gets MAC address of given port.
@@ -240,6 +233,15 @@ func CreateRing(count uint) *Ring {
 
 	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
 	return (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+}
+
+// CreateRings creates ring with given name and count.
+func CreateRings(count uint, inIndexNumber int32) Rings {
+	rings := make(Rings, inIndexNumber, inIndexNumber)
+	for i := int32(0); i < inIndexNumber; i++ {
+		rings[i] = CreateRing(count)
+	}
+	return rings
 }
 
 // EnqueueBurst enqueues data to ring buffer.
@@ -445,11 +447,11 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.receiveRSS(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // ReceiveKNI - get packets from Linux core and enqueue on a Ring.
@@ -458,17 +460,17 @@ func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN *Ring, flag *int32, coreID int) {
+func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Ring, flag *int32, coreID int) {
-	C.nff_go_stop(IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func Stop(IN Rings, flag *int32, coreID int) {
+	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -512,16 +514,21 @@ func GetPortsNumber() int {
 	return int(C.rte_eth_dev_count())
 }
 
+func CheckPortRSS(port uint16) int32 {
+	return int32(C.check_port_rss(C.uint16_t(port)))
+}
+
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool) error {
-	var mempool *C.struct_rte_mempool
+func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
+	var mempools **C.struct_rte_mempool
 	if willReceive {
-		mempool = (*C.struct_rte_mempool)(CreateMempool("receive"))
+		m := CreateMempools("receive", inIndex)
+		mempools = (**C.struct_rte_mempool)(unsafe.Pointer(&(m[0])))
 	} else {
-		mempool = nil
+		mempools = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
-		mempool, C._Bool(promiscuous), C._Bool(hwtxchecksum)) != 0 {
+		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
@@ -542,6 +549,15 @@ func CreateMempool(name string) *Mempool {
 	usedMempools = append(usedMempools, mempoolPair{mempool, tName})
 	return (*Mempool)(mempool)
 }
+
+func CreateMempools(name string, inIndex int32) []*Mempool {
+	m := make([]*Mempool, inIndex, inIndex)
+	for i := int32(0); i < inIndex; i++ {
+		m[i] = CreateMempool(name)
+	}
+	return m
+}
+
 
 // SetAffinity sets cpu affinity mask.
 func SetAffinity(coreID int) error {

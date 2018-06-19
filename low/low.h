@@ -146,44 +146,16 @@ int checkRSSPacketCount(struct cPort *port, int16_t queue) {
 	return rte_eth_rx_queue_count(port->PortId, queue);
 }
 
-bool changeRSSReta(struct cPort *port, bool increment) {
+int check_port_rss(uint16_t port) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
-	rte_eth_dev_info_get(port->PortId, &dev_info);
-
-	struct rte_eth_rss_reta_entry64 reta_conf[APP_RETA_SIZE_MAX];
-	memset(reta_conf, 0, sizeof(reta_conf));
-
-	// This is required, hanging without this
-	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
-		reta_conf[i].mask = UINT64_MAX;
-	}
-
-	if (increment) {
-		if (port->QueuesNumber == dev_info.max_rx_queues) {
-			return false;
-		}
-		port->QueuesNumber++;
-	} else {
-		port->QueuesNumber--;
-	}
-
-	rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
-
-	// http://dpdk.org/doc/api/examples_2ip_pipeline_2init_8c-example.html#a27
-	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
-		for (int j = 0; j < RTE_RETA_GROUP_SIZE; j++) {
-			reta_conf[i].reta[j] = j % port->QueuesNumber;
-		}
-	}
-	rte_eth_dev_rss_reta_update(port->PortId, reta_conf, dev_info.reta_size);
-	return true;
-	// TODO we don't start or stop queues here. Is it right?
+	rte_eth_dev_info_get(port, &dev_info);
+	return dev_info.max_rx_queues;
 }
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, bool promiscuous, bool hwtxchecksum) {
+int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
 	struct rte_eth_dev_info dev_info;
@@ -191,12 +163,7 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	rte_eth_dev_info_get(port, &dev_info);
 
 	if (willReceive) {
-		// TODO Investigate this
-		if (dev_info.max_rx_queues > 16) {
-			rx_rings = 16;
-		} else {
-			rx_rings = dev_info.max_rx_queues;
-		}
+		rx_rings = inIndex;
 		if (tx_rings == 0) {
 			// All receive ports should have at least one send queue to handle ARP
 			tx_rings = 1;
@@ -226,7 +193,7 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	/* Allocate and set up RX queues per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE,
-				rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+				rte_eth_dev_socket_id(port), NULL, mbuf_pools[q]);
 		if (retval < 0)
 			return retval;
 	}
@@ -260,10 +227,6 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 		.PortId  = port,
 		.QueuesNumber = rx_rings
 	};
-	// Stop all queues except the last one. Queues will be added later if needed
-	for (q = 0; q < rx_rings - 1; q++) {
-		changeRSSReta(&newPort, false);
-	}
 
 	return 0;
 }
@@ -356,27 +319,29 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
-
 	while (*flag == process) {
-		// Get packets from port
-		uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
-		if (unlikely(rx_pkts_number == 0)) {
-			continue;
-		}
-		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+		for (int q = 0; q < inIndex[0]; q++) {
+			// Get packets from port
+			uint16_t rx_pkts_number = rte_eth_rx_burst(port, inIndex[q+1], bufs, BURST_SIZE);
+			if (unlikely(rx_pkts_number == 0)) {
+				continue;
+			}
+			rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 
-		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
-		// Free any packets which can't be pushed to the ring. The ring is probably full.
-		handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+			uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_rings[inIndex[q+1]], (void*)bufs, rx_pkts_number, NULL);
+			// Free any packets which can't be pushed to the ring. The ring is probably full.
+			handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
-		receive_received += rx_pkts_number;
-		receive_pushed += pushed_pkts_number;
+			receive_received += rx_pkts_number;
+			receive_pushed += pushed_pkts_number;
 #endif
+		}
 	}
+	free(out_rings);
 	*flag = wasStopped;
 }
 
@@ -405,58 +370,62 @@ void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, in
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, int16_t queue, struct rte_ring *in_ring, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
 	while (*flag == process) {
-		// Get packets for TX from ring
-		uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
+		for (int q = 0; q < inIndexNumber; q++) {
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 
-		if (unlikely(pkts_for_tx_number == 0))
-			continue;
+			if (unlikely(pkts_for_tx_number == 0))
+				continue;
 
-		if (queue != -1) {
-			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
-		} else {
-			// if queue == "-1" this means that this send is to KNI device
-			tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
-		}
-		// Free any unsent packets
-		handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
+			if (queue != -1) {
+				tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
+			} else {
+				// if queue == "-1" this means that this send is to KNI device
+				tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+			}
+			// Free any unsent packets
+			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG
-		send_required += pkts_for_tx_number;
-		send_sent += tx_pkts_number;
+			send_required += pkts_for_tx_number;
+			send_sent += tx_pkts_number;
 #endif
+		}
 	}
+	free(in_rings);
 	*flag = wasStopped;
 }
 
-void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
+void nff_go_stop(struct rte_ring **in_rings, volatile int *flag, int coreId) {
 	setAffinity(coreId);
-
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Flag is used for both scheduler and stop.
 	// stopRequest will stop scheduler and this loop will stop with stopRequest+1
 	while (*flag == process || *flag == stopRequest) {
-		// Get packets for freeing from ring
-		uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_ring, (void*)bufs, BURST_SIZE, NULL);
+		for (int q = 0; q < 50 /*Maximum possible rings*/; q++) {
+			// Get packets for freeing from ring
+			uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 
-		if (unlikely(pkts_for_free_number == 0))
-			continue;
+			if (unlikely(pkts_for_free_number == 0))
+				continue;
 
-		// Free all these packets
-		for (buf = 0; buf < pkts_for_free_number; buf++) {
-			rte_pktmbuf_free(bufs[buf]);
-		}
-
+			// Free all these packets
+			for (buf = 0; buf < pkts_for_free_number; buf++) {
+				rte_pktmbuf_free(bufs[buf]);
+			}
 #ifdef DEBUG
-		stop_freed += pkts_for_free_number;
+			stop_freed += pkts_for_free_number;
 #endif
+		}
 	}
+	free(in_rings);
 	*flag = wasStopped;
 }
 
@@ -580,6 +549,14 @@ struct nff_go_ring {
 	void *internal_DPDK_ring;
 	uint32_t offset;
 };
+
+struct rte_ring** extractDPDKRings(struct nff_go_ring** r, int32_t inIndexNumber) {
+	struct rte_ring **output = malloc(inIndexNumber*sizeof(struct rte_ring *));
+	for (int i = 0; i < inIndexNumber; i++) {
+		output[i] = r[i]->DPDK_ring;
+	}
+	return output;
+}
 
 struct nff_go_ring *
 nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
