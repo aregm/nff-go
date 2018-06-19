@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 if (( "$#" != 1 ))
 then

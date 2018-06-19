@@ -3,8 +3,7 @@ package main
 import "github.com/intel-go/nff-go/flow"
 
 func main() {
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 

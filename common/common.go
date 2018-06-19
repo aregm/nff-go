@@ -79,6 +79,12 @@ const (
 	GTPMinLen  = 8
 )
 
+const (
+	TCPMinDataOffset = 0x50 // minimal tcp data offset
+	IPv4VersionIhl   = 0x45 // IPv4, IHL = 5 (min header len)
+	IPv6VtcFlow      = 0x60 // IPv6 version
+)
+
 // LogType - type of logging, used in flow package
 type LogType uint8
 
@@ -140,6 +146,7 @@ const (
 	SetAffinityErr
 	MultipleReceivePort
 	MultipleKNIPort
+	WrongPort
 )
 
 // NFError is error type returned by nff-go functions

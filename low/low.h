@@ -43,6 +43,18 @@
 *(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart; \
 *(char **)((char *)(buf) + mbufStructSize + 40) = 0;
 
+#ifdef REASSEMBLY
+#define REASSEMBLY_INIT \
+	struct rte_ip_frag_tbl* tbl = create_reassemble_table(); \
+	struct rte_ip_frag_death_row death_row; \
+	death_row.cnt = 0; /* DPDK doesn't initialize this field. It is probably a bug. */ \
+	struct rte_ip_frag_death_row* pdeath_row = &death_row;
+#else
+#define REASSEMBLY_INIT \
+	struct rte_ip_frag_tbl* tbl = NULL; \
+	struct rte_ip_frag_death_row* pdeath_row = NULL;
+#endif
+
 // Firstly we set "next" packet pointer (+40) to the packet from next mbuf
 // Secondly we know that followed mbufs don't contain L2 and L3 headers. We assume that they start with a data
 // so we assume that Data packet field (+16) should be equal to Ether packet field (+24)
@@ -105,9 +117,13 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	conf_default.core_id = core; // Core ID to bind kernel thread on
 	conf_default.group_id = port;
 	conf_default.mbuf_size = 2048;
-	conf_default.addr = dev_info.pci_dev->addr;
-	conf_default.id = dev_info.pci_dev->id;
+	if (dev_info.pci_dev) {
+		conf_default.addr = dev_info.pci_dev->addr;
+		conf_default.id = dev_info.pci_dev->id;
+	}
 	conf_default.force_bind = 1; // Flag to bind kernel thread
+	rte_eth_macaddr_get(port, (struct ether_addr *)&conf_default.mac_addr);
+	rte_eth_dev_get_mtu(port, &conf_default.mtu);
 
 	struct rte_kni_ops ops;
 	memset(&ops, 0, sizeof(ops));
@@ -116,14 +132,18 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	ops.config_network_if = KNI_config_network_interface;
 	ops.config_mac_address = KNI_config_mac_address;
 	ops.config_promiscusity = KNI_config_promiscusity;
+
+	// Both rte_kni_conf and rte_kni_ops structures are changed in DPDK
+	// We should always compare our initialization with current DPDK
+	// version of these structures
 	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
 		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
 	}
 }
 
-int checkRSSPacketCount(struct cPort *port) {
-	return rte_eth_rx_queue_count(port->PortId, port->QueuesNumber-1);
+int checkRSSPacketCount(struct cPort *port, int16_t queue) {
+	return rte_eth_rx_queue_count(port->PortId, queue);
 }
 
 bool changeRSSReta(struct cPort *port, bool increment) {
@@ -148,7 +168,7 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 		port->QueuesNumber--;
 	}
 
-        rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
+	rte_eth_dev_rss_reta_query(port->PortId, reta_conf, dev_info.reta_size);
 
 	// http://dpdk.org/doc/api/examples_2ip_pipeline_2init_8c-example.html#a27
 	for (int i = 0; i < dev_info.reta_size / RTE_RETA_GROUP_SIZE; i++) {
@@ -163,12 +183,12 @@ bool changeRSSReta(struct cPort *port, bool increment) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, struct ether_addr* addr, bool hwtxchecksum) {
+int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool *mbuf_pool, bool promiscuous, bool hwtxchecksum) {
 	uint16_t rx_rings, tx_rings = sendQueuesNumber;
 
-        struct rte_eth_dev_info dev_info;
-        memset(&dev_info, 0, sizeof(dev_info));
-        rte_eth_dev_info_get(port, &dev_info);
+	struct rte_eth_dev_info dev_info;
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port, &dev_info);
 
 	if (willReceive) {
 		// TODO Investigate this
@@ -176,6 +196,10 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 			rx_rings = 16;
 		} else {
 			rx_rings = dev_info.max_rx_queues;
+		}
+		if (tx_rings == 0) {
+			// All receive ports should have at least one send queue to handle ARP
+			tx_rings = 1;
 		}
 	} else {
 		rx_rings = 0;
@@ -225,11 +249,10 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	if (retval < 0)
 		return retval;
 
-	/* Get the port MAC address. */
-	rte_eth_macaddr_get(port, addr);
-
-	/* Enable RX in promiscuous mode for the Ethernet device. */
-	rte_eth_promiscuous_enable(port);
+	if (promiscuous == true) {
+		/* Enable RX in promiscuous mode for the Ethernet device. */
+		rte_eth_promiscuous_enable(port);
+	}
 
 	// Not to use .rx_deferred_start = 0 in custom configuration
 	// and use default configuration instead
@@ -245,6 +268,49 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	return 0;
 }
 
+__attribute__((always_inline))
+static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t real_number, uint16_t required_number) {
+	if (unlikely(real_number < required_number)) {
+	        for (uint16_t i = real_number; i < required_number; i++) {
+	                rte_pktmbuf_free(bufs[i]);
+	        }
+	}
+}
+
+__attribute__((always_inline))
+static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_t rx_pkts_number, struct rte_ip_frag_tbl* tbl, struct rte_ip_frag_death_row* death_row) {
+#ifdef REASSEMBLY
+	uint16_t temp_number = 0;
+	uint64_t cur_tsc = rte_rdtsc();
+#endif
+	for (uint16_t i = 0; i < rx_pkts_number; i++) {
+	        // Prefetch decreases speed here without reassembly and increases with reassembly.
+	        // Speed of this is highly influenced by size of mempool. It seems that due to caches.
+	        mbufInit(bufs[i]);
+#ifdef REASSEMBLY
+	        // TODO prefetch will give 8-10% performance in reassembly case.
+	        // However we need additional investigations about small (< 3) packet numbers.
+	        //rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3] /*PREFETCH_OFFSET*/, void *));
+	        bufs[i] = reassemble(tbl, bufs[i], death_row, cur_tsc);
+	        if (bufs[i] == NULL) {
+	                continue;
+	        }
+	        struct rte_mbuf *temp = bufs[i];
+	        while (temp->next != NULL) {
+	                mbufSetNext(temp);
+	                temp = temp->next;
+	        }
+	        bufs[temp_number] = bufs[i];
+	        temp_number++;
+#endif
+	}
+#ifdef REASSEMBLY
+	rx_pkts_number = temp_number;
+	rte_ip_frag_free_death_row(death_row, 0 /* PREFETCH_OFFSET */);
+#endif
+	return rx_pkts_number;
+}
+
 struct rte_ip_frag_tbl* create_reassemble_table() {
 	static uint32_t max_flow_num = 0x1000;
 	static uint32_t max_flow_ttl = MS_PER_S;
@@ -258,7 +324,8 @@ struct rte_ip_frag_tbl* create_reassemble_table() {
 	return tbl;
 }
 
-struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, struct rte_ip_frag_death_row* death_row, uint64_t cur_tsc) {
+__attribute__((always_inline))
+static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, struct rte_ip_frag_death_row* death_row, uint64_t cur_tsc) {
 	struct ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct ether_hdr *);
 
 	// TODO packet_type is not mandatory required for drivers.
@@ -275,84 +342,61 @@ struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, s
 		}
 	}
 	if (RTE_ETH_IS_IPV6_HDR(buf->packet_type)) { // if packet is IPv6
-	        struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
-	        struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
+		struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
+		struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
 
-	        if (frag_hdr != NULL) {
-	                buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
-	                buf->l3_len = sizeof(*ip_hdr) + sizeof(*frag_hdr); // prepare mbuf: setup l2_len/l3_len.
+		if (frag_hdr != NULL) {
+			buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
+			buf->l3_len = sizeof(*ip_hdr) + sizeof(*frag_hdr); // prepare mbuf: setup l2_len/l3_len.
 			// This function will return first mbuf from mbuf chain
 			// Following mbufs in a chain will be without L2 and L3 headers
-	                return rte_ipv6_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr, frag_hdr);
-	        }
+			return rte_ipv6_frag_reassemble_packet(tbl, death_row, buf, cur_tsc, ip_hdr, frag_hdr);
+		}
 	}
 	return buf;
 }
 
-void nff_go_recv(uint16_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void receiveRSS(uint16_t port, int16_t queue, struct rte_ring *out_ring, volatile int *flag, int coreId) {
 	setAffinity(coreId);
-
 	struct rte_mbuf *bufs[BURST_SIZE];
-	uint16_t i;
-	uint16_t rx_pkts_number;
+	REASSEMBLY_INIT
 
-#ifdef REASSEMBLY
-	struct rte_ip_frag_tbl* tbl = create_reassemble_table();
-	struct rte_ip_frag_death_row death_row;
-	death_row.cnt = 0; // DPDK doesn't initialize this field. It is probably a bug.
-	struct rte_mbuf *temp;
-#endif
 	while (*flag == process) {
-		// Get RX packets from port
-		if (queue != -1) {
-			rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
-		} else {
-			// If queue == "-1" is means that this receive is from KNI device
-			rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
-			rte_kni_handle_request(kni[port]);
-		}
-#ifdef REASSEMBLY
-		uint16_t temp_number = 0;
-		uint64_t cur_tsc = rte_rdtsc();
-#endif
-
-		if (unlikely(rx_pkts_number == 0))
+		// Get packets from port
+		uint16_t rx_pkts_number = rte_eth_rx_burst(port, queue, bufs, BURST_SIZE);
+		if (unlikely(rx_pkts_number == 0)) {
 			continue;
-
-		for (i = 0; i < rx_pkts_number; i++) {
-			// Prefetch decreases speed here without reassembly and increases with reassembly.
-			// Speed of this is highly influenced by size of mempool. It seems that due to caches.
-			mbufInit(bufs[i]);
-#ifdef REASSEMBLY
-			// TODO prefetch will give 8-10% performance in reassembly case.
-			// However we need additional investigations about small (< 3) packet numbers.
-			//rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3 /* PREFETCH_OFFSET */], void *));
-			bufs[i] = reassemble(tbl, bufs[i], &death_row, cur_tsc);
-			if (bufs[i] == NULL) {
-				continue; // no packet to send out.
-			}
-			temp = bufs[i];
-			while (temp->next != NULL) {
-				mbufSetNext(temp);
-				temp = temp->next;
-			}
-			bufs[temp_number] = bufs[i];
-			temp_number++;
-#endif
 		}
-
-#ifdef REASSEMBLY
-		rx_pkts_number = temp_number;
-		rte_ip_frag_free_death_row(&death_row, 0 /* PREFETCH_OFFSET */);
-#endif
+		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 
 		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
 		// Free any packets which can't be pushed to the ring. The ring is probably full.
-		if (unlikely(pushed_pkts_number < rx_pkts_number)) {
-			for (i = pushed_pkts_number; i < rx_pkts_number; i++) {
-				rte_pktmbuf_free(bufs[i]);
-			}
+		handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+#ifdef DEBUG
+		receive_received += rx_pkts_number;
+		receive_pushed += pushed_pkts_number;
+#endif
+	}
+	*flag = wasStopped;
+}
+
+void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+	setAffinity(coreId);
+	struct rte_mbuf *bufs[BURST_SIZE];
+	REASSEMBLY_INIT
+
+	while (*flag == process) {
+		// Get packets from KNI
+     		uint16_t rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+		rte_kni_handle_request(kni[port]);
+		if (unlikely(rx_pkts_number == 0)) {
+			continue;
 		}
+		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+		// Free any packets which can't be pushed to the ring. The ring is probably full.
+		handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
 		receive_received += rx_pkts_number;
 		receive_pushed += pushed_pkts_number;
@@ -380,12 +424,8 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring *in_ring, volatil
 			// if queue == "-1" this means that this send is to KNI device
 			tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
 		}
-		// Free any unsent packets.
-		if (unlikely(tx_pkts_number < pkts_for_tx_number)) {
-			for (buf = tx_pkts_number; buf < pkts_for_tx_number; buf++) {
-				rte_pktmbuf_free(bufs[buf]);
-			}
-		}
+		// Free any unsent packets
+		handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG
 		send_required += pkts_for_tx_number;
 		send_sent += tx_pkts_number;
@@ -408,7 +448,7 @@ void nff_go_stop(struct rte_ring *in_ring, volatile int *flag, int coreId) {
 		if (unlikely(pkts_for_free_number == 0))
 			continue;
 
-		// Free all this packets
+		// Free all these packets
 		for (buf = 0; buf < pkts_for_free_number; buf++) {
 			rte_pktmbuf_free(bufs[buf]);
 		}
@@ -535,23 +575,22 @@ int getMempoolSpace(struct rte_mempool * m) {
 }
 
 struct nff_go_ring {
-        struct rte_ring *DPDK_ring;
-        // We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
-        void *internal_DPDK_ring;
-        uint32_t offset;
+	struct rte_ring *DPDK_ring;
+	// We need this second ring pointer because CGO can't calculate address for ring pointer variable. It is CGO limitation
+	void *internal_DPDK_ring;
+	uint32_t offset;
 };
 
 struct nff_go_ring *
 nff_go_ring_create(const char *name, unsigned count, int socket_id, unsigned flags) {
-        struct nff_go_ring* r;
-        r = malloc(sizeof(struct nff_go_ring));
+	struct nff_go_ring* r = malloc(sizeof(struct nff_go_ring));
 
-        r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
-        // Ring elements are located immidiately behind rte_ring structure
-        // So ring[1] is pointed to the beginning of this data
-        r->internal_DPDK_ring = &(r->DPDK_ring)[1];
-        r->offset = sizeof(void*);
-        return r;
+	r->DPDK_ring = rte_ring_create(name, count, socket_id, flags);
+	// Ring elements are located immidiately behind rte_ring structure
+	// So ring[1] is pointed to the beginning of this data
+	r->internal_DPDK_ring = &(r->DPDK_ring)[1];
+	r->offset = sizeof(void*);
+	return r;
 }
 
 void *
@@ -583,7 +622,7 @@ void lpm_free(void *lpm) {
 //     2. You should check if there are new callbacks in DPDK
 //     3. You should check examples/kni/main.c file for callbacks examples
 //     4. You should understand that calling rte_eth_dev_stop in the same time of rte_eth_rx_burst will result to errors
-//         4a. One of these errors can be overloading of receive mempool
+//	 4a. One of these errors can be overloading of receive mempool
 //     5. You should understand that calling rte_eth_dev_start should include receive ring handling as in port_init
 static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu) {
 	fprintf(stderr, "DEBUG: KNI: Change MTU of port %d to %u\n", port_id, new_mtu);
@@ -603,4 +642,18 @@ static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]) {
 static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on) {
 	fprintf(stderr, "DEBUG: KNI: Promiscusity mode of port %d %s\n", port_id, to_on ? "on" : "off");
 	return 0;
+}
+
+bool check_hwtxchecksum_capability(uint16_t port_id) {
+	uint64_t flags = DEV_TX_OFFLOAD_IPV4_CKSUM |
+		DEV_TX_OFFLOAD_UDP_CKSUM |
+		DEV_TX_OFFLOAD_TCP_CKSUM;
+	struct rte_eth_dev_info dev_info;
+
+	if (port_id >= rte_eth_dev_count())
+		return false;
+
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port_id, &dev_info);
+	return (dev_info.tx_offload_capa & flags) == flags;
 }

@@ -7,8 +7,7 @@ var l3Rules *packet.L3Rules
 
 func main() {
 	var err error
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 

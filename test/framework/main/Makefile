@@ -2,11 +2,14 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-all: tf
-
-tf: tf.go ../config.go ../dockerlauncher.go ../logging.go ../testsuite.go ../types.go ../report.go
+% : %.go
 	go build $<
-	go build perf_compare.go
+
+all: tf perf_compare report_compare
+
+tf: tf.go ../apptype_string.go ../config.go ../dockerlauncher.go ../logging.go ../testsuite.go ../types.go ../report.go
+
+report_compare: report_compare.go ../types.go ../report.go ../dockerlauncher.go
 
 clean:
 	-rm tf perf_compare

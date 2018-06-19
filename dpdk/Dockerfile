@@ -9,6 +9,8 @@ LABEL RUN docker run -it --privileged -v /sys/bus/pci/drivers:/sys/bus/pci/drive
 
 EXPOSE 22022
 
+RUN dnf -y install pciutils; dnf clean all
+
 WORKDIR /workdir
 COPY pktgen .
 COPY Pktgen.lua .

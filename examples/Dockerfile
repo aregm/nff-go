@@ -15,3 +15,5 @@ COPY copy .
 COPY createPacket .
 COPY sendFixedPktsNumber .
 COPY errorHandling .
+COPY gtpu .
+COPY pingReplay .

@@ -9,10 +9,7 @@ import (
 )
 
 func main() {
-	config := flow.Config{}
-
-	// Initialize NFF-GO library at 15 cores by default
-	flow.CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	a, err := flow.SetReceiver(0)
 	flow.CheckFatal(err)

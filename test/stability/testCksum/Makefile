@@ -7,6 +7,6 @@ IMAGENAME = nff-go-test-cksum
 EXECUTABLES = testCksum
 
 testing: check-pktgen
-	go test -v -test.timeout 0
+	go test -v -test.timeout 15m
 
 include $(PATH_TO_MK)/leaf.mk

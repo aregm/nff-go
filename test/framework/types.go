@@ -26,6 +26,32 @@ const (
 	TestInterrupted
 )
 
+// UnmarshalJSON unmarshals data and checks app type validity.
+func (at *TestStatus) UnmarshalJSON(data []byte) error {
+	// Extract the string from data.
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("TestStatus should be a string, got %s", data)
+	}
+
+	// Use map to get int keys for string values
+	got, ok := map[string]TestStatus{
+		"TestCreated":        TestCreated,
+		"TestInitialized":    TestInitialized,
+		"TestInvalid":        TestInvalid,
+		"TestRunning":        TestRunning,
+		"TestReportedPassed": TestReportedPassed,
+		"TestReportedFailed": TestReportedFailed,
+		"TestTimedOut":       TestTimedOut,
+		"TestInterrupted":    TestInterrupted,
+	}[s]
+	if !ok {
+		return fmt.Errorf("invalid TestStatus %q", s)
+	}
+	*at = got
+	return nil
+}
+
 // AppType is a type of application.
 type AppType int
 
@@ -33,6 +59,8 @@ type AppType int
 const (
 	TestAppGo AppType = iota
 	TestAppPktgen
+	TestAppApacheBenchmark
+	TestAppLatency
 )
 
 // UnmarshalJSON unmarshals data and checks app type validity.
@@ -44,7 +72,12 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]AppType{"TestAppGo": TestAppGo, "TestAppPktgen": TestAppPktgen}[s]
+	got, ok := map[string]AppType{
+		"TestAppGo":              TestAppGo,
+		"TestAppPktgen":          TestAppPktgen,
+		"TestAppApacheBenchmark": TestAppApacheBenchmark,
+		"TestAppLatency":         TestAppLatency,
+	}[s]
 	if !ok {
 		return fmt.Errorf("invalid AppType %q", s)
 	}
@@ -58,6 +91,8 @@ type TestType int
 // Constants for different test types.
 const (
 	TestTypeBenchmark TestType = iota
+	TestTypeApacheBenchmark
+	TestTypeLatency
 	TestTypeScenario
 )
 
@@ -70,10 +105,67 @@ func (at *TestType) UnmarshalJSON(data []byte) error {
 	}
 
 	// Use map to get int keys for string values
-	got, ok := map[string]TestType{"TestTypeBenchmark": TestTypeBenchmark, "TestTypeScenario": TestTypeScenario}[s]
+	got, ok := map[string]TestType{
+		"TestTypeBenchmark":       TestTypeBenchmark,
+		"TestTypeApacheBenchmark": TestTypeApacheBenchmark,
+		"TestTypeLatency":         TestTypeLatency,
+		"TestTypeScenario":        TestTypeScenario,
+	}[s]
 	if !ok {
 		return fmt.Errorf("invalid TestType %q", s)
 	}
 	*at = got
 	return nil
+}
+
+// PktgenMeasurement has measured by pktgen benchmark values.
+type PktgenMeasurement struct {
+	PktsTX, MbitsTX, PktsRX, MbitsRX int64
+}
+
+// CoresInfo has info about used and free cores.
+type CoresInfo struct {
+	CoresUsed, CoresFree int
+}
+
+// ReportCoresInfo has info about cores for final report
+type ReportCoresInfo struct {
+	CoresInfo
+	CoreLastValue int
+	CoreDecreased bool
+}
+
+// Indexes in array of Apache Benchmark stats ApacheBenchmarkStats
+const (
+	RequestsPerSecond = iota
+	TimePerRequest
+	TimePerRequestConcurrent
+	TransferRate
+)
+
+// ApacheBenchmarkStats has info about running Apache Benchmark web
+// client.
+type ApacheBenchmarkStats struct {
+	Stats [4]float32
+}
+
+// Indexes in array of latency stats LatencyStats
+const (
+	ReceivedSentRatio = iota
+	Speed
+	MedianLatency
+	AverageLatency
+	Stddev
+)
+
+// LatencyStats has info about finished latency perf test
+type LatencyStats struct {
+	Stats [5]float32
+}
+
+// TestReport has info about test status and application.
+type TestReport struct {
+	AppIndex  int
+	AppStatus TestStatus
+	msg       string
 }

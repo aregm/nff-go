@@ -19,7 +19,6 @@ package low
 import "C"
 
 import (
-	"encoding/hex"
 	"os"
 	"runtime"
 	"strconv"
@@ -30,6 +29,8 @@ import (
 	"github.com/intel-go/nff-go/asm"
 	"github.com/intel-go/nff-go/common"
 )
+
+var ringName = 1
 
 // DirectStop frees mbufs.
 func DirectStop(pktsForFreeNumber int, buf []uintptr) {
@@ -57,8 +58,9 @@ var mbufCacheSizeT uint
 
 type mempoolPair struct {
 	mempool *C.struct_rte_mempool
-	name string
+	name    string
 }
+
 var usedMempools []mempoolPair
 
 func GetPort(n uint16) *Port {
@@ -68,8 +70,8 @@ func GetPort(n uint16) *Port {
 	return p
 }
 
-func CheckRSSPacketCount(p *Port) int {
-	return int(C.checkRSSPacketCount((*C.struct_cPort)(p)))
+func CheckRSSPacketCount(p *Port) uint32 {
+	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), C.int16_t(p.QueuesNumber-1)))
 }
 
 func DecreaseRSS(p *Port) {
@@ -232,12 +234,12 @@ const (
 )
 
 // CreateRing creates ring with given name and count.
-func CreateRing(name string, count uint) *Ring {
-	var ring *Ring
-	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
-	ring = (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+func CreateRing(count uint) *Ring {
+	name := strconv.Itoa(ringName)
+	ringName++
 
-	return ring
+	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
+	return (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
 }
 
 // EnqueueBurst enqueues data to ring buffer.
@@ -442,13 +444,17 @@ func (ring *Ring) GetRingCount() uint32 {
 	return uint32((ring.DPDK_ring.prod.tail - ring.DPDK_ring.cons.tail) & ring.DPDK_ring.mask)
 }
 
-// Receive - get packets and enqueue on a Ring.
-func Receive(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
-	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
-	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+// ReceiveRSS - get packets from port and enqueue on a Ring.
+func ReceiveRSS(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
+	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_recv(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+}
+
+// ReceiveKNI - get packets from Linux core and enqueue on a Ring.
+func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
+	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Send - dequeue packets and send.
@@ -507,37 +513,33 @@ func GetPortsNumber() int {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, hwtxchecksum bool) error {
-	addr := make([]byte, C.ETHER_ADDR_LEN)
+func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool) error {
 	var mempool *C.struct_rte_mempool
 	if willReceive {
-		mempool = (*C.struct_rte_mempool)(CreateMempool("Receive"))
+		mempool = (*C.struct_rte_mempool)(CreateMempool("receive"))
 	} else {
 		mempool = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
-		mempool, (*C.struct_ether_addr)(unsafe.Pointer(&(addr[0]))), C._Bool(hwtxchecksum)) != 0 {
+		mempool, C._Bool(promiscuous), C._Bool(hwtxchecksum)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
-	t := hex.Dump(addr)
-	common.LogDebug(common.Initialization, "Port", port, "MAC address:", t[10:27])
 	return nil
 }
 
 // CreateMempool creates and returns a new memory pool.
 func CreateMempool(name string) *Mempool {
-	nameC := 0
-        for i := range usedMempools {
-                if usedMempools[i].name == name {
-                        nameC++
-                }
-        }
-        if nameC != 0 {
-                name = name + " " + strconv.Itoa(nameC)
-        }
+	nameC := 1
+	tName := name
+	for i := range usedMempools {
+		if usedMempools[i].name == tName {
+			tName = name + strconv.Itoa(nameC)
+			nameC++
+		}
+	}
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
-	usedMempools = append(usedMempools, mempoolPair{mempool, name})
+	usedMempools = append(usedMempools, mempoolPair{mempool, tName})
 	return (*Mempool)(mempool)
 }
 
@@ -609,7 +611,7 @@ func Statistics(N float32) {
 func ReportMempoolsState() {
 	for _, m := range usedMempools {
 		use := C.getMempoolSpace(m.mempool)
-		common.LogDebug(common.Debug, m.name, "mempool used", use, "from", mbufNumberT)
+		common.LogDebug(common.Debug, "Mempool usage", m.name, use, "from", mbufNumberT)
 		if float32(mbufNumberT-uint(use))/float32(mbufNumberT)*100 < 10 {
 			common.LogDrop(common.Debug, m.name, "mempool has less than 10% free space. This can lead to dropping packets while receive.")
 		}
@@ -655,4 +657,8 @@ func BoolToInt(value bool) uint8 {
 
 func IntArrayToBool(value *[32]uint8) *[32]bool {
 	return (*[32]bool)(unsafe.Pointer(value))
+}
+
+func CheckHWTXChecksumCapability(port uint16) bool {
+	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
 }

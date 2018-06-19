@@ -39,8 +39,9 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 	for i < len(lines) {
-		if strings.Contains(lines[i], "TestTypeBenchmark") && !strings.Contains(lines[i], "log") {
-			name := strings.Split(lines[i][8:len(lines[i])-18], "_off_")
+		if strings.Contains(lines[i], "onclick=\"toggleVisibility") {
+			i++
+			name := strings.Split(lines[i][8:], "_off_")
 			if len(name[1]) == 2 {
 				name[1] = "  " + name[1]
 			} else if len(name[1]) == 3 {

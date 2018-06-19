@@ -10,6 +10,6 @@ all:
 	cp ../../framework/main/config.json .
 
 testing: check-pktgen
-	go test
+	go test -v -test.timeout 20m
 
 include $(PATH_TO_MK)/leaf.mk
