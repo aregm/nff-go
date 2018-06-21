@@ -162,14 +162,10 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
-	if (willReceive) {
-		rx_rings = inIndex;
-		if (tx_rings == 0) {
-			// All receive ports should have at least one send queue to handle ARP
-			tx_rings = 1;
-		}
-	} else {
-		rx_rings = 0;
+	rx_rings = inIndex;
+	if (tx_rings == 0) {
+		// All receive ports should have at least one send queue to handle ARP
+		tx_rings = 1;
 	}
 	int retval;
 	uint16_t q;

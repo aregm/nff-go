@@ -13,7 +13,7 @@ package low
 // it increases executable size and build time.
 
 /*
-#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
 #include "low.h"
 */
 import "C"
@@ -521,12 +521,8 @@ func CheckPortRSS(port uint16) int32 {
 // CreatePort initializes a new port using global settings and parameters.
 func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
 	var mempools **C.struct_rte_mempool
-	if willReceive {
-		m := CreateMempools("receive", inIndex)
-		mempools = (**C.struct_rte_mempool)(unsafe.Pointer(&(m[0])))
-	} else {
-		mempools = nil
-	}
+	m := CreateMempools("receive", inIndex)
+	mempools = (**C.struct_rte_mempool)(unsafe.Pointer(&(m[0])))
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
 		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
