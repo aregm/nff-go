@@ -30,6 +30,7 @@
 package flow
 
 import (
+	"net"
 	"os"
 	"runtime"
 	"sync/atomic"
@@ -56,9 +57,9 @@ type processSegment struct {
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
 type Flow struct {
-	current  low.Rings
-	segment  *processSegment
-	previous **Func
+	current       low.Rings
+	segment       *processSegment
+	previous      **Func
 	inIndexNumber int32
 }
 
@@ -91,6 +92,8 @@ type Func struct {
 	bufIndex        uint
 	contextIndex    int
 	followingNumber uint8
+
+	name string
 }
 
 // GenerateFunction is a function type for user defined function which generates packets.
@@ -139,9 +142,10 @@ type Kni struct {
 }
 
 type receiveParameters struct {
-	out  low.Rings
-	port *low.Port
-	kni  bool
+	out   low.Rings
+	port  *low.Port
+	kni   bool
+	stats common.RXTXStats
 }
 
 func addReceiver(portId uint16, kni bool, out low.Rings, inIndexNumber int32) {
@@ -149,10 +153,14 @@ func addReceiver(portId uint16, kni bool, out low.Rings, inIndexNumber int32) {
 	par.port = low.GetPort(portId)
 	par.out = out
 	par.kni = kni
+	var name string
 	if kni {
-		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, sendReceiveKNI, 0)
+		name = schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, sendReceiveKNI, 0)
 	} else {
-		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+		name = schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+	}
+	if countersEnabled {
+		registerRXTXStatitics(&par.stats, name)
 	}
 }
 
@@ -162,6 +170,7 @@ type generateParameters struct {
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
 	targetSpeed            float64
+	stats                  common.NodeTelemetry
 }
 
 func addGenerator(out low.Rings, generateFunction GenerateFunction, context UserContext) {
@@ -170,7 +179,11 @@ func addGenerator(out low.Rings, generateFunction GenerateFunction, context User
 	par.generateFunction = generateFunction
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("generator", nil, nil, pGenerate, par, &ctx, generate, 0)
+	name := schedState.addFF("generator", nil, nil, pGenerate, par, &ctx, generate, 0)
+	if countersEnabled {
+		par.stats.Out = make([]common.NodeIOPortTelemetry, len(out))
+		registerNodeStatitics(&par.stats, name)
+	}
 }
 
 func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
@@ -183,13 +196,18 @@ func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
 	par.targetSpeed = float64(targetSpeed)
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
-	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, &ctx, fastGenerate, 0)
+	name := schedState.addFF("fast generator", nil, nil, pFastGenerate, par, &ctx, fastGenerate, 0)
+	if countersEnabled {
+		par.stats.Out = make([]common.NodeIOPortTelemetry, len(out))
+		registerNodeStatitics(&par.stats, name)
+	}
 }
 
 type sendParameters struct {
 	in    low.Rings
 	queue int16
 	port  uint16
+	stats common.RXTXStats
 }
 
 func addSender(port uint16, queue int16, in low.Rings, inIndexNumber int32) {
@@ -197,10 +215,14 @@ func addSender(port uint16, queue int16, in low.Rings, inIndexNumber int32) {
 	par.port = port
 	par.queue = queue
 	par.in = in
+	var name string
 	if queue != -1 {
-		schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
+		name = schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
 	} else {
-		schedState.addFF("KNI sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
+		name = schedState.addFF("KNI sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
+	}
+	if countersEnabled {
+		registerRXTXStatitics(&par.stats, name)
 	}
 }
 
@@ -209,6 +231,7 @@ type copyParameters struct {
 	out     low.Rings
 	outCopy low.Rings
 	mempool *low.Mempool
+	stats   common.NodeTelemetry
 }
 
 func addCopier(in low.Rings, out low.Rings, outCopy low.Rings, inIndexNumber int32) {
@@ -217,11 +240,16 @@ func addCopier(in low.Rings, out low.Rings, outCopy low.Rings, inIndexNumber int
 	par.out = out
 	par.outCopy = outCopy
 	par.mempool = low.CreateMempool("copy")
-	schedState.addFF("copy", nil, nil, pcopy, par, nil, segmentCopy, inIndexNumber)
+	name := schedState.addFF("copy", nil, nil, pcopy, par, nil, segmentCopy, inIndexNumber)
+	if countersEnabled {
+		par.stats.Out = make([]common.NodeIOPortTelemetry, len(out))
+		registerNodeStatitics(&par.stats, name)
+	}
 }
 
 func makePartitioner(N uint64, M uint64) *Func {
 	f := new(Func)
+	f.name = "partition"
 	f.sFunc = partition
 	f.vFunc = vPartition
 	f.next = make([]*Func, 2, 2)
@@ -231,6 +259,7 @@ func makePartitioner(N uint64, M uint64) *Func {
 
 func makeSeparator(separateFunction SeparateFunction, vectorSeparateFunction VectorSeparateFunction) *Func {
 	f := new(Func)
+	f.name = "separate"
 	f.sSeparateFunction = separateFunction
 	f.vSeparateFunction = vectorSeparateFunction
 	f.sFunc = separate
@@ -242,6 +271,7 @@ func makeSeparator(separateFunction SeparateFunction, vectorSeparateFunction Vec
 
 func makeSplitter(splitFunction SplitFunction, vectorSplitFunction VectorSplitFunction, n uint8) *Func {
 	f := new(Func)
+	f.name = "split"
 	f.sSplitFunction = splitFunction
 	f.vSplitFunction = vectorSplitFunction
 	f.sFunc = split
@@ -253,6 +283,7 @@ func makeSplitter(splitFunction SplitFunction, vectorSplitFunction VectorSplitFu
 
 func makeHandler(handleFunction HandleFunction, vectorHandleFunction VectorHandleFunction) *Func {
 	f := new(Func)
+	f.name = "handle"
 	f.sHandleFunction = handleFunction
 	f.vHandleFunction = vectorHandleFunction
 	f.sFunc = handle
@@ -265,19 +296,24 @@ func makeHandler(handleFunction HandleFunction, vectorHandleFunction VectorHandl
 type writeParameters struct {
 	in       low.Rings
 	filename string
+	stats    common.NodeTelemetry
 }
 
 func addWriter(filename string, in low.Rings, inIndexNumber int32) {
 	par := new(writeParameters)
 	par.in = in
 	par.filename = filename
-	schedState.addFF("writer", write, nil, nil, par, nil, readWrite, inIndexNumber)
+	name := schedState.addFF("write", write, nil, nil, par, nil, readWrite, inIndexNumber)
+	if countersEnabled {
+		registerNodeStatitics(&par.stats, name)
+	}
 }
 
 type readParameters struct {
 	out      low.Rings
 	filename string
 	repcount int32
+	stats    common.NodeTelemetry
 }
 
 func addReader(filename string, out low.Rings, repcount int32) {
@@ -285,11 +321,15 @@ func addReader(filename string, out low.Rings, repcount int32) {
 	par.out = out
 	par.filename = filename
 	par.repcount = repcount
-	schedState.addFF("reader", read, nil, nil, par, nil, readWrite, 0)
+	name := schedState.addFF("read", read, nil, nil, par, nil, readWrite, 0)
+	if countersEnabled {
+		registerNodeStatitics(&par.stats, name)
+	}
 }
 
 func makeSlice(out low.Rings, segment *processSegment) *Func {
 	f := new(Func)
+	f.name = "unknown"
 	f.sFunc = constructSlice
 	f.vFunc = vConstructSlice
 	segment.out = append(segment.out, out)
@@ -303,6 +343,7 @@ type segmentParameters struct {
 	out       *([]low.Rings)
 	firstFunc *Func
 	stype     *uint8
+	stats     common.NodeTelemetry
 }
 
 func addSegment(in low.Rings, first *Func, inIndexNumber int32) *processSegment {
@@ -314,7 +355,11 @@ func addSegment(in low.Rings, first *Func, inIndexNumber int32) *processSegment 
 	segment.contexts = make([](UserContext), 0, 0)
 	par.out = &segment.out
 	par.stype = &segment.stype
-	schedState.addFF("segment", nil, nil, segmentProcess, par, &segment.contexts, segmentCopy, inIndexNumber)
+	name := schedState.addFF(first.name, nil, nil, segmentProcess, par, &segment.contexts, segmentCopy, inIndexNumber)
+	if countersEnabled {
+		par.stats.Out = make([]common.NodeIOPortTelemetry, first.followingNumber)
+		registerNodeStatitics(&par.stats, name)
+	}
 	return segment
 }
 
@@ -361,7 +406,20 @@ type port struct {
 	willKNI        bool // will this port has assigned KNI device
 	port           uint16
 	MAC            [common.EtherAddrLen]uint8
-	InIndex     int32
+	InIndex        int32
+}
+
+type StatisticFlags struct {
+	// When true gather statistics related to IP protocol.
+	AnalyzeL3 bool
+	// When true gather statistics related to UDP protocol.
+	AnalyzeUDP bool
+	// When true gather statistics related to TCP protocol.
+	AnalyzeTCP bool
+	// When true gather statistics related to ICMP protocol.
+	AnalyzeICMP bool
+	// When true gather telemetry on each node in flow graph.
+	AnalyzeTelemetry bool
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -417,6 +475,28 @@ type Config struct {
 	// Scheduler should clone functions even if ti can lead to reordering.
 	// This option should be switch off for all high level reassembling like TCP or HTTP
 	RestrictedCloning bool
+	// HTTP server address to use for serving statistics and
+	// telemetry. Server provides different types of statistics which
+	// can be controlled by statistics flags. File format is
+	// JSON. Registered roots return statistics for all framework
+	// graph nodes or accept an optional argument /ID where ID is port
+	// number for send and receive nodes.
+	//
+	// Following are possible statistics requests:
+	//
+	// /rxtxstats for protocol statistics gathered on all send and
+	// receive or /rxtxstats/name for individual send/receiver node.
+	//
+	// /telemetry for all nodes names and their counters which include
+	// received, send, processed, lost and dropped packets. Using
+	// /telemetry/name returns information about individual node.
+	//
+	// If no string is specified, no HTTP server is spawned.
+	StatsHTTPAddress *net.TCPAddr
+	// StatisticFlags specifies which types of statistics the
+	// framework should gather and serve using HTTP server running on
+	// StatsHTTPAddress.
+	StatisticFlags StatisticFlags
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -519,11 +599,23 @@ func SystemInit(args *Config) error {
 	portPair = make(map[uint32](*port))
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateRings(burstSize * sizeMultiplier, 50 /*Maximum possible rings*/)
+	StopRing := low.CreateRings(burstSize*sizeMultiplier, 50 /*Maximum possible rings*/)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
-	// Init packet processing
+
+	// Set HW offloading flag in packet package
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
+
+	// Initialize telemetry web server
+	if countersEnabled {
+		if args.StatsHTTPAddress != nil {
+			if err = initCounters(args.StatsHTTPAddress); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Init packet processing
 	for i := 0; i < 10; i++ {
 		for j := 0; j < burstSize; j++ {
 			vEach[i][j] = uint8(i)
@@ -602,7 +694,7 @@ func SetSenderFile(IN *Flow, filename string) error {
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addReader(filename, rings, repcount)
 	return newFlow(rings, 1)
 }
@@ -620,7 +712,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	}
 	createdPorts[portId].wasRequested = true
 	createdPorts[portId].willReceive = true
-	rings := low.CreateRings(burstSize * sizeMultiplier, createdPorts[portId].InIndex)
+	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
 	addReceiver(portId, false, rings, createdPorts[portId].InIndex)
 	return newFlow(rings, createdPorts[portId].InIndex), nil
 }
@@ -630,7 +722,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addReceiver(kni.portId, true, rings, 1)
 	return newFlow(rings, 1)
 }
@@ -640,7 +732,7 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	if targetSpeed > 0 {
 		addFastGenerator(rings, f, nil, targetSpeed, context)
 	} else {
@@ -654,7 +746,7 @@ func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContex
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	if targetSpeed > 0 {
 		addFastGenerator(rings, nil, f, targetSpeed, context)
 	} else {
@@ -669,7 +761,7 @@ func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, contex
 // Single packet non-clonable flow function will be added. It can be used for waiting of
 // input user packets.
 func SetGenerator(f GenerateFunction, context UserContext) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addGenerator(rings, f, context)
 	return newFlow(rings, 1)
 }
@@ -707,13 +799,14 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	ringFirst := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
-	ringSecond := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+	ringFirst := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
+	ringSecond := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 	if IN.segment == nil {
 		addCopier(IN.current, ringFirst, ringSecond, IN.inIndexNumber)
 	} else {
-		tRing := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+		tRing := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 		ms := makeSlice(tRing, IN.segment)
+		ms.name = "copy"
 		segmentInsert(IN, ms, false, nil, 0, 0)
 		addCopier(tRing, ringFirst, ringSecond, IN.inIndexNumber)
 		IN.segment = nil
@@ -761,6 +854,7 @@ func SetSeparator(IN *Flow, separateFunction SeparateFunction, context UserConte
 // user defined function returns "true" and is sent to new flow otherwise.
 func SetVectorSeparator(IN *Flow, vectorSeparateFunction VectorSeparateFunction, context UserContext) (OUT *Flow, err error) {
 	separate := makeSeparator(nil, vectorSeparateFunction)
+	separate.name = "vecto separate"
 	if err := segmentInsert(IN, separate, false, context, 2, 1); err != nil {
 		return nil, err
 	}
@@ -795,6 +889,7 @@ func SetVectorSplitter(IN *Flow, vectorSplitFunction VectorSplitFunction, flowNu
 		return nil, err
 	}
 	split := makeSplitter(nil, vectorSplitFunction, uint8(flowNumber))
+	split.name = "vector split"
 	segmentInsert(IN, split, true, context, 2, 0)
 	OutArray = make([](*Flow), flowNumber, flowNumber)
 	for i := range OutArray {
@@ -842,6 +937,7 @@ func SetHandler(IN *Flow, handleFunction HandleFunction, context UserContext) er
 // and sent further in the same flow.
 func SetVectorHandler(IN *Flow, vectorHandleFunction VectorHandleFunction, context UserContext) error {
 	handle := makeHandler(nil, vectorHandleFunction)
+	handle.name = "vector handle"
 	return segmentInsert(IN, handle, false, context, 2, 0)
 }
 
@@ -851,6 +947,7 @@ func SetVectorHandler(IN *Flow, vectorHandleFunction VectorHandleFunction, conte
 // If user function returns false after handling a packet it is dropped automatically.
 func SetHandlerDrop(IN *Flow, separateFunction SeparateFunction, context UserContext) error {
 	separate := makeSeparator(separateFunction, nil)
+	separate.name = "handle+drop"
 	if err := segmentInsert(IN, separate, false, context, 1, 1); err != nil {
 		return err
 	}
@@ -863,6 +960,7 @@ func SetHandlerDrop(IN *Flow, separateFunction SeparateFunction, context UserCon
 // If user function returns false after handling a packet it is dropped automatically.
 func SetVectorHandlerDrop(IN *Flow, vectorSeparateFunction VectorSeparateFunction, context UserContext) error {
 	separate := makeSeparator(nil, vectorSeparateFunction)
+	separate.name = "vector handle+drop"
 	if err := segmentInsert(IN, separate, false, context, 2, 1); err != nil {
 		return err
 	}
@@ -880,7 +978,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 			max = InArray[i].inIndexNumber
 		}
 	}
-	rings := low.CreateRings(burstSize * sizeMultiplier, max)
+	rings := low.CreateRings(burstSize*sizeMultiplier, max)
 	for i := range InArray {
 		if err := checkFlow(InArray[i]); err != nil {
 			return nil, err
@@ -891,6 +989,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 		} else {
 			// TODO merge finishes segment even if this is merge inside it. Need to optimize.
 			ms := makeSlice(rings, InArray[i].segment)
+			ms.name = "merge"
 			segmentInsert(InArray[i], ms, true, nil, 0, 0)
 		}
 	}
@@ -936,7 +1035,7 @@ func finishFlow(IN *Flow) low.Rings {
 		ring = IN.current
 		closeFlow(IN)
 	} else {
-		ring = low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+		ring = low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 		ms := makeSlice(ring, IN.segment)
 		segmentInsert(IN, ms, true, nil, 0, 0)
 	}
@@ -959,7 +1058,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 	} else {
 		if setType > 0 && IN.segment.stype > 0 && setType != IN.segment.stype {
 			// Try to combine scalar and vector code. Start new segment
-			ring := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+			ring := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 			ms := makeSlice(ring, IN.segment)
 			segmentInsert(IN, ms, false, nil, 0, 0)
 			IN.segment = nil
@@ -1038,7 +1137,10 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 						time.Sleep(time.Duration(pause) * time.Nanosecond)
 					}
 					continue
+				} else if countersEnabled {
+					updatePortStats(&lp.stats.In, InputMbufs, n)
 				}
+
 				if scalar { // Scalar code
 					for i := uint(0); i < n; i++ {
 						currentFunc := firstFunc
@@ -1063,6 +1165,14 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 						}
 						safeEnqueue(OUT[index][inIndex[q]], OutputMbufs[index], uint(countOfPackets[index]))
 						currentSpeed.Packets += uint64(countOfPackets[index])
+
+						if countersEnabled {
+							// FIXME: inaccurate statistics because
+							// safeEnqueue may drop some packets and
+							// processed number is less than countOfPackets[index]
+							updatePortStats(&lp.stats.Out[index], OutputMbufs[index], uint(countOfPackets[index]))
+						}
+
 						countOfPackets[index] = 0
 					}
 				} else { // Vector code
@@ -1080,6 +1190,13 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 							count := FillSliceFromMask(InputMbufs, &def[st].mask, OutputMbufs[0])
 							safeEnqueue(OUT[answers[0]][inIndex[q]], OutputMbufs[0], uint(count))
 							currentSpeed.Packets += uint64(count)
+
+							if countersEnabled {
+								// FIXME: inaccurate statistics because
+								// safeEnqueue may drop some packets and
+								// processed number is less than count
+								updatePortStats(&lp.stats.Out[0], OutputMbufs[0], uint(count))
+							}
 						} else if cur.followingNumber == 1 {
 							// We have simple handle. Mask will remain the same, current function will be changed
 							def[st].f = cur.next[0]
@@ -1106,12 +1223,12 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 
 func recvRSS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID)
+	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID, &srp.stats)
 }
 
 func recvKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.ReceiveKNI(uint16(srp.port.PortId), srp.out[0], flag, coreID)
+	low.ReceiveKNI(uint16(srp.port.PortId), srp.out[0], flag, coreID, &srp.stats)
 }
 
 func pGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int, report chan reportPair, context []UserContext) {
@@ -1135,6 +1252,10 @@ func pGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int, rep
 			}
 			generateFunction(tempPacket, context[0])
 			safeEnqueueOne(OUT[0], tempPacket.ToUintptr())
+
+			if countersEnabled {
+				updatePortStatsOne(&gp.stats.Out[0], tempPacket)
+			}
 		}
 	}
 }
@@ -1175,7 +1296,7 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 			}
 			if vector == false {
 				for i := range bufs {
-					// TODO Maybe we need to prefetcht here?
+					// TODO Maybe we need to prefetch here?
 					tempPacket = packet.ExtractPacket(bufs[i])
 					generateFunction(tempPacket, context[0])
 					if reportMbits {
@@ -1188,6 +1309,13 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 			}
 			safeEnqueue(OUT[0], bufs, burstSize)
 			currentSpeed.Packets += uint64(burstSize)
+
+			if countersEnabled {
+				// FIXME: inaccurate statistics because
+				// safeEnqueue may drop some packets and processed
+				// number is less than burstSize
+				updatePortStats(&gp.stats.Out[0], bufs, burstSize)
+			}
 			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 			// we just want to slow goroutine down without parking, so loop is OK for this.
 			// time.Now lasts approximately 70ns and this satisfies us
@@ -1230,12 +1358,17 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 		default:
 			for q := int32(1); q < inIndex[0]+1; q++ {
 				n := IN[inIndex[q]].DequeueBurst(bufs1, burstSize)
+
 				if n != 0 {
+					if countersEnabled {
+						updatePortStats(&cp.stats.In, bufs1, n)
+					}
+
 					if err := low.AllocateMbufs(bufs2, mempool, n); err != nil {
 						common.LogFatal(common.Debug, err)
 					}
 					for i := uint(0); i < n; i++ {
-						// TODO Maybe we need to prefetcht here?
+						// TODO Maybe we need to prefetch here?
 						tempPacket1 = packet.ExtractPacket(bufs1[i])
 						tempPacket2 = packet.ExtractPacket(bufs2[i])
 						packet.GeneratePacketFromByte(tempPacket2, tempPacket1.GetRawPacketBytes())
@@ -1246,6 +1379,14 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 					safeEnqueue(OUT[inIndex[q]], bufs1, uint(n))
 					safeEnqueue(OUTCopy[inIndex[q]], bufs2, uint(n))
 					currentSpeed.Packets += uint64(n)
+
+					if countersEnabled {
+						// FIXME: inaccurate statistics because
+						// safeEnqueue may drop some packets and
+						// processed number is less than n
+						updatePortStats(&cp.stats.Out[0], bufs1, n)
+						updatePortStats(&cp.stats.Out[1], bufs2, n)
+					}
 				}
 				// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 				// we just want to slow goroutine down without parking, so loop is OK for this.
@@ -1263,7 +1404,7 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 
 func send(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.queue, srp.in, inIndex[0], flag, coreID)
+	low.Send(srp.port, srp.queue, srp.in, inIndex[0], flag, coreID, &srp.stats)
 }
 
 func merge(from low.Rings, to low.Rings) {
@@ -1386,6 +1527,11 @@ func write(parameters interface{}, inIndex []int32, stopper [2]chan int) {
 		default:
 			for q := int32(0); q < inIndex[0]; q++ {
 				n := IN[q].DequeueBurst(bufIn, 1)
+
+				if countersEnabled {
+					updatePortStats(&wp.stats.In, bufIn, n)
+				}
+
 				if n == 0 {
 					continue
 				}
@@ -1452,6 +1598,12 @@ func read(parameters interface{}, inIndex []int32, stopper [2]chan int) {
 			// TODO we need packet reassembly here. However we don't
 			// use mbuf packet_type here, so it is impossible.
 			safeEnqueueOne(OUT[0], tempPacket.ToUintptr())
+
+			if countersEnabled {
+				// FIXME: inaccurate statistics because safeEnqueueOne
+				// may drop a packet and processed number is zero
+				updatePortStatsOne(&rp.stats.Out[0], tempPacket)
+			}
 		}
 	}
 }
@@ -1536,4 +1688,41 @@ func CheckFatal(err error) {
 		}
 		common.LogFatalf(common.Debug, "failed with message: %s\n", err.Error())
 	}
+}
+
+func updatePortStatsOne(stats *common.NodeIOPortTelemetry, pkt *packet.Packet) {
+	if useInterlockedCounters {
+		atomic.AddUint64(&stats.PacketsProcessed, 1)
+		if analyzePacketSizes {
+			atomic.AddUint64(&stats.BytesProcessed, uint64(pkt.GetPacketLen()))
+		}
+	} else {
+		stats.PacketsProcessed++
+		if analyzePacketSizes {
+			stats.BytesProcessed += uint64(pkt.GetPacketLen())
+		}
+	}
+}
+
+func updatePortStats(stats *common.NodeIOPortTelemetry, packetPtrs []uintptr, number uint) {
+	if useInterlockedCounters {
+		atomic.AddUint64(&stats.PacketsProcessed, uint64(number))
+		if analyzePacketSizes {
+			atomic.AddUint64(&stats.BytesProcessed, calculateSize(packetPtrs, number))
+		}
+	} else {
+		stats.PacketsProcessed += uint64(number)
+		if analyzePacketSizes {
+			stats.BytesProcessed += calculateSize(packetPtrs, number)
+		}
+	}
+}
+
+func calculateSize(packetPtrs []uintptr, number uint) uint64 {
+	size := uint64(0)
+	for i := uint(0); i < number; i++ {
+		tempPacket := packet.ExtractPacket(packetPtrs[i])
+		size += uint64(tempPacket.GetPacketLen())
+	}
+	return size
 }
