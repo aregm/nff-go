@@ -128,14 +128,14 @@ type flowFunction struct {
 
 // Adding every flow function to scheduler list
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
-	par interface{}, context *[]UserContext, fType ffType, inIndexNumber int32) {
+	par interface{}, context *[]UserContext, fType ffType, inIndexNumber int32) string {
 	ff := new(flowFunction)
 	nameC := 1
-	tName := name
+	tName := name + strconv.Itoa(nameC)
 	for i := range scheduler.ff {
 		if scheduler.ff[i].name == tName {
-			tName = name + strconv.Itoa(nameC)
 			nameC++
+			tName = name + strconv.Itoa(nameC)
 		}
 	}
 	ff.name = tName
@@ -150,6 +150,7 @@ func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFl
 		scheduler.maxInIndex = inIndexNumber
 	}
 	scheduler.ff = append(scheduler.ff, ff)
+	return tName
 }
 
 type scheduler struct {

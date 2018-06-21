@@ -45,6 +45,9 @@
 
 // #define DEBUG
 // #define REASSEMBLY
+#define COUNTERS_ENABLED
+#define USE_INTERLOCKED_COUNTERS
+#define ANALYZE_PACKETS_SIZES
 
 #define recvNotUsed 0
 #define recvDone 2
@@ -83,9 +86,45 @@
 	struct rte_ip_frag_death_row* pdeath_row = NULL;
 #endif
 
+#ifdef COUNTERS_ENABLED
+#ifdef USE_INTERLOCKED_COUNTERS
+#define UPDATE_PACKETS(packets, dropped)                        \
+    __sync_fetch_and_add(&stats->PacketsProcessed, (packets));  \
+    __sync_fetch_and_add(&stats->PacketsDropped, (dropped));
+#ifdef ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                                 \
+    __sync_fetch_and_add(&stats->BytesProcessed, (bytes));
+#else // ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    do {} while (0)
+#endif // ANALYZE_PACKETS_SIZES
+#else // USE_INTERLOCKED_COUNTERS
+#define UPDATE_PACKETS(packets, dropped)        \
+    stats->PacketsProcessed += (packets);       \
+    stats->PacketsDropped += (dropped);
+#ifdef ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    stats->BytesProcessed += (bytes);
+#else // ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    do {} while (0)
+#endif // ANALYZE_PACKETS_SIZES
+#endif // USE_INTERLOCKED_COUNTERS
+#define UPDATE_COUNTERS(packets, bytes, dropped)    \
+    UPDATE_PACKETS(packets, dropped)                \
+    UPDATE_BYTES(bytes)
+#else // COUNTERS_ENABLED
+#define UPDATE_COUNTERS(packets, bytes, dropped)    \
+    do {} while (0)
+#endif // COUNTERS_ENABLED
+
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
 long stop_freed = 0;
+
+typedef struct {
+	uint64_t PacketsProcessed, PacketsDropped, BytesProcessed;
+} RXTXStats;
 
 int mbufStructSize;
 int headroomSize;
@@ -269,6 +308,17 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	return 0;
 }
 
+#if defined(COUNTERS_ENABLED) && defined(ANALYZE_PACKETS_SIZES)
+__attribute__((always_inline))
+static inline uint64_t calculateSize(struct rte_mbuf *bufs[BURST_SIZE], uint16_t number) {
+	uint64_t size = 0;
+	for (uint32_t i = 0; i < number; i++) {
+		size += bufs[i]->pkt_len;
+	}
+	return size;
+}
+#endif
+
 __attribute__((always_inline))
 static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t real_number, uint16_t required_number) {
 	if (unlikely(real_number < required_number)) {
@@ -363,7 +413,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -378,12 +428,15 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 			rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 
 			uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_rings[inIndex[q+1]], (void*)bufs, rx_pkts_number, NULL);
+
+			UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
 			// Free any packets which can't be pushed to the ring. The ring is probably full.
 			handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
 			receive_received += rx_pkts_number;
 			receive_pushed += pushed_pkts_number;
-#endif
+#endif // DEBUG
 		}
 	}
 	free(out_rings);
@@ -392,8 +445,8 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 }
 
 void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
-           bool recv, struct rte_ring *out_ring,
-           bool send, struct rte_ring **in_rings, int32_t inIndexNumber) {
+    bool recv, struct rte_ring *out_ring,
+    bool send, struct rte_ring **in_rings, int32_t inIndexNumber, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	int q = 0;
@@ -406,6 +459,9 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 			if (likely(rx_pkts_number != 0)) {
 				rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 				uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+
+                UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
 				// Free any packets which can't be pushed to the ring. The ring is probably full.
 				handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
 			}
@@ -416,6 +472,9 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 			if (likely(pkts_for_tx_number != 0)) {
 				uint16_t tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+
+                UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
+
 				// Free any unsent packets
 				handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 			}
@@ -427,7 +486,7 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -449,6 +508,9 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 			if (switchQueue) {
 				queue = !queue;
 			}
+
+            UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
+
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG
@@ -559,6 +621,21 @@ int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool n
 	return 0;
 }
 
+int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
+	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
+	if (ret == 0) {
+		for (int i = 0; i < count; i++) {
+			if (L2CanBeChanged == true) {
+				mbufInitL2(bufs[i]);
+			}
+#ifdef REASSEMBLY
+			mbufInitNextChain(bufs[i]);
+#endif
+		}
+	}
+	return ret;
+}
+
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
 
@@ -588,21 +665,6 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	free(temp);
 
 	return mbuf_pool;
-}
-
-int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
-	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
-	if (ret == 0) {
-		for (int i = 0; i < count; i++) {
-			if (L2CanBeChanged == true) {
-				mbufInitL2(bufs[i]);
-			}
-#ifdef REASSEMBLY
-			mbufInitNextChain(bufs[i]);
-#endif
-		}
-	}
-	return ret;
 }
 
 int getMempoolSpace(struct rte_mempool * m) {
@@ -736,7 +798,7 @@ int initDevice(char *name) {
 	return s;
 }
 
-void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId) {
+void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 	const int recvOSBusrst = BURST_SIZE;
 	struct rte_mbuf *bufs[recvOSBusrst];
@@ -756,13 +818,16 @@ void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, vol
 		}
 		uint16_t rx_pkts_number = handleReceived(bufs, recvOSBusrst, tbl, pdeath_row);
 		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
-		// Free any packets which can't be pushed to the ring. The ring is probably full.
-                handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+
+        UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
+        // Free any packets which can't be pushed to the ring. The ring is probably full.
+        handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 	}
 	*flag = wasStopped;
 }
 
-void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
+void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -776,6 +841,9 @@ void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volat
 			for (int i = 0; i < pkts_for_tx_number; i++) {
 				send(socket, (char *)(bufs[i]) + defaultStart, rte_pktmbuf_pkt_len(bufs[i]), 0);
 			}
+
+            UPDATE_COUNTERS(pkts_for_tx_number, calculateSize(bufs, pkts_for_tx_number), 0);
+
 			// Free all packets
 			handleUnpushed(bufs, 0, pkts_for_tx_number);
 		}

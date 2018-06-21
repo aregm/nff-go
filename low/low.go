@@ -490,15 +490,15 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, race *int32) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, race *int32, stats *common.RXTXStats) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))),
-		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)))
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
-func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings) {
+func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings, stats *common.RXTXStats) {
 	var nOut *C.struct_rte_ring
 	var nIn **C.struct_rte_ring
 	if OUT != nil {
@@ -508,15 +508,16 @@ func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool
 		nIn = C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN)))
 	}
 	C.nff_go_KNI(C.uint16_t(port), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
-		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)))
+		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int) {
+func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int, stats *common.RXTXStats) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)),
+		C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Stop - dequeue and free packets.
@@ -745,13 +746,16 @@ func CheckHWTXChecksumCapability(port uint16) bool {
 	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
 }
 
-func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int) {
+func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
 	m := CreateMempool("receiveOS")
-	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
-func SendOS(socket int, IN Rings, flag *int32, coreID int) {
-	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func SendOS(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
+		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 func InitDevice(device string) int {
