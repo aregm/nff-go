@@ -97,3 +97,9 @@ func dropInvalidCPUs(nums []int, maxcpu int) []int {
 	}
 	return nums[:i]
 }
+
+// RXTXStats describes statistics for sender or receiver flow function
+// node.
+type RXTXStats struct {
+	PacketsProcessed, PacketsDropped, BytesProcessed uint64
+}
