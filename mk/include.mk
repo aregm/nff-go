@@ -12,9 +12,9 @@ ifndef DPDK_URL
 DPDK_URL=http://fast.dpdk.org/rel/dpdk-$(DPDK_VERSION).tar.xz
 endif
 PKTGEN_VERSION=3.4.9
-PKTGEN_DIR=pktgen-$(PKTGEN_VERSION)
+PKTGEN_DIR=pktgen-dpdk-pktgen-$(PKTGEN_VERSION)
 ifndef PKTGEN_URL
-PKTGEN_URL=http://dpdk.org/browse/apps/pktgen-dpdk/snapshot/pktgen-$(PKTGEN_VERSION).tar.xz
+PKTGEN_URL=http://git.dpdk.org/apps/pktgen-dpdk/snapshot/pktgen-dpdk-pktgen-$(PKTGEN_VERSION).tar.xz
 endif
 export RTE_SDK = $(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
 export RTE_TARGET = x86_64-native-linuxapp-gcc
