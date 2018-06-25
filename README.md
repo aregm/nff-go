@@ -1,8 +1,10 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff) 
 [![GoDoc](https://godoc.org/github.com/intel-go/yanff?status.svg)](https://godoc.org/github.com/intel-go/yanff)
 [![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/intel-go/yanff.svg?branch=develop)](https://travis-ci.org/intel-go/yanff)
+[![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
+
+**NFF-Go becomes part of DPDK project umbrella under Linux Foundation! Mirror repo can be found here: http://dpdk.org/browse/apps/nff-go/. We will accept patches through DPDK mail-list and standard DPDK contribution [process](http://dpdk.org/doc/guides/contributing/patches.html) too.**
 
 ## What it is
 NFF-Go is a set of libraries for creating and deploying cloud-native Network
@@ -82,7 +84,7 @@ build.
 
 If you are working on a fork, then the **go get** command will not put nff-go in
 $GOPATH/src/github.com/intel-go. However, imports will continue to reference
-githb.com/intel-go. This is a feature of Go and not a problem in the way nff-go
+github.com/intel-go. This is a feature of Go and not a problem in the way nff-go
 is written. See [stackoverflow
 article](https://stackoverflow.com/questions/14323872/using-forked-package-import-in-go)
 for a discussion. A simple way to resolve the problem is to use a symlink. If
@@ -129,7 +131,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
 ### environment variables
     
-        export PATH="$PATH:$GOPATH"/bin
+        export PATH="$PATH:$GOPATH/bin"
     
 ## Building NFF-GO
 
