@@ -6,73 +6,51 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 )
 
-var (
-	mode uint
-
-	inport1     uint
-	inport2     uint
-	outport1    uint
-	outport2    uint
-	noscheduler bool
-)
-
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
+	var mode uint
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
-	flag.UintVar(&outport1, "outport1", 1, "port for 1st sender")
-	flag.UintVar(&outport2, "outport2", 1, "port for 2nd sender")
-	flag.UintVar(&inport1, "inport1", 0, "port for 1st receiver")
-	flag.UintVar(&inport2, "inport2", 0, "port for 2nd receiver")
-	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
+	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	cores := flag.String("cores", "0-43", "Cores mask. Avoid hyperthreading here")
 	flag.Parse()
 
-	// Initialize NFF-GO library at 15 cores by default
+	// Initialize NFF-GO library
 	config := flow.Config{
-		CPUList:          "0-14",
-		DisableScheduler: noscheduler,
+		DisableScheduler: *noscheduler,
+		DPDKArgs:         []string{*dpdkLogLevel},
+		CPUList:          *cores,
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Receive packets from zero port. One queue per receive will be added automatically.
-	firstFlow0, err := flow.SetReceiver(uint8(inport1))
-	CheckFatal(err)
-	firstFlow1, err := flow.SetReceiver(uint8(inport2))
-	CheckFatal(err)
-
-	firstFlow, err := flow.SetMerger(firstFlow0, firstFlow1)
-	CheckFatal(err)
+	firstFlow, err := flow.SetReceiver(uint16(*inport))
+	flow.CheckFatal(err)
 
 	// Handle second flow via some heavy function
 	if mode == 0 {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc0, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc0, nil))
 	} else if mode == 1 {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc1, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc1, nil))
 	} else {
-		CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
+		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
 	}
 
 	// Split for two senders and send
 	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
-	CheckFatal(flow.SetSender(firstFlow, uint8(outport1)))
-	CheckFatal(flow.SetSender(secondFlow, uint8(outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func heavyFunc0(currentPacket *packet.Packet, context flow.UserContext) {

@@ -35,14 +35,6 @@ var (
 	totalPackets uint64
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	flag.StringVar(&outFile, "outfile", "pkts_generated.pcap", "file to write output to")
 	flag.StringVar(&inFile, "infile", "config.json", "file with configurations for generator")
@@ -59,20 +51,20 @@ func main() {
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	var m sync.Mutex
 	testDoneEvent = sync.NewCond(&m)
 
 	generator, err := getGenerator()
-	CheckFatal(err)
+	flow.CheckFatal(err)
 	// Create packet flow
 	outputFlow := flow.SetGenerator(generator, nil)
 
-	CheckFatal(flow.SetSenderFile(outputFlow, outFile))
+	flow.CheckFatal(flow.SetSenderFile(outputFlow, outFile))
 	// Start pipeline
 	go func() {
-		CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStart())
 	}()
 
 	// Wait for enough packets to arrive
@@ -311,7 +303,7 @@ func generateIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
+		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
 	}
 }
 
@@ -404,10 +396,10 @@ func generateTCPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
-		pkt.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pkt.GetIPv4(), pkt.GetTCPForIPv4(), pkt.Data))
+		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
+		pkt.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetTCPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pkt.GetIPv6(), pkt.GetTCPForIPv6(), pkt.Data))
+		pkt.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetTCPForIPv6(), pkt.Data))
 	}
 }
 
@@ -451,10 +443,10 @@ func generateUDPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
-		pkt.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pkt.GetIPv4(), pkt.GetUDPForIPv4(), pkt.Data))
+		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
+		pkt.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetUDPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pkt.GetIPv6(), pkt.GetUDPForIPv6(), pkt.Data))
+		pkt.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetUDPForIPv6(), pkt.Data))
 	}
 }
 
@@ -498,10 +490,10 @@ func generateICMPIP(pkt *packet.Packet, context flow.UserContext) {
 		panic(fmt.Sprintf("failed to fill ether header %v", err))
 	}
 	if l3.Version == 4 {
-		pkt.GetIPv4().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4()))
-		pkt.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pkt.GetIPv4(), pkt.GetICMPForIPv4(), pkt.Data))
+		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
+		pkt.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetICMPForIPv4(), pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPForIPv6(), pkt.Data))
+		pkt.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetICMPForIPv6(), pkt.Data))
 	}
 }
 

@@ -13,3 +13,4 @@ WORKDIR /workdir
 COPY nat .
 COPY config.json .
 COPY config2ports.json .
+COPY config-vlan.json .

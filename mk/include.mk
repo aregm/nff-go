@@ -6,12 +6,12 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
-DPDK_VERSION = 17.08
+DPDK_VERSION = 18.02
 DPDK_DIR = dpdk-$(DPDK_VERSION)
 ifndef DPDK_URL
 DPDK_URL=http://fast.dpdk.org/rel/dpdk-$(DPDK_VERSION).tar.xz
 endif
-PKTGEN_VERSION=3.4.0
+PKTGEN_VERSION=3.4.9
 PKTGEN_DIR=pktgen-$(PKTGEN_VERSION)
 ifndef PKTGEN_URL
 PKTGEN_URL=http://dpdk.org/browse/apps/pktgen-dpdk/snapshot/pktgen-$(PKTGEN_VERSION).tar.xz
@@ -39,7 +39,8 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_PCLMULQDQ		\
 	-DRTE_MACHINE_CPUFLAG_RDRAND		\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
-	-include rte_config.h
+	-include rte_config.h			\
+	-Wno-deprecated-declarations
 # DEBUG flags
 # export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -mno-fsgsbase -mno-f16c -include rte_config.h
 
@@ -60,70 +61,11 @@ endif
 export CGO_CFLAGS = $(CFLAGS)
 
 export CGO_LDFLAGS =				\
-	-L$(RTE_SDK)/$(RTE_TARGET)/lib		\
-	-W					\
-	-Wall					\
-	-Werror					\
-	-Wstrict-prototypes			\
-	-Wmissing-prototypes			\
-	-Wmissing-declarations			\
-	-Wold-style-definition			\
-	-Wpointer-arith				\
-	-Wcast-align				\
-	-Wnested-externs			\
-	-Wcast-qual				\
-	-Wformat-nonliteral			\
-	-Wformat-security			\
-	-Wundef					\
-	-Wwrite-strings				\
+	-L$(RTE_SDK)/$(RTE_TARGET)/lib 		\
 	-Wl,--no-as-needed			\
-	-Wl,-export-dynamic			\
-	-Wl,--whole-archive			\
-	-lrte_distributor			\
-	-lrte_reorder				\
-	-lrte_kni				\
-	-lrte_pipeline				\
-	-lrte_table				\
-	-lrte_port				\
-	-lrte_timer				\
-	-lrte_hash				\
-	-lrte_jobstats				\
-	-lrte_lpm				\
-	-lrte_power				\
-	-lrte_acl				\
-	-lrte_meter				\
-	-lrte_sched				\
-	-lrte_vhost				\
-	-Wl,--start-group			\
-	-lrte_kvargs				\
-	-lrte_mbuf				\
-	-lrte_ip_frag				\
-	-lrte_ethdev				\
-	-lrte_mempool				\
-	-lrte_ring				\
-	-lrte_eal				\
-	-lrte_cmdline				\
-	-lrte_cfgfile				\
-	-lrte_pmd_bond				\
-	-lrte_pmd_vmxnet3_uio			\
-	-lrte_net				\
-	-lrte_pmd_virtio			\
-	-lrte_pmd_cxgbe				\
-	-lrte_pmd_enic				\
-	-lrte_pmd_i40e				\
-	-lrte_pmd_fm10k				\
-	-lrte_pmd_ixgbe				\
-	-lrte_pmd_e1000				\
-	-lrte_pmd_ring				\
-	-lrte_pmd_af_packet			\
-	-lrte_pmd_null				\
-	-lrt					\
-	-lm					\
-	-ldl					\
-	-lnuma					\
-	-lrte_mempool_ring			\
-	-Wl,--end-group				\
-	-Wl,--no-whole-archive
+	-Wl,-export-dynamic
+
+export CGO_LDFLAGS_ALLOW=-Wl,--((no-)?whole-archive|((start|end)-group))
 
 # Universal check whether a variable is set
 .PHONY: .check-defined-%

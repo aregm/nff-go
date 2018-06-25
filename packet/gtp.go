@@ -60,9 +60,12 @@ const (
 	EndMarker       = 254
 	// G-PDU message = encapsulated user data
 	G_PDU = 255
+
+	UDPPortGTPU     = 2152
+	SwapUDPPortGTPU = 26632
 )
 
-// TODO Add "Information Element@ constants
+// TODO Add "Information Element" constants
 
 func (hdr *GTPHdr) String() string {
 	hType := "GTPv1"
@@ -85,6 +88,7 @@ func (hdr *GTPHdr) String() string {
 		min += fmt.Sprintf(`, N-PDU number %d`, hdr.NextExtensionHeader)
 		// TODO add dumping of all extension headers
 	}
+	min += "\n"
 	return min
 }
 
@@ -111,13 +115,14 @@ func (packet *Packet) GTPIPv4AllParsing() *GTPHdr {
 // EncapsulateIPv4GTP assumes that user wants to build ether->IPv4->UDP->GTP->payload data structure
 // with standart IPv4 header size. It is also assumed that payload type is IPv4, so no etherType changes are needed
 func (packet *Packet) EncapsulateIPv4GTP(TEID uint32) bool {
+	length := packet.GetPacketLen() - EtherLen
 	if !packet.EncapsulateHead(EtherLen, IPv4MinLen+UDPLen+GTPMinLen) {
 		return false
 	}
 	gtp := (*GTPHdr)(unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen + UDPLen))
 	gtp.HeaderType = 0x30   // 001 - GTPv1, 1 - not GTP', 0 - reserved, 000 - no optional fields
 	gtp.MessageType = G_PDU // encapsulated user message
-	gtp.MessageLength = 0   // Just 8 byte header, no additions TODO no user data is calculated?
+	gtp.MessageLength = SwapBytesUint16(uint16(length))
 	gtp.TEID = SwapBytesUint32(TEID)
 	return true
 	// Developer can use standart parsing functions after this function

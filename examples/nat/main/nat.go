@@ -14,20 +14,14 @@ import (
 	"github.com/intel-go/nff-go/flow"
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	// Parse arguments
 	cores := flag.String("cores", "", "Specify CPU cores to use")
 	configFile := flag.String("config", "config.json", "Specify config file name")
-	flag.BoolVar(&nat.CalculateChecksum, "csum", true, "Specify whether to calculate checksums in modified packets")
-	flag.BoolVar(&nat.HWTXChecksum, "hwcsum", true, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
+	flag.BoolVar(&nat.NoCalculateChecksum, "nocsum", false, "Specify whether to calculate checksums in modified packets")
+	flag.BoolVar(&nat.NoHWTXChecksum, "nohwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	flag.Parse()
 
 	// Set up reaction to SIGINT (Ctrl-C)
@@ -35,22 +29,31 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	// Read config
-	CheckFatal(nat.ReadConfig(*configFile))
+	flow.CheckFatal(nat.ReadConfig(*configFile))
 
 	// Init NFF-GO system at 16 available cores
 	nffgoconfig := flow.Config{
-		CPUList:      *cores,
-		HWTXChecksum: nat.HWTXChecksum,
+		CPUList:          *cores,
+		HWTXChecksum:     !nat.NoHWTXChecksum,
+		DPDKArgs:         []string{*dpdkLogLevel},
+		DisableScheduler: *noscheduler,
 	}
 
-	CheckFatal(flow.SystemInit(&nffgoconfig))
+	flow.CheckFatal(flow.SystemInit(&nffgoconfig))
+
+	offloadingAvailable := nat.CheckHWOffloading()
+	if !nat.NoHWTXChecksum && !offloadingAvailable {
+		println("Warning! Requested hardware offloading is not available on all ports. Falling back to software checksum calculation.")
+		nat.NoHWTXChecksum = true
+		flow.SetUseHWCapability(flow.HWTXChecksumCapability, false)
+	}
 
 	// Initialize flows and necessary state
 	nat.InitFlows()
 
 	// Start flow scheduler
 	go func() {
-		CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStart())
 	}()
 
 	// Wait for interrupt

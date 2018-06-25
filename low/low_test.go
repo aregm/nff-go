@@ -28,7 +28,7 @@ func TestReorder(t *testing.T) {
 	}
 
 	// Real usable ring size is count-1
-	ring := CreateRing("ring", 64)
+	ring := CreateRing(64)
 	a1 := uint(63)
 	a2 := uint(29)
 	a3 := uint(14)

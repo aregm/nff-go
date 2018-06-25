@@ -12,6 +12,4 @@ COPY perf_light .
 COPY perf_main .
 COPY perf_seq .
 COPY ipsec .
-COPY latency-part1 .
-COPY latency-stub .
-COPY sendback .
+COPY latency .

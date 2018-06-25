@@ -30,14 +30,16 @@ clean: clean-default
 # Add user name to generated images
 ifdef NFF_GO_IMAGE_PREFIX
 WORKIMAGENAME=$(NFF_GO_IMAGE_PREFIX)/$(USER)/$(IMAGENAME)
+IMAGE_PREFIX=$(NFF_GO_IMAGE_PREFIX)/$(USER)
 else
 WORKIMAGENAME=$(USER)/$(IMAGENAME)
+IMAGE_PREFIX=$(USER)
 endif
 
 .check-images-env: .check-defined-IMAGENAME
 
 images: Dockerfile .check-images-env all
-	docker build --build-arg USER_NAME=$(USER) -t $(WORKIMAGENAME) .
+	docker build --build-arg USER_NAME=$(IMAGE_PREFIX) -t $(WORKIMAGENAME) .
 
 clean-images: .check-images-env clean
 	-docker rmi $(WORKIMAGENAME)

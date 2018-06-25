@@ -53,7 +53,7 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry Tuple)
 }
 
 // PublicToPrivateTranslation does ingress translation.
-func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
+func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 
@@ -65,17 +65,14 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	if pktIPv4 == nil {
 		arp := pkt.GetARPCheckVLAN()
 		if arp != nil {
-			port := pp.PublicPort.handleARP(pkt)
-			if port != flowDrop {
-				dumpPacket(pkt, pi.index, iPUBLIC)
-			} else {
+			if pp.PublicPort.handleARP(pkt, pi.index, iPUBLIC) == false {
 				dumpDrop(pkt, pi.index, iPUBLIC)
 			}
-			return port
+			return false
 		}
 		// We don't currently support anything except for IPv4 and ARP
 		dumpDrop(pkt, pi.index, iPUBLIC)
-		return flowDrop
+		return false
 	}
 
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
@@ -92,19 +89,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	} else if pktICMP != nil {
 		// Check if this ICMP packet destination is NAT itself. If
 		// yes, reply back with ICMP and stop packet processing.
-		port := pp.PublicPort.handleICMP(pkt)
-		if port != flowOut {
-			if port == flowBack {
-				dumpPacket(pkt, pi.index, iPUBLIC)
-			} else if port == flowDrop {
-				dumpDrop(pkt, pi.index, iPUBLIC)
-			}
-			return port
+		if pp.PublicPort.handleICMP(pkt, pi.index, iPUBLIC) == false {
+			return false
 		}
 		pub2priKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		dumpDrop(pkt, pi.index, iPUBLIC)
-		return flowDrop
+		return false
 	}
 
 	// Do lookup
@@ -115,7 +106,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// packet is ignored.
 	if !found {
 		dumpDrop(pkt, pi.index, iPUBLIC)
-		return flowDrop
+		return false
 	}
 	value := v.(Tuple)
 
@@ -129,7 +120,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
 		dumpDrop(pkt, pi.index, iPUBLIC)
-		return flowDrop
+		return false
 	}
 
 	// Check whether TCP connection could be reused
@@ -147,21 +138,21 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.DstPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
 	dumpPacket(pkt, pi.index, iPRIVATE)
-	return flowOut
+	return true
 }
 
 // PrivateToPublicTranslation does egress translation.
-func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
+func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 
@@ -173,17 +164,14 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	if pktIPv4 == nil {
 		arp := pkt.GetARPCheckVLAN()
 		if arp != nil {
-			port := pp.PrivatePort.handleARP(pkt)
-			if port != flowDrop {
-				dumpPacket(pkt, pi.index, iPRIVATE)
-			} else {
+			if pp.PrivatePort.handleARP(pkt, pi.index, iPRIVATE) == false {
 				dumpDrop(pkt, pi.index, iPRIVATE)
 			}
-			return port
+			return false
 		}
 		// We don't currently support anything except for IPv4 and ARP
 		dumpDrop(pkt, pi.index, iPRIVATE)
-		return flowDrop
+		return false
 	}
 
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
@@ -202,19 +190,13 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	} else if pktICMP != nil {
 		// Check if this ICMP packet destination is NAT itself. If
 		// yes, reply back with ICMP and stop packet processing.
-		port := pp.PrivatePort.handleICMP(pkt)
-		if port != flowOut {
-			if port == flowBack {
-				dumpPacket(pkt, pi.index, iPRIVATE)
-			} else if port == flowDrop {
-				dumpDrop(pkt, pi.index, iPRIVATE)
-			}
-			return port
+		if pp.PrivatePort.handleICMP(pkt, pi.index, iPRIVATE) == false {
+			return false
 		}
 		pri2pubKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		dumpDrop(pkt, pi.index, iPRIVATE)
-		return flowDrop
+		return false
 	}
 
 	// Do lookup
@@ -230,7 +212,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
 			dumpDrop(pkt, pi.index, iPRIVATE)
-			return flowDrop
+			return false
 		}
 	} else {
 		value = v.(Tuple)
@@ -252,17 +234,17 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if pktTCP != nil {
 		pktTCP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4TCPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else if pktUDP != nil {
 		pktUDP.SrcPort = packet.SwapBytesUint16(value.port)
-		setIPv4UDPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	} else {
 		pktICMP.Identifier = packet.SwapBytesUint16(value.port)
-		setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
+		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
 	dumpPacket(pkt, pi.index, iPUBLIC)
-	return flowOut
+	return true
 }
 
 // Simple check for FIN or RST in TCP
@@ -303,32 +285,44 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 	}
 }
 
-func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
+func (port *ipv4Port) handleARP(pkt *packet.Packet, index int, isPrivate interfaceType) bool {
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
 		// We don't care about replies so far
-		return flowDrop
+		return false
 	}
 
 	// Check that someone is asking about MAC of my IP address and HW
 	// address is blank in request
-	if packet.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != packet.SwapBytesUint32(port.Subnet.Addr) ||
-		arp.THA != [common.EtherAddrLen]byte{} {
-		return flowDrop
+	if packet.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != packet.SwapBytesUint32(port.Subnet.Addr) {
+		println("Warning! Got an ARP packet with target IPv4 address", StringIPv4Array(arp.TPA),
+			"different from IPv4 address on interface. Should be", StringIPv4Int(port.Subnet.Addr),
+			". ARP request ignored.")
+		return false
+	}
+	if arp.THA != [common.EtherAddrLen]byte{} {
+		println("Warning! Got an ARP packet with non-zero MAC address", StringMAC(arp.THA),
+			". ARP request ignored.")
+		return false
 	}
 
 	// Prepare an answer to this request
-	pkt.Ether.DAddr = pkt.Ether.SAddr
-	pkt.Ether.SAddr = port.SrcMACAddress
-	arp.Operation = packet.SwapBytesUint16(packet.ARPReply)
-	myIP := arp.TPA
-	arp.TPA = arp.SPA
-	arp.THA = arp.SHA
-	arp.SPA = myIP
-	arp.SHA = port.SrcMACAddress
+	answerPacket, err := packet.NewPacket()
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
 
-	return flowBack
+	packet.InitARPReplyPacket(answerPacket, port.SrcMACAddress, arp.SHA, packet.ArrayToIPv4(arp.TPA), packet.ArrayToIPv4(arp.SPA))
+	vlan := pkt.GetVLAN()
+	if vlan != nil {
+		answerPacket.AddVLANTag(packet.SwapBytesUint16(vlan.TCI))
+	}
+
+	dumpPacket(answerPacket, index, isPrivate)
+	answerPacket.SendPacket(port.Index)
+
+	return true
 }
 
 func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
@@ -342,12 +336,12 @@ func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
 	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 }
 
-func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
+func (port *ipv4Port) handleICMP(pkt *packet.Packet, index int, isPrivate interfaceType) bool {
 	ipv4 := pkt.GetIPv4NoCheck()
 
 	// Check that received ICMP packet is addressed at this host
 	if packet.SwapBytesUint32(ipv4.DstAddr) != port.Subnet.Addr {
-		return flowOut
+		return true
 	}
 
 	icmp := pkt.GetICMPNoCheck()
@@ -357,12 +351,23 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 	// NAT way. Maybe these are packets which should be passed through
 	// translation.
 	if icmp.Type != common.ICMPTypeEchoRequest || icmp.Code != 0 {
-		return flowOut
+		return true
 	}
 
 	// Return a packet back to sender
-	swapAddrIPv4(pkt)
-	icmp.Type = common.ICMPTypeEchoResponse
-	setIPv4ICMPChecksum(pkt, CalculateChecksum, HWTXChecksum)
-	return flowBack
+	answerPacket, err := packet.NewPacket()
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
+	packet.GeneratePacketFromByte(answerPacket, pkt.GetRawPacketBytes())
+
+	answerPacket.ParseL3CheckVLAN()
+	swapAddrIPv4(answerPacket)
+	answerPacket.ParseL4ForIPv4()
+	(answerPacket.GetICMPNoCheck()).Type = common.ICMPTypeEchoResponse
+	setIPv4ICMPChecksum(answerPacket, !NoCalculateChecksum, !NoHWTXChecksum)
+
+	dumpPacket(answerPacket, index, isPrivate)
+	answerPacket.SendPacket(port.Index)
+	return false
 }

@@ -9,7 +9,7 @@ EXECUTABLES = testMerge
 all:
 	cp ../../framework/main/config.json .
 
-testing:
-	go test
+testing: check-pktgen
+	go test -v -test.timeout 20m
 
 include $(PATH_TO_MK)/leaf.mk

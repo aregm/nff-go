@@ -22,11 +22,6 @@ type terminationDirection uint8
 type interfaceType int
 
 const (
-	flowDrop   = 0
-	flowBack   = 1
-	flowOut    = 2
-	totalFlows = 3
-
 	pri2pub terminationDirection = 0x0f
 	pub2pri terminationDirection = 0xf0
 
@@ -53,7 +48,7 @@ type portMapEntry struct {
 
 // Type describing a network port
 type ipv4Port struct {
-	Index         uint8      `json:"index"`
+	Index         uint16     `json:"index"`
 	DstMACAddress macAddress `json:"dst-mac"`
 	Subnet        ipv4Subnet `json:"subnet"`
 	Vlan          uint16     `json:"vlan-tag"`
@@ -95,10 +90,10 @@ var (
 	Natconfig *Config
 	// CalculateChecksum is a flag whether checksums should be
 	// calculated for modified packets.
-	CalculateChecksum bool
+	NoCalculateChecksum bool
 	// HWTXChecksum is a flag whether checksums calculation should be
 	// offloaded to HW.
-	HWTXChecksum bool
+	NoHWTXChecksum bool
 
 	// Debug variables
 	debugDump = false
@@ -248,13 +243,7 @@ func InitFlows() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fromPublic, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation,
-			totalFlows, context)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = flow.SetStopper(fromPublic[flowDrop])
-		if err != nil {
+		if flow.SetHandlerDrop(publicToPrivate, PublicToPrivateTranslation, context) != nil {
 			log.Fatal(err)
 		}
 
@@ -263,32 +252,15 @@ func InitFlows() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fromPrivate, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation,
-			totalFlows, context)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = flow.SetStopper(fromPrivate[flowDrop])
-		if err != nil {
+		if flow.SetHandlerDrop(privateToPublic, PrivateToPublicTranslation, context) != nil {
 			log.Fatal(err)
 		}
 
-		// ARP packets from public go back to public
-		toPublic, err := flow.SetMerger(fromPublic[flowBack], fromPrivate[flowOut])
+		err = flow.SetSender(publicToPrivate, pp.PrivatePort.Index)
 		if err != nil {
 			log.Fatal(err)
 		}
-		// ARP packets from private go back to private
-		toPrivate, err := flow.SetMerger(fromPrivate[flowBack], fromPublic[flowOut])
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = flow.SetSender(toPrivate, pp.PrivatePort.Index)
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = flow.SetSender(toPublic, pp.PublicPort.Index)
+		err = flow.SetSender(privateToPublic, pp.PublicPort.Index)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -306,4 +278,15 @@ func InitFlows() {
 		fdrop = make([]*os.File, asize)
 		dropsync = make([]sync.Mutex, asize)
 	}
+}
+
+func CheckHWOffloading() bool {
+	ports := []uint16{}
+
+	for i := range Natconfig.PortPairs {
+		pp := &Natconfig.PortPairs[i]
+		ports = append(ports, pp.PublicPort.Index, pp.PrivatePort.Index)
+	}
+
+	return flow.CheckHWCapability(flow.HWTXChecksumCapability, ports)
 }

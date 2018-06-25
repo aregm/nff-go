@@ -8,9 +8,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"flag"
-	"fmt"
 	"hash"
-	"os"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
@@ -18,32 +16,28 @@ import (
 	"github.com/intel-go/nff-go/packet"
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
-	var noscheduler bool
-	flag.BoolVar(&noscheduler, "no-scheduler", false, "disable scheduler")
+	outport := flag.Uint("outport", 1, "port for sender")
+	inport := flag.Uint("inport", 0, "port for receiver")
+	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	cores := flag.String("cores", "0-43", "Cores mask. Avoid hyperthreading here")
 	flag.Parse()
 
 	config := flow.Config{
-		CPUList:          "0-31",
-		DisableScheduler: noscheduler,
+		DisableScheduler: *noscheduler,
+		DPDKArgs:         []string{*dpdkLogLevel},
+		CPUList:	  *cores,
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
-	input, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
-	CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
-	CheckFatal(flow.SetSender(input, uint8(1)))
+	input, err := flow.SetReceiver(uint16(*inport))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandlerDrop(input, encapsulation, *(new(context))))
+	flow.CheckFatal(flow.SetHandlerDrop(input, decapsulation, *(new(context))))
+	flow.CheckFatal(flow.SetSender(input, uint16(*outport)))
 
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 type context struct {

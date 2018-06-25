@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"os"
@@ -12,26 +13,39 @@ import (
 	"time"
 )
 
+// TeststuiteReport has information about all test results.
+type TestsuiteReport struct {
+	Timestamp string
+	Tests     []*TestcaseReportInfo
+}
+
 // TestcaseReportInfo has all info about test.
 type TestcaseReportInfo struct {
-	Status        TestStatus
-	Benchdata     []Measurement
-	CoresStats    CoresInfo
-	CoreLastValue int
-	CoreDecreased bool
-	Apps          []RunningApp
+	TestName string
+	Status   TestStatus
+	// Pktgen type tests
+	PktgenBenchdata []PktgenMeasurement `json:",omitempty"`
+	CoresStats      *ReportCoresInfo    `json:",omitempty"`
+	// Apache benchmark type tests
+	ABStats *ApacheBenchmarkStats `json:",omitempty"`
+	// Latency type tests
+	LatStats *LatencyStats `json:",omitempty"`
+	// Per application statistics
+	Apps []RunningApp `json:"-"`
 }
 
 // Report represents test report.
 type Report struct {
 	output *os.File
 	t      *template.Template
-	Done   chan error
-	Pipe   chan TestcaseReportInfo
+	report TestsuiteReport
+	json   *os.File
 }
 
 const (
-	reportHeader = `{{define "header"}}<!DOCTYPE html><html>
+	statusTemplate = `{{define "statusLine"}}<font color="{{if eq . %d}}green{{else}}red{{end}}">{{.}}</font>{{end}}`
+
+	reportTemplate = `{{define "testreport"}}<!DOCTYPE html><html>
     <head>
         <meta charset="UTF-8">
         <style>
@@ -65,6 +79,10 @@ const (
             td.thinrborder {
                 border-right: 1pt solid grey;
             }
+            td.thinrborderstatnames {
+                border-right: 1pt solid grey;
+                text-align: left;
+            }
         </style>
         <script>
             function toggleVisibility(buttonID, idArray) {
@@ -85,20 +103,17 @@ const (
                 }
             }
         </script>
-        <title>Test report from {{.}}</title>
+        <title>Test report from {{.Timestamp}}</title>
     </head>
     <body>
-        <h1>Test report from {{.}}</h1>
-    <table style="width:100%">{{end}}`
-
-	statusTemplate = `{{define "statusLine"}}<font color="{{if eq . %d}}green{{else}}red{{end}}">{{.}}</font>{{end}}`
-
-	reportTemplate = `{{range $testindex, $testelement := .}}<tr class="test">
+    <h1>Test report from {{.Timestamp}}</h1>
+    <table style="width:100%">
+    {{range $testindex, $testelement := .Tests}}<tr class="test">
     <td>
         {{with $buttonid := genbuttonid $testindex}}<input onclick="toggleVisibility('{{$buttonid}}', [{{range $appindex, $appelement := $testelement.Apps}}'{{genappid $testindex $appindex}}', {{end}}])" type="button" value="Show details" id="{{$buttonid}}"></input>{{end}}
-        {{testid .}}
+        {{.TestName}}
     </td><td>
-        {{block "statusLine" .Status}}{{end}}{{if .Benchdata}}{{with .Benchdata}}
+        {{block "statusLine" .Status}}{{end}}{{if .PktgenBenchdata}}{{with .PktgenBenchdata}}
         <table class="bench">
             <tr>
                 <th class="rbborder">Port</th>
@@ -109,26 +124,50 @@ const (
                 {{range .}}<th class="thinrborder">Pkts TX</th><th class="thinrborder">Mbit TX</th><th class="thinrborder">Pkts RX</th><th class="rbborder">Mbit RX</th>{{end}}
                 <th class="thinrborder">Used</th><th class="thinrborder">Free</th><th class="thinrborder">Last</th><th class="rbborder">Decreased</th>
             </tr><tr>
-                <td class="rborder">Average</td>{{range .}}<td>{{.PktsTX}}</td><td>{{.MbitsTX}}</td><td>{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{end}}{{/* end with .Benchdata */}}
-                <td class="thinrborder">{{.CoresStats.CoresUsed}}</td><td class="thinrborder">{{.CoresStats.CoresFree}}</td><td class="thinrborder">{{.CoreLastValue}}</td><td class="rborder">{{if .CoreDecreased}}YES{{else}}NO{{end}}</td>
+                <td class="rborder">Average</td>{{range .}}<td>{{.PktsTX}}</td><td>{{.MbitsTX}}</td><td>{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{end}}{{/* end with .PktgenBenchdata */}}
+                <td class="thinrborder">{{.CoresStats.CoresUsed}}</td><td class="thinrborder">{{.CoresStats.CoresFree}}</td><td class="thinrborder">{{.CoresStats.CoreLastValue}}</td><td class="rborder">{{if .CoresStats.CoreDecreased}}YES{{else}}NO{{end}}</td>
             </tr>
-        </table>{{end}}{{/* end if .Benchdata */}}
+        </table>{{end}}{{/* end if .PktgenBenchdata */}}{{if .ABStats}}{{with .ABStats}}
+        <table class="bench">
+            <tr>
+                <td class="thinrborderstatnames">Requests per second [#/sec] (mean)</td><td>{{index .Stats 0}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Time per request [ms] (mean)</td><td>{{index .Stats 1}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Time per request [ms] (mean, across all concurrent requests)</td><td>{{index .Stats 2}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Transfer rate [Kbytes/sec] received</td><td>{{index .Stats 3}}</td>
+            </tr>
+        </table>{{end}}{{/* end with .ABStats */}}{{end}}{{/* end if .ABStats */}}{{if .LatStats}}{{with .LatStats}}
+        <table class="bench">
+            <tr>
+                <td class="thinrborderstatnames">Received/sent [%]</td><td>{{index .Stats 0}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Median [us]</td><td>{{index .Stats 2}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Average [us]</td><td>{{index .Stats 3}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Stddev [us]</td><td>{{index .Stats 4}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Requested speed [Pkts/sec]</td><td>{{index .Stats 1}}</td>
+            </tr>
+        </table>{{end}}{{/* end with .LatStats */}}{{end}}{{/* end if .LatStats */}}
     </td>
-</tr>{{range $appindex, $appelement := .Apps}}<tr style='display:none' id='{{genappid $testindex $appindex}}'>
+    </tr>{{range $appindex, $appelement := .Apps}}<tr style='display:none' id='{{genappid $testindex $appindex}}'>
     <td>
         <a {{getloggerfile .}}>{{.String}}</a>
     </td>
     <td>
-        {{block "statusLine" .Status}}{{end}}{{with .Benchmarks}}<table class="bench">{{range $index, $element := .}}{{if eq $index 0}}<tr>
+        {{block "statusLine" .Status}}{{end}}{{with .PktgenBenchdata}}<table class="bench">{{range $index, $element := .}}{{if eq $index 0}}<tr>
                 <th class="rbborder">Port</th>
                 {{range $port, $e := $element}}<th colspan="4" class="rbborder">{{$port}}</th>{{end}}
             </tr><tr>
                 <th class="rbborder"></th>
                 {{range $element}}<th class="thinrborder">Pkts TX</th><th class="thinrborder">Mbit TX</th><th class="thinrborder">Pkts RX</th><th class="rbborder">Mbit RX</th>{{end}}
             </tr>{{end}}{{/* end of table header */}}<tr>
-                <td class="rborder">{{$index}}</td>{{range $element}}<td class="thinrborder">{{.PktsTX}}</td><td class="thinrborder">{{.MbitsTX}}</td><td class="thinrborder">{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}
+                <td class="rborder">{{$index}}</td>{{range $element}}<td class="thinrborder">{{.PktsTX}}</td><td class="thinrborder">{{.MbitsTX}}</td><td class="thinrborder">{{.PktsRX}}</td><td class="rborder">{{.MbitsRX}}</td>{{end}}{{/* end range over pktgen data */}}
             </tr>
-        {{end}}</table>{{end}}{{/* end with .Benchmarks */}}{{with .CoresStats}}<table class="bench">
+        {{end}}</table>{{end}}{{/* end with .PktgenBenchdata */}}{{with .CoresStats}}<table class="bench">
             <tr>
                 <th class="rbborder"></th>
                 <th colspan="2" class="rbborder">Cores</th>
@@ -139,17 +178,14 @@ const (
             </tr>{{range $index, $element := .}}<tr>
                 <td class="rborder">{{$index}}</td>
                 <td class="thinrborder">{{.CoresUsed}}</td><td class="thinrborder">{{.CoresFree}}</td>
-            </tr>{{end}}
-        </table>{{end}}{{/* end with .Benchmarks */}}
+            </tr>{{end}}{{/* end range over cores array */}}
+        </table>{{end}}{{/* end with .CoresStats */}}
     </td>
-</tr>{{end}}{{end}}`
-
-	reportFooter = `{{define "footer"}}</table></body></html>{{end}}`
+    </tr>{{end}}{{/* end range over apps */}}{{end}}{{/* end range over tests */}}</table></body></html>{{end}}{{/* end template */}}`
 )
 
 var (
 	funcs = template.FuncMap{
-		"testid":      func(tr TestcaseReportInfo) string { return tr.Apps[0].test.String() },
 		"genbuttonid": func(index int) string { return "test-" + strconv.Itoa(index) },
 		"genappid": func(testindex, appindex int) string {
 			return "app-" + strconv.Itoa(testindex) + "-" + strconv.Itoa(appindex)
@@ -170,11 +206,6 @@ func StartReport(logdir string) *Report {
 
 	// Parse report templates
 	r.t = template.New("report")
-	r.t, err = r.t.Parse(reportHeader)
-	if err != nil {
-		LogError("Report header template parse error:", err)
-		return nil
-	}
 	r.t, err = r.t.Parse(fmt.Sprintf(statusTemplate, TestReportedPassed))
 	if err != nil {
 		LogError("Report status template parse error:", err)
@@ -185,58 +216,41 @@ func StartReport(logdir string) *Report {
 		LogError("Report body template parse error:", err)
 		return nil
 	}
-	r.t, err = r.t.Parse(reportFooter)
+
+	// Open html report file
+	htmlname := logdir + string(os.PathSeparator) + "index.html"
+	r.output, err = os.Create(htmlname)
 	if err != nil {
-		LogError("Report footer template parse error:", err)
+		LogError("Failed to create report file", htmlname, err)
 		return nil
 	}
 
-	// Open report file
-	name := logdir + string(os.PathSeparator) + "index.html"
-	r.output, err = os.Create(name)
+	jsonname := logdir + string(os.PathSeparator) + "report.json"
+	r.json, err = os.Create(jsonname)
 	if err != nil {
-		LogError("Failed to create report file", name, err)
+		LogError("Failed to create report file", jsonname, err)
 		return nil
 	}
 
-	timestr := time.Now().Format(time.RFC3339)
-	err = r.t.ExecuteTemplate(r.output, "header", timestr)
-	if err != nil {
-		LogError("Failed to write to report file", name, err)
-		r.output.Close()
-		return nil
-	}
-
-	// Create a pipe for communication with report writing go-routine
-	r.Pipe = make(chan TestcaseReportInfo)
-	r.Done = make(chan error, 1)
-
-	// Start report writing go-routine
-	go writeReport(&r)
-
+	r.report.Timestamp = time.Now().Format(time.RFC3339)
 	return &r
 }
 
-func writeReport(r *Report) {
-	err := r.t.ExecuteTemplate(r.output, "report", r.Pipe)
-	if err != nil {
-		r.Done <- err
-	}
-
-	close(r.Done)
+func (r *Report) AddTestResult(tr *TestcaseReportInfo) {
+	r.report.Tests = append(r.report.Tests, tr)
 }
 
-// FinishReport finishes report writing.
+// FinishReport writes report into html and json files.
 func (r *Report) FinishReport() {
-	close(r.Pipe)
-
-	select {
-	case err := <-r.Done:
-		LogErrorsIfNotNil(err)
-	}
-
-	err := r.t.ExecuteTemplate(r.output, "footer", nil)
+	err := r.t.ExecuteTemplate(r.output, "testreport", &r.report)
 	LogErrorsIfNotNil(err)
-
 	r.output.Close()
+
+	enc := json.NewEncoder(r.json)
+	enc.Encode(&r.report)
+	r.json.Close()
+}
+
+func (ts TestStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ts.String())
 }

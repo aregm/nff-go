@@ -4,6 +4,8 @@
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
 
+**NFF-Go becomes part of DPDK project umbrella under Linux Foundation! Mirror repo can be found here: http://dpdk.org/browse/apps/nff-go/. We will accept patches through DPDK mail-list and standard DPDK contribution [process](http://dpdk.org/doc/guides/contributing/patches.html) too.**
+
 ## What it is
 NFF-Go is a set of libraries for creating and deploying cloud-native Network
 Functions (NFs). It simplifies the creation of network functions without
@@ -25,41 +27,33 @@ sacrificing performance.
 Simple ACL based firewall
 ```Go
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	// Initialize NFF-GO library to use 8 cores max.
 	config := flow.Config{
 		CPUCoresNumber: 8,
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get filtering rules from access control file.
 	L3Rules, err := packet.GetL3ACLFromORIG("Firewall.conf")
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.
 	inputFlow, err := flow.SetReceiver(uint8(0))
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Separate packet flow based on ACL.
 	rejectFlow, err := flow.SetSeparator(inputFlow, L3Separator, nil)
-	CheckFatal(err)
+	flow.CheckFatal(err)
 
 	// Drop rejected packets.
-	CheckFatal(flow.SetStopper(rejectFlow))
+	flow.CheckFatal(flow.SetStopper(rejectFlow))
 
 	// Send accepted packets to first port. Send queue will be added automatically.
-	CheckFatal(flow.SetSender(inputFlow, uint8(1)))
+	flow.CheckFatal(flow.SetSender(inputFlow, uint8(1)))
 
 	// Begin to process packets.
-	CheckFatal(flow.SystemStart())
+	flow.CheckFatal(flow.SystemStart())
 }
 
 // User defined function for separating packets
@@ -90,7 +84,7 @@ build.
 
 If you are working on a fork, then the **go get** command will not put nff-go in
 $GOPATH/src/github.com/intel-go. However, imports will continue to reference
-githb.com/intel-go. This is a feature of Go and not a problem in the way nff-go
+github.com/intel-go. This is a feature of Go and not a problem in the way nff-go
 is written. See [stackoverflow
 article](https://stackoverflow.com/questions/14323872/using-forked-package-import-in-go)
 for a discussion. A simple way to resolve the problem is to use a symlink. If
@@ -137,7 +131,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
 ### environment variables
     
-        export PATH="$PATH:$GOPATH"/bin
+        export PATH="$PATH:$GOPATH/bin"
     
 ## Building NFF-GO
 

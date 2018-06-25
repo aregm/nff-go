@@ -10,4 +10,7 @@ main: apptype_string.go
 %_string.go: types.go
 	go generate
 
+testing:
+	go test -v
+
 include $(PATH_TO_MK)/intermediate.mk
