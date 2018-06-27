@@ -3,11 +3,11 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-SUBDIRS = testResend testMerge testSplit testSeparate testPartition testHandle testCksum
+SUBDIRS = testMerge testSingleWorkingFF testCksum
+
+include $(PATH_TO_MK)/intermediate.mk
 
 testing:
 	for dir in $(SUBDIRS); do \
 		cd $$dir && make testing; cd -; \
 	done
-
-include $(PATH_TO_MK)/intermediate.mk

@@ -16,7 +16,9 @@ var (
 	srcMac0 [common.EtherAddrLen]uint8
 	dstMac1 [common.EtherAddrLen]uint8
 	srcMac1 [common.EtherAddrLen]uint8
-	stubMac = [common.EtherAddrLen]uint8{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
+	// First byte in MAC address has to be even because otherwise it
+	// means multicast address which cannot be source address.
+	stubMac = [common.EtherAddrLen]uint8{0x10, 0x22, 0x33, 0x44, 0x55, 0x66}
 	// ModifyPacket is used to set src and dst MAC addresses for outgoing packets.
 	ModifyPacket = []interface{}{modifyPacket0, modifyPacket1}
 )
@@ -39,6 +41,50 @@ func ShouldBeSkipped(pkt *packet.Packet) bool {
 		return true
 	}
 	return false
+}
+
+// ProtocolType used to determine which protocols should not
+// be skipped.
+type ProtocolType uint
+
+const (
+	// constants for different protocol types.
+	TypeUdpTcpIcmp ProtocolType = iota
+	TypeUdpTcp
+	TypeTcp
+	TypeUdp
+	TypeIcmp
+)
+
+// ShouldBeSkippedAllExcept return false for packets with given ip version and protocol type
+// and true for all other. Specify 0 ip version to accept both 4 and 6.
+func ShouldBeSkippedAllExcept(pkt *packet.Packet, ipVersion uint, protocol ProtocolType) bool {
+	var pktTCP *packet.TCPHdr
+	var pktUDP *packet.UDPHdr
+	var pktICMP *packet.ICMPHdr
+	pktIPv4, pktIPv6, _ := pkt.ParseAllKnownL3CheckVLAN()
+	if (ipVersion == 0 || ipVersion == 4) && pktIPv4 != nil {
+		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv4()
+	} else if (ipVersion == 0 || ipVersion == 6) && pktIPv6 != nil {
+		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv6()
+	}
+	if pktTCP != nil {
+		switch protocol {
+		case TypeTcp, TypeUdpTcpIcmp, TypeUdpTcp:
+			return false
+		}
+	} else if pktUDP != nil {
+		switch protocol {
+		case TypeUdp, TypeUdpTcpIcmp, TypeUdpTcp:
+			return false
+		}
+	} else if pktICMP != nil {
+		switch protocol {
+		case TypeIcmp, TypeUdpTcpIcmp:
+			return false
+		}
+	}
+	return true
 }
 
 // readConfig function reads and parses config file

@@ -7,7 +7,7 @@
             },
             "public-port": {
                 "index": 1,
-                "dst-mac": "08:00:27:19:e5:97",
+                "dst-mac": "3C:FD:FE:A4:DD:F0",
                 "subnet": "192.168.16.1"
             }
         }

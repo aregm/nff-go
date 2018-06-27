@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,8 +41,6 @@ var (
 	// we received totalPackets number of pkts
 	exampleDoneEvent *sync.Cond
 
-	outPort int
-	inPort  int
 	// addresses imitating users sending non flood
 	// flooding user's addresses will be generated
 	goodAddresses = [goodDataListSize]uint32{packet.SwapBytesUint32(1235),
@@ -57,40 +54,32 @@ var (
 		packet.SwapBytesUint16(4)}
 )
 
-// CheckFatal is an error handling function
-func CheckFatal(err error) {
-	if err != nil {
-		fmt.Printf("checkfail: %+v\n", err)
-		os.Exit(1)
-	}
-}
-
 func main() {
 	flag.Uint64Var(&speed, "speed", speed, "speed of generator, Pkts/s")
-	flag.IntVar(&outPort, "outPort", 0, "port to send")
-	flag.IntVar(&inPort, "inPort", 0, "port to receive")
+	outPort := flag.Uint("outPort", 0, "port to send")
+	inPort := flag.Uint("inPort", 0, "port to receive")
 	flag.Uint64Var(&totalPackets, "totalPackets", 100000000, "finish work when total number of packets received")
 	flag.Parse()
 	// Init NFF-GO system at requested number of cores.
 	config := flow.Config{
 		CPUList: "0-15",
 	}
-	CheckFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(&config))
 
 	exampleDoneEvent = sync.NewCond(&sync.Mutex{})
 
 	// Create first packet flow
 	outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
-	CheckFatal(err)
-	CheckFatal(flow.SetSender(outputFlow, uint8(outPort)))
-	inputFlow, err := flow.SetReceiver(uint8(inPort))
-	CheckFatal(err)
-	CheckFatal(flow.SetHandler(inputFlow, checkInputFlow, nil))
-	CheckFatal(flow.SetStopper(inputFlow))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetSender(outputFlow, uint16(*outPort)))
+	inputFlow, err := flow.SetReceiver(uint16(*inPort))
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandler(inputFlow, checkInputFlow, nil))
+	flow.CheckFatal(flow.SetStopper(inputFlow))
 	go randomizeSize()
 	// Start pipeline
 	go func() {
-		CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStart())
 	}()
 
 	// Wait for enough packets to arrive

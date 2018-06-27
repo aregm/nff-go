@@ -11,10 +11,8 @@ import (
 	"time"
 )
 
-func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
+func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 	interrupt chan os.Signal) *TestcaseReportInfo {
-	test := config.Tests[index]
-
 	if test.TestTime < config.Config.RequestTimeout {
 		LogError("Test", test.Name, "duration", test.TestTime, "should be greater than docker http request timeout",
 			config.Config.RequestTimeout)
@@ -24,6 +22,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 	}
 
 	LogInfo("/--- Running test", test.Name, "---")
+	LogInfo("Apps: ", test.Apps)
 
 	apps := make([]RunningApp, len(test.Apps))
 
@@ -40,7 +39,7 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 		}
 
 		logger := NewLogger(file)
-		apps[iii].InitTest(logger, iii, &test.Apps[iii], &config.Config, &test)
+		apps[iii].InitTest(logger, iii, &test.Apps[iii], &config.Config, test)
 		err = apps[iii].startTest()
 		if err != nil {
 			LogError("Error running test application", &apps[iii], ":", err)
@@ -78,7 +77,6 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 				apps[r.AppIndex].Logger.LogInfo(r.AppIndex, r.msg)
 				if r.AppStatus == TestReportedFailed || r.AppStatus == TestReportedPassed {
 					apps[r.AppIndex].Logger.LogDebug("Finished with code", r.AppStatus)
-
 					killAllRunningAndRemoveData(apps)
 					apps[r.AppIndex].Status = r.AppStatus
 					if r.AppStatus == TestReportedPassed {
@@ -116,59 +114,100 @@ func (config *TestsuiteConfig) executeOneTest(index int, logdir string,
 
 	LogInfo("\\--- Finished test", test.Name, "--- status:", testStatus)
 
-	var b []Measurement
-	if test.Type == TestTypeBenchmark && pktgenAppIndex >= 0 && apps[pktgenAppIndex].Benchmarks != nil {
-		ports := len(apps[pktgenAppIndex].Benchmarks[0])
-		b = make([]Measurement, ports)
-		for _, m := range apps[pktgenAppIndex].Benchmarks {
+	tri := TestcaseReportInfo{
+		TestName: test.Name,
+		Status:   testStatus,
+		Apps:     apps,
+	}
+
+	if test.Type == TestTypeBenchmark {
+		// Fill up pktgen transfer rate stats
+		if pktgenAppIndex >= 0 && apps[pktgenAppIndex].PktgenBenchdata != nil {
+			ports := len(apps[pktgenAppIndex].PktgenBenchdata[0])
+			b := make([]PktgenMeasurement, ports)
+			for _, m := range apps[pktgenAppIndex].PktgenBenchdata {
+				for p := 0; p < ports; p++ {
+					b[p].PktsTX += m[p].PktsTX
+					b[p].MbitsTX += m[p].MbitsTX
+					b[p].PktsRX += m[p].PktsRX
+					b[p].MbitsRX += m[p].MbitsRX
+				}
+			}
+
+			number := int64(len(apps[pktgenAppIndex].PktgenBenchdata))
 			for p := 0; p < ports; p++ {
-				b[p].PktsTX += m[p].PktsTX
-				b[p].MbitsTX += m[p].MbitsTX
-				b[p].PktsRX += m[p].PktsRX
-				b[p].MbitsRX += m[p].MbitsRX
+				b[p].PktsTX /= number
+				b[p].MbitsTX /= number
+				b[p].PktsRX /= number
+				b[p].MbitsRX /= number
+			}
+
+			tri.PktgenBenchdata = b
+		}
+
+		// Fill up used cores stats
+		if coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
+			clv := 0
+			cd := false
+			cu := 0
+			cf := 0
+			for _, cs := range apps[coresAppIndex].CoresStats {
+				cu += cs.CoresUsed
+				cf += cs.CoresFree
+
+				if !cd && cs.CoresUsed < clv {
+					cd = true
+				}
+				clv = cs.CoresUsed
+			}
+
+			number := len(apps[coresAppIndex].CoresStats)
+
+			tri.CoresStats = &ReportCoresInfo{
+				CoresInfo: CoresInfo{
+					CoresUsed: cu / number,
+					CoresFree: cf / number,
+				},
+				CoreLastValue: clv,
+				CoreDecreased: cd,
 			}
 		}
-
-		number := int64(len(apps[pktgenAppIndex].Benchmarks))
-		for p := 0; p < ports; p++ {
-			b[p].PktsTX /= number
-			b[p].MbitsTX /= number
-			b[p].PktsRX /= number
-			b[p].MbitsRX /= number
-		}
-	}
-
-	var c CoresInfo
-	var clv int
-	var cd = false
-	if test.Type == TestTypeBenchmark && coresAppIndex >= 0 && apps[coresAppIndex].CoresStats != nil {
-		for _, cs := range apps[coresAppIndex].CoresStats {
-			c.CoresUsed += cs.CoresUsed
-			c.CoresFree += cs.CoresFree
-
-			if !cd && cs.CoresUsed < clv {
-				cd = true
+	} else if test.Type == TestTypeApacheBenchmark {
+		// Find which app has Apache Benchmark statistics report
+		for iii := range apps {
+			if apps[iii].config.Type == TestAppApacheBenchmark {
+				tri.ABStats = apps[iii].abs
+				break
 			}
-			clv = cs.CoresUsed
 		}
-
-		number := len(apps[coresAppIndex].CoresStats)
-		c.CoresUsed /= number
-		c.CoresFree /= number
+	} else if test.Type == TestTypeLatency {
+		// Find which app has Latency statistics report
+		for iii := range apps {
+			if apps[iii].config.Type == TestAppLatency {
+				tri.LatStats = apps[iii].lats
+				break
+			}
+		}
 	}
 
-	return &TestcaseReportInfo{
-		Status:        testStatus,
-		Benchdata:     b,
-		CoresStats:    c,
-		CoreLastValue: clv,
-		CoreDecreased: cd,
-		Apps:          apps,
+	return &tri
+}
+
+func isTestInList(test *TestConfig, tl TestsList) bool {
+	if len(tl) == 0 {
+		return true
 	}
+
+	for iii := range tl {
+		if tl[iii].MatchString(test.Name) {
+			return true
+		}
+	}
+	return false
 }
 
 // RunAllTests launches all tests.
-func (config *TestsuiteConfig) RunAllTests(logdir string) int {
+func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList) int {
 	report := StartReport(logdir)
 	if report == nil {
 		return 255
@@ -178,29 +217,41 @@ func (config *TestsuiteConfig) RunAllTests(logdir string) int {
 	sichan := make(chan os.Signal, 1)
 	signal.Notify(sichan, os.Interrupt)
 
-	var totalTests, passedTests, failedTests int
+	var totalTests, passedTests, failedTests []string
 	for iii := range config.Tests {
-		tr := config.executeOneTest(iii, logdir, sichan)
-		report.Pipe <- *tr
+		test := &config.Tests[iii]
 
-		totalTests++
-		if tr.Status == TestReportedPassed {
-			passedTests++
-		} else {
-			failedTests++
-		}
+		if isTestInList(test, tl) {
+			tr := config.executeOneTest(test, logdir, sichan)
+			report.AddTestResult(tr)
 
-		if tr.Status == TestInterrupted {
-			break
+			totalTests = append(totalTests, test.Name)
+			if tr.Status == TestReportedPassed {
+				passedTests = append(passedTests, test.Name)
+			} else {
+				failedTests = append(failedTests, test.Name)
+			}
+
+			if tr.Status == TestInterrupted {
+				break
+			}
 		}
 	}
 
 	report.FinishReport()
 
-	LogInfo("TESTS EXECUTED:", totalTests)
-	LogInfo("PASSED:", passedTests)
-	LogInfo("FAILED:", failedTests)
-	return failedTests
+	LogInfo("EXECUTED TEST NAMES:", totalTests)
+	LogInfo("PASSED TEST NAMES:", passedTests)
+	LogInfo("FAILED TEST NAMES:", failedTests)
+	LogInfo("TESTS EXECUTED:", len(totalTests))
+	LogInfo("PASSED:", len(passedTests))
+	LogInfo("FAILED:", len(failedTests))
+
+	if len(failedTests) > 0 {
+		return 100 + len(failedTests)
+	} else {
+		return 0
+	}
 }
 
 func setAppStatusOnTimeout(testType TestType, apps []RunningApp) {

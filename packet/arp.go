@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
 )
 
 // ARPHdr is protocol structure used in Address Resolution Protocol
@@ -58,16 +57,11 @@ func (hdr *ARPHdr) String() string {
 // initARPCommonData allocates ARP packet, fills ether header and
 // arp hrd, pro, hln, pln with values for ether and IPv4
 func initARPCommonData(packet *Packet) bool {
-	var bufSize uint = common.EtherLen + common.ARPLen
-	if low.AppendMbuf(packet.CMbuf, bufSize) == false {
-		common.LogWarning(common.Debug, "Cannot append mbuf")
+	if InitEmptyARPPacket(packet) == false {
 		return false
 	}
 
-	packet.Ether.EtherType = SwapBytesUint16(common.ARPNumber)
-
-	packet.ParseL3()
-	arp := packet.GetARP()
+	arp := packet.GetARPNoCheck()
 	arp.HType = SwapBytesUint16(1)
 	arp.PType = SwapBytesUint16(common.IPV4Number)
 	arp.HLen = common.EtherAddrLen
@@ -88,7 +82,7 @@ func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, T
 	}
 	packet.Ether.SAddr = SHA
 	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	arp := packet.GetARP()
+	arp := packet.GetARPNoCheck()
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
@@ -109,7 +103,7 @@ func InitARPReplyPacket(packet *Packet, SHA, THA [common.EtherAddrLen]uint8, SPA
 	}
 	packet.Ether.SAddr = SHA
 	packet.Ether.DAddr = THA
-	arp := packet.GetARP()
+	arp := packet.GetARPNoCheck()
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
@@ -131,7 +125,7 @@ func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]
 	}
 	packet.Ether.SAddr = SHA
 	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	arp := packet.GetARP()
+	arp := packet.GetARPNoCheck()
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
@@ -153,7 +147,7 @@ func InitGARPAnnouncementReplyPacket(packet *Packet, SHA [common.EtherAddrLen]ui
 	}
 	packet.Ether.SAddr = SHA
 	packet.Ether.DAddr = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	arp := packet.GetARP()
+	arp := packet.GetARPNoCheck()
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)

@@ -9,25 +9,24 @@ import "github.com/intel-go/nff-go/packet"
 var rulesp unsafe.Pointer
 
 func main() {
-	config := flow.Config{}
-	checkFatal(flow.SystemInit(&config))
+	flow.CheckFatal(flow.SystemInit(nil))
 
 	initCommonState()
 
 	l3Rules, err := packet.GetL3ACLFromORIG("rules1.conf")
-	checkFatal(err)
+	flow.CheckFatal(err)
 	rulesp = unsafe.Pointer(&l3Rules)
 	go updateSeparateRules()
 
 	firstFlow, err := flow.SetReceiver(0)
-	checkFatal(err)
+	flow.CheckFatal(err)
 	secondFlow, err := flow.SetSeparator(firstFlow, mySeparator, nil)
-	checkFatal(err)
-	checkFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
-	checkFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
-	checkFatal(flow.SetSender(firstFlow, 0))
-	checkFatal(flow.SetStopper(secondFlow))
-	checkFatal(flow.SystemStart())
+	flow.CheckFatal(err)
+	flow.CheckFatal(flow.SetHandler(firstFlow, modifyPacket[0], nil))
+	flow.CheckFatal(flow.SetHandler(secondFlow, modifyPacket[1], nil))
+	flow.CheckFatal(flow.SetSender(firstFlow, 0))
+	flow.CheckFatal(flow.SetStopper(secondFlow))
+	flow.CheckFatal(flow.SystemStart())
 }
 
 func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
@@ -39,7 +38,7 @@ func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
 		locall3Rules, err := packet.GetL3ACLFromORIG("rules1.conf")
-		checkFatal(err)
+		flow.CheckFatal(err)
 		atomic.StorePointer(&rulesp, unsafe.Pointer(locall3Rules))
 	}
 }
