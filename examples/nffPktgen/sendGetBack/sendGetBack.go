@@ -15,7 +15,7 @@ import (
 
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
-	"github.com/intel-go/nff-go/test/localTesting/pktgen/generator"
+	"github.com/intel-go/nff-go/examples/nffPktgen/generator"
 )
 
 var (
@@ -29,12 +29,19 @@ type mapFlags struct {
 	set   bool
 }
 
+func parseStr(s string) string {
+	indx := strings.Index(s, "'")
+	substr := s[indx+1:]
+	indx = strings.Index(substr, "'")
+	return substr[:indx]
+}
+
 func parseIntOrStr(s string) interface{} {
 	var parsed interface{}
 	var err error
 	parsed, err = strconv.Atoi(s)
 	if err != nil {
-		parsed = strings.Trim(s, "' ")
+		parsed  = parseStr(s)
 	}
 	return parsed
 }
@@ -60,7 +67,7 @@ func (m *mapFlags) Set(s string) error {
 	for _, val := range ss {
 		val = strings.TrimSpace(val)
 		pair := strings.Split(val, ":")
-		value := strings.Trim(pair[1], "' ")
+		value := parseStr(pair[1])
 		(*m).value[parseIntOrStr(pair[0])] = value
 	}
 	(*m).set = true
