@@ -10,6 +10,9 @@ TESTING_TARGETS = $(CI_TESTING_TARGETS) test/stability
 
 all: $(SUBDIRS)
 
+debug:
+	$(MAKE) all NFF_GO_DEBUG=y
+
 dpdk: nff-go-base
 
 test: dpdk
