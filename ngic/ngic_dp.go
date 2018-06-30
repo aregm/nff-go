@@ -236,7 +236,6 @@ func main() {
 //
 func FilterFunction(current *packet.Packet, context flow.UserContext) bool {
 	ipv4, ipv6, arp := current.ParseAllKnownL3()
-	utils.LogDebug(utils.Debug, "Ini FilterFunction ", ipv4.DstAddr)
 	if arp != nil {
 		utils.LogDebug(utils.Debug, "ARP pkt found ", ipv4.DstAddr)
 		return true
@@ -360,9 +359,9 @@ func s1u_handler(current *packet.Packet, context flow.UserContext) bool {
 	ipv4 := current.GetIPv4()
 	if ipv4 == nil || ipv4.DstAddr != utils.StringToIPv4(config.S1U_IP) {
 		// reject with wrong dest ip
-		utils.LogError(utils.Debug, " reject dest ip doesn't match")
+		utils.LogError(utils.Debug, "INVALID PKT REJECT: dest ip doesn't match")
 		if ipv4 != nil {
-			utils.LogError(utils.Debug, "reject dest ip doesn't match %v", ipv4)
+			utils.LogError(utils.Debug, "INVALID PKT REJECT: dest ip doesn't match %v", ipv4)
 		}
 		return false
 	}
@@ -372,14 +371,14 @@ func s1u_handler(current *packet.Packet, context flow.UserContext) bool {
 
 	if udp == nil || udp.DstPort != packet.SwapUDPPortGTPU {
 		// reject un-tunneled packet
-		utils.LogError(utils.Debug, "rejecting un-tunneled packet")
+		utils.LogError(utils.Debug, "INVALID PKT REJECT: un-tunneled packet")
 		return false
 	}
 	gtpu := current.GTPIPv4FastParsing()
 
 	if gtpu.TEID == 0 || gtpu.MessageType != packet.G_PDU {
 		// reject for gtpu reasons
-		utils.LogError(utils.Debug, "rejecting not valid GTPU packet")
+		utils.LogError(utils.Debug, "INVALID PKT REJECT not valid GTPU packet")
 		return false
 	}
 
@@ -396,15 +395,15 @@ func s1u_handler(current *packet.Packet, context flow.UserContext) bool {
 	}
 
 	if current.DecapsulateIPv4GTP() == false {
-		utils.LogError(utils.Debug, "reject unable to decap GTPU header")
+		utils.LogError(utils.Debug, "INVALID PKT REJECT: unable to decap GTPU header")
 		return false
 	}
 
 	current.ParseL3()
 	ipv4 = current.GetIPv4()
 
-	utils.LogDebug(utils.Debug, "decap:gtpu.TEID = ", utils.SwapBytesUint32(pkt_gtpu_teid))
-	utils.LogDebug(utils.Debug, "decap:inner pkt src ipv4 = ", ipv4)
+//	utils.LogDebug(utils.Debug, "decap:gtpu.TEID = ", utils.SwapBytesUint32(pkt_gtpu_teid))
+//	utils.LogDebug(utils.Debug, "decap:inner pkt src ipv4 = ", ipv4)
 
 	if filter_ul_traffic(current) == false {
 		return false
@@ -435,15 +434,15 @@ func sgi_handler(current *packet.Packet, context flow.UserContext) bool {
 	fteid, ok := dl_map[pkt_ipv4.DstAddr]
 
 	if ok == false {
-		utils.LogError(utils.Debug, "INVALID PKT REJECT : TEID not found for UE_IP ", utils.Int2ip(pkt_ipv4.DstAddr).String())
+		utils.LogError(utils.Debug, "INVALID PKT REJECT: TEID not found for UE_IP ", utils.Int2ip(pkt_ipv4.DstAddr).String())
 		return false
 	}
 
-	utils.LogDebug(utils.Debug, "encap:teid = ", utils.SwapBytesUint32(fteid.ENB_TEID))
-	utils.LogDebug(utils.Debug, "encap:pkt ipv4 = ", pkt_ipv4)
+//	utils.LogDebug(utils.Debug, "encap:teid = ", utils.SwapBytesUint32(fteid.ENB_TEID))
+//	utils.LogDebug(utils.Debug, "encap:pkt ipv4 = ", pkt_ipv4)
 
-	if current.EncapsulateIPv4GTP(fteid.ENB_TEID /* TEID */) == false {
-		utils.LogError(utils.Debug, "Encapsulating GTP pkt ")
+	if current.EncapsulateIPv4GTP(fteid.ENB_TEID) == false {
+		utils.LogError(utils.Debug, "INVALID PKT REJECT: Encapsulating GTP pkt ")
 		return false
 	}
 
