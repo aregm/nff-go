@@ -1,3 +1,7 @@
+// Copyright (c) 2003-2018, Great Software Laboratory Pvt. Ltd.
+// Copyright (c) 2017 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 package rules
 
 import (
@@ -392,7 +396,6 @@ func LookUpPCCRuleBySDF(sdf_idx int) PCC_FILTER {
 
 	utils.LogDebug(utils.Debug, "LookUpPCCRuleBySDF No of rules found : ", len(pcc_filters))
 	if len(pcc_filters) == 0 {
-		//	    utils.LogDebug(utils.Debug,"returning default sdf rule ")
 		return pcc_filter
 	}
 
@@ -407,7 +410,6 @@ func LookUpPCCRuleByADC(adc_idx int) (PCC_FILTER, error) {
 	pcc_filters := pcc_adc_map[adc_idx]
 
 	utils.LogDebug(utils.Debug, "LookUpPCCRuleByADC No of rules found : ", len(pcc_filters))
-
 	if len(pcc_filters) == 0 {
 		return pcc_filter, errors.New("No PCC rule matched ")
 	}
