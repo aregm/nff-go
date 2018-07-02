@@ -28,6 +28,10 @@ var (
 )
 
 func init() {
+	
+	if _, err := os.Stat("log"); os.IsNotExist(err) {
+	          os.Mkdir("log", 0666)
+	}
 
 	file, err := os.OpenFile(LOG_FILE_PATH, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
