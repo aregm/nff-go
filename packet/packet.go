@@ -473,6 +473,18 @@ func InitEmptyPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+func fillIPv4Default(packet *Packet, plLen uint16, nextProto uint8) {
+	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(plLen)
+	packet.GetIPv4NoCheck().NextProtoID = nextProto
+}
+
+func fillIPv6Default(packet *Packet, totalLen uint16, nextProto uint8) {
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(totalLen)
+	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
+	packet.GetIPv6NoCheck().Proto = nextProto
+}
+
 // InitEmptyIPv4Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv4 headers.
 func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
@@ -483,16 +495,12 @@ func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
 		LogWarning(Debug, "InitEmptyIPv4Packet: Cannot append mbuf")
 		return false
 	}
-
-	// After packet is parsed, we can write to packet struct known protocol types
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
-	packet.GetIPv4NoCheck().NextProtoID = NoNextHeader
+	fillIPv4Default(packet, uint16(IPv4MinLen+plSize), NoNextHeader)
+
 	if hwtxchecksum {
 		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4OLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
@@ -512,10 +520,7 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-	packet.GetIPv6NoCheck().Proto = NoNextHeader
-
+	fillIPv6Default(packet, uint16(plSize), NoNextHeader)
 	return true
 }
 
@@ -546,15 +551,12 @@ func InitEmptyIPv4TCPPacket(packet *Packet, plSize uint) bool {
 	}
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = TCPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
-
+	fillIPv4Default(packet, uint16(IPv4MinLen+TCPMinLen+plSize), TCPNumber)
 	packet.ParseL4ForIPv4()
 	packet.GetTCPNoCheck().DataOff = TCPMinDataOffset
 	packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(packet.GetTCPNoCheck().DataOff&0xf0)>>2)
+
 	if hwtxchecksum {
 		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
@@ -575,12 +577,8 @@ func InitEmptyIPv4UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen + UDPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = UDPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
-
+	fillIPv4Default(packet, uint16(IPv4MinLen+UDPLen+plSize), UDPNumber)
 	packet.ParseL4ForIPv4()
 	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
@@ -604,11 +602,8 @@ func InitEmptyIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen + ICMPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = ICMPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	fillIPv4Default(packet, uint16(IPv4MinLen+ICMPLen+plSize), ICMPNumber)
 	packet.ParseL4ForIPv4()
 	return true
 }
@@ -627,13 +622,11 @@ func InitEmptyIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = TCPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-
+	fillIPv6Default(packet, uint16(TCPMinLen+plSize), TCPNumber)
 	packet.ParseL4ForIPv6()
 	packet.GetTCPNoCheck().DataOff = TCPMinDataOffset
 	packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(packet.GetTCPNoCheck().DataOff&0xf0)>>2)
+
 	if hwtxchecksum {
 		low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
 	}
@@ -654,10 +647,7 @@ func InitEmptyIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + UDPLen)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = UDPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-
+	fillIPv6Default(packet, uint16(UDPLen+plSize), UDPNumber)
 	packet.ParseL4ForIPv6()
 	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
@@ -678,11 +668,8 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + ICMPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = ICMPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
+	fillIPv6Default(packet, uint16(ICMPLen+plSize), ICMPNumber)
 	packet.ParseL4ForIPv6()
 	return true
 }
