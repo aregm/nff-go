@@ -1,3 +1,7 @@
+// Copyright (c) 2003-2018, Great Software Laboratory Pvt. Ltd.
+// Copyright (c) 2017 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
 package main
 
 import (
@@ -387,10 +391,10 @@ func s1u_handler(current *packet.Packet, context flow.UserContext) bool {
 	// TODO
 	// Look up gtpu.TEID sesson and UE IP validate against session
 	//
-	_, ok := ul_map[utils.SwapBytesUint32(pkt_gtpu_teid)]
+	_, ok := ul_map[packet.SwapBytesUint32(pkt_gtpu_teid)]
 
 	if ok == false {
-		utils.LogError(utils.Debug, "INVALID PKT REJECT :  UE_CONEXT not found for TEID", utils.SwapBytesUint32(pkt_gtpu_teid))
+		utils.LogError(utils.Debug, "INVALID PKT REJECT :  UE_CONEXT not found for TEID", packet.SwapBytesUint32(pkt_gtpu_teid))
 		return false
 	}
 
@@ -402,8 +406,8 @@ func s1u_handler(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 = current.GetIPv4()
 
-//	utils.LogDebug(utils.Debug, "decap:gtpu.TEID = ", utils.SwapBytesUint32(pkt_gtpu_teid))
-//	utils.LogDebug(utils.Debug, "decap:inner pkt src ipv4 = ", ipv4)
+	//	utils.LogDebug(utils.Debug, "decap:gtpu.TEID = ", packet.SwapBytesUint32(pkt_gtpu_teid))
+	//	utils.LogDebug(utils.Debug, "decap:inner pkt src ipv4 = ", ipv4)
 
 	if filter_ul_traffic(current) == false {
 		return false
@@ -438,8 +442,8 @@ func sgi_handler(current *packet.Packet, context flow.UserContext) bool {
 		return false
 	}
 
-//	utils.LogDebug(utils.Debug, "encap:teid = ", utils.SwapBytesUint32(fteid.ENB_TEID))
-//	utils.LogDebug(utils.Debug, "encap:pkt ipv4 = ", pkt_ipv4)
+	//	utils.LogDebug(utils.Debug, "encap:teid = ", packet.SwapBytesUint32(fteid.ENB_TEID))
+	//	utils.LogDebug(utils.Debug, "encap:pkt ipv4 = ", pkt_ipv4)
 
 	if current.EncapsulateIPv4GTP(fteid.ENB_TEID) == false {
 		utils.LogError(utils.Debug, "INVALID PKT REJECT: Encapsulating GTP pkt ")
