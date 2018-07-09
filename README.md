@@ -69,7 +69,8 @@ available in the master branch.
 
 ## Getting NFF-GO
 
-Use the **go get** command to download NFF-GO. You must first set your GOPATH
+Use the **go get** command to download NFF-GO. You must first set your GOPATH:
+
        export GOPATH=/my/local/directory
        go get -v -d github.com/intel-go/nff-go
 
