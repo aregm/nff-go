@@ -2,23 +2,18 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package generator
 
 import (
 	"bytes"
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
 	"net"
 	"os"
-	"strconv"
-	"strings"
-	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
@@ -26,133 +21,40 @@ import (
 	"github.com/intel-go/nff-go/test/localTesting/pktgen/parseConfig"
 )
 
-var (
+var gen generator
+
+type generator struct {
 	count         uint64
-	testDoneEvent *sync.Cond
-	number        uint64
-	isCycled      bool
-)
-
-type mapFlags struct {
-	value map[int]string
-	set   bool
+	isFinite	  bool
+	number uint64
 }
 
-func (m *mapFlags) String() string {
-	s := ""
-	for key, value := range (*m).value {
-		if s != "" {
-			s += ","
-		}
-		s += fmt.Sprintf("%d: '%s'", key, value)
-	}
-	return s
+// NewGenerator return generator struct pointer
+// generator is single and created only once
+func GetGenerator() *generator {
+	return &gen
 }
 
-func (m *mapFlags) Set(s string) error {
-	ss := strings.Split(s, ",")
-	(*m).value = make(map[int]string)
-	for _, val := range ss {
-		val = strings.TrimSpace(val)
-		pair := strings.Split(val, ":")
-		key, err := strconv.Atoi(pair[0])
-		if err != nil {
-			return err
-		}
-		value := strings.Trim(pair[1], "' ")
-		(*m).value[key] = value
-	}
-	(*m).set = true
-	return nil
+// GetGeneratedNumber returns a number of packets generated
+func (g *generator) GetGeneratedNumber() uint64 {
+	return atomic.LoadUint64(&(g.count))
 }
 
-func main() {
-	var (
-		portflag           uint
-		outFile, inFile    string
-		outPort            uint16
-		usePort, useFile   bool
-		speed              uint64
-		m                  sync.Mutex
-		fileFlow, portFlow *flow.Flow
-		eachPortConfig     mapFlags
-	)
-	flag.StringVar(&outFile, "outfile", "", "file to write output to")
-	flag.UintVar(&portflag, "outport", 70000, "port to send output to")
-	flag.StringVar(&inFile, "infile", "config.json", "file with configurations for generator")
-	flag.Uint64Var(&number, "number", 10000000, "stop after generation number number")
-	flag.BoolVar(&isCycled, "cycle", false, "cycle execution and generate infinite number of packets")
-	flag.Uint64Var(&speed, "speed", 6000000, "speed of fast generator, Pkts/s")
-	flag.Var(&eachPortConfig, "portConfig", "specify config per port portNum: 'path', portNum2: 'path2'. For example: 1: 'ip4.json', 0: 'mix.json'")
-	flag.Parse()
+// ResetCounter resets count of generated packets
+func (g *generator) ResetCounter() {
+	atomic.StoreUint64(&(g.count), 0)
+}
 
-	// Init NFF-GO system at 16 available cores
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+// SetGenerateNumber sets a number to generate
+func (g *generator) SetGenerateNumber(number uint64) {
+	g.number = number
+	g.isFinite = true
+}
 
-	testDoneEvent = sync.NewCond(&m)
-
-	if eachPortConfig.set {
-		for key, value := range eachPortConfig.value {
-			configuration, err := ReadConfig(value)
-			if err != nil {
-				panic(fmt.Sprintf("%s config reading failed: %v", value, err))
-			}
-			context, err := getGeneratorContext(configuration)
-			flow.CheckFatal(err)
-			outFlow, err := flow.SetFastGenerator(generate, speed, &context)
-			flow.CheckFatal(err)
-			flow.CheckFatal(flow.SetSender(outFlow, uint16(key)))
-		}
-	} else {
-		if portflag != 70000 {
-			usePort = true
-			outPort = uint16(portflag)
-		}
-		if outFile != "" {
-			useFile = true
-		}
-		if !usePort && !useFile {
-			useFile = true
-			outFile = "pkts_generated.pcap"
-		}
-		configuration, err := ReadConfig(inFile)
-		if err != nil {
-			panic(fmt.Sprintf("config reading failed: %v", err))
-		}
-
-		context, err := getGeneratorContext(configuration)
-		flow.CheckFatal(err)
-		fileFlow, err = flow.SetFastGenerator(generate, speed, &context)
-		flow.CheckFatal(err)
-		if useFile && usePort {
-			portFlow, err = flow.SetCopier(fileFlow)
-			flow.CheckFatal(err)
-		} else {
-			if usePort {
-				portFlow = fileFlow
-			}
-		}
-		if useFile {
-			flow.CheckFatal(flow.SetSenderFile(fileFlow, outFile))
-		}
-		if usePort {
-			flow.CheckFatal(flow.SetSender(portFlow, outPort))
-		}
-	}
-
-	// Start pipeline
-	go func() {
-		flow.CheckFatal(flow.SystemStart())
-	}()
-
-	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
-
-	// Print report
-	println("Sent", atomic.LoadUint64(&count), "packets")
+// ResetGenerateNumber sets a number to generate to infinite
+func (g *generator) ResetGenerateNumber() {
+	g.number = 0
+	g.isFinite = false
 }
 
 // ReadConfig function reads and parses config file.
@@ -301,16 +203,6 @@ func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet,
 	}
 }
 
-func checkFinish() {
-	if isCycled {
-		return
-	}
-	if atomic.AddUint64(&count, 1) >= number {
-		time.Sleep(time.Second)
-		testDoneEvent.Signal()
-	}
-}
-
 // one unit for each mix
 type generatorTableUnit struct {
 	have, need    uint32
@@ -326,6 +218,7 @@ type genParameters struct {
 	table  []generatorTableUnit
 	next   []uint32
 	length uint32
+	rnd *rand.Rand
 }
 
 func (gp *genParameters) String() string {
@@ -340,13 +233,14 @@ func (gp *genParameters) String() string {
 func (gp genParameters) Copy() interface{} {
 	cpy := make([]generatorTableUnit, len(gp.table))
 	copy(cpy, gp.table)
-	return genParameters{table: cpy, next: []uint32{0}, length: gp.length}
+	return genParameters{table: cpy, next: []uint32{0}, length: gp.length, rnd: rand.New(rand.NewSource(13))}
 }
 
 func (gp genParameters) Delete() {
 }
 
-func getGeneratorContext(mixConfig []*parseConfig.MixConfig) (genParameters, error) {
+// GetGeneratorContext returns generator context according to config
+func GetGeneratorContext(mixConfig []*parseConfig.MixConfig) (genParameters, error) {
 	var t []generatorTableUnit
 	for _, packetConfig := range mixConfig {
 		genFunc, err := getGenerator(packetConfig.Config)
@@ -356,10 +250,14 @@ func getGeneratorContext(mixConfig []*parseConfig.MixConfig) (genParameters, err
 		tu := generatorTableUnit{have: 0, need: packetConfig.Quantity, generatorFunc: genFunc, config: packetConfig.Config}
 		t = append(t, tu)
 	}
-	return genParameters{table: t, next: []uint32{0}, length: uint32(len(t))}, nil
+	return genParameters{table: t, next: []uint32{0}, length: uint32(len(t)), rnd: rand.New(rand.NewSource(13))}, nil
 }
 
-func generate(pkt *packet.Packet, context flow.UserContext) {
+// Generate is a main generatior func
+func Generate(pkt *packet.Packet, context flow.UserContext) {
+	if gen.isFinite && gen.count >= gen.number {
+		return
+	}
 	genP := context.(genParameters)
 	table := genP.table
 	next := genP.next[0]
@@ -375,6 +273,7 @@ func generate(pkt *packet.Packet, context flow.UserContext) {
 		}
 	}
 	table[next].generatorFunc(pkt, table[next].config)
+	atomic.AddUint64(&(gen.count), 1)
 	context.(genParameters).table[next].have++
 }
 
@@ -382,7 +281,6 @@ func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	data, err := generateData(l2.Data)
 	if err != nil {
@@ -406,7 +304,6 @@ func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	data, err := generateData(l3.Data)
@@ -446,7 +343,6 @@ func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.ARPConfig)
 	var SHA, THA [common.EtherAddrLen]uint8
@@ -495,7 +391,6 @@ func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.TCPConfig)
@@ -543,7 +438,6 @@ func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.UDPConfig)
@@ -591,7 +485,6 @@ func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.ICMPConfig)
