@@ -217,7 +217,7 @@ func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) 
 	ffi := new(instance)
 	common.LogDebug(common.Initialization, "Start new instance for", ff.name)
 	ffi.inIndex = inIndex
-	ffi.report = make(chan reportPair, 50)
+	ffi.report = make(chan reportPair, len(scheduler.cores) - 1)
 	ffi.previousSpeed = make([]reportPair, len(scheduler.cores), len(scheduler.cores))
 	ffi.ff = ff
 	err = ffi.startNewClone(scheduler, ff.instanceNumber)
@@ -582,6 +582,15 @@ func (ff *flowFunction) updateCurrentSpeed() {
 			temp := <-ffi.report
 			ffi.currentSpeed.Packets += temp.Packets
 			ffi.currentSpeed.Bytes += temp.Bytes
+		}
+		// If any flow functions wait in a queue to put their
+		// reports immidiately after reading- we should remove them.
+		// They will put reports again after scheduling time.
+		t = len(ffi.report)
+		if t != 0 {
+			for k := 0; k < t; k++ {
+				<-ffi.report
+			}
 		}
 	}
 }
