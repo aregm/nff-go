@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 
@@ -16,12 +17,13 @@ import (
 
 func main() {
 	// Parse arguments
-	cores := flag.String("cores", "", "Specify CPU cores to use")
-	configFile := flag.String("config", "config.json", "Specify config file name")
-	flag.BoolVar(&nat.NoCalculateChecksum, "nocsum", false, "Specify whether to calculate checksums in modified packets")
-	flag.BoolVar(&nat.NoHWTXChecksum, "nohwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum)")
-	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
-	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
+	cores := flag.String("cores", "", "Specify CPU cores to use.")
+	configFile := flag.String("config", "config.json", "Specify config file name.")
+	flag.BoolVar(&nat.NoCalculateChecksum, "nocsum", false, "Specify whether to calculate checksums in modified packets.")
+	flag.BoolVar(&nat.NoHWTXChecksum, "nohwcsum", false, "Specify whether to use hardware offloading for checksums calculation (requires -csum).")
+	nostats := flag.Bool("nostats", false, "Disable statics HTTP server")
+	noscheduler := flag.Bool("no-scheduler", false, "Disable scheduler.")
+	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL.")
 	flag.Parse()
 
 	// Set up reaction to SIGINT (Ctrl-C)
@@ -31,12 +33,20 @@ func main() {
 	// Read config
 	flow.CheckFatal(nat.ReadConfig(*configFile))
 
+	var statsServerAddres *net.TCPAddr = nil
+	if !*nostats {
+		statsServerAddres = &net.TCPAddr{
+			Port: 8080,
+		}
+	}
+
 	// Init NFF-GO system at 16 available cores
 	nffgoconfig := flow.Config{
 		CPUList:          *cores,
 		HWTXChecksum:     !nat.NoHWTXChecksum,
 		DPDKArgs:         []string{*dpdkLogLevel},
 		DisableScheduler: *noscheduler,
+		StatsHTTPAddress: statsServerAddres,
 	}
 
 	flow.CheckFatal(flow.SystemInit(&nffgoconfig))

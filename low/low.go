@@ -447,25 +447,25 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, stats *common.RXTXStats) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // ReceiveKNI - get packets from Linux core and enqueue on a Ring.
-func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
-	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int) {
+func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int, stats *common.RXTXStats) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Stop - dequeue and free packets.
@@ -557,7 +557,6 @@ func CreateMempools(name string, inIndex int32) []*Mempool {
 	}
 	return m
 }
-
 
 // SetAffinity sets cpu affinity mask.
 func SetAffinity(coreID int) error {

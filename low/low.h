@@ -31,6 +31,9 @@
 
 // #define DEBUG
 // #define REASSEMBLY
+#define COUNTERS_ENABLED
+#define USE_INTERLOCKED_COUNTERS
+#define ANALYZE_PACKETS_SIZES
 
 // This macros clears packet structure which is stored inside mbuf
 // 0 offset is L3 protocol pointer
@@ -66,6 +69,10 @@
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
 long stop_freed = 0;
+
+typedef struct {
+	uint64_t PacketsProcessed, PacketsDropped, BytesProcessed;
+} RXTXStats;
 
 int mbufStructSize;
 int headroomSize;
@@ -231,6 +238,17 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	return 0;
 }
 
+#if defined(COUNTERS_ENABLED) && defined(ANALYZE_PACKETS_SIZES)
+__attribute__((always_inline))
+static inline uint64_t calculateSize(struct rte_mbuf *bufs[BURST_SIZE], uint16_t number) {
+	uint64_t size = 0;
+	for (uint32_t i = 0; i < number; i++) {
+		size += bufs[i]->pkt_len;
+	}
+	return size;
+}
+#endif
+
 __attribute__((always_inline))
 static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t real_number, uint16_t required_number) {
 	if (unlikely(real_number < required_number)) {
@@ -319,7 +337,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -338,14 +356,30 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 #ifdef DEBUG
 			receive_received += rx_pkts_number;
 			receive_pushed += pushed_pkts_number;
-#endif
+#endif // DEBUG
+
+#ifdef COUNTERS_ENABLED
+#ifdef USE_INTERLOCKED_COUNTERS
+			__sync_fetch_and_add(&stats->PacketsProcessed, pushed_pkts_number);
+#ifdef ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->BytesProcessed, calculateSize(bufs, pushed_pkts_number));
+#endif // ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->PacketsDropped, rx_pkts_number - pushed_pkts_number);
+#else
+			stats->PacketsProcessed += pushed_pkts_number;
+#ifdef ANALYZE_PACKETS_SIZES
+			stats->BytesProcessed += calculateSize(bufs, pushed_pkts_number);
+#endif // ANALYZE_PACKETS_SIZES
+			stats->PacketsDropped += rx_pkts_number - pushed_pkts_number;
+#endif // USE_INTERLOCKED_COUNTERS
+#endif // COUNTERS_ENABLED
 		}
 	}
 	free(out_rings);
 	*flag = wasStopped;
 }
 
-void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -365,12 +399,28 @@ void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, in
 #ifdef DEBUG
 		receive_received += rx_pkts_number;
 		receive_pushed += pushed_pkts_number;
-#endif
+#endif // DEBUG
+
+#ifdef COUNTERS_ENABLED
+#ifdef USE_INTERLOCKED_COUNTERS
+			__sync_fetch_and_add(&stats->PacketsProcessed, pushed_pkts_number);
+#ifdef ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->BytesProcessed, calculateSize(bufs, pushed_pkts_number));
+#endif // ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->PacketsDropped, rx_pkts_number - pushed_pkts_number);
+#else
+			stats->PacketsProcessed += pushed_pkts_number;
+#ifdef ANALYZE_PACKETS_SIZES
+			stats->BytesProcessed += calculateSize(bufs, pushed_pkts_number);
+#endif // ANALYZE_PACKETS_SIZES
+			stats->PacketsDropped += rx_pkts_number - pushed_pkts_number;
+#endif // USE_INTERLOCKED_COUNTERS
+#endif // COUNTERS_ENABLED
 	}
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -396,6 +446,22 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32
 			send_required += pkts_for_tx_number;
 			send_sent += tx_pkts_number;
 #endif
+
+#ifdef COUNTERS_ENABLED
+#ifdef USE_INTERLOCKED_COUNTERS
+			__sync_fetch_and_add(&stats->PacketsProcessed, tx_pkts_number);
+#ifdef ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->BytesProcessed, calculateSize(bufs, tx_pkts_number));
+#endif // ANALYZE_PACKETS_SIZES
+			__sync_fetch_and_add(&stats->PacketsDropped, pkts_for_tx_number - tx_pkts_number);
+#else
+			stats->PacketsProcessed += tx_pkts_number;
+#ifdef ANALYZE_PACKETS_SIZES
+			stats->BytesProcessed += calculateSize(bufs, tx_pkts_number);
+#endif // ANALYZE_PACKETS_SIZES
+			stats->PacketsDropped += pkts_for_tx_number - tx_pkts_number;
+#endif // USE_INTERLOCKED_COUNTERS
+#endif // COUNTERS_ENABLED
 		}
 	}
 	free(in_rings);

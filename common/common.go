@@ -412,3 +412,22 @@ func dropInvalidCPUs(nums []int, maxcpu int) []int {
 	}
 	return nums[:i]
 }
+
+// NodeIOPortTelemetry describes statistics for one input or output
+// port of a flow function node.
+type NodeIOPortTelemetry struct {
+	PacketsProcessed uint64
+	BytesProcessed   uint64
+}
+
+// NodeTelemetry describes statistics for one flow function node.
+type NodeTelemetry struct {
+	In  NodeIOPortTelemetry
+	Out []NodeIOPortTelemetry
+}
+
+// RXTXStats describes statistics for sender or receiver flow function
+// node.
+type RXTXStats struct {
+	PacketsProcessed, PacketsDropped, BytesProcessed uint64
+}
