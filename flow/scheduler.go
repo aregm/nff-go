@@ -552,9 +552,9 @@ func (ff *flowFunction) printDebug(schedTime uint) {
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
 		out := ff.instance[0].currentSpeed.normalize(schedTime)
 		if reportMbits {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s, target speed is", int64(targetSpeed), "PKT/S")
+			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s, target speed is", uint64(targetSpeed), "PKT/S")
 		} else {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S, target speed is", int64(targetSpeed), "PKT/S")
+			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S, target speed is", uint64(targetSpeed), "PKT/S")
 		}
 	case readWrite, generate, sendReceiveKNI, receiveRSS:
 	}
