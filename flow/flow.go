@@ -174,16 +174,25 @@ func addGenerator(out low.Rings, generateFunction GenerateFunction, context User
 }
 
 func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
-	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) {
+	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) error {
+	fTargetSpeed := float64(targetSpeed)
+	if fTargetSpeed <= 0 {
+		return common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
+	} else if fTargetSpeed / (1000 /*milleseconds*/ / float64(schedTime)) < float64(burstSize) {
+		// TargetSpeed per schedTime should be more than burstSize because one burstSize packets in
+		// one schedTime seconds are out minimal scheduling part. We can't make generate speed less than this.
+		return common.WrapWithNFError(nil, "Target speed per schedTime should be more than burstSize", common.BadArgument)
+	}
 	par := new(generateParameters)
 	par.out = out
 	par.generateFunction = generateFunction
 	par.mempool = low.CreateMempool("fast generate")
 	par.vectorGenerateFunction = vectorGenerateFunction
-	par.targetSpeed = float64(targetSpeed)
+	par.targetSpeed = fTargetSpeed
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
 	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, &ctx, fastGenerate, 0)
+	return nil
 }
 
 type sendParameters struct {
@@ -641,10 +650,8 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Function tries to achieve target speed by cloning.
 func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
-	if targetSpeed > 0 {
-		addFastGenerator(rings, f, nil, targetSpeed, context)
-	} else {
-		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
+	if err := addFastGenerator(rings, f, nil, targetSpeed, context); err != nil {
+		return nil, err
 	}
 	return newFlow(rings, 1), nil
 }
@@ -655,10 +662,8 @@ func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContex
 // Function tries to achieve target speed by cloning.
 func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
 	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
-	if targetSpeed > 0 {
-		addFastGenerator(rings, nil, f, targetSpeed, context)
-	} else {
-		return nil, common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
+	if err := addFastGenerator(rings, nil, f, targetSpeed, context); err != nil {
+		return nil, err
 	}
 	return newFlow(rings, 1), nil
 }
