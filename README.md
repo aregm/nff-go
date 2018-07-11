@@ -140,19 +140,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 
 ## Building NFF-GO in debug mode
 
-There are several ways.
-* To set environment variable:
-
-		export NFF_GO_DEBUG=y
-		make
-
-or
-
-        make -j8 NFF_GO_DEBUG=y
-
-* To build with debug target
-
-		 make debug -j8
+		make debug -j8
 
 # Running NFF-GO
 
