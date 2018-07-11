@@ -23,7 +23,6 @@ export RTE_TARGET = x86_64-native-linuxapp-gcc
 # VMs and Docker containers.
 CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-O3					\
-	-g					\
 	-std=gnu11				\
 	-m64					\
 	-pthread				\
@@ -43,8 +42,7 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-Wno-deprecated-declarations
 
 ifdef NFF_GO_DEBUG
-# DEBUG flags
-export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -mno-fsgsbase -mno-f16c -include rte_config.h
+export CFLAGS += -g -O0 -D DEBUG
 endif
 
 HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
