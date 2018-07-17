@@ -1,7 +1,3 @@
-// Copyright (c) 2003-2018, Great Software Laboratory Pvt. Ltd.
-// Copyright (c) 2017 Intel Corporation.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
 package utils
 
 import (
@@ -42,6 +38,10 @@ func NextIP(ip net.IP, inc uint) net.IP {
 	return net.IPv4(v0, v1, v2, v3)
 }
 
+func SwapBytesUint32(x uint32) uint32 {
+	return ((x & 0x000000ff) << 24) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) >> 8) | ((x & 0xff000000) >> 24)
+}
+
 func Ip2int(ip net.IP) uint32 {
 	if len(ip) == 16 {
 		return binary.BigEndian.Uint32(ip[12:16])
@@ -61,7 +61,7 @@ func PrintMAC(prompt string, mac [common.EtherAddrLen]uint8) {
 }
 
 func ByteAryToIPv4(ipB [4]byte) uint32 {
-       return uint32(ipB[3])<<24 | uint32(ipB[2])<<16 | uint32(ipB[1])<<8 | uint32(ipB[0])
+	return uint32(ipB[3])<<24 | uint32(ipB[2])<<16 | uint32(ipB[1])<<8 | uint32(ipB[0])
 }
 
 // CheckFatal is an error handling function

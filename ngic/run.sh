@@ -3,7 +3,7 @@
 source config/dp_config.cfg
 
 DEBUG=false
-FLOW_DEBUG=true
+FLOW_DEBUG=false
 
 echo "" > log/dp.log
 
