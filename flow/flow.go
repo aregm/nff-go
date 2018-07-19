@@ -47,6 +47,13 @@ var portPair map[uint32](*port)
 var schedState *scheduler
 var vEach [10][burstSize]uint8
 
+type Timer struct {
+	t *time.Ticker
+	handler func(UserContext)
+	contexts []UserContext
+	checks []*bool
+}
+
 type processSegment struct {
 	out      []low.Rings
 	contexts []UserContext
@@ -1530,6 +1537,43 @@ func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr)
 		}
 	}
 	return uint8(count)
+}
+
+// AddTimer adds a timer which may call handler function every d milliseconds
+// It is required to add at least one variant of this timer for working
+// TODO d should be approximate as schedTime because handler will be call from scheduler
+// Return created timer
+func AddTimer(d time.Duration, handler func(UserContext)) *Timer {
+	t := new(Timer)
+	t.t = time.NewTicker(d)
+	t.handler = handler
+	t.contexts = make([]UserContext, 0, 0)
+	t.checks = make([]*bool, 0, 0)
+	schedState.Timers = append(schedState.Timers, t)
+	return t
+}
+
+// AddVariant adds a variant for an existing timer. Variant is a context parameter
+// which will be passed to handler callback from AddTimer function
+// Function return a pointer to variable which should be set to "true"
+// everytime to prevent timer from ping.
+// Timer variant automatically drops after timer invocation
+func (timer *Timer) AddVariant(context UserContext) *bool {
+	check := false
+	timer.contexts = append(timer.contexts, context)
+	timer.checks = append(timer.checks, &check)
+	return &check
+}
+
+// Stop removes timer with all its variants
+func (timer *Timer) Stop() {
+	timer.t.Stop()
+	for i, t := range schedState.Timers {
+		if t == timer {
+			schedState.Timers = append(schedState.Timers[:i], schedState.Timers[i+1:]...)
+			return
+		}
+	}
 }
 
 // CheckFatal is a default error handling function, which prints error message and
