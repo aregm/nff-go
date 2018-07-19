@@ -17,3 +17,4 @@ COPY sendFixedPktsNumber .
 COPY errorHandling .
 COPY gtpu .
 COPY pingReplay .
+COPY timer .

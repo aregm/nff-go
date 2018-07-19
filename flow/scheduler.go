@@ -153,6 +153,7 @@ type scheduler struct {
 	maxPacketsToClone uint32
 	stopFlag          int32
 	maxRecv           int
+	Timers		  []*Timer
 }
 
 type core struct {
@@ -321,6 +322,36 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 	checkRequired := false
 	for atomic.LoadInt32(&scheduler.stopFlag) == process {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
+		// We have an array of Timers which can be increated by AddTimer function
+		// Timer has duration and handler common for all Timer variants, so firstly
+		// we check that timer ticker channel is ready:
+		for _, t := range(scheduler.Timers) {
+			select {
+			case <-t.t.C:
+				// If this timer was ticked we check all checks of all variants
+				// Timer. We need variants because one TCP timer will handle
+				// different TCP sessions. Variant's context is a difference of
+				// current session from other sessions. Variant's check is a
+				// variable that user will set to "true" if he wants to reset timer
+				// for example if packet of this session was arrived.
+				for i, c := range t.checks {
+					// We set all checks to false. If we saw false check it means
+					// that user didn't see any event and timer handler should be called.
+					// We use boolean checks for performance reasons because reset timer
+					// after each packet is quite slow.
+					if *c == false {
+						t.handler(t.contexts[i])
+						// We remove current variant after handler calling, because this
+						// session was finished.
+						t.contexts = append(t.contexts[:i], t.contexts[i+1:]...)
+						t.checks = append(t.checks[:i], t.checks[i+1:]...)
+						continue
+					}
+					*c = false
+				}
+			default:
+			}
+		}
 		select {
 		case <-tick:
 			checkRequired = true
