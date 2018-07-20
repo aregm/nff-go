@@ -1,24 +1,19 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package generator
 
 import (
 	"bytes"
 	"encoding/binary"
-	"flag"
 	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
 	"net"
 	"os"
-	"strconv"
-	"strings"
-	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
@@ -26,133 +21,40 @@ import (
 	"github.com/intel-go/nff-go/test/localTesting/pktgen/parseConfig"
 )
 
-var (
-	count         uint64
-	testDoneEvent *sync.Cond
-	number        uint64
-	isCycled      bool
-)
+var gen generator
 
-type mapFlags struct {
-	value map[int]string
-	set   bool
+type generator struct {
+	count    uint64
+	isFinite bool
+	number   uint64
 }
 
-func (m *mapFlags) String() string {
-	s := ""
-	for key, value := range (*m).value {
-		if s != "" {
-			s += ","
-		}
-		s += fmt.Sprintf("%d: '%s'", key, value)
-	}
-	return s
+// GetGenerator returns generator struct pointer
+// generator is single and created only once
+func GetGenerator() *generator {
+	return &gen
 }
 
-func (m *mapFlags) Set(s string) error {
-	ss := strings.Split(s, ",")
-	(*m).value = make(map[int]string)
-	for _, val := range ss {
-		val = strings.TrimSpace(val)
-		pair := strings.Split(val, ":")
-		key, err := strconv.Atoi(pair[0])
-		if err != nil {
-			return err
-		}
-		value := strings.Trim(pair[1], "' ")
-		(*m).value[key] = value
-	}
-	(*m).set = true
-	return nil
+// GetGeneratedNumber returns a number of packets generated
+func (g *generator) GetGeneratedNumber() uint64 {
+	return atomic.LoadUint64(&(g.count))
 }
 
-func main() {
-	var (
-		portflag           uint
-		outFile, inFile    string
-		outPort            uint16
-		usePort, useFile   bool
-		speed              uint64
-		m                  sync.Mutex
-		fileFlow, portFlow *flow.Flow
-		eachPortConfig     mapFlags
-	)
-	flag.StringVar(&outFile, "outfile", "", "file to write output to")
-	flag.UintVar(&portflag, "outport", 70000, "port to send output to")
-	flag.StringVar(&inFile, "infile", "config.json", "file with configurations for generator")
-	flag.Uint64Var(&number, "number", 10000000, "stop after generation number number")
-	flag.BoolVar(&isCycled, "cycle", false, "cycle execution and generate infinite number of packets")
-	flag.Uint64Var(&speed, "speed", 6000000, "speed of fast generator, Pkts/s")
-	flag.Var(&eachPortConfig, "portConfig", "specify config per port portNum: 'path', portNum2: 'path2'. For example: 1: 'ip4.json', 0: 'mix.json'")
-	flag.Parse()
+// ResetCounter resets count of generated packets
+func (g *generator) ResetCounter() {
+	atomic.StoreUint64(&(g.count), 0)
+}
 
-	// Init NFF-GO system at 16 available cores
-	config := flow.Config{}
-	flow.CheckFatal(flow.SystemInit(&config))
+// SetGenerateNumber sets a number to generate
+func (g *generator) SetGenerateNumber(number uint64) {
+	g.number = number
+	g.isFinite = true
+}
 
-	testDoneEvent = sync.NewCond(&m)
-
-	if eachPortConfig.set {
-		for key, value := range eachPortConfig.value {
-			configuration, err := ReadConfig(value)
-			if err != nil {
-				panic(fmt.Sprintf("%s config reading failed: %v", value, err))
-			}
-			context, err := getGeneratorContext(configuration)
-			flow.CheckFatal(err)
-			outFlow, err := flow.SetFastGenerator(generate, speed, &context)
-			flow.CheckFatal(err)
-			flow.CheckFatal(flow.SetSender(outFlow, uint16(key)))
-		}
-	} else {
-		if portflag != 70000 {
-			usePort = true
-			outPort = uint16(portflag)
-		}
-		if outFile != "" {
-			useFile = true
-		}
-		if !usePort && !useFile {
-			useFile = true
-			outFile = "pkts_generated.pcap"
-		}
-		configuration, err := ReadConfig(inFile)
-		if err != nil {
-			panic(fmt.Sprintf("config reading failed: %v", err))
-		}
-
-		context, err := getGeneratorContext(configuration)
-		flow.CheckFatal(err)
-		fileFlow, err = flow.SetFastGenerator(generate, speed, &context)
-		flow.CheckFatal(err)
-		if useFile && usePort {
-			portFlow, err = flow.SetCopier(fileFlow)
-			flow.CheckFatal(err)
-		} else {
-			if usePort {
-				portFlow = fileFlow
-			}
-		}
-		if useFile {
-			flow.CheckFatal(flow.SetSenderFile(fileFlow, outFile))
-		}
-		if usePort {
-			flow.CheckFatal(flow.SetSender(portFlow, outPort))
-		}
-	}
-
-	// Start pipeline
-	go func() {
-		flow.CheckFatal(flow.SystemStart())
-	}()
-
-	// Wait for enough packets to arrive
-	testDoneEvent.L.Lock()
-	testDoneEvent.Wait()
-	testDoneEvent.L.Unlock()
-
-	// Print report
-	println("Sent", atomic.LoadUint64(&count), "packets")
+// ResetGenerateNumber sets a number to generate to infinite
+func (g *generator) ResetGenerateNumber() {
+	g.number = 0
+	g.isFinite = false
 }
 
 // ReadConfig function reads and parses config file.
@@ -212,20 +114,20 @@ func getNextPort(port *parseConfig.PortRange) (nextPort uint16) {
 	return nextPort
 }
 
-func getNextSeqNumber(seq *parseConfig.Sequence) (nextSeqNum uint32) {
+func getNextSeqNumber(seq *parseConfig.Sequence, rnd *rand.Rand) (nextSeqNum uint32) {
 	if len(seq.Next) == 0 {
 		return 0
 	}
 	nextSeqNum = seq.Next[0]
 	if seq.Type == parseConfig.RANDOM {
-		seq.Next[0] = rand.Uint32()
+		seq.Next[0] = rnd.Uint32()
 	} else if seq.Type == parseConfig.INCREASING {
 		seq.Next[0]++
 	}
 	return nextSeqNum
 }
 
-func generateData(configuration interface{}) ([]uint8, error) {
+func generateData(configuration interface{}, rnd *rand.Rand) ([]uint8, error) {
 	switch data := configuration.(type) {
 	case parseConfig.Raw:
 		pktData := make([]uint8, len(data.Data))
@@ -234,20 +136,20 @@ func generateData(configuration interface{}) ([]uint8, error) {
 	case parseConfig.RandBytes:
 		maxZise := data.Size + data.Deviation
 		minSize := data.Size - data.Deviation
-		randSize := uint(rand.Float64()*float64(maxZise-minSize) + float64(minSize))
+		randSize := uint(rnd.Float64()*float64(maxZise-minSize) + float64(minSize))
 		pktData := make([]uint8, randSize)
 		for i := range pktData {
-			pktData[i] = byte(rand.Int())
+			pktData[i] = byte(rnd.Int())
 		}
 		return pktData, nil
 	case []parseConfig.PDistEntry:
 		prob := 0.0
-		rndN := math.Abs(rand.Float64())
+		rndN := math.Abs(rnd.Float64())
 		maxProb := parseConfig.PDistEntry{Probability: 0}
 		for _, item := range data {
 			prob += item.Probability
 			if rndN <= prob {
-				pktData, err := generateData(item.Data)
+				pktData, err := generateData(item.Data, rnd)
 				if err != nil {
 					return nil, fmt.Errorf("failed to fill data with pdist data type: %v", err)
 				}
@@ -263,7 +165,7 @@ func generateData(configuration interface{}) ([]uint8, error) {
 		// get the variant with max prob
 		// if something went wrong and rand did not match any prob
 		// may happen if sum of prob was not 1
-		pktData, err := generateData(maxProb.Data)
+		pktData, err := generateData(maxProb.Data, rnd)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fill data with pdist data type: %v", err)
 		}
@@ -272,7 +174,7 @@ func generateData(configuration interface{}) ([]uint8, error) {
 	return nil, fmt.Errorf("unknown data type")
 }
 
-func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet, *parseConfig.PacketConfig), error) {
+func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet, *parseConfig.PacketConfig, *rand.Rand), error) {
 	switch l2 := (configuration.Data).(type) {
 	case parseConfig.EtherConfig:
 		switch l3 := l2.Data.(type) {
@@ -301,20 +203,10 @@ func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet,
 	}
 }
 
-func checkFinish() {
-	if isCycled {
-		return
-	}
-	if atomic.AddUint64(&count, 1) >= number {
-		time.Sleep(time.Second)
-		testDoneEvent.Signal()
-	}
-}
-
 // one unit for each mix
 type generatorTableUnit struct {
 	have, need    uint32
-	generatorFunc func(*packet.Packet, *parseConfig.PacketConfig)
+	generatorFunc func(*packet.Packet, *parseConfig.PacketConfig, *rand.Rand)
 	config        *parseConfig.PacketConfig
 }
 
@@ -326,27 +218,20 @@ type genParameters struct {
 	table  []generatorTableUnit
 	next   []uint32
 	length uint32
-}
-
-func (gp *genParameters) String() string {
-	s := "genP:\n"
-	for _, tu := range gp.table {
-		s = s + fmt.Sprintf("\ttu: %v\n", tu.String())
-	}
-	s = s + fmt.Sprintf("next: %d, len: %d\n", gp.next, gp.length)
-	return s
+	rnd    *rand.Rand
 }
 
 func (gp genParameters) Copy() interface{} {
 	cpy := make([]generatorTableUnit, len(gp.table))
 	copy(cpy, gp.table)
-	return genParameters{table: cpy, next: []uint32{0}, length: gp.length}
+	return genParameters{table: cpy, next: []uint32{0}, length: gp.length, rnd: rand.New(rand.NewSource(13))}
 }
 
 func (gp genParameters) Delete() {
 }
 
-func getGeneratorContext(mixConfig []*parseConfig.MixConfig) (genParameters, error) {
+// GetContext gets generator context according to config
+func GetContext(mixConfig []*parseConfig.MixConfig) (genParameters, error) {
 	var t []generatorTableUnit
 	for _, packetConfig := range mixConfig {
 		genFunc, err := getGenerator(packetConfig.Config)
@@ -356,10 +241,14 @@ func getGeneratorContext(mixConfig []*parseConfig.MixConfig) (genParameters, err
 		tu := generatorTableUnit{have: 0, need: packetConfig.Quantity, generatorFunc: genFunc, config: packetConfig.Config}
 		t = append(t, tu)
 	}
-	return genParameters{table: t, next: []uint32{0}, length: uint32(len(t))}, nil
+	return genParameters{table: t, next: []uint32{0}, length: uint32(len(t)), rnd: rand.New(rand.NewSource(13))}, nil
 }
 
-func generate(pkt *packet.Packet, context flow.UserContext) {
+// Generate is a main generatior func
+func Generate(pkt *packet.Packet, context flow.UserContext) {
+	if gen.isFinite && gen.count >= gen.number {
+		return
+	}
 	genP := context.(genParameters)
 	table := genP.table
 	next := genP.next[0]
@@ -374,17 +263,17 @@ func generate(pkt *packet.Packet, context flow.UserContext) {
 			context.(genParameters).next[0] = next
 		}
 	}
-	table[next].generatorFunc(pkt, table[next].config)
+	table[next].generatorFunc(pkt, table[next].config, genP.rnd)
+	atomic.AddUint64(&(gen.count), 1)
 	context.(genParameters).table[next].have++
 }
 
-func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
-	data, err := generateData(l2.Data)
+	data, err := generateData(l2.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l2: %v", err))
 	}
@@ -402,14 +291,13 @@ func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
-	data, err := generateData(l3.Data)
+	data, err := generateData(l3.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l3: %v", err))
 	}
@@ -442,11 +330,10 @@ func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.ARPConfig)
 	var SHA, THA [common.EtherAddrLen]uint8
@@ -491,15 +378,14 @@ func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.TCPConfig)
-	data, err := generateData(l4.Data)
+	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
 	}
@@ -519,7 +405,7 @@ func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 		panic(fmt.Sprintf("fill packet l4 failed, unknovn version %d", l3.Version))
 	}
 	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillTCPHdr(pkt, &l4); err != nil {
+	if err := fillTCPHdr(pkt, &l4, rnd); err != nil {
 		panic(fmt.Sprintf("failed to fill tcp header %v", err))
 	}
 	if err := fillIPHdr(pkt, &l3); err != nil {
@@ -539,15 +425,14 @@ func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.UDPConfig)
-	data, err := generateData(l4.Data)
+	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
 	}
@@ -587,15 +472,14 @@ func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
+func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	checkFinish()
 	l2 := config.Data.(parseConfig.EtherConfig)
 	l3 := l2.Data.(parseConfig.IPConfig)
 	l4 := l3.Data.(parseConfig.ICMPConfig)
-	data, err := generateData(l4.Data)
+	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
 	}
@@ -615,7 +499,7 @@ func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 		panic(fmt.Sprintf("fill packet l4 failed, unknovn version %d", l3.Version))
 	}
 	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillICMPHdr(pkt, &l4); err != nil {
+	if err := fillICMPHdr(pkt, &l4, rnd); err != nil {
 		panic(fmt.Sprintf("failed to fill icmp header %v", err))
 	}
 	if err := fillIPHdr(pkt, &l3); err != nil {
@@ -635,11 +519,11 @@ func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig) {
 	config.Data = l2
 }
 
-func fillTCPHdr(pkt *packet.Packet, l4 *parseConfig.TCPConfig) error {
+func fillTCPHdr(pkt *packet.Packet, l4 *parseConfig.TCPConfig, rnd *rand.Rand) error {
 	emptyPacketTCP := (*packet.TCPHdr)(pkt.L4)
 	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(getNextPort(&(l4.SPort)))
 	emptyPacketTCP.DstPort = packet.SwapBytesUint16(getNextPort(&(l4.DPort)))
-	emptyPacketTCP.SentSeq = packet.SwapBytesUint32(getNextSeqNumber((&l4.Seq)))
+	emptyPacketTCP.SentSeq = packet.SwapBytesUint32(getNextSeqNumber((&l4.Seq), rnd))
 	emptyPacketTCP.TCPFlags = l4.Flags
 	return nil
 }
@@ -651,12 +535,12 @@ func fillUDPHdr(pkt *packet.Packet, l4 *parseConfig.UDPConfig) error {
 	return nil
 }
 
-func fillICMPHdr(pkt *packet.Packet, l4 *parseConfig.ICMPConfig) error {
+func fillICMPHdr(pkt *packet.Packet, l4 *parseConfig.ICMPConfig, rnd *rand.Rand) error {
 	emptyPacketICMP := (*packet.ICMPHdr)(pkt.L4)
 	emptyPacketICMP.Type = l4.Type
 	emptyPacketICMP.Code = l4.Code
 	emptyPacketICMP.Identifier = l4.Identifier
-	emptyPacketICMP.SeqNum = packet.SwapBytesUint16(uint16(getNextSeqNumber(&(l4.Seq))))
+	emptyPacketICMP.SeqNum = packet.SwapBytesUint16(uint16(getNextSeqNumber(&(l4.Seq), rnd)))
 	return nil
 }
 

@@ -1,16 +1,77 @@
 # Packet generation to file
 
 ## What it is
-Pktgen parses config in json format and generates packets according to it in pcap file that can be read by NFF-GO reader, Wireshark, tcpdump and other tools reading pcap files.
+Pktgen parses config in json format and generates packets according to it and sends to port or pcap file that can be read by NFF-GO reader, Wireshark, tcpdump and other tools reading pcap files.
+Generator package has public API which can be used for own generator.
 
-### Command-line options:
-* --totalPackets sets the number of packets to generate, default value is 10000000
-* --infile sets the name of the file with packet configurations, default value is "config.json"
-* --outfile sets the name of the file to write output to, default value is "pkts_generated.pcap". Can be set with port (the output is copied).
-* --outport sets the port number to send output to. Can be used alone, with or instead of outfile.
-* --speed sets the speed of generator
-* --cycle sets cycle execution to generate infinite number of packets
-* --portConfig specifies config per port portNum: 'path', portNum2: 'path2'. For example: 1: 'ip4.json', 0: 'mix.json'
+### API:
+
+```go
+func GetGenerator() *generator 
+```
+returns generator object pointer which is singleton, so will be created only once.
+
+```go
+func (g *generator) GetGeneratedNumber() uint64
+```
+returns how much packets were generated.
+
+```go
+func (g *generator) ResetCounter() {
+```
+sets counter of generated packets to 0.
+
+```go
+func (g *generator) SetGenerateNumber(number uint64)
+```
+sets number to generate. When generated counter will reach it, generation will be stopped.
+
+```go
+func (g *generator) ResetGenerateNumber()
+```
+sets number to generate to infinity (by default).
+
+```go
+func ReadConfig(fileName string) ([]*parseConfig.MixConfig, error)
+```
+returns read and parsed config from file.
+
+```go
+func GetContext(mixConfig []*parseConfig.MixConfig) (genParameters, error)
+```
+returns context that chould be sent to generator according to configuration.
+
+```go
+func Generate(pkt *packet.Packet, context flow.UserContext)
+```
+is a main generator nunction. Context is obligatory.
+
+### Example of usage:
+```go
+    // parse config
+    configuration, err := generator.ReadConfig(pathToConfigJSON)
+    // check error
+	flow.CheckFatal(err)
+    // generate context by config
+    context, err := generator.GetContext(configuration)
+    // check error
+    flow.CheckFatal(err)
+    // set generator
+    outFlow, err := flow.SetFastGenerator(generator.Generate, speed, &context)
+    // check error
+    flow.CheckFatal(err)
+    // send
+    flow.CheckFatal(flow.SetSender(outFlow, uint16(port)))
+
+    // periodically print statistics
+	go func() {
+        g :=  generator.GetGenerator()
+		for {
+			println("Sent", g.GetGeneratedNumber(), "packets")
+			time.Sleep(time.Second * 5)
+		}
+	}()
+```
 
 ### Configuration syntax:
 File should be a structure containing structure with ethernet header or mix configuration:
