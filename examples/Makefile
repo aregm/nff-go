@@ -14,9 +14,12 @@ gopacket:
 gopacketParserExample: gopacket
 	go build gopacketParserExample.go
 
-.PHONY: dpi
+.PHONY: dpi nffPktgen
 dpi:
 	$(MAKE) -C dpi
+
+nffPktgen:
+	$(MAKE) -C nffPktgen
 
 include $(PATH_TO_MK)/intermediate.mk
 include $(PATH_TO_MK)/leaf.mk

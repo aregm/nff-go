@@ -18,7 +18,6 @@ import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
-	"github.com/intel-go/nff-go/test/localTesting/pktgen/parseConfig"
 )
 
 var gen generator
@@ -58,19 +57,19 @@ func (g *generator) ResetGenerateNumber() {
 }
 
 // ReadConfig function reads and parses config file.
-func ReadConfig(fileName string) ([]*parseConfig.MixConfig, error) {
+func ReadConfig(fileName string) ([]*MixConfig, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("opening file failed with: %v ", err)
 	}
-	cfg, err := parseConfig.ParseConfig(f)
+	cfg, err := ParseConfig(f)
 	if err != nil {
 		return nil, fmt.Errorf("parsing config failed with: %v", err)
 	}
 	return cfg, nil
 }
 
-func getNextAddr(addr *parseConfig.AddrRange) []uint8 {
+func getNextAddr(addr *AddrRange) []uint8 {
 	if len(addr.Current) == 0 {
 		addr.Current = []uint8{0}
 	}
@@ -102,7 +101,7 @@ func copyAddr(destination []uint8, source []uint8, size int) {
 	}
 }
 
-func getNextPort(port *parseConfig.PortRange) (nextPort uint16) {
+func getNextPort(port *PortRange) (nextPort uint16) {
 	if len(port.Current) == 0 {
 		port.Current = []uint16{0}
 	}
@@ -114,14 +113,14 @@ func getNextPort(port *parseConfig.PortRange) (nextPort uint16) {
 	return nextPort
 }
 
-func getNextSeqNumber(seq *parseConfig.Sequence, rnd *rand.Rand) (nextSeqNum uint32) {
+func getNextSeqNumber(seq *Sequence, rnd *rand.Rand) (nextSeqNum uint32) {
 	if len(seq.Next) == 0 {
 		return 0
 	}
 	nextSeqNum = seq.Next[0]
-	if seq.Type == parseConfig.RANDOM {
+	if seq.Type == RANDOM {
 		seq.Next[0] = rnd.Uint32()
-	} else if seq.Type == parseConfig.INCREASING {
+	} else if seq.Type == INCREASING {
 		seq.Next[0]++
 	}
 	return nextSeqNum
@@ -129,11 +128,11 @@ func getNextSeqNumber(seq *parseConfig.Sequence, rnd *rand.Rand) (nextSeqNum uin
 
 func generateData(configuration interface{}, rnd *rand.Rand) ([]uint8, error) {
 	switch data := configuration.(type) {
-	case parseConfig.Raw:
+	case Raw:
 		pktData := make([]uint8, len(data.Data))
 		copy(pktData[:], ([]uint8(data.Data)))
 		return pktData, nil
-	case parseConfig.RandBytes:
+	case RandBytes:
 		maxZise := data.Size + data.Deviation
 		minSize := data.Size - data.Deviation
 		randSize := uint(rnd.Float64()*float64(maxZise-minSize) + float64(minSize))
@@ -142,10 +141,10 @@ func generateData(configuration interface{}, rnd *rand.Rand) ([]uint8, error) {
 			pktData[i] = byte(rnd.Int())
 		}
 		return pktData, nil
-	case []parseConfig.PDistEntry:
+	case []PDistEntry:
 		prob := 0.0
 		rndN := math.Abs(rnd.Float64())
-		maxProb := parseConfig.PDistEntry{Probability: 0}
+		maxProb := PDistEntry{Probability: 0}
 		for _, item := range data {
 			prob += item.Probability
 			if rndN <= prob {
@@ -174,26 +173,26 @@ func generateData(configuration interface{}, rnd *rand.Rand) ([]uint8, error) {
 	return nil, fmt.Errorf("unknown data type")
 }
 
-func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet, *parseConfig.PacketConfig, *rand.Rand), error) {
+func getGenerator(configuration *PacketConfig) (func(*packet.Packet, *PacketConfig, *rand.Rand), error) {
 	switch l2 := (configuration.Data).(type) {
-	case parseConfig.EtherConfig:
+	case EtherConfig:
 		switch l3 := l2.Data.(type) {
-		case parseConfig.IPConfig:
+		case IPConfig:
 			switch l3.Data.(type) {
-			case parseConfig.TCPConfig:
+			case TCPConfig:
 				return generateTCPIP, nil
-			case parseConfig.UDPConfig:
+			case UDPConfig:
 				return generateUDPIP, nil
-			case parseConfig.ICMPConfig:
+			case ICMPConfig:
 				return generateICMPIP, nil
-			case parseConfig.Raw, parseConfig.RandBytes, []parseConfig.PDistEntry:
+			case Raw, RandBytes, []PDistEntry:
 				return generateIP, nil
 			default:
 				return nil, fmt.Errorf("unknown packet l4 configuration")
 			}
-		case parseConfig.ARPConfig:
+		case ARPConfig:
 			return generateARP, nil
-		case parseConfig.Raw, parseConfig.RandBytes, []parseConfig.PDistEntry:
+		case Raw, RandBytes, []PDistEntry:
 			return generateEther, nil
 		default:
 			return nil, fmt.Errorf("unknown packet l3 configuration")
@@ -206,8 +205,8 @@ func getGenerator(configuration *parseConfig.PacketConfig) (func(*packet.Packet,
 // one unit for each mix
 type generatorTableUnit struct {
 	have, need    uint32
-	generatorFunc func(*packet.Packet, *parseConfig.PacketConfig, *rand.Rand)
-	config        *parseConfig.PacketConfig
+	generatorFunc func(*packet.Packet, *PacketConfig, *rand.Rand)
+	config        *PacketConfig
 }
 
 func (gtu *generatorTableUnit) String() string {
@@ -231,7 +230,7 @@ func (gp genParameters) Delete() {
 }
 
 // GetContext gets generator context according to config
-func GetContext(mixConfig []*parseConfig.MixConfig) (genParameters, error) {
+func GetContext(mixConfig []*MixConfig) (genParameters, error) {
 	var t []generatorTableUnit
 	for _, packetConfig := range mixConfig {
 		genFunc, err := getGenerator(packetConfig.Config)
@@ -268,11 +267,11 @@ func Generate(pkt *packet.Packet, context flow.UserContext) {
 	context.(genParameters).table[next].have++
 }
 
-func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateEther(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
+	l2 := config.Data.(EtherConfig)
 	data, err := generateData(l2.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l2: %v", err))
@@ -291,12 +290,12 @@ func generateEther(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *ra
 	config.Data = l2
 }
 
-func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
-	l3 := l2.Data.(parseConfig.IPConfig)
+	l2 := config.Data.(EtherConfig)
+	l3 := l2.Data.(IPConfig)
 	data, err := generateData(l3.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l3: %v", err))
@@ -330,12 +329,12 @@ func generateIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.
 	config.Data = l2
 }
 
-func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
-	l3 := l2.Data.(parseConfig.ARPConfig)
+	l2 := config.Data.(EtherConfig)
+	l3 := l2.Data.(ARPConfig)
 	var SHA, THA [common.EtherAddrLen]uint8
 	copyAddr(SHA[:], getNextAddr(&(l3.SHA)), common.EtherAddrLen)
 	SPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.SPA))).To4())
@@ -378,13 +377,13 @@ func generateARP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand
 	config.Data = l2
 }
 
-func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateTCPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
-	l3 := l2.Data.(parseConfig.IPConfig)
-	l4 := l3.Data.(parseConfig.TCPConfig)
+	l2 := config.Data.(EtherConfig)
+	l3 := l2.Data.(IPConfig)
+	l4 := l3.Data.(TCPConfig)
 	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
@@ -425,13 +424,13 @@ func generateTCPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *ra
 	config.Data = l2
 }
 
-func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateUDPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
-	l3 := l2.Data.(parseConfig.IPConfig)
-	l4 := l3.Data.(parseConfig.UDPConfig)
+	l2 := config.Data.(EtherConfig)
+	l3 := l2.Data.(IPConfig)
+	l4 := l3.Data.(UDPConfig)
 	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
@@ -472,13 +471,13 @@ func generateUDPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *ra
 	config.Data = l2
 }
 
-func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *rand.Rand) {
+func generateICMPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(parseConfig.EtherConfig)
-	l3 := l2.Data.(parseConfig.IPConfig)
-	l4 := l3.Data.(parseConfig.ICMPConfig)
+	l2 := config.Data.(EtherConfig)
+	l3 := l2.Data.(IPConfig)
+	l4 := l3.Data.(ICMPConfig)
 	data, err := generateData(l4.Data, rnd)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
@@ -519,7 +518,7 @@ func generateICMPIP(pkt *packet.Packet, config *parseConfig.PacketConfig, rnd *r
 	config.Data = l2
 }
 
-func fillTCPHdr(pkt *packet.Packet, l4 *parseConfig.TCPConfig, rnd *rand.Rand) error {
+func fillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) error {
 	emptyPacketTCP := (*packet.TCPHdr)(pkt.L4)
 	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(getNextPort(&(l4.SPort)))
 	emptyPacketTCP.DstPort = packet.SwapBytesUint16(getNextPort(&(l4.DPort)))
@@ -528,14 +527,14 @@ func fillTCPHdr(pkt *packet.Packet, l4 *parseConfig.TCPConfig, rnd *rand.Rand) e
 	return nil
 }
 
-func fillUDPHdr(pkt *packet.Packet, l4 *parseConfig.UDPConfig) error {
+func fillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) error {
 	emptyPacketUDP := (*packet.UDPHdr)(pkt.L4)
 	emptyPacketUDP.SrcPort = packet.SwapBytesUint16(getNextPort(&(l4.SPort)))
 	emptyPacketUDP.DstPort = packet.SwapBytesUint16(getNextPort(&(l4.DPort)))
 	return nil
 }
 
-func fillICMPHdr(pkt *packet.Packet, l4 *parseConfig.ICMPConfig, rnd *rand.Rand) error {
+func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) error {
 	emptyPacketICMP := (*packet.ICMPHdr)(pkt.L4)
 	emptyPacketICMP.Type = l4.Type
 	emptyPacketICMP.Code = l4.Code
@@ -544,7 +543,7 @@ func fillICMPHdr(pkt *packet.Packet, l4 *parseConfig.ICMPConfig, rnd *rand.Rand)
 	return nil
 }
 
-func fillIPHdr(pkt *packet.Packet, l3 *parseConfig.IPConfig) error {
+func fillIPHdr(pkt *packet.Packet, l3 *IPConfig) error {
 	if l3.Version == 4 {
 		pktIP := pkt.GetIPv4()
 		pktIP.SrcAddr = binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.SAddr))).To4())
@@ -559,7 +558,7 @@ func fillIPHdr(pkt *packet.Packet, l3 *parseConfig.IPConfig) error {
 	return nil
 }
 
-func fillEtherHdr(pkt *packet.Packet, l2 *parseConfig.EtherConfig) error {
+func fillEtherHdr(pkt *packet.Packet, l2 *EtherConfig) error {
 	if l2.VLAN != nil {
 		if err := addVLAN(pkt, l2.VLAN.TCI); err != nil {
 			return err
