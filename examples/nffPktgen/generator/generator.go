@@ -5,15 +5,14 @@
 package generator
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
 	"math/big"
 	"math/rand"
-	"net"
 	"os"
 	"sync/atomic"
+	"unsafe"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
@@ -23,9 +22,7 @@ import (
 var gen generator
 
 type generator struct {
-	count    uint64
-	isFinite bool
-	number   uint64
+	count uint64
 }
 
 // GetGenerator returns generator struct pointer
@@ -37,23 +34,6 @@ func GetGenerator() *generator {
 // GetGeneratedNumber returns a number of packets generated
 func (g *generator) GetGeneratedNumber() uint64 {
 	return atomic.LoadUint64(&(g.count))
-}
-
-// ResetCounter resets count of generated packets
-func (g *generator) ResetCounter() {
-	atomic.StoreUint64(&(g.count), 0)
-}
-
-// SetGenerateNumber sets a number to generate
-func (g *generator) SetGenerateNumber(number uint64) {
-	g.number = number
-	g.isFinite = true
-}
-
-// ResetGenerateNumber sets a number to generate to infinite
-func (g *generator) ResetGenerateNumber() {
-	g.number = 0
-	g.isFinite = false
 }
 
 // ReadConfig function reads and parses config file.
@@ -70,27 +50,15 @@ func ReadConfig(fileName string) ([]*MixConfig, error) {
 }
 
 func getNextAddr(addr *AddrRange) []uint8 {
-	if len(addr.Current) == 0 {
-		addr.Current = []uint8{0}
-	}
 	if addr.Incr == 0 {
-		return addr.Current
+		return addr.Current.Bytes()
 	}
+	addr.Current.Add(big.NewInt(int64(addr.Incr)), addr.Current)
 	// if current < min or current > max, copy min to current
-	if bytes.Compare(addr.Current, addr.Min) < 0 || bytes.Compare(addr.Current, addr.Max) > 0 {
-		addr.Current = make([]byte, len(addr.Min))
-		copy(addr.Current, addr.Min)
+	if addr.Current.Cmp(addr.Min) < 0 || addr.Current.Cmp(addr.Max) > 0 {
+		addr.Current = addr.Min
 	}
-	// copy current to return
-	retAddr := make([]byte, len(addr.Current))
-	copy(retAddr, addr.Current)
-	// increment current
-	addressInt := big.NewInt(0)
-	addressInt.SetBytes(addr.Current)
-	addressInt.Add(big.NewInt(int64(addr.Incr)), addressInt)
-	newAddr := addressInt.Bytes()
-	copyAddr(addr.Current, newAddr, len(addr.Current))
-	return retAddr
+	return addr.Current.Bytes()
 }
 
 func copyAddr(destination []uint8, source []uint8, size int) {
@@ -102,97 +70,96 @@ func copyAddr(destination []uint8, source []uint8, size int) {
 }
 
 func getNextPort(port *PortRange) (nextPort uint16) {
-	if len(port.Current) == 0 {
-		port.Current = []uint16{0}
+	if port.Current < port.Min || port.Current > port.Max {
+		port.Current = port.Min
 	}
-	if port.Current[0] < port.Min || port.Current[0] > port.Max {
-		port.Current[0] = port.Min
-	}
-	nextPort = port.Current[0]
-	port.Current[0] += port.Incr
+	nextPort = port.Current
+	port.Current += port.Incr
 	return nextPort
 }
 
 func getNextSeqNumber(seq *Sequence, rnd *rand.Rand) (nextSeqNum uint32) {
-	if len(seq.Next) == 0 {
-		return 0
-	}
-	nextSeqNum = seq.Next[0]
+	nextSeqNum = seq.Next
 	if seq.Type == RANDOM {
-		seq.Next[0] = rnd.Uint32()
+		seq.Next = rnd.Uint32()
 	} else if seq.Type == INCREASING {
-		seq.Next[0]++
+		seq.Next++
 	}
 	return nextSeqNum
 }
 
-func generateData(configuration interface{}, rnd *rand.Rand) ([]uint8, error) {
-	switch data := configuration.(type) {
-	case Raw:
-		pktData := make([]uint8, len(data.Data))
-		copy(pktData[:], ([]uint8(data.Data)))
-		return pktData, nil
-	case RandBytes:
+type dataCopier func(unsafe.Pointer, uint, *rand.Rand, unsafe.Pointer)
+
+func copyRaw(configuration unsafe.Pointer, size uint, rnd *rand.Rand, copyTo unsafe.Pointer) {
+	data := (*Raw)(configuration)
+	copy((*[1 << 30]uint8)(copyTo)[0:size], ([]uint8(data.Data)))
+}
+
+func copyRand(configuration unsafe.Pointer, size uint, rnd *rand.Rand, copyTo unsafe.Pointer) {
+	packetData := (*[1 << 30]byte)(copyTo)[0:size]
+	for i := range packetData {
+		packetData[i] = byte(rnd.Int())
+	}
+}
+
+func getDataSizeType(configuration unsafe.Pointer, dtype DataType, rnd *rand.Rand) (uint, unsafe.Pointer, dataCopier) {
+	switch dtype {
+	case RAWDATA:
+		data := (*Raw)(configuration)
+		return uint(len(data.Data)), configuration, copyRaw
+	case RANDDATA:
+		data := (*RandBytes)(configuration)
 		maxZise := data.Size + data.Deviation
 		minSize := data.Size - data.Deviation
 		randSize := uint(rnd.Float64()*float64(maxZise-minSize) + float64(minSize))
-		pktData := make([]uint8, randSize)
-		for i := range pktData {
-			pktData[i] = byte(rnd.Int())
-		}
-		return pktData, nil
-	case []PDistEntry:
+		return randSize, configuration, copyRand
+	case PDISTDATA:
+		data := (*[]PDistEntry)(configuration)
 		prob := 0.0
 		rndN := math.Abs(rnd.Float64())
 		maxProb := PDistEntry{Probability: 0}
-		for _, item := range data {
+		for _, item := range *data {
 			prob += item.Probability
 			if rndN <= prob {
-				pktData, err := generateData(item.Data, rnd)
-				if err != nil {
-					return nil, fmt.Errorf("failed to fill data with pdist data type: %v", err)
-				}
-				return pktData, nil
+				return getDataSizeType(item.Data, item.DType, rnd)
 			}
 			if item.Probability > maxProb.Probability {
 				maxProb = item
 			}
 		}
 		if prob <= 0 || prob > 1 {
-			return nil, fmt.Errorf("sum of pdist probabilities is invalid, %f", prob)
+			panic(fmt.Sprintf("sum of pdist probabilities is invalid, %f", prob))
 		}
 		// get the variant with max prob
 		// if something went wrong and rand did not match any prob
 		// may happen if sum of prob was not 1
-		pktData, err := generateData(maxProb.Data, rnd)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fill data with pdist data type: %v", err)
-		}
-		return pktData, nil
+		return getDataSizeType(maxProb.Data, maxProb.DType, rnd)
 	}
-	return nil, fmt.Errorf("unknown data type")
+	panic(fmt.Sprintf("unknown data type"))
 }
 
 func getGenerator(configuration *PacketConfig) (func(*packet.Packet, *PacketConfig, *rand.Rand), error) {
-	switch l2 := (configuration.Data).(type) {
-	case EtherConfig:
-		switch l3 := l2.Data.(type) {
-		case IPConfig:
-			switch l3.Data.(type) {
-			case TCPConfig:
+	switch configuration.DType {
+	case ETHERHDR:
+		l2 := (*EtherConfig)(configuration.Data)
+		switch l2.DType {
+		case IPHDR:
+			l3 := (*IPConfig)(l2.Data)
+			switch l3.DType {
+			case TCPHDR:
 				return generateTCPIP, nil
-			case UDPConfig:
+			case UDPHDR:
 				return generateUDPIP, nil
-			case ICMPConfig:
+			case ICMPHDR:
 				return generateICMPIP, nil
-			case Raw, RandBytes, []PDistEntry:
+			case RAWDATA, RANDDATA, PDISTDATA:
 				return generateIP, nil
 			default:
 				return nil, fmt.Errorf("unknown packet l4 configuration")
 			}
-		case ARPConfig:
+		case ARPHDR:
 			return generateARP, nil
-		case Raw, RandBytes, []PDistEntry:
+		case RAWDATA, RANDDATA, PDISTDATA:
 			return generateEther, nil
 		default:
 			return nil, fmt.Errorf("unknown packet l3 configuration")
@@ -215,95 +182,80 @@ func (gtu *generatorTableUnit) String() string {
 
 type genParameters struct {
 	table  []generatorTableUnit
-	next   []uint32
+	next   uint32
 	length uint32
 	rnd    *rand.Rand
 }
 
 func (gp genParameters) Copy() interface{} {
-	cpy := make([]generatorTableUnit, len(gp.table))
-	copy(cpy, gp.table)
-	return genParameters{table: cpy, next: []uint32{0}, length: gp.length, rnd: rand.New(rand.NewSource(13))}
+	ret := new(genParameters)
+	ret.table = make([]generatorTableUnit, len(gp.table))
+	copy(ret.table, gp.table)
+	ret.length = gp.length
+	ret.rnd = rand.New(rand.NewSource(13))
+	return ret
 }
 
 func (gp genParameters) Delete() {
 }
 
 // GetContext gets generator context according to config
-func GetContext(mixConfig []*MixConfig) (genParameters, error) {
+func GetContext(mixConfig []*MixConfig) (*genParameters, error) {
 	var t []generatorTableUnit
 	for _, packetConfig := range mixConfig {
 		genFunc, err := getGenerator(packetConfig.Config)
 		if err != nil {
-			return genParameters{}, err
+			return nil, err
 		}
 		tu := generatorTableUnit{have: 0, need: packetConfig.Quantity, generatorFunc: genFunc, config: packetConfig.Config}
 		t = append(t, tu)
 	}
-	return genParameters{table: t, next: []uint32{0}, length: uint32(len(t)), rnd: rand.New(rand.NewSource(13))}, nil
+	ret := new(genParameters)
+	ret.table = t
+	ret.length = uint32(len(t))
+	ret.rnd = rand.New(rand.NewSource(13))
+	return ret, nil
 }
 
 // Generate is a main generatior func
 func Generate(pkt *packet.Packet, context flow.UserContext) {
-	if gen.isFinite && gen.count >= gen.number {
-		return
-	}
-	genP := context.(genParameters)
-	table := genP.table
-	next := genP.next[0]
+	genP := context.(*genParameters)
 	if genP.length > 1 {
-		if table[next].have == table[next].need {
-			context.(genParameters).table[next].have = 0
-			if next+1 < genP.length {
-				next++
+		if genP.table[genP.next].have == genP.table[genP.next].need {
+			genP.table[genP.next].have = 0
+			if genP.next+1 < genP.length {
+				genP.next++
 			} else {
-				next = 0
+				genP.next = 0
 			}
-			context.(genParameters).next[0] = next
 		}
 	}
-	table[next].generatorFunc(pkt, table[next].config, genP.rnd)
+	genP.table[genP.next].generatorFunc(pkt, genP.table[genP.next].config, genP.rnd)
 	atomic.AddUint64(&(gen.count), 1)
-	context.(genParameters).table[next].have++
+	genP.table[genP.next].have++
 }
 
 func generateEther(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	data, err := generateData(l2.Data, rnd)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse data for l2: %v", err))
-	}
-	if data == nil {
-		panic(fmt.Sprintf("failed to generate data"))
-	}
-	size := uint(len(data))
+	l2 := (*EtherConfig)(config.Data)
+	size, dataConfig, copyDataFunc := getDataSizeType(l2.Data, l2.DType, rnd)
+
 	if !packet.InitEmptyPacket(pkt, size) {
 		panic(fmt.Sprintf("InitEmptyPacket failed"))
 	}
-	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillEtherHdr(pkt, &l2); err != nil {
-		panic(fmt.Sprintf("failed to fill ether header %v", err))
-	}
-	config.Data = l2
+	copyDataFunc(dataConfig, size, rnd, pkt.Data)
+	fillEtherHdr(pkt, l2)
 }
 
 func generateIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	l3 := l2.Data.(IPConfig)
-	data, err := generateData(l3.Data, rnd)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse data for l3: %v", err))
-	}
-	if data == nil {
-		panic(fmt.Sprintf("failed to generate data"))
-	}
-	size := uint(len(data))
+	l2 := (*EtherConfig)(config.Data)
+	l3 := (*IPConfig)(l2.Data)
+	size, dataConfig, copyDataFunc := getDataSizeType(l3.Data, l3.DType, rnd)
 	if l3.Version == 4 {
 		if !packet.InitEmptyIPv4Packet(pkt, size) {
 			panic(fmt.Sprintf("InitEmptyIPv4Packet returned false"))
@@ -315,29 +267,31 @@ func generateIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	} else {
 		panic(fmt.Sprintf("fillPacketl3 failed, unknovn version %d", l3.Version))
 	}
-	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillIPHdr(pkt, &l3); err != nil {
-		panic(fmt.Sprintf("failed to fill ip header %v", err))
-	}
-	if err := fillEtherHdr(pkt, &l2); err != nil {
-		panic(fmt.Sprintf("failed to fill ether header %v", err))
-	}
+	copyDataFunc(dataConfig, size, rnd, pkt.Data)
+	fillEtherHdr(pkt, l2)
+	fillIPHdr(pkt, l3)
 	if l3.Version == 4 {
-		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
+		pktIP := (*packet.IPv4Hdr)(pkt.L3)
+		pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
 	}
-	l2.Data = l3
-	config.Data = l2
+}
+
+func To4(addr []byte) []byte {
+	if len(addr) > common.IPv4AddrLen {
+		return addr[len(addr)-common.IPv4AddrLen:]
+	}
+	return addr
 }
 
 func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	l3 := l2.Data.(ARPConfig)
+	l2 := (*EtherConfig)(config.Data)
+	l3 := (*ARPConfig)(l2.Data)
 	var SHA, THA [common.EtherAddrLen]uint8
 	copyAddr(SHA[:], getNextAddr(&(l3.SHA)), common.EtherAddrLen)
-	SPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.SPA))).To4())
+	SPA := binary.LittleEndian.Uint32(To4(getNextAddr(&(l3.SPA))))
 	switch l3.Operation {
 	case packet.ARPRequest:
 		if l3.Gratuitous {
@@ -345,7 +299,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 				panic(fmt.Sprintf("InitGARPAnnouncementRequestPacket returned false"))
 			}
 		} else {
-			TPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.TPA))).To4())
+			TPA := binary.LittleEndian.Uint32(To4(getNextAddr(&(l3.TPA))))
 			if !packet.InitARPRequestPacket(pkt, SHA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPRequestPacket returned false"))
 			}
@@ -357,7 +311,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 			}
 		} else {
 			copyAddr(THA[:], getNextAddr(&(l3.THA)), common.EtherAddrLen)
-			TPA := binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.TPA))).To4())
+			TPA := binary.LittleEndian.Uint32(To4(getNextAddr(&(l3.TPA))))
 			if !packet.InitARPReplyPacket(pkt, SHA, THA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPReplyPacket returned false"))
 			}
@@ -365,33 +319,22 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	default:
 		panic(fmt.Sprintf("unsupported operation code: %d", l3.Operation))
 	}
-	if len(l2.DAddr.Current) != 0 {
-		copyAddr(pkt.Ether.DAddr[:], getNextAddr(&(l2.DAddr)), common.EtherAddrLen)
-	}
+	copyAddr(pkt.Ether.DAddr[:], getNextAddr(&(l2.DAddr)), common.EtherAddrLen)
 	if l2.VLAN != nil {
 		if !pkt.AddVLANTag(l2.VLAN.TCI) {
 			panic("failed to add vlan tag to arp packet")
 		}
 	}
-	l2.Data = l3
-	config.Data = l2
 }
 
 func generateTCPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	l3 := l2.Data.(IPConfig)
-	l4 := l3.Data.(TCPConfig)
-	data, err := generateData(l4.Data, rnd)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
-	}
-	if data == nil {
-		panic(fmt.Sprintf("failed to generate data"))
-	}
-	size := uint(len(data))
+	l2 := (*EtherConfig)(config.Data)
+	l3 := (*IPConfig)(l2.Data)
+	l4 := (*TCPConfig)(l3.Data)
+	size, dataConfig, copyDataFunc := getDataSizeType(l4.Data, l4.DType, rnd)
 	if l3.Version == 4 {
 		if !packet.InitEmptyIPv4TCPPacket(pkt, size) {
 			panic(fmt.Sprintf("InitEmptyIPv4TCPPacket returned false"))
@@ -403,42 +346,29 @@ func generateTCPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	} else {
 		panic(fmt.Sprintf("fill packet l4 failed, unknovn version %d", l3.Version))
 	}
-	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillTCPHdr(pkt, &l4, rnd); err != nil {
-		panic(fmt.Sprintf("failed to fill tcp header %v", err))
-	}
-	if err := fillIPHdr(pkt, &l3); err != nil {
-		panic(fmt.Sprintf("failed to fill ip header %v", err))
-	}
-	if err := fillEtherHdr(pkt, &l2); err != nil {
-		panic(fmt.Sprintf("failed to fill ether header %v", err))
-	}
+	copyDataFunc(dataConfig, size, rnd, pkt.Data)
+	fillEtherHdr(pkt, l2)
+	fillIPHdr(pkt, l3)
+	fillTCPHdr(pkt, l4, rnd)
+	pktTCP := (*packet.TCPHdr)(pkt.L4)
 	if l3.Version == 4 {
-		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
-		pkt.GetTCPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetTCPForIPv4(), pkt.Data))
+		pktIP := (*packet.IPv4Hdr)(pkt.L3)
+		pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
+		pktTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4TCPChecksum(pktIP, pktTCP, pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetTCPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetTCPForIPv6(), pkt.Data))
+		pktIP := (*packet.IPv6Hdr)(pkt.L3)
+		pktTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pktIP, pktTCP, pkt.Data))
 	}
-	l3.Data = l4
-	l2.Data = l3
-	config.Data = l2
 }
 
 func generateUDPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	l3 := l2.Data.(IPConfig)
-	l4 := l3.Data.(UDPConfig)
-	data, err := generateData(l4.Data, rnd)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
-	}
-	if data == nil {
-		panic(fmt.Sprintf("failed to generate data"))
-	}
-	size := uint(len(data))
+	l2 := (*EtherConfig)(config.Data)
+	l3 := (*IPConfig)(l2.Data)
+	l4 := (*UDPConfig)(l3.Data)
+	size, dataConfig, copyDataFunc := getDataSizeType(l4.Data, l4.DType, rnd)
 	if l3.Version == 4 {
 		if !packet.InitEmptyIPv4UDPPacket(pkt, size) {
 			panic(fmt.Sprintf("InitEmptyIPv4UDPPacket returned false"))
@@ -450,42 +380,29 @@ func generateUDPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	} else {
 		panic(fmt.Sprintf("fill packet l4 failed, unknovn version %d", l3.Version))
 	}
-	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillUDPHdr(pkt, &l4); err != nil {
-		panic(fmt.Sprintf("failed to fill udp header %v", err))
-	}
-	if err := fillIPHdr(pkt, &l3); err != nil {
-		panic(fmt.Sprintf("failed to fill ip header %v", err))
-	}
-	if err := fillEtherHdr(pkt, &l2); err != nil {
-		panic(fmt.Sprintf("failed to fill ether header %v", err))
-	}
+	copyDataFunc(dataConfig, size, rnd, pkt.Data)
+	fillEtherHdr(pkt, l2)
+	fillIPHdr(pkt, l3)
+	fillUDPHdr(pkt, l4)
+	pktUDP := (*packet.UDPHdr)(pkt.L4)
 	if l3.Version == 4 {
-		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
-		pkt.GetUDPForIPv4().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetUDPForIPv4(), pkt.Data))
+		pktIP := (*packet.IPv4Hdr)(pkt.L3)
+		pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
+		pktUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(pktIP, pktUDP, pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetUDPForIPv6().DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetUDPForIPv6(), pkt.Data))
+		pktIP := (*packet.IPv6Hdr)(pkt.L3)
+		pktUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pktIP, pktUDP, pkt.Data))
 	}
-	l3.Data = l4
-	l2.Data = l3
-	config.Data = l2
 }
 
 func generateICMPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	if pkt == nil {
 		panic("Failed to create new packet")
 	}
-	l2 := config.Data.(EtherConfig)
-	l3 := l2.Data.(IPConfig)
-	l4 := l3.Data.(ICMPConfig)
-	data, err := generateData(l4.Data, rnd)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to parse data for l4: %v", err))
-	}
-	if data == nil {
-		panic(fmt.Sprintf("failed to generate data"))
-	}
-	size := uint(len(data))
+	l2 := (*EtherConfig)(config.Data)
+	l3 := (*IPConfig)(l2.Data)
+	l4 := (*ICMPConfig)(l3.Data)
+	size, dataConfig, copyDataFunc := getDataSizeType(l4.Data, l4.DType, rnd)
 	if l3.Version == 4 {
 		if !packet.InitEmptyIPv4ICMPPacket(pkt, size) {
 			panic(fmt.Sprintf("InitEmptyIPv4ICMPPacket returned false"))
@@ -497,92 +414,74 @@ func generateICMPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	} else {
 		panic(fmt.Sprintf("fill packet l4 failed, unknovn version %d", l3.Version))
 	}
-	copy((*[1 << 30]uint8)(pkt.Data)[0:size], data)
-	if err := fillICMPHdr(pkt, &l4, rnd); err != nil {
-		panic(fmt.Sprintf("failed to fill icmp header %v", err))
-	}
-	if err := fillIPHdr(pkt, &l3); err != nil {
-		panic(fmt.Sprintf("failed to fill ip header %v", err))
-	}
-	if err := fillEtherHdr(pkt, &l2); err != nil {
-		panic(fmt.Sprintf("failed to fill ether header %v", err))
-	}
+	copyDataFunc(dataConfig, size, rnd, pkt.Data)
+	fillEtherHdr(pkt, l2)
+	fillIPHdr(pkt, l3)
+	fillICMPHdr(pkt, l4, rnd)
+	pktICMP := (*packet.ICMPHdr)(pkt.L4)
 	if l3.Version == 4 {
-		pkt.GetIPv4CheckVLAN().HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pkt.GetIPv4CheckVLAN()))
-		pkt.GetICMPForIPv4().Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pkt.GetIPv4CheckVLAN(), pkt.GetICMPForIPv4(), pkt.Data))
+		pktIP := (*packet.IPv4Hdr)(pkt.L3)
+		pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
+		pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pktIP, pktICMP, pkt.Data))
 	} else if l3.Version == 6 {
-		pkt.GetICMPForIPv6().Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pkt.GetIPv6CheckVLAN(), pkt.GetICMPForIPv6(), pkt.Data))
+		pktIP := (*packet.IPv6Hdr)(pkt.L3)
+		pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pktIP, pktICMP, pkt.Data))
 	}
-	l3.Data = l4
-	l2.Data = l3
-	config.Data = l2
 }
 
-func fillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) error {
+func fillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) {
 	emptyPacketTCP := (*packet.TCPHdr)(pkt.L4)
 	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(getNextPort(&(l4.SPort)))
 	emptyPacketTCP.DstPort = packet.SwapBytesUint16(getNextPort(&(l4.DPort)))
 	emptyPacketTCP.SentSeq = packet.SwapBytesUint32(getNextSeqNumber((&l4.Seq), rnd))
 	emptyPacketTCP.TCPFlags = l4.Flags
-	return nil
 }
 
-func fillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) error {
+func fillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) {
 	emptyPacketUDP := (*packet.UDPHdr)(pkt.L4)
 	emptyPacketUDP.SrcPort = packet.SwapBytesUint16(getNextPort(&(l4.SPort)))
 	emptyPacketUDP.DstPort = packet.SwapBytesUint16(getNextPort(&(l4.DPort)))
-	return nil
 }
 
-func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) error {
+func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 	emptyPacketICMP := (*packet.ICMPHdr)(pkt.L4)
 	emptyPacketICMP.Type = l4.Type
 	emptyPacketICMP.Code = l4.Code
 	emptyPacketICMP.Identifier = l4.Identifier
 	emptyPacketICMP.SeqNum = packet.SwapBytesUint16(uint16(getNextSeqNumber(&(l4.Seq), rnd)))
-	return nil
 }
 
-func fillIPHdr(pkt *packet.Packet, l3 *IPConfig) error {
+func fillIPHdr(pkt *packet.Packet, l3 *IPConfig) {
 	if l3.Version == 4 {
-		pktIP := pkt.GetIPv4()
-		pktIP.SrcAddr = binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.SAddr))).To4())
-		pktIP.DstAddr = binary.LittleEndian.Uint32(net.IP(getNextAddr(&(l3.DAddr))).To4())
-		return nil
+		pktIP := (*packet.IPv4Hdr)(pkt.L3)
+		pktIP.SrcAddr = binary.LittleEndian.Uint32(To4(getNextAddr(&(l3.SAddr))))
+		pktIP.DstAddr = binary.LittleEndian.Uint32(To4(getNextAddr(&(l3.DAddr))))
+		return
 	}
-	pktIP := pkt.GetIPv6()
-	nextAddr := getNextAddr(&(l3.SAddr))
-	copyAddr(pktIP.SrcAddr[:], nextAddr, common.IPv6AddrLen)
-	nextAddr = getNextAddr(&(l3.DAddr))
-	copyAddr(pktIP.DstAddr[:], nextAddr, common.IPv6AddrLen)
-	return nil
+	pktIP := (*packet.IPv6Hdr)(pkt.L3)
+	copyAddr(pktIP.SrcAddr[:], getNextAddr(&(l3.SAddr)), common.IPv6AddrLen)
+	copyAddr(pktIP.DstAddr[:], getNextAddr(&(l3.DAddr)), common.IPv6AddrLen)
 }
 
-func fillEtherHdr(pkt *packet.Packet, l2 *EtherConfig) error {
+func fillEtherHdr(pkt *packet.Packet, l2 *EtherConfig) {
 	if l2.VLAN != nil {
-		if err := addVLAN(pkt, l2.VLAN.TCI); err != nil {
-			return err
-		}
+		addVLAN(pkt, l2.VLAN.TCI)
 	}
-	nextAddr := getNextAddr(&(l2.DAddr))
-	copyAddr(pkt.Ether.DAddr[:], nextAddr, common.EtherAddrLen)
-	nextAddr = getNextAddr(&(l2.SAddr))
-	copyAddr(pkt.Ether.SAddr[:], nextAddr, common.EtherAddrLen)
-	return nil
+	copyAddr(pkt.Ether.DAddr[:], getNextAddr(&(l2.DAddr)), common.EtherAddrLen)
+	copyAddr(pkt.Ether.SAddr[:], getNextAddr(&(l2.SAddr)), common.EtherAddrLen)
 }
 
 // faster version of packet.AddVLANTag, can be used only
 // when ether src and dst are not set, but ether type is
 // (most InitEmptyPacket functions do so).
-func addVLAN(pkt *packet.Packet, tag uint16) error {
+func addVLAN(pkt *packet.Packet, tag uint16) {
 	if !pkt.EncapsulateHead(0, 4) {
-		return fmt.Errorf("failed to add vlan tag, EncapsulateHead returned false")
+		panic("failed to add vlan tag, EncapsulateHead returned false")
 	}
 	pkt.Ether.EtherType = packet.SwapBytesUint16(common.VLANNumber)
 	vhdr := pkt.GetVLAN()
 	if vhdr == nil {
-		return fmt.Errorf("failed to get vlan, GetVLAN returned nil")
+		panic("failed to get vlan, GetVLAN returned nil")
 	}
 	vhdr.TCI = packet.SwapBytesUint16(tag)
-	return nil
 }
