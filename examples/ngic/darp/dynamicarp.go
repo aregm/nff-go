@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/examples/ngic/global"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/vishvananda/netlink"
@@ -38,27 +37,46 @@ const (
 	LblARPInComplete = "INCOMPLETE"
 )
 
-var mapRouteTable map[uint32]netlink.Route
+// stats counters
+var (
+	UlTxCounter uint64
+	DlTxCounter uint64
+)
+
+//var mapRouteTable map[uint32]netlink.Route
+var mapRouteTable map[uint32]RouteEntry
 
 var ulMapArpTable sync.Map
 var dlMapArpTable sync.Map
 
-var ulPktsQueue = queue.New(10000)
-var dlPktsQueue = queue.New(10000)
+//UlPktsQMap  Uplink queued pkt map
+var UlPktsQMap sync.Map
+
+//DlPktsQMap Downlink queued pkt map
+var DlPktsQMap sync.Map
 
 var isRouteUpdated int32
 
 //ARPEntry ...
 type ARPEntry struct {
 	IP     net.IP
+	IntIP  uint32
 	MAC    net.HardwareAddr
 	PORT   int
 	STATUS string //int
 }
 
+//RouteEntry route entry with mac for the GW for lookup optimization
+type RouteEntry struct {
+	Dst *net.IPNet
+	Gw  net.IP
+	MAC net.HardwareAddr
+}
+
 //init ...
 func init() {
-	mapRouteTable = make(map[uint32]netlink.Route)
+	//mapRouteTable = make(map[uint32]netlink.Route)
+	mapRouteTable = make(map[uint32]RouteEntry) //TODO optmized lookup for gw
 }
 
 //Configure initialize route,arp table add lister for any route modification and updat route table and arp entries a
@@ -87,7 +105,7 @@ func initRouteTable() {
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err == nil {
 
-		tmp := make(map[uint32]netlink.Route)
+		tmp := make(map[uint32]RouteEntry)
 		fmt.Println("--------------------------------------")
 		fmt.Println("Route Table")
 		fmt.Println("--------------------------------------")
@@ -97,8 +115,23 @@ func initRouteTable() {
 				DstIP = common.StringToIPv4(route.Dst.IP.String())
 			}
 			//common.LogInfo(common.Info, "Adding Entry Dst# ", common.Int2ip(packet.SwapBytesUint32(DstIP)).String(), " , ", DstIP)
+			//	tmp[DstIP] = route
+			if route.Gw != nil {
+				val, ok := dlMapArpTable.Load(common.StringToIPv4(route.Gw.String()))
+				if ok {
+					entry := val.(ARPEntry)
+					_, routeExist := tmp[DstIP]
+					if routeExist {
+						if route.Priority > 0 {
+							continue
+						}
+					}
+					tmp[DstIP] = RouteEntry{Dst: route.Dst, Gw: route.Gw, MAC: entry.MAC}
+				}
+			} else {
+				tmp[DstIP] = RouteEntry{Dst: route.Dst, Gw: route.Gw}
+			}
 			fmt.Println(route.Dst, " ", route.Gw)
-			tmp[DstIP] = route
 		} //for
 		fmt.Println("--------------------------------------")
 		mapRouteTable = tmp
@@ -108,7 +141,7 @@ func initRouteTable() {
 }
 
 //GetRoute ...
-func GetRoute(ip uint32) (netlink.Route, error) {
+func GetRoute(ip uint32) (RouteEntry, error) {
 	common.LogInfo(common.Info, " Get Route table entries ...")
 	NETMASK := uint32(4294967040) //255.255.255.0 /24 TODO
 	Dst := packet.SwapBytesUint32(ip) & NETMASK
@@ -234,21 +267,29 @@ func updateLinuxArp(DeviceName string, ip net.IP, mac net.HardwareAddr) {
 }
 
 //Add arp incomplete entry to ARP table
-func addDlArpEntry(ip uint32) {
+func addDlArpEntry(ip uint32) ARPEntry {
+	strIP := common.Int2ip(packet.SwapBytesUint32(ip))
+	common.LogInfo(common.Info, "[DL] AddULArp Entry  : ", strIP)
 	arpEntry := ARPEntry{
-		IP:     common.Int2ip(packet.SwapBytesUint32(ip)),
+		IP:     strIP,
+		IntIP:  ip,
 		STATUS: LblARPInComplete,
 	}
 	dlMapArpTable.Store(ip, arpEntry)
+	return arpEntry
 }
 
 //Add arp incomplete entry to ARP table
-func addUlArpEntry(ip uint32) {
+func addUlArpEntry(ip uint32) ARPEntry {
+	strIP := common.Int2ip(packet.SwapBytesUint32(ip))
+	common.LogInfo(common.Info, "[UL] AddULArp Entry  : ", strIP)
 	arpEntry := ARPEntry{
-		IP:     common.Int2ip(packet.SwapBytesUint32(ip)),
+		IP:     strIP,
+		IntIP:  ip,
 		STATUS: LblARPInComplete,
 	}
 	ulMapArpTable.Store(ip, arpEntry)
+	return arpEntry
 }
 
 var onceULRebuildArpCache sync.Once
@@ -259,7 +300,7 @@ func rebuildDlArpCache(dstip uint32, mac net.HardwareAddr) {
 
 	route, err := GetRoute(dstip)
 	if err == nil {
-		common.LogInfo(common.Info, "[DL] RebuildArpCache : ", route.Dst.IP, route.Dst.Mask)
+		common.LogInfo(common.Info, "[DL] RebuildArpCache : ", route.Dst)
 		ipnet := route.Dst
 		ip := route.Dst.IP
 		for ip := ip.Mask(ipnet.Mask); ipnet.Contains(ip); common.IncrementIP(ip) {
@@ -306,14 +347,14 @@ func LookupDlArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, bool, er
 		if entry.STATUS == LblARPComplete {
 			return entry.MAC, false, nil
 		}
-		putToDlQueue(pkt)
-		common.LogInfo(common.Info, "[DL] ARP Incomplete  Queued Pkt ", dlPktsQueue.Len())
+		putToDlQueue(entry, pkt)
+		common.LogInfo(common.Info, "[DL] ARP Incomplete  Queued Pkt ")
 		return entry.MAC, false, errors.New("[DL] ARP is not resolved for IP ")
 	}
 	var entry = ARPEntry{}
 	gw, err := lookupRoute(ip)
 	if err == nil {
-		common.LogInfo(common.Info, "[DL]Found GW ", common.Int2ip(packet.SwapBytesUint32(gw)).String(), gw)
+		//		common.LogInfo(common.Info, "[DL]Found GW ", common.Int2ip(packet.SwapBytesUint32(gw)).String(), gw)
 		if gw != 0 {
 			val, ok = dlMapArpTable.Load(gw)
 			common.LogInfo(common.Info, "[DL] GW ARPEntry ", val, ok)
@@ -323,15 +364,15 @@ func LookupDlArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, bool, er
 					onceDLRebuildArpCache.Do(func() { rebuildDlArpCache(ip, entry.MAC) })
 					return entry.MAC, false, nil
 				}
-				putToDlQueue(pkt)
-				common.LogInfo(common.Info, "[DL] GW ARP Incomplete Queued Pkt ", dlPktsQueue.Len())
+				putToDlQueue(entry, pkt)
+				common.LogInfo(common.Info, "[DL] GW ARP Incomplete Queued Pkt ")
 				return entry.MAC, false, errors.New("[DL] ARP is not resolved for IP ")
 			}
 			ip = gw
 		}
-		addDlArpEntry(ip)
-		putToDlQueue(pkt)
-		common.LogInfo(common.Info, "[DL] Adding ARP entry : Queued Pkt ", ip, dlPktsQueue.Len())
+		entry := addDlArpEntry(ip)
+		putToDlQueue(entry, pkt)
+		common.LogInfo(common.Info, "[DL] Adding ARP entry : Queued Pkt ", ip)
 	}
 	return entry.MAC, !ok, errors.New("[DL]ARP is not resolved for IP ")
 
@@ -347,14 +388,14 @@ func LookupUlArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, bool, er
 		if entry.STATUS == LblARPComplete {
 			return entry.MAC, false, nil
 		}
-		putToUlQueue(pkt)
-		common.LogInfo(common.Info, "[UL] ARP is incomplete  Pkt added to Queue", ulPktsQueue.Len())
+		putToUlQueue(entry, pkt)
+		common.LogInfo(common.Info, "[UL] ARP is incomplete  Pkt added to Queue")
 		return entry.MAC, false, errors.New("[UL] ARP is not resolved for IP ")
 	}
 	var entry = ARPEntry{}
 	gw, err := lookupRoute(ip)
 	if err == nil {
-		common.LogInfo(common.Info, "[UL] Found GW ", common.Int2ip(packet.SwapBytesUint32(gw)).String(), gw)
+		//		common.LogInfo(common.Info, "[UL] Found GW ", common.Int2ip(packet.SwapBytesUint32(gw)).String(), gw)
 		if gw != 0 {
 			val, ok = ulMapArpTable.Load(gw)
 			common.LogInfo(common.Info, "[UL] GW ARPEntry ", val, ok)
@@ -364,25 +405,31 @@ func LookupUlArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, bool, er
 					onceULRebuildArpCache.Do(func() { rebuildUlArpCache(ip, entry.MAC) })
 					return entry.MAC, false, nil
 				}
-				putToUlQueue(pkt)
-				common.LogInfo(common.Info, "[UL] GW ARP is incomplete  Pkt added to Queue", ulPktsQueue.Len())
+				putToUlQueue(entry, pkt)
+				common.LogInfo(common.Info, "[UL] GW ARP is incomplete  Pkt added to Queue")
 				return entry.MAC, false, errors.New("[UL] ARP is not resolved for IP ")
 			}
 			ip = gw
 		}
-		addUlArpEntry(ip)
-		putToUlQueue(pkt)
-		common.LogInfo(common.Info, "[UL] Adding ARP entry :  Pkt added to Queue", ulPktsQueue.Len())
+		entry := addUlArpEntry(ip)
+		putToUlQueue(entry, pkt)
+		common.LogInfo(common.Info, "[UL] Adding ARP entry :  Pkt added to Queue")
 	}
 	return entry.MAC, !ok, errors.New("[UL] ARP is not resolved for IP ")
 
 }
 
 // Clone the pkt and put into queue
-func putToUlQueue(srcPkt *packet.Packet) bool {
+func putToUlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
 	clPkt, err := ClonePacket(srcPkt)
 	if err == nil {
-		ulPktsQueue.Put(clPkt)
+		val, ok := UlPktsQMap.Load(entry.IntIP)
+		if !ok {
+			val = queue.New(100)
+			UlPktsQMap.Store(entry.IntIP, val)
+		}
+		pktQueue := val.(*queue.Queue)
+		pktQueue.Put(clPkt)
 		return true
 	}
 	common.LogInfo(common.Info, "[UL] ERROR while cloning pkt ", clPkt)
@@ -390,10 +437,16 @@ func putToUlQueue(srcPkt *packet.Packet) bool {
 }
 
 // Clone the pkt and put into queue
-func putToDlQueue(srcPkt *packet.Packet) bool {
+func putToDlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
 	clPkt, err := ClonePacket(srcPkt)
 	if err == nil {
-		dlPktsQueue.Put(clPkt)
+		val, ok := DlPktsQMap.Load(entry.IntIP)
+		if !ok {
+			val = queue.New(100)
+			DlPktsQMap.Store(entry.IntIP, val)
+		}
+		pktQueue := val.(*queue.Queue)
+		pktQueue.Put(clPkt)
 		return true
 	}
 	common.LogInfo(common.Info, "[DL] ERROR while cloning pkt ", clPkt)
@@ -418,7 +471,7 @@ func UpdateDlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, s1uDeviceName strin
 			entry.STATUS = LblARPComplete
 
 			dlMapArpTable.Store(spa, entry)
-			sendDLQueuedPkts(entry, dstPort)
+			go sendDLQueuedPkts(entry, dstPort)
 			updateLinuxArp(s1uDeviceName, entry.IP, entry.MAC)
 			return true
 		}
@@ -458,7 +511,7 @@ func UpdateUlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, sgiDeviceName strin
 			entry.STATUS = LblARPComplete
 			ulMapArpTable.Store(spa, entry)
 			//common.LogInfo(common.Info, "[UL]  ARP  Entry COMPLETE ", spa, " , ", entry.MAC, ", ERROR =", " ,SHA =", arpPkt.SHA)
-			sendULQueuedPkts(entry, dstPort)
+			go sendULQueuedPkts(entry, dstPort)
 			updateLinuxArp(sgiDeviceName, entry.IP, entry.MAC)
 			return true
 		}
@@ -483,8 +536,10 @@ func UpdateUlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, sgiDeviceName strin
 
 //Send Queued pkt after ARP is resolved
 func sendULQueuedPkts(entry ARPEntry, dstPort uint16) {
-	for {
-		items, err := ulPktsQueue.Get(10)
+	if val, ok := UlPktsQMap.Load(entry.IntIP); ok {
+		pktQueue := val.(*queue.Queue)
+
+		items, err := pktQueue.Get(100)
 		if err == nil {
 			for _, item := range items {
 				pkt := item.(*packet.Packet)
@@ -492,25 +547,21 @@ func sendULQueuedPkts(entry ARPEntry, dstPort uint16) {
 				//common.LogInfo(common.Info, "[UL] Sending queued pkts ", pkt)
 				result := pkt.SendPacket(dstPort)
 				if result == true {
-					atomic.AddUint64(&global.UlTxCounter, 1)
+					atomic.AddUint64(&UlTxCounter, 1)
 					//common.LogInfo(common.Info, "Sending success")
 				} else {
 					common.LogInfo(common.Info, "Sending failed ")
 				}
 			}
 		}
-		if ulPktsQueue.Len() == 0 {
-			break
-		}
 	}
-
-	common.LogInfo(common.Info, "[UL] Sending queued pkts ", ulPktsQueue.Len())
 }
 
 //Send Queued pkt after ARP is resolved
 func sendDLQueuedPkts(entry ARPEntry, dstPort uint16) {
-	for {
-		items, err := dlPktsQueue.Get(10)
+	if val, ok := DlPktsQMap.Load(entry.IntIP); ok {
+		pktQueue := val.(*queue.Queue)
+		items, err := pktQueue.Get(100)
 		if err == nil {
 			for _, item := range items {
 				pkt := item.(*packet.Packet)
@@ -518,18 +569,14 @@ func sendDLQueuedPkts(entry ARPEntry, dstPort uint16) {
 				//common.LogInfo(common.Info, "[DL] Sending queued pkts ", pkt)
 				result := pkt.SendPacket(dstPort)
 				if result == true {
-					atomic.AddUint64(&global.DlTxCounter, 1)
+					atomic.AddUint64(&DlTxCounter, 1)
 					//common.LogInfo(common.Info, "Sending success")
 				} else {
 					common.LogInfo(common.Info, "Sending failed ")
 				}
 			}
 		}
-		if dlPktsQueue.Len() == 0 {
-			break
-		}
 	}
-	common.LogInfo(common.Info, "[DL] Sending queued pkts ", dlPktsQueue.Len())
 }
 
 //ClonePacket clone existing packet
