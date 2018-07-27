@@ -13,15 +13,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/intel-go/nff-go/examples/nffPktgen/generator"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
-	"github.com/intel-go/nff-go/examples/nffPktgen/generator"
 )
 
 var (
-	number, recv  uint64
-	isCycled      bool
-	testDoneEvent *sync.Cond
+	number, numberGot, recv uint64
+	isCycled                bool
+	testDoneEvent           *sync.Cond
 )
 
 type mapFlags struct {
@@ -41,7 +41,7 @@ func parseIntOrStr(s string) interface{} {
 	var err error
 	parsed, err = strconv.Atoi(s)
 	if err != nil {
-		parsed  = parseStr(s)
+		parsed = parseStr(s)
 	}
 	return parsed
 }
@@ -111,7 +111,8 @@ func main() {
 		eachOutPortConfig mapFlags
 		eachInPortConfig  listFlags
 	)
-	flag.Uint64Var(&number, "number", 10000000, "stop after generated number")
+	flag.Uint64Var(&number, "number", 0, "stop after generated number")
+	flag.Uint64Var(&numberGot, "numberGot", 10000000, "stop after got number")
 	flag.BoolVar(&isCycled, "cycle", false, "cycle execution")
 	flag.Uint64Var(&speed, "speed", 6000000, "speed of fast generator, Pkts/s")
 	flag.Var(&eachOutPortConfig, "outConfig", "specifies config per port portNum or file: 'path', 'pcapOut': 'path2'. For example: 1: 'ip4.json', 'mix.pcap': 'mix.json'")
@@ -119,7 +120,9 @@ func main() {
 	flag.Parse()
 
 	// Init NFF-GO system at 16 available cores
-	config := flow.Config{}
+	config := flow.Config{
+		CPUList: "0-43",
+	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	testDoneEvent = sync.NewCond(&m)
@@ -143,7 +146,6 @@ func main() {
 		default:
 			panic(fmt.Sprintf("Unrecognized type in outConfig: %v", key))
 		}
-
 	}
 	for _, value := range eachInPortConfig.value {
 		var (
@@ -171,8 +173,11 @@ func main() {
 	g := generator.GetGenerator()
 	go func() {
 		for {
+			if g.GetGeneratedNumber() >= number {
+				testDoneEvent.Signal()
+			}
 			println("Sent/Got", g.GetGeneratedNumber(), "/", atomic.LoadUint64(&recv), "packets")
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second)
 		}
 	}()
 
@@ -188,7 +193,7 @@ func handleRecv(currentPacket *packet.Packet, context flow.UserContext) {
 	if isCycled {
 		return
 	}
-	if got >= number {
+	if got >= numberGot {
 		time.Sleep(time.Second)
 		testDoneEvent.Signal()
 	}
