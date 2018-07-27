@@ -1045,9 +1045,14 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 			for q := int32(1); q < inIndex[0]+1; q++ {
 				n := IN[inIndex[q]].DequeueBurst(InputMbufs, burstSize)
 				if n == 0 {
+					// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
+					// we just want to slow goroutine down without parking, so loop is OK for this.
+					// time.Now lasts approximately 70ns and this satisfies us
 					if pause != 0 {
 						// pause should be non 0 only if function works with ONE inIndex
-						time.Sleep(time.Duration(pause) * time.Nanosecond)
+						a := time.Now()
+						for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
+						}
 					}
 					continue
 				}
@@ -1263,7 +1268,7 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 				// we just want to slow goroutine down without parking, so loop is OK for this.
 				// time.Now lasts approximately 70ns and this satisfies us
 				if pause != 0 {
-					// pause should be 0 only if function works with ONE inIndex
+					// pause should be non 0 only if function works with ONE inIndex
 					a := time.Now()
 					for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
 					}
