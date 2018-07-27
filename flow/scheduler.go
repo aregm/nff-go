@@ -216,7 +216,7 @@ func (scheduler *scheduler) systemStart() (err error) {
 
 func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) (err error) {
 	ffi := new(instance)
-	common.LogDebug(common.Initialization, "Start new instance for", ff.name)
+	common.LogDebug(common.Debug, "Start new instance for", ff.name)
 	ffi.inIndex = inIndex
 	ffi.report = make(chan reportPair, len(scheduler.cores) - 1)
 	ffi.previousSpeed = make([]reportPair, len(scheduler.cores), len(scheduler.cores))
@@ -236,7 +236,7 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, "instance", n)
 		return err
 	}
-	common.LogDebug(common.Initialization, "Start new clone for", ff.name, "instance", n, "at", core, "core")
+	common.LogDebug(common.Debug, "Start new clone for", ff.name, "instance", n, "at", core, "core")
 	ffi.clone = append(ffi.clone, &clonePair{index, [2]chan int{nil, nil}, process})
 	ffi.cloneNumber++
 	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
@@ -246,7 +246,7 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 	go func() {
 		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
 			if err := low.SetAffinity(core); err != nil {
-				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
+				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
 			}
 			if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
 				ff.cloneFunction(ff.Parameters, ffi.inIndex, ffi.clone[ffi.cloneNumber-1].channel, ffi.report, cloneContext(ff.context))
@@ -261,6 +261,7 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 }
 
 func (ff *flowFunction) stopClone(ffi *instance, scheduler *scheduler) {
+	common.LogDebug(common.Debug, "Stop clone")
 	if ffi.clone[ffi.cloneNumber-1].channel[0] != nil {
 		ffi.clone[ffi.cloneNumber-1].channel[0] <- -1
 		<-ffi.clone[ffi.cloneNumber-1].channel[1]
@@ -278,7 +279,7 @@ func (ff *flowFunction) stopClone(ffi *instance, scheduler *scheduler) {
 }
 
 func (ff *flowFunction) stopInstance(from int, to int, scheduler *scheduler) {
-	common.LogDebug(common.Initialization, "Stop instance for", ff.name)
+	common.LogDebug(common.Debug, "Stop instance for", ff.name)
 	fromInstance := ff.instance[from]
 	for fromInstance.cloneNumber != 0 {
 		ff.stopClone(fromInstance, scheduler)
@@ -396,6 +397,8 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							}
 						}
 					}
+					// TODO this is wrong due to different speeds of different flows. Also we should take into account only
+					// instances without clones here.
 					if ff.instanceNumber > 1 {
 						min0 := 0
 						min1 := 1
@@ -576,7 +579,7 @@ func (ff *flowFunction) printDebug(schedTime uint) {
 			if reportMbits {
 				common.LogDebug(common.Debug, "Current speed of", q, "instance of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s")
 			} else {
-				common.LogDebug(common.Debug, "Current speed of", q, "instance of", ff.name, "is", out.Packets, "PKT/S, cloneNumber:", ff.instance[q].cloneNumber)
+				common.LogDebug(common.Debug, "Current speed of", q, "instance of", ff.name, "is", out.Packets, "PKT/S, cloneNumber:", ff.instance[q].cloneNumber, "queue number:", ff.instance[q].inIndex[0])
 			}
 		}
 	case fastGenerate:
