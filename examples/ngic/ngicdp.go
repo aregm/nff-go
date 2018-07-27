@@ -20,7 +20,7 @@
 // UL Flow:
 //   1. GTPU traffic recived on S1U interface (S1u recv flow) is validated based on the TEID and DestIP
 //   2. If valid decap GTP headers
-//   3. Apply the policy and charging rules
+//   3. Apply the policy and charging rule
 //   4. Update the next hop info for the pkt
 //	    a) if StaticARP is enabled then lookup static arp table using destIP if found update the pkt with destination mac
 //		 and send via SGI interface (SGI send flow) else drop the pkt.
@@ -53,8 +53,7 @@ import (
 	"fmt"
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/examples/ngic/darp"
-	"github.com/intel-go/nff-go/examples/ngic/global"
-	"github.com/intel-go/nff-go/examples/ngic/rule"
+	"github.com/intel-go/nff-go/rules"
 	"github.com/intel-go/nff-go/examples/ngic/sarp"
 	"github.com/intel-go/nff-go/examples/ngic/simucp"
 	"github.com/intel-go/nff-go/flow"
@@ -99,13 +98,29 @@ var (
 	ADCL3Rules *packet.L3Rules
 
 	//EnableStaticARP ...
-	EnableStaticARP = false
+	EnableStaticARP = true
 
 	//UlMap ue context map contains UL information
 	UlMap map[uint32]uint32
 	//DlMap ue context map contains DL information
 	DlMap map[uint32]*simucp.ENBFTEID
 )
+
+
+// stats counters
+var (
+	UlRxCounter uint64
+	DlRxCounter uint64
+)
+
+//kni counters
+var (
+	KniUlRxCounter uint64
+	KniDlRxCounter uint64
+	KniUlTxCounter uint64
+	KniDlTxCounter uint64
+)
+
 
 //initConfig
 func initConfig() {
@@ -165,7 +180,7 @@ func main() {
 	//intialize logger
 	initLogger()
 	//initialize rules
-	rule.Init()
+	rules.Init()
 
 	// train DP
 	UlMap, DlMap = simucp.TrainDP()
@@ -193,11 +208,11 @@ func main() {
 	common.PrintMAC("SGI port MAC : ", SgiMac)
 
 	var err1 error
-	SDFUlL3Rules, err1 = packet.GetL3ACLFromORIG(rule.SdfUlACLFilePath)
+	SDFUlL3Rules, err1 = packet.GetL3ACLFromORIG(rules.SdfUlACLFilePath)
 	flow.CheckFatal(err1)
-	SDFDlL3Rules, err1 = packet.GetL3ACLFromORIG(rule.SdfDlACLFilePath)
+	SDFDlL3Rules, err1 = packet.GetL3ACLFromORIG(rules.SdfDlACLFilePath)
 	flow.CheckFatal(err1)
-	ADCL3Rules, err1 = packet.GetL3ACLFromORIG(rule.AdcACLFilePath)
+	ADCL3Rules, err1 = packet.GetL3ACLFromORIG(rules.AdcACLFilePath)
 	flow.CheckFatal(err1)
 
 	if DpConfig.NeedKNI == true {
@@ -266,7 +281,7 @@ func main() {
 
 //DownlinkFilterKni ...
 func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
-	atomic.AddUint64(&global.KniDlRxCounter, 1)
+	atomic.AddUint64(&KniDlRxCounter, 1)
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
 	//	common.LogInfo(common.Info, "In SGI FilterFunction ", ipv4, arpPkt)
 	if arpPkt != nil {
@@ -274,18 +289,18 @@ func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 			common.LogInfo(common.Info, "ARP Response recv = ", arpPkt)
 			darp.UpdateUlArpTable(arpPkt, DpConfig.SgiPortIdx, DpConfig.SgiDeviceName)
 		}
-		atomic.AddUint64(&global.KniDlTxCounter, 1)
+		atomic.AddUint64(&KniDlTxCounter, 1)
 		return true
 	} else if ipv4 != nil {
 
 		if ipv4.NextProtoID == common.ICMPNumber {
 			common.LogInfo(common.Info, "PING pkt found ")
-			atomic.AddUint64(&global.KniDlTxCounter, 1)
+			atomic.AddUint64(&KniDlTxCounter, 1)
 			return true
 		}
 	} else if ipv6 != nil {
 		if ipv6.Proto == common.ICMPNumber {
-			atomic.AddUint64(&global.KniDlTxCounter, 1)
+			atomic.AddUint64(&KniDlTxCounter, 1)
 			return true
 		}
 	}
@@ -301,8 +316,8 @@ func applyDlRulesFilter(current *packet.Packet) bool {
 	//	common.LogInfo(common.Info, "SDX Rule Idx  #", int(sdfIdx))
 	//	common.LogInfo(common.Info, "ADC Rule Idx  #", int(adcIdx))
 
-	pccFilter := rule.LookUpPCCRuleBySDF(int(sdfIdx))
-	adcPCCFilter, err := rule.LookUpPCCRuleByADC(int(adcIdx))
+	pccFilter := rules.LookUpPCCRuleBySDF(int(sdfIdx))
+	adcPCCFilter, err := rules.LookUpPCCRuleByADC(int(adcIdx))
 	if err == nil {
 		if pccFilter.Precedence > adcPCCFilter.Precedence {
 			pccFilter = adcPCCFilter
@@ -329,7 +344,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
-			atomic.AddUint64(&global.DlTxCounter, 1)
+			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
 			return false
 		}
@@ -337,7 +352,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		dmac, sendArp, err := darp.LookupDlArpTable(ipv4.DstAddr, pkt) //s1uGwMac
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
-			atomic.AddUint64(&global.DlTxCounter, 1)
+			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
 			if sendArp {
 				packet.InitARPRequestPacket(pkt, S1uMac, common.StringToIPv4(DpConfig.S1uIP), ipv4.DstAddr)
@@ -361,7 +376,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 		common.LogInfo(common.Info, "[DL]Not a valid Ipv4 PKT : INVALID PKT REJECT")
 		return false
 	}
-	atomic.AddUint64(&global.DlRxCounter, 1)
+	atomic.AddUint64(&DlRxCounter, 1)
 
 	fteid, ok := DlMap[pktIpv4.DstAddr]
 
@@ -421,7 +436,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 //UplinkFilterKni ...
 func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 
-	atomic.AddUint64(&global.KniUlTxCounter, 1)
+	atomic.AddUint64(&KniUlTxCounter, 1)
 
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
 	//	common.LogInfo(common.Info, "In S1U FilterFunction ", ipv4, arpPkt)
@@ -430,18 +445,18 @@ func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 			common.LogInfo(common.Info, "ARP response recv = ", arpPkt)
 			darp.UpdateDlArpTable(arpPkt, DpConfig.S1uPortIdx, DpConfig.S1uDeviceName)
 		}
-		atomic.AddUint64(&global.KniUlTxCounter, 1)
+		atomic.AddUint64(&KniUlTxCounter, 1)
 		return true
 	} else if ipv4 != nil {
 
 		if ipv4.NextProtoID == common.ICMPNumber {
 			common.LogInfo(common.Info, "PING pkt found ")
-			atomic.AddUint64(&global.KniUlTxCounter, 1)
+			atomic.AddUint64(&KniUlTxCounter, 1)
 			return true
 		}
 	} else if ipv6 != nil {
 		if ipv6.Proto == common.ICMPNumber {
-			atomic.AddUint64(&global.KniUlTxCounter, 1)
+			atomic.AddUint64(&KniUlTxCounter, 1)
 			return true
 		}
 	}
@@ -456,8 +471,8 @@ func applyUlRulesFilter(current *packet.Packet) bool {
 	//	common.LogInfo(common.Info, "SDX Rule Idx  #", int(sdf_idx))
 	//	common.LogInfo(common.Info, "ADC Rule Idx  #", int(adc_idx))
 
-	pccFilter := rule.LookUpPCCRuleBySDF(int(sdfIdx))
-	adcPCCFilter, err := rule.LookUpPCCRuleByADC(int(adcIdx))
+	pccFilter := rules.LookUpPCCRuleBySDF(int(sdfIdx))
+	adcPCCFilter, err := rules.LookUpPCCRuleByADC(int(adcIdx))
 	if err == nil {
 		if pccFilter.Precedence > adcPCCFilter.Precedence {
 			pccFilter = adcPCCFilter
@@ -485,7 +500,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
-			atomic.AddUint64(&global.UlTxCounter, 1)
+			atomic.AddUint64(&darp.UlTxCounter, 1)
 		} else {
 			return false
 		}
@@ -495,7 +510,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
-			atomic.AddUint64(&global.UlTxCounter, 1)
+			atomic.AddUint64(&darp.UlTxCounter, 1)
 		} else {
 			if sendArp {
 				//sending arp request pkt only once
@@ -540,7 +555,7 @@ func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 		common.LogError(common.Info, "rejecting not valid GTPU packet")
 		return false
 	}
-	atomic.AddUint64(&global.UlRxCounter, 1) //increment counters
+	atomic.AddUint64(&UlRxCounter, 1) //increment counters
 
 	//make a copy of gtpu
 	pktTEID := gtpu.TEID
@@ -582,7 +597,7 @@ func PrintStats() {
 		if count%20 == 0 {
 			fmt.Printf("\n%-11s %-11s %-11s %-11s %-11s|| %-11s %-11s %-11s%-11s %-11s\n", "KNI-RX", "KNI-TX", "UL-RX", "UL-TX", "UL-DFF", "KNI-RX", "KNI-TX", "DL-RX", "DL-TX", "DL-DFF")
 		}
-		fmt.Printf("%-11d %-11d %-11d %-11d %-11d|| %-11d %-11d %-11d%-11d %-11d\n", global.KniUlRxCounter, global.KniUlTxCounter, global.UlRxCounter, global.UlTxCounter, (global.UlRxCounter - global.UlTxCounter), global.KniDlRxCounter, global.KniDlTxCounter, global.DlRxCounter, global.DlTxCounter, (global.DlRxCounter - global.DlTxCounter))
+		fmt.Printf("%-11d %-11d %-11d %-11d %-11d|| %-11d %-11d %-11d%-11d %-11d\n", KniUlRxCounter, KniUlTxCounter, UlRxCounter, darp.UlTxCounter, (UlRxCounter - darp.UlTxCounter), KniDlRxCounter, KniDlTxCounter, DlRxCounter, darp.DlTxCounter, (DlRxCounter - darp.DlTxCounter))
 		//  fmt.Printf("\r\x1b[32;1mPKT UL Tx/Rx : %d/%d  , PKT DL Tx/Rx : %d/%d\x1b[0m",ul_tx_pkt_counter,ul_rx_pkt_counter,dl_tx_pkt_counter,dl_rx_pkt_counter)
 		time.Sleep(1000 * time.Millisecond)
 		count++
