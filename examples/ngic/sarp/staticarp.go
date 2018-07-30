@@ -77,8 +77,8 @@ func AddArpData(ipRange string, value string) {
 				STATUS: "COMPLETED",
 				MAC:    hw,
 			} //
-			common.LogInfo(common.Info, "Entry : ", common.Int2ip(i), common.StringToIPv4(data.IP.String()), common.StringToIPv4(strings.Split(ipRange, " ")[0]))
-			addStaticArpEntry(common.StringToIPv4(common.Int2ip(i).String()), data)
+			common.LogInfo(common.Info, "Entry : ", common.Int2ip(i), packet.StringToIPv4(data.IP.String()), packet.StringToIPv4(strings.Split(ipRange, " ")[0]))
+			addStaticArpEntry(packet.StringToIPv4(common.Int2ip(i).String()), data)
 		} //
 	}
 }

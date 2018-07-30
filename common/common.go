@@ -16,7 +16,6 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"strings"
 )
 
 // Max array length for type conversions
@@ -317,7 +316,7 @@ func LogTitle(logType LogType, v ...interface{}) {
 
 // SetLogType internal, used in flow package
 func SetLogType(logType LogType) {
-//	log.SetFlags(0)
+	log.SetFlags(0)
 	currentLogType = logType
 }
 
@@ -429,23 +428,6 @@ func dropInvalidCPUs(nums []int, maxcpu int) []int {
 		}
 	}
 	return nums[:i]
-}
-// parse ip address string to int ip
-func StringToIPv4(ipaddr string) uint32 {
-	str_ary := strings.Split(ipaddr, ".")
-	bIp := [4]byte{}
-
-	i := 0
-	for _, element := range str_ary {
-		val, err := strconv.Atoi(element)
-		if err != nil {
-			panic(err)
-		}
-		bIp[i] = byte(val)
-		i++
-	}
-	return ByteAryToIPv4(bIp)
-
 }
 
 //get the next ip address specified by the inc

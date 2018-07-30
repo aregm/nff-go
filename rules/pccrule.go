@@ -11,6 +11,32 @@ import (
 	"strconv"
 )
 
+// constants for pcc filter
+const (
+	LblNumPccFilters = "NUM_PCC_FILTERS"
+	LblPccFilter     = "PCC_FILTER"
+
+	LblUlAmbrMtrProfileIdx = "UL_AMBR_MTR_PROFILE_IDX"
+	LblDlAmbrMtrProfileIdx = "DL_AMBR_MTR_PROFILE_IDX"
+	LblReportLevel         = "REPORT_LEVEL"
+	LblPrecedence          = "PRECEDENCE"
+	LblRulename            = "RULE_NAME"
+	LblRatingGroup         = "RATING_GROUP"
+	LblServiceID           = "SERVICE_ID"
+	LblRuleStatus          = "RULE_STATUS"
+	LblChargingMode        = "CHARGING_MODE"
+	LblGateSatus           = "GATE_STATUS"
+	LblMeteringMethod      = "METERING_METHOD"
+	LblMuleNotify          = "MUTE_NOTIFY"
+	LblMonitoringKey       = "MONITORING_KEY"
+	LblSponsorID           = "SPONSOR_ID"
+	LblRedirectInfo        = "REDIRECT_INFO"
+	LblSessionCont         = "SESSION_CONT"
+	LblDropPktCount        = "DROP_PKT_COUNT"
+	LblSdfFilterIdx        = "SDF_FILTER_IDX"
+	LblAdcFilterIdx        = "ADC_FILTER_IDX"
+)
+
 //PCCFilter ...
 type PCCFilter struct {
 	PCCFilterIdx       int

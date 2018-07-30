@@ -15,6 +15,27 @@ import (
 	"strconv"
 )
 
+//constants for sdf filter
+const (
+	LblNumSdfFilters = "NUM_SDF_FILTERS"
+	LblSdfFilter     = "SDF_FILTER"
+
+	LblDirection           = "DIRECTION"
+	LblIpv4Local           = "IPV4_LOCAL"
+	LblIpv4Remote          = "IPV4_REMOTE"
+	LblIpv4LocalMask       = "IPV4_LOCAL_MASK"
+	LblIpv4RemoteMask      = "IPV4_REMOTE_MASK"
+	LblProtocol            = "PROTOCOL"
+	LblLocalLowLimitPort   = "LOCAL_LOW_LIMIT_PORT"
+	LblLocalHighLimitPort  = "LOCAL_HIGH_LIMIT_PORT"
+	LblRemoteLowLimitPort  = "REMOTE_LOW_LIMIT_PORT"
+	LblRemoteHighLimitPort = "REMOTE_HIGH_LIMIT_PORT"
+
+	LblDirectionUl = "uplink_only"
+	LblDirectionDl = "downlink_only"
+	LblDirectionBi = "bidirectional"
+)
+
 //SDFFilter ...
 type SDFFilter struct {
 	SDFFilterIdx   int
@@ -45,7 +66,7 @@ func ParseSDFRules(filepath string) []SDFFilter {
 
 	noOfFilters, err := cfg.Section(LblGlobal).Key(LblNumSdfFilters).Int()
 	flow.CheckFatal(err)
-
+	sdfFilters := []SDFFilter{}
 	for i := 1; i <= noOfFilters; i++ {
 		strVal := strconv.Itoa(i)
 		section := cfg.Section(LblSdfFilter + "_" + strVal)

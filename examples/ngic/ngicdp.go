@@ -53,11 +53,11 @@ import (
 	"fmt"
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/examples/ngic/darp"
-	"github.com/intel-go/nff-go/rules"
 	"github.com/intel-go/nff-go/examples/ngic/sarp"
 	"github.com/intel-go/nff-go/examples/ngic/simucp"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/rules"
 	"log"
 	"os"
 	"sync/atomic"
@@ -81,6 +81,14 @@ type Config struct {
 	SgiDeviceName   string
 }
 
+// constants for rule file paths
+const (
+	PccRulesFilePath = "config/pcc_rules.cfg"
+	SdfRulesFilePath = "config/sdf_rules.cfg"
+	AdcRulesFilePath = "config/adc_rules.cfg"
+)
+
+//dp variables
 var (
 	//DpConfig dp configuration object
 	DpConfig = Config{}
@@ -106,7 +114,6 @@ var (
 	DlMap map[uint32]*simucp.ENBFTEID
 )
 
-
 // stats counters
 var (
 	UlRxCounter uint64
@@ -120,7 +127,6 @@ var (
 	KniUlTxCounter uint64
 	KniDlTxCounter uint64
 )
-
 
 //initConfig
 func initConfig() {
@@ -145,6 +151,20 @@ func initConfig() {
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", DpConfig.S1uIP, DpConfig.SgiIP)
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", DpConfig.NeedKNI, DpConfig.CPUList, DpConfig.KNICpuIdx)
 	fmt.Printf("[INFO] S1uDeviceName = %s , SgiDeviceName = %s \n", DpConfig.S1uDeviceName, DpConfig.SgiDeviceName)
+
+}
+
+// initRules initializae rules map
+func initRules() {
+
+	pccFilters := rules.ParsePCCRules(PccRulesFilePath)
+	sdfFilters := rules.ParseSDFRules(SdfRulesFilePath)
+	adcFilters := rules.ParseADCRules(AdcRulesFilePath)
+	rules.PrepareSdfUlACL(sdfFilters)
+	rules.PrepareSdfDlACL(sdfFilters)
+	rules.PrepareAdcACL(adcFilters)
+	rules.BuildPCCSDFMap(pccFilters)
+	rules.BuildPCCADCMap(pccFilters)
 
 }
 
@@ -180,7 +200,7 @@ func main() {
 	//intialize logger
 	initLogger()
 	//initialize rules
-	rules.Init()
+	initRules()
 
 	// train DP
 	UlMap, DlMap = simucp.TrainDP()
@@ -355,7 +375,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
 			if sendArp {
-				packet.InitARPRequestPacket(pkt, S1uMac, common.StringToIPv4(DpConfig.S1uIP), ipv4.DstAddr)
+				packet.InitARPRequestPacket(pkt, S1uMac, packet.StringToIPv4(DpConfig.S1uIP), ipv4.DstAddr)
 				common.LogInfo(common.Info, "[DL] Sending ARP request", pkt)
 			} else {
 				return false
@@ -413,7 +433,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - common.EtherLen))
 	ipv4.NextProtoID = common.UDPNumber
 
-	ipv4.SrcAddr = common.StringToIPv4(DpConfig.S1uIP)
+	ipv4.SrcAddr = packet.StringToIPv4(DpConfig.S1uIP)
 	ipv4.DstAddr = fteid.IP
 	ipv4.HdrChecksum = packet.CalculateIPv4Checksum(ipv4)
 
@@ -514,7 +534,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		} else {
 			if sendArp {
 				//sending arp request pkt only once
-				packet.InitARPRequestPacket(pkt, SgiMac, common.StringToIPv4(DpConfig.SgiIP), ipv4.DstAddr)
+				packet.InitARPRequestPacket(pkt, SgiMac, packet.StringToIPv4(DpConfig.SgiIP), ipv4.DstAddr)
 				common.LogInfo(common.Info, "[UL] Sending ARP request", pkt)
 			} else {
 				return false
@@ -531,7 +551,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 := current.GetIPv4()
-	if ipv4 == nil || ipv4.DstAddr != common.StringToIPv4(DpConfig.S1uIP) {
+	if ipv4 == nil || ipv4.DstAddr != packet.StringToIPv4(DpConfig.S1uIP) {
 		// reject with wrong dest ip
 		common.LogError(common.Info, " [UL] reject dest ip doesn't match")
 		if ipv4 != nil {
@@ -598,8 +618,7 @@ func PrintStats() {
 			fmt.Printf("\n%-11s %-11s %-11s %-11s %-11s|| %-11s %-11s %-11s%-11s %-11s\n", "KNI-RX", "KNI-TX", "UL-RX", "UL-TX", "UL-DFF", "KNI-RX", "KNI-TX", "DL-RX", "DL-TX", "DL-DFF")
 		}
 		fmt.Printf("%-11d %-11d %-11d %-11d %-11d|| %-11d %-11d %-11d%-11d %-11d\n", KniUlRxCounter, KniUlTxCounter, UlRxCounter, darp.UlTxCounter, (UlRxCounter - darp.UlTxCounter), KniDlRxCounter, KniDlTxCounter, DlRxCounter, darp.DlTxCounter, (DlRxCounter - darp.DlTxCounter))
-		//  fmt.Printf("\r\x1b[32;1mPKT UL Tx/Rx : %d/%d  , PKT DL Tx/Rx : %d/%d\x1b[0m",ul_tx_pkt_counter,ul_rx_pkt_counter,dl_tx_pkt_counter,dl_rx_pkt_counter)
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(10 * 1000 * time.Millisecond)
 		count++
 	}
 }
