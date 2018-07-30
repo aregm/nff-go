@@ -1,5 +1,5 @@
 //Package rules ...
-// Copyright (c) 2017 Intel Corporation.
+// Copyright 2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package rules
@@ -13,6 +13,17 @@ import (
 	"os"
 	"sort"
 	"strconv"
+)
+
+//constants for adc filter
+const (
+	LblNumAdcRules = "NUM_ADC_RULES"
+	LblAdcRule     = "ADC_RULE"
+
+	LblAdcType = "ADC_TYPE"
+	LblIP      = "IP"
+	LblPrefix  = "PREFIX"
+	LblDomain  = "DOMAIN"
 )
 
 //ADCFilter ...
@@ -36,7 +47,7 @@ func ParseADCRules(filepath string) []ADCFilter {
 
 	noOfFilters, err := cfg.Section(LblGlobal).Key(LblNumAdcRules).Int()
 	flow.CheckFatal(err)
-
+	adcFilters := []ADCFilter{}
 	for i := 1; i <= noOfFilters; i++ {
 		strVal := strconv.Itoa(i)
 		section := cfg.Section(LblAdcRule + "_" + strVal)

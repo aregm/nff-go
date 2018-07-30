@@ -1,5 +1,4 @@
-
-n Infrastructure Core (NGIC) VNF
+# Infrastructure Core (NGIC) VNF
 ==============================================
 
 ### Introduction

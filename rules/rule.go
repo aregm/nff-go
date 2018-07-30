@@ -1,5 +1,5 @@
 //Package rules ...
-// Copyright (c) 2017 Intel Corporation.
+// Copyright 2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package rules
@@ -9,28 +9,22 @@ import (
 	"github.com/intel-go/nff-go/common"
 )
 
+//constants globals
+const (
+	LblGlobal = "GLOBAL"
+)
+
+//generated ACLs file path
 var (
-	pccFilters []PCCFilter
-	adcFilters []ADCFilter
-	sdfFilters []SDFFilter
+	SdfUlACLFilePath = "/tmp/sdf_ul_acl.cfg"
+	SdfDlACLFilePath = "/tmp/sdf_dl_acl.cfg"
+	AdcACLFilePath   = "/tmp/adc_acl.cfg"
 )
 
 var (
 	pccSDFMap map[int][]PCCFilter
 	pccADCMap map[int][]PCCFilter
 )
-
-//Init ... initial rules and prepare and install acl
-func Init() {
-	pccFilters = ParsePCCRules(PccRulesFilePath)
-	sdfFilters = ParseSDFRules(SdfRulesFilePath)
-	adcFilters = ParseADCRules(AdcRulesFilePath)
-	PrepareSdfUlACL(sdfFilters)
-	PrepareSdfDlACL(sdfFilters)
-	PrepareAdcACL(adcFilters)
-	pccSDFMap = BuildPCCSDFMap(pccFilters)
-	pccADCMap = BuildPCCADCMap(pccFilters)
-}
 
 //LookUpPCCRuleBySDF ...
 func LookUpPCCRuleBySDF(sdfIdx int) PCCFilter {

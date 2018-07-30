@@ -1,5 +1,5 @@
 //Package simucp ...
-// Copyright (c) 2017 Intel Corporation.
+// Copyright 2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package simucp
@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 	"gopkg.in/ini.v1"
 	"net"
 	"strconv"
@@ -95,7 +96,7 @@ func populateULTable(config *SimuConfig) map[uint32]uint32 {
 	ulMap := make(map[uint32]uint32)
 	startUeIP := net.ParseIP(config.StartUeIP)
 	for i := 0; i < config.FlowCount; i++ {
-		ulMap[config.StartS1uTEID] = common.StringToIPv4(common.NextIP(startUeIP, uint(i)).String())
+		ulMap[config.StartS1uTEID] = packet.StringToIPv4(common.NextIP(startUeIP, uint(i)).String())
 		config.StartS1uTEID++
 	}
 	return ulMap
@@ -109,9 +110,9 @@ func populateDLTable(config *SimuConfig) map[uint32]*ENBFTEID {
 
 		enbFteid := ENBFTEID{
 			TEID: config.StartEnbTEID,
-			IP:   common.StringToIPv4(config.StartEnbIP),
+			IP:   packet.StringToIPv4(config.StartEnbIP),
 		}
-		dlMap[common.StringToIPv4(common.NextIP(startUeIP, uint(i)).String())] = &enbFteid
+		dlMap[packet.StringToIPv4(common.NextIP(startUeIP, uint(i)).String())] = &enbFteid
 
 		//  startENB_TEID++  //CHANGEME
 	}

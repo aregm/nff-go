@@ -1,5 +1,5 @@
 //Package darp ...
-// Copyright (c) 2017 Intel Corporation.
+// Copyright 2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 // Dynamic Arp support
@@ -110,14 +110,14 @@ func initRouteTable() {
 		fmt.Println("Route Table")
 		fmt.Println("--------------------------------------")
 		for _, route := range routes {
-			DstIP := common.StringToIPv4("0.0.0.0")
+			DstIP := packet.StringToIPv4("0.0.0.0")
 			if route.Dst != nil {
-				DstIP = common.StringToIPv4(route.Dst.IP.String())
+				DstIP = packet.StringToIPv4(route.Dst.IP.String())
 			}
 			//common.LogInfo(common.Info, "Adding Entry Dst# ", common.Int2ip(packet.SwapBytesUint32(DstIP)).String(), " , ", DstIP)
 			//	tmp[DstIP] = route
 			if route.Gw != nil {
-				val, ok := dlMapArpTable.Load(common.StringToIPv4(route.Gw.String()))
+				val, ok := dlMapArpTable.Load(packet.StringToIPv4(route.Gw.String()))
 				if ok {
 					entry := val.(ARPEntry)
 					_, routeExist := tmp[DstIP]
@@ -166,11 +166,11 @@ func lookupRoute(ip uint32) (uint32, error) {
 	if ok {
 		//common.LogInfo(common.Info, "Found # Gw: ", route.Gw, ", ", route.Gw.String())
 		if route.Gw != nil {
-			return common.StringToIPv4(route.Gw.String()), nil
+			return packet.StringToIPv4(route.Gw.String()), nil
 		}
-		return common.StringToIPv4("0.0.0.0"), nil
+		return packet.StringToIPv4("0.0.0.0"), nil
 	}
-	return common.StringToIPv4("0.0.0.0"), errors.New("Route not found")
+	return packet.StringToIPv4("0.0.0.0"), errors.New("Route not found")
 } //
 
 // initialize the arp table using netlink call
@@ -186,7 +186,7 @@ func initArpTable() {
 			ipv4 := neigh.IP.To4()
 			//	//common.LogInfo(common.Info,"[DEBUG]",ip)
 			if ipv4 != nil && !ipv4.IsLoopback() {
-				common.LogInfo(common.Info, "Adding Entry IP# ", ipv4.String(), " , ", common.StringToIPv4(ipv4.String()))
+				common.LogInfo(common.Info, "Adding Entry IP# ", ipv4.String(), " , ", packet.StringToIPv4(ipv4.String()))
 				fmt.Println(ipv4, " ", neigh.HardwareAddr)
 
 				arpEntry := ARPEntry{
@@ -195,8 +195,8 @@ func initArpTable() {
 					STATUS: LblARPComplete,
 				}
 
-				ulMapArpTable.Store(common.StringToIPv4(ipv4.String()), arpEntry)
-				dlMapArpTable.Store(common.StringToIPv4(ipv4.String()), arpEntry)
+				ulMapArpTable.Store(packet.StringToIPv4(ipv4.String()), arpEntry)
+				dlMapArpTable.Store(packet.StringToIPv4(ipv4.String()), arpEntry)
 
 			}
 		}
@@ -309,8 +309,8 @@ func rebuildDlArpCache(dstip uint32, mac net.HardwareAddr) {
 				STATUS: LblARPComplete,
 				MAC:    mac,
 			} //
-			dlMapArpTable.Store(common.StringToIPv4(ip.String()), arpEntry)
-			common.LogInfo(common.Info, "[DL] Adding Arp Entry : ", ip, common.StringToIPv4(ip.String()))
+			dlMapArpTable.Store(packet.StringToIPv4(ip.String()), arpEntry)
+			common.LogInfo(common.Info, "[DL] Adding Arp Entry : ", ip, packet.StringToIPv4(ip.String()))
 		}
 	}
 
@@ -330,8 +330,8 @@ func rebuildUlArpCache(dstip uint32, mac net.HardwareAddr) {
 				STATUS: LblARPComplete,
 				MAC:    mac,
 			} //
-			ulMapArpTable.Store(common.StringToIPv4(ip.String()), arpEntry)
-			common.LogInfo(common.Info, "[UL] Adding Arp Entry : ", ip, common.StringToIPv4(ip.String()))
+			ulMapArpTable.Store(packet.StringToIPv4(ip.String()), arpEntry)
+			common.LogInfo(common.Info, "[UL] Adding Arp Entry : ", ip, packet.StringToIPv4(ip.String()))
 		}
 	}
 
