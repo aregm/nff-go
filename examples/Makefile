@@ -5,7 +5,8 @@
 PATH_TO_MK = ../mk
 IMAGENAME = nff-go-examples
 EXECUTABLES = dump clonablePcapDumper kni copy errorHandling timer \
-			  createPacket sendFixedPktsNumber gtpu pingReplay
+			  createPacket sendFixedPktsNumber gtpu pingReplay \
+			  netlink
 SUBDIRS = nat tutorial antiddos demo fileReadWrite firewall forwarding
 
 gopacket:
