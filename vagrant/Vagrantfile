@@ -75,8 +75,9 @@ sudo systemctl start network-manager
 SHELL
 
 $provision_common = <<SHELL
-echo Reassigning \'Wired connection 1\' interface to system name
-sudo nmcli c mod 'Wired connection 1' connection.id 'System connection'
+syscon=$(nmcli --fields device,name,type,state -t c s | grep activated | grep -v bridge | cut -d: -f2)
+echo Reassigning "${syscon}" interface to system name
+sudo nmcli c mod "${syscon}" connection.id 'System connection'
 
 echo Unpacking Go language into /opt
 (cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.10.1.linux-amd64.tar.gz | tar zx')
