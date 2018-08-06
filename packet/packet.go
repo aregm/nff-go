@@ -43,10 +43,11 @@ package packet
 
 import (
 	"fmt"
-	"unsafe"
-
 	. "github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/low"
+	"strconv"
+	"strings"
+	"unsafe"
 )
 
 var mbufStructSize uintptr
@@ -896,4 +897,22 @@ func (lpm *LPM) Delete(ip uint32, depth uint8) int {
 // Free frees LPM C management memory
 func (lpm *LPM) Free() {
 	low.FreeLPM(lpm.lpm)
+}
+
+// parse ip address string to int ip
+func StringToIPv4(ipaddr string) uint32 {
+	str_ary := strings.Split(ipaddr, ".")
+	bIp := [4]byte{}
+
+	i := 0
+	for _, element := range str_ary {
+		val, err := strconv.Atoi(element)
+		if err != nil {
+			panic(err)
+		}
+		bIp[i] = byte(val)
+		i++
+	}
+	return ArrayToIPv4(bIp)
+
 }

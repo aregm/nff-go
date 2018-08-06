@@ -6,7 +6,7 @@ PATH_TO_MK = ../mk
 IMAGENAME = nff-go-examples
 EXECUTABLES = dump clonablePcapDumper kni copy errorHandling \
 			  createPacket sendFixedPktsNumber gtpu pingReplay
-SUBDIRS = nat tutorial antiddos demo fileReadWrite firewall forwarding
+SUBDIRS = nat tutorial antiddos demo fileReadWrite firewall forwarding ngic
 
 gopacket:
 	go get -v github.com/google/gopacket

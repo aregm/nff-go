@@ -7,14 +7,15 @@
 package common
 
 import (
+	"encoding/binary"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"log"
 	"math"
+	"net"
 	"os"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 // Max array length for type conversions
@@ -93,6 +94,8 @@ const (
 	No LogType = 1 << iota
 	// Initialization - output during system initialization
 	Initialization
+	//
+	Info
 	// Debug - output during execution one time per time period (scheduler ticks)
 	Debug
 	// Verbose - output during execution as soon as something happens. Can influence performance
@@ -246,7 +249,7 @@ func WrapWithNFError(err error, message string, code ErrorCode) error {
 	return errors.WithStack(err)
 }
 
-var currentLogType = No | Initialization | Debug
+var currentLogType = No | Initialization | Info | Debug
 
 // LogFatal internal, used in all packages
 func LogFatal(logType LogType, v ...interface{}) {
@@ -288,6 +291,14 @@ func LogDebug(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogInfo internal, used in all packages
+func LogInfo(logType LogType, v ...interface{}) {
+	if logType&currentLogType != 0 {
+		t := fmt.Sprintln(v...)
+		log.Print("INFO: ", t)
+	}
+}
+
 // LogDrop internal, used in all packages
 func LogDrop(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {
@@ -307,6 +318,12 @@ func LogTitle(logType LogType, v ...interface{}) {
 func SetLogType(logType LogType) {
 	log.SetFlags(0)
 	currentLogType = logType
+}
+
+func SetLogger(out io.Writer,prefix string,flags int){
+	log.SetFlags(flags)
+	log.SetPrefix(prefix)
+	log.SetOutput(out)
 }
 
 // GetDPDKLogLevel internal, used in flow package
@@ -411,4 +428,40 @@ func dropInvalidCPUs(nums []int, maxcpu int) []int {
 		}
 	}
 	return nums[:i]
+}
+
+//get the next ip address specified by the inc
+func NextIP(ip net.IP, inc uint) net.IP {
+	i := ip.To4()
+	v := uint(i[0])<<24 + uint(i[1])<<16 + uint(i[2])<<8 + uint(i[3])
+	v += inc
+	v3 := byte(v & 0xFF)
+	v2 := byte((v >> 8) & 0xFF)
+	v1 := byte((v >> 16) & 0xFF)
+	v0 := byte((v >> 24) & 0xFF)
+	return net.IPv4(v0, v1, v2, v3)
+}
+
+//increment ip address
+func IncrementIP(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
+// convert ip address to int
+func Ip2int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return binary.BigEndian.Uint32(ip[12:16])
+	}
+	return binary.BigEndian.Uint32(ip)
+}
+
+//convert int ip to  net.IP
+func Int2ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, nn)
+	return ip
 }
