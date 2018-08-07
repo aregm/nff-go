@@ -7,12 +7,55 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"os/signal"
 
 	"github.com/intel-go/nff-go/examples/nat"
+	upd "github.com/intel-go/nff-go/examples/nat/updatecfg"
 	"github.com/intel-go/nff-go/flow"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
+
+const (
+	port = ":60602"
+)
+
+type server struct{}
+
+// UpdateNATConfig implements updatecfg.Updater
+func (s *server) UpdateNATConfig(ctx context.Context, in *upd.UpdateRequest) (*upd.UpdateReply, error) {
+	privIp, privIpnet, err := net.ParseCIDR(in.Upd.GetPrivateSubnet())
+	if err != nil {
+		return &upd.UpdateReply{Message: "Cannot parse private IP"}, err
+	}
+	nat.Natconfig.PortPairs[0].PrivatePort.Subnet.Addr, err = nat.ConvertIPv4(privIp.To4())
+	nat.Natconfig.PortPairs[0].PublicPort.Subnet.Mask, err = nat.ConvertIPv4(privIpnet.Mask)
+	if err != nil {
+		return &upd.UpdateReply{Message: "Cannot ConvertIPv4 private IP"}, err
+	}
+
+	pubIp, pubIpnet, err := net.ParseCIDR(in.Upd.GetPublicSubnet())
+	if err != nil {
+		return &upd.UpdateReply{Message: "Cannot parse public IP"}, err
+	}
+	nat.Natconfig.PortPairs[0].PublicPort.Subnet.Addr, err = nat.ConvertIPv4(pubIp.To4())
+	nat.Natconfig.PortPairs[0].PublicPort.Subnet.Mask, err = nat.ConvertIPv4(pubIpnet.Mask)
+	if err != nil {
+		return &upd.UpdateReply{Message: "Cannot ConvertIPv4 public IP"}, err
+	}
+
+	hw, err := net.ParseMAC(in.Upd.GetPublicDstMac())
+	if err != nil {
+		return &upd.UpdateReply{Message: "Cannot parse dst MAC"}, err
+	}
+	copy(nat.Natconfig.PortPairs[0].PublicPort.DstMACAddress[:], hw)
+
+	return &upd.UpdateReply{Message: "Table updated: priv=" + in.Upd.GetPrivateSubnet() + ", publ=" + in.Upd.GetPublicSubnet() + ", public_dst_mac=" + in.Upd.GetPublicDstMac()}, nil
+}
 
 func main() {
 	// Parse arguments
@@ -50,6 +93,20 @@ func main() {
 
 	// Initialize flows and necessary state
 	nat.InitFlows()
+
+	go func() {
+		lis, err := net.Listen("tcp", port)
+		if err != nil {
+			log.Fatalf("failed to listen: %v", err)
+		}
+		s := grpc.NewServer()
+		upd.RegisterUpdaterServer(s, &server{})
+		// Register reflection service on gRPC server.
+		reflection.Register(s)
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
 
 	// Start flow scheduler
 	go func() {

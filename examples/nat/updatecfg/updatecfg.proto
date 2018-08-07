@@ -1,0 +1,28 @@
+// Copyright 2018 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_outer_classname = "UpdateNatCfg";
+
+package updatecfg;
+
+service Updater {
+  rpc UpdateNATConfig (UpdateRequest) returns (UpdateReply) {}
+}
+
+message Update {
+  string private_subnet = 1;
+  string public_subnet = 2;
+  string public_dst_mac = 3;
+}
+
+message UpdateRequest {
+  Update upd = 1;
+}
+
+message UpdateReply {
+  string message = 1;
+}
