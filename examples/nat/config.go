@@ -7,6 +7,7 @@ package nat
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -73,6 +74,10 @@ func (out *protocolId) UnmarshalJSON(b []byte) error {
 type ipv4Subnet struct {
 	Addr uint32
 	Mask uint32
+}
+
+func (fp *forwardedPort) String() string {
+	return fmt.Sprintf("Port:%d, Destination:%+v, Protocol: %d", fp.Port, packet.IPv4ToString(fp.Destination.Addr), fp.Protocol)
 }
 
 func (subnet *ipv4Subnet) String() string {
@@ -169,7 +174,7 @@ func (pi pairIndex) Copy() interface{} {
 func (pi pairIndex) Delete() {
 }
 
-func convertIPv4(in []byte) (uint32, error) {
+func ConvertIPv4(in []byte) (uint32, error) {
 	if in == nil || len(in) > 4 {
 		return 0, errors.New("Only IPv4 addresses are supported now")
 	}
@@ -188,10 +193,10 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 	}
 
 	if ip, ipnet, err := net.ParseCIDR(s); err == nil {
-		if out.Addr, err = convertIPv4(ip.To4()); err != nil {
+		if out.Addr, err = ConvertIPv4(ip.To4()); err != nil {
 			return err
 		}
-		if out.Mask, err = convertIPv4(ipnet.Mask); err != nil {
+		if out.Mask, err = ConvertIPv4(ipnet.Mask); err != nil {
 			return err
 		}
 		return nil
@@ -199,7 +204,7 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 
 	if ip := net.ParseIP(s); ip != nil {
 		var err error
-		if out.Addr, err = convertIPv4(ip.To4()); err != nil {
+		if out.Addr, err = ConvertIPv4(ip.To4()); err != nil {
 			return err
 		}
 		out.Mask = 0xffffffff
@@ -225,7 +230,7 @@ func (out *hostPort) UnmarshalJSON(b []byte) error {
 	if ipArray == nil {
 		return errors.New("Bad IPv4 address specified: " + hostStr)
 	}
-	out.Addr, err = convertIPv4(ipArray.To4())
+	out.Addr, err = ConvertIPv4(ipArray.To4())
 	if err != nil {
 		return err
 	}
