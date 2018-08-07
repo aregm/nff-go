@@ -66,6 +66,14 @@ func LogDebug(logType LogType, v ...interface{}) {
 	}
 }
 
+// LogInfo internal, used in all packages
+func LogInfo(logType LogType, v ...interface{}) {
+	if logType&currentLogType != 0 {
+		t := fmt.Sprintln(v...)
+		log.Print("INFO: ", t)
+	}
+}
+
 // LogDrop internal, used in all packages
 func LogDrop(logType LogType, v ...interface{}) {
 	if logType&currentLogType != 0 {

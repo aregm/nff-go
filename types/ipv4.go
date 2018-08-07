@@ -57,3 +57,40 @@ func (out *IPv4Address) UnmarshalJSON(b []byte) error {
 	}
 	return fmt.Errorf("Failed to parse address %s", s)
 }
+
+// NextIP returns the next ip address specified by the inc.
+func NextIP(ip net.IP, inc uint) net.IP {
+	i := ip.To4()
+	v := uint(i[0])<<24 + uint(i[1])<<16 + uint(i[2])<<8 + uint(i[3])
+	v += inc
+	v3 := byte(v & 0xFF)
+	v2 := byte((v >> 8) & 0xFF)
+	v1 := byte((v >> 16) & 0xFF)
+	v0 := byte((v >> 24) & 0xFF)
+	return net.IPv4(v0, v1, v2, v3)
+}
+
+// IncrementIP increments all bytes in IPv4 address.
+func IncrementIP(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
+
+// Ip2int convert IPv4 address to int
+func Ip2int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return binary.BigEndian.Uint32(ip[12:16])
+	}
+	return binary.BigEndian.Uint32(ip)
+}
+
+// Int2ip converts int ip to net.IP.
+func Int2ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, nn)
+	return ip
+}
