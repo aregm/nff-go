@@ -1,4 +1,4 @@
-# Copyright 2017 Intel Corporation. 
+# Copyright 2017 Intel Corporation.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@ include $(PATH_TO_MK)/include.mk
 # Build all
 .PHONY: clean
 $(EXECUTABLES) : % : %.go
-	go build $< $(COMMON_FILES)
+	go build  $(LDFLAGS) $< $(COMMON_FILES)
 # Use the following line to build Go files without optimizations
 #	go build -gcflags '-N -l' $< $(COMMON_FILES)
 
