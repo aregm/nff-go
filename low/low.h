@@ -106,7 +106,7 @@ void setAffinity(int coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
-void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
+int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
@@ -138,8 +138,9 @@ void create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mb
 	// version of these structures
 	kni[port] = rte_kni_alloc(mbuf_pool, &conf_default, &ops);
 	if (kni[port] == NULL) {
-		rte_exit(EXIT_FAILURE, "Error with KNI allocation\n");
+		return -1;
 	}
+	return 0;
 }
 
 int checkRSSPacketCount(struct cPort *port, int16_t queue) {
@@ -480,13 +481,13 @@ void statistics(float N) {
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
-void eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
+int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
 {
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
-		rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
+		return -1;
 	if (ret < argc-1)
-		rte_exit(EXIT_FAILURE, "rte_eal_init can't parse all parameters\n");
+		return 1;
 	free(argv[argc-1]);
 	free(argv);
 	BURST_SIZE = burstSize;
@@ -496,6 +497,7 @@ void eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
 	if (needKNI != 0) {
 		rte_kni_init(MAX_KNI);
 	}
+	return 0;
 }
 
 int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);

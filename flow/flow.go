@@ -521,7 +521,9 @@ func SystemInit(args *Config) error {
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI)
+	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI); err != nil {
+		return err
+	}
 	// Init Ports
 	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
 	for i := range createdPorts {
@@ -1545,7 +1547,9 @@ func CreateKniDevice(portId uint16, name string) (*Kni, error) {
 	if core, _, err := schedState.getCore(); err != nil {
 		return nil, err
 	} else {
-		low.CreateKni(portId, uint(core), name)
+		if err := low.CreateKni(portId, uint(core), name); err != nil {
+			return nil, err
+		}
 	}
 	kni := new(Kni)
 	// Port will be identifier of this KNI
