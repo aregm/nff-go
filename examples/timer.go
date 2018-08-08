@@ -20,7 +20,7 @@ var duration *time.Duration
 
 func main() {
 	inport = flag.Uint("inport", 0, "port for receiver")
-	duration = flag.Duration("duration", 2000 * time.Millisecond, "seconds to react")
+	duration = flag.Duration("duration", 2000*time.Millisecond, "seconds to react")
 	flag.Parse()
 
 	flow.CheckFatal(flow.SystemInit(nil))
