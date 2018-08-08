@@ -558,7 +558,6 @@ func CreateMempools(name string, inIndex int32) []*Mempool {
 	return m
 }
 
-
 // SetAffinity sets cpu affinity mask.
 func SetAffinity(coreID int) error {
 	// go tool trace shows that each proc executes different goroutine. However it is expected behavior

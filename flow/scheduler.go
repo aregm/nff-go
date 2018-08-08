@@ -153,7 +153,7 @@ type scheduler struct {
 	maxPacketsToClone uint32
 	stopFlag          int32
 	maxRecv           int
-	Timers		  []*Timer
+	Timers            []*Timer
 }
 
 type core struct {
@@ -218,7 +218,7 @@ func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) 
 	ffi := new(instance)
 	common.LogDebug(common.Debug, "Start new instance for", ff.name)
 	ffi.inIndex = inIndex
-	ffi.report = make(chan reportPair, len(scheduler.cores) - 1)
+	ffi.report = make(chan reportPair, len(scheduler.cores)-1)
 	ffi.previousSpeed = make([]reportPair, len(scheduler.cores), len(scheduler.cores))
 	ffi.ff = ff
 	err = ffi.startNewClone(scheduler, ff.instanceNumber)
@@ -326,7 +326,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 		// We have an array of Timers which can be increated by AddTimer function
 		// Timer has duration and handler common for all Timer variants, so firstly
 		// we check that timer ticker channel is ready:
-		for _, t := range(scheduler.Timers) {
+		for _, t := range scheduler.Timers {
 			select {
 			case <-t.t.C:
 				// If this timer was ticked we check all checks of all variants

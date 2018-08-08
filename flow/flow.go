@@ -48,10 +48,10 @@ var schedState *scheduler
 var vEach [10][burstSize]uint8
 
 type Timer struct {
-	t *time.Ticker
-	handler func(UserContext)
+	t        *time.Ticker
+	handler  func(UserContext)
 	contexts []UserContext
-	checks []*bool
+	checks   []*bool
 }
 
 type processSegment struct {
@@ -63,9 +63,9 @@ type processSegment struct {
 // Flow is an abstraction for connecting flow functions with each other.
 // Flow shouldn't be understood in any way beyond this.
 type Flow struct {
-	current  low.Rings
-	segment  *processSegment
-	previous **Func
+	current       low.Rings
+	segment       *processSegment
+	previous      **Func
 	inIndexNumber int32
 }
 
@@ -185,7 +185,7 @@ func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
 	fTargetSpeed := float64(targetSpeed)
 	if fTargetSpeed <= 0 {
 		return common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
-	} else if fTargetSpeed / (1000 /*milleseconds*/ / float64(schedTime)) < float64(burstSize) {
+	} else if fTargetSpeed/(1000 /*milleseconds*/ /float64(schedTime)) < float64(burstSize) {
 		// TargetSpeed per schedTime should be more than burstSize because one burstSize packets in
 		// one schedTime seconds are out minimal scheduling part. We can't make generate speed less than this.
 		return common.WrapWithNFError(nil, "Target speed per schedTime should be more than burstSize", common.BadArgument)
@@ -377,7 +377,7 @@ type port struct {
 	willKNI        bool // will this port has assigned KNI device
 	port           uint16
 	MAC            [common.EtherAddrLen]uint8
-	InIndex     int32
+	InIndex        int32
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -535,7 +535,7 @@ func SystemInit(args *Config) error {
 	portPair = make(map[uint32](*port))
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateRings(burstSize * sizeMultiplier, 50 /*Maximum possible rings*/)
+	StopRing := low.CreateRings(burstSize*sizeMultiplier, 50 /*Maximum possible rings*/)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
 	// Init packet processing
@@ -618,7 +618,7 @@ func SetSenderFile(IN *Flow, filename string) error {
 // file is read infinitely in circle.
 // Returns new opened flow with read packets.
 func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addReader(filename, rings, repcount)
 	return newFlow(rings, 1)
 }
@@ -636,7 +636,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	}
 	createdPorts[portId].wasRequested = true
 	createdPorts[portId].willReceive = true
-	rings := low.CreateRings(burstSize * sizeMultiplier, createdPorts[portId].InIndex)
+	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
 	addReceiver(portId, false, rings, createdPorts[portId].InIndex)
 	return newFlow(rings, createdPorts[portId].InIndex), nil
 }
@@ -646,7 +646,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addReceiver(kni.portId, true, rings, 1)
 	return newFlow(rings, 1)
 }
@@ -656,7 +656,7 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	if err := addFastGenerator(rings, f, nil, targetSpeed, context); err != nil {
 		return nil, err
 	}
@@ -668,7 +668,7 @@ func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContex
 // Returns new open flow with generated packets.
 // Function tries to achieve target speed by cloning.
 func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	if err := addFastGenerator(rings, nil, f, targetSpeed, context); err != nil {
 		return nil, err
 	}
@@ -681,7 +681,7 @@ func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, contex
 // Single packet non-clonable flow function will be added. It can be used for waiting of
 // input user packets.
 func SetGenerator(f GenerateFunction, context UserContext) (OUT *Flow) {
-	rings := low.CreateRings(burstSize * sizeMultiplier, 1)
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addGenerator(rings, f, context)
 	return newFlow(rings, 1)
 }
@@ -719,12 +719,12 @@ func SetCopier(IN *Flow) (OUT *Flow, err error) {
 	if err := checkFlow(IN); err != nil {
 		return nil, err
 	}
-	ringFirst := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
-	ringSecond := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+	ringFirst := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
+	ringSecond := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 	if IN.segment == nil {
 		addCopier(IN.current, ringFirst, ringSecond, IN.inIndexNumber)
 	} else {
-		tRing := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+		tRing := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 		ms := makeSlice(tRing, IN.segment)
 		segmentInsert(IN, ms, false, nil, 0, 0)
 		addCopier(tRing, ringFirst, ringSecond, IN.inIndexNumber)
@@ -892,7 +892,7 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 			max = InArray[i].inIndexNumber
 		}
 	}
-	rings := low.CreateRings(burstSize * sizeMultiplier, max)
+	rings := low.CreateRings(burstSize*sizeMultiplier, max)
 	for i := range InArray {
 		if err := checkFlow(InArray[i]); err != nil {
 			return nil, err
@@ -948,7 +948,7 @@ func finishFlow(IN *Flow) low.Rings {
 		ring = IN.current
 		closeFlow(IN)
 	} else {
-		ring = low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+		ring = low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 		ms := makeSlice(ring, IN.segment)
 		segmentInsert(IN, ms, true, nil, 0, 0)
 	}
@@ -971,7 +971,7 @@ func segmentInsert(IN *Flow, f *Func, willClose bool, context UserContext, setTy
 	} else {
 		if setType > 0 && IN.segment.stype > 0 && setType != IN.segment.stype {
 			// Try to combine scalar and vector code. Start new segment
-			ring := low.CreateRings(burstSize * sizeMultiplier, IN.inIndexNumber)
+			ring := low.CreateRings(burstSize*sizeMultiplier, IN.inIndexNumber)
 			ms := makeSlice(ring, IN.segment)
 			segmentInsert(IN, ms, false, nil, 0, 0)
 			IN.segment = nil
