@@ -481,7 +481,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							if ffi.inIndex[0] > 1 {
 								ff.oneCoreSpeed = ffi.currentSpeed
 								if ff.startNewInstance(constructZeroIndex(ffi.inIndex), scheduler) == nil {
-									ff.instance[ff.instanceNumber-1].inIndex = constructDuplicatedIndex(ffi.inIndex)
+									constructDuplicatedIndex(ffi.inIndex, ff.instance[ff.instanceNumber-1].inIndex)
 									a = false
 								}
 							}
@@ -535,7 +535,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						for q := 0; q < ff.instanceNumber; q++ {
 							if ff.instance[q].checkInputRingClonable(RSSCloneMax) && ff.instance[q].checkOutputRingClonable(scheduler.maxPacketsToClone) {
 								if ff.startNewInstance(constructZeroIndex(ff.instance[q].inIndex), scheduler) == nil {
-									ff.instance[ff.instanceNumber-1].inIndex = constructDuplicatedIndex(ff.instance[q].inIndex)
+									constructDuplicatedIndex(ff.instance[q].inIndex, ff.instance[ff.instanceNumber-1].inIndex)
 								}
 								break
 							}
@@ -705,8 +705,7 @@ func constructZeroIndex(old []int32) []int32 {
 	return make([]int32, len(old), len(old))
 }
 
-func constructDuplicatedIndex(old []int32) []int32 {
-	newIndex := make([]int32, len(old), len(old))
+func constructDuplicatedIndex(old []int32, newIndex []int32) {
 	oldLen := old[0]/2 + old[0]%2
 	newLen := old[0] / 2
 	for q := int32(0); q < newLen; q++ {
@@ -714,7 +713,6 @@ func constructDuplicatedIndex(old []int32) []int32 {
 	}
 	newIndex[0] = newLen
 	old[0] = oldLen
-	return newIndex
 }
 
 func constructNewIndex(inIndexNumber int32) []int32 {
