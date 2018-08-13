@@ -257,6 +257,9 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 			ff.cFunction(ff.Parameters, ffi.inIndex, &ffi.clone[ffi.cloneNumber-1].flag, core)
 		}
 	}()
+	if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
+		<-ffi.clone[ffi.cloneNumber-1].channel[1]
+	}
 	return nil
 }
 
@@ -393,7 +396,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 								// Save current speed as speed of flow function with this number of clones before removing
 								ffi.previousSpeed[ffi.cloneNumber] = ffi.currentSpeed
 								ff.stopClone(ffi, scheduler)
-								ffi.updatePause(ffi.cloneNumber)
+								ffi.updatePause(ffi.cloneNumber - 1)
 							}
 						}
 					}
@@ -417,7 +420,9 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 							}
 						}
 						if ff.instance[min0].currentSpeed.Packets+ff.instance[min1].currentSpeed.Packets < ff.oneCoreSpeed.Packets {
+							toInstance := ff.instance[min1]
 							ff.stopInstance(min0, min1, scheduler)
+							toInstance.updatePause(0)
 						}
 					}
 				case fastGenerate: // Only clones, no instances
@@ -482,6 +487,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 								ff.oneCoreSpeed = ffi.currentSpeed
 								if ff.startNewInstance(constructZeroIndex(ffi.inIndex), scheduler) == nil {
 									constructDuplicatedIndex(ffi.inIndex, ff.instance[ff.instanceNumber-1].inIndex)
+									ffi.updatePause(0)
 									a = false
 								}
 							}
@@ -498,7 +504,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 									ffi.previousSpeed[ffi.cloneNumber] = ffi.currentSpeed
 									if ffi.startNewClone(scheduler, q) == nil {
 										// Add a pause to all clones. This pause depends on the number of clones.
-										ffi.updatePause(ffi.cloneNumber)
+										ffi.updatePause(ffi.cloneNumber - 1)
 									}
 									continue
 								}

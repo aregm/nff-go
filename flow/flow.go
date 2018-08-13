@@ -1010,7 +1010,6 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 		countOfPackets[index] = 0
 	}
 	var currentSpeed reportPair
-	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
 	firstFunc := lp.firstFunc
 	// For scalar part
@@ -1024,10 +1023,13 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 	def := make([]pair, 30, 30)
 	var currentMask [burstSize]bool
 	var answers [burstSize]uint8
+	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+	stopper[1] <- 2 // Answer that function is ready
 
 	for {
 		select {
 		case pause = <-stopper[0]:
+			tick.Stop()
 			if pause == -1 {
 				// It is time to close this clone
 				for i := range context {
@@ -1037,8 +1039,13 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 				}
 				stopper[1] <- 1
 				return
+			} else {
+				// For any events with this function we should restart timer
+				// We don't do it regularly without any events due to performance
+				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+				currentSpeed = reportPair{}
 			}
-		case <-tick:
+		case <-tick.C:
 			report <- currentSpeed
 			currentSpeed = reportPair{}
 		default:
@@ -1136,6 +1143,7 @@ func pGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int, rep
 	gp := parameters.(*generateParameters)
 	OUT := gp.out
 	generateFunction := gp.generateFunction
+	stopper[1] <- 2 // Answer that function is ready
 	for {
 		select {
 		case <-stopper[0]:
@@ -1168,11 +1176,13 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 	var tempPacket *packet.Packet
 	tempPackets := make([]*packet.Packet, burstSize)
 	var currentSpeed reportPair
-	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
+	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+	stopper[1] <- 2 // Answer that function is ready
 	for {
 		select {
 		case pause = <-stopper[0]:
+			tick.Stop()
 			if pause == -1 {
 				// It is time to close this clone
 				if context[0] != nil {
@@ -1180,8 +1190,13 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 				}
 				stopper[1] <- 1
 				return
+			} else {
+				// For any events with this function we should restart timer
+				// We don't do it regularly without any events due to performance
+				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+				currentSpeed = reportPair{}
 			}
-		case <-tick:
+		case <-tick.C:
 			report <- currentSpeed
 			currentSpeed = reportPair{}
 		default:
@@ -1230,18 +1245,25 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 	var tempPacket1 *packet.Packet
 	var tempPacket2 *packet.Packet
 	var currentSpeed reportPair
-	tick := time.Tick(time.Duration(schedTime) * time.Millisecond)
 	var pause int
+	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+	stopper[1] <- 2 // Answer that function is ready
 
 	for {
 		select {
 		case pause = <-stopper[0]:
+			tick.Stop()
 			if pause == -1 {
 				// It is time to remove this clone
 				stopper[1] <- 1
 				return
+			} else {
+				// For any events with this function we should restart timer
+				// We don't do it regularly without any events due to performance
+				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
+				currentSpeed = reportPair{}
 			}
-		case <-tick:
+		case <-tick.C:
 			report <- currentSpeed
 			currentSpeed = reportPair{}
 		default:
