@@ -535,7 +535,7 @@ func SystemInit(args *Config) error {
 	portPair = make(map[uint32](*port))
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
-	StopRing := low.CreateRings(burstSize*sizeMultiplier, 50 /*Maximum possible rings*/)
+	StopRing := low.CreateRings(burstSize*sizeMultiplier, maxInIndex)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
 	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
 	// Init packet processing
