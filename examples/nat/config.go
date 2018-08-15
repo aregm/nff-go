@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2017-2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,7 +7,6 @@ package nat
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 type terminationDirection uint8
@@ -28,13 +28,68 @@ const (
 	iPUBLIC  interfaceType = 0
 	iPRIVATE interfaceType = 1
 
+	dirDROP = 0
+	dirSEND = 1
+	dirKNI  = 2
+
 	connectionTimeout time.Duration = 1 * time.Minute
 	portReuseTimeout  time.Duration = 1 * time.Second
 )
 
+type hostPort struct {
+	Addr uint32
+	Port uint16
+}
+
+type protocolId uint8
+
+type forwardedPort struct {
+	Port         uint16     `json:"port"`
+	Destination  hostPort   `json:"destination"`
+	Protocol     protocolId `json:"protocol"`
+	forwardToKNI bool
+}
+
+var protocolIdLookup map[string]protocolId = map[string]protocolId{
+	"TCP": common.TCPNumber,
+	"UDP": common.UDPNumber,
+}
+
+func (out *protocolId) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	result, ok := protocolIdLookup[s]
+	if !ok {
+		return errors.New("Bad protocol name: " + s)
+	}
+
+	*out = result
+	return nil
+}
+
 type ipv4Subnet struct {
 	Addr uint32
 	Mask uint32
+}
+
+func (subnet *ipv4Subnet) String() string {
+	// Count most significant set bits
+	mask := uint32(1) << 31
+	i := 0
+	for ; i <= 32; i++ {
+		if subnet.Mask&mask == 0 {
+			break
+		}
+		mask >>= 1
+	}
+	return packet.IPv4ToString(subnet.Addr) + "/" + strconv.Itoa(i)
+}
+
+func (subnet *ipv4Subnet) checkAddrWithingSubnet(addr uint32) bool {
+	return addr&subnet.Mask == subnet.Addr&subnet.Mask
 }
 
 type macAddress [common.EtherAddrLen]uint8
@@ -44,35 +99,39 @@ type portMapEntry struct {
 	addr                 uint32
 	finCount             uint8
 	terminationDirection terminationDirection
+	static               bool
 }
 
 // Type describing a network port
 type ipv4Port struct {
-	Index         uint16     `json:"index"`
-	DstMACAddress macAddress `json:"dst-mac"`
-	Subnet        ipv4Subnet `json:"subnet"`
-	Vlan          uint16     `json:"vlan-tag"`
+	Index         uint16          `json:"index"`
+	Subnet        ipv4Subnet      `json:"subnet"`
+	Vlan          uint16          `json:"vlan-tag"`
+	KNIName       string          `json:"kni-name"`
+	ForwardPorts  []forwardedPort `json:"forward-ports"`
 	SrcMACAddress macAddress
+	Type          interfaceType
+	// Pointer to an opposite port in a pair
+	opposite *ipv4Port
+	// Map of allocated IP ports on public interface
+	portmap [][]portMapEntry
+	// Main lookup table which contains entries for packets coming at this port
+	translationTable []*sync.Map
 	// ARP lookup table
-	ArpTable sync.Map
+	arpTable sync.Map
+	// Debug dump stuff
+	fdump    [dirKNI + 1]*os.File
+	dumpsync [dirKNI + 1]sync.Mutex
 }
 
 // Config for one port pair.
 type portPair struct {
 	PrivatePort ipv4Port `json:"private-port"`
 	PublicPort  ipv4Port `json:"public-port"`
-	// Main lookup table which contains entries for private to public translation
-	pri2pubTable []sync.Map
-	// Main lookup table which contains entries for public to private translation
-	pub2priTable []sync.Map
 	// Synchronization point for lookup table modifications
 	mutex sync.Mutex
-	// Map of allocated IP ports on public interface
-	portmap [][]portMapEntry
 	// Port that was allocated last
 	lastport int
-	// Maximum allowed port number
-	maxport int
 }
 
 // Config for NAT.
@@ -94,17 +153,11 @@ var (
 	// HWTXChecksum is a flag whether checksums calculation should be
 	// offloaded to HW.
 	NoHWTXChecksum bool
+	NeedKNI        bool
 
 	// Debug variables
 	debugDump = false
 	debugDrop = false
-	// Controls whether debug dump files are separate for private and
-	// public interface or both traces are dumped in the same file.
-	dumptogether = false
-	fdump        []*os.File
-	dumpsync     []sync.Mutex
-	fdrop        []*os.File
-	dropsync     []sync.Mutex
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -155,6 +208,41 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 	return errors.New("Failed to parse address " + s)
 }
 
+// UnmarshalJSON parses ipv4 host:port string. Port may be omitted and
+// is set to zero in this case.
+func (out *hostPort) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	hostStr, portStr, err := net.SplitHostPort(s)
+	if err != nil {
+		return err
+	}
+
+	ipArray := net.ParseIP(hostStr)
+	if ipArray == nil {
+		return errors.New("Bad IPv4 address specified: " + hostStr)
+	}
+	out.Addr, err = convertIPv4(ipArray.To4())
+	if err != nil {
+		return err
+	}
+
+	if portStr != "" {
+		port, err := strconv.ParseInt(portStr, 10, 32)
+		if err != nil {
+			return err
+		}
+		out.Port = uint16(port)
+	} else {
+		out.Port = 0
+	}
+
+	return nil
+}
+
 // UnmarshalJSON parses MAC address.
 func (out *macAddress) UnmarshalJSON(b []byte) error {
 	var s string
@@ -186,6 +274,10 @@ func ReadConfig(fileName string) error {
 
 	for i := range Natconfig.PortPairs {
 		pp := &Natconfig.PortPairs[i]
+
+		pp.PrivatePort.Type = iPRIVATE
+		pp.PublicPort.Type = iPUBLIC
+
 		if pp.PrivatePort.Vlan == 0 && pp.PublicPort.Vlan != 0 {
 			return errors.New("Private port with index " +
 				strconv.Itoa(int(pp.PrivatePort.Index)) +
@@ -199,6 +291,43 @@ func ReadConfig(fileName string) error {
 				strconv.Itoa(int(pp.PublicPort.Index)) +
 				" has zero vlan tag. Transition between VLAN-enabled and VLAN-disabled networks is not supported yet.")
 		}
+
+		port := &pp.PrivatePort
+		opposite := &pp.PublicPort
+		for pi := 0; pi < 2; pi++ {
+			for fpi := range port.ForwardPorts {
+				fp := &port.ForwardPorts[fpi]
+				if fp.Destination.Addr == 0 {
+					if port.KNIName == "" {
+						return errors.New("Port with index " +
+							strconv.Itoa(int(port.Index)) +
+							" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0")
+					}
+					fp.forwardToKNI = true
+					if fp.Destination.Port != fp.Port {
+						return errors.New("When address 0.0.0.0 is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
+							strconv.Itoa(int(fp.Port)) + " and " +
+							strconv.Itoa(int(fp.Destination.Port)))
+					}
+					NeedKNI = true
+				} else {
+					if pi == 0 {
+						return errors.New("Only KNI port forwarding is allowed on private port. All translated connections from private to public network can be initiated without any forwarding rules.")
+					}
+					if !opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
+						return errors.New("Destination address " +
+							packet.IPv4ToString(fp.Destination.Addr) +
+							" should be within subnet " +
+							opposite.Subnet.String())
+					}
+					if fp.Destination.Port == 0 {
+						fp.Destination.Port = fp.Port
+					}
+				}
+			}
+			port = &pp.PublicPort
+			opposite = &pp.PrivatePort
+		}
 	}
 
 	return nil
@@ -210,18 +339,43 @@ func (pp *portPair) initLocalMACs() {
 	pp.PrivatePort.SrcMACAddress = flow.GetPortMACAddress(pp.PrivatePort.Index)
 }
 
-func (pp *portPair) allocatePortMap() {
-	pp.maxport = portEnd
-	pp.portmap = make([][]portMapEntry, common.UDPNumber+1)
-	pp.portmap[common.ICMPNumber] = make([]portMapEntry, pp.maxport)
-	pp.portmap[common.TCPNumber] = make([]portMapEntry, pp.maxport)
-	pp.portmap[common.UDPNumber] = make([]portMapEntry, pp.maxport)
-	pp.lastport = portStart
+func (port *ipv4Port) allocatePublicPortPortMap() {
+	port.portmap = make([][]portMapEntry, common.UDPNumber+1)
+	port.portmap[common.ICMPNumber] = make([]portMapEntry, portEnd)
+	port.portmap[common.TCPNumber] = make([]portMapEntry, portEnd)
+	port.portmap[common.UDPNumber] = make([]portMapEntry, portEnd)
 }
 
-func (pp *portPair) allocateLookupMap() {
-	pp.pri2pubTable = make([]sync.Map, common.UDPNumber+1)
-	pp.pub2priTable = make([]sync.Map, common.UDPNumber+1)
+func (port *ipv4Port) allocateLookupMap() {
+	port.translationTable = make([]*sync.Map, common.UDPNumber+1)
+	for i := range port.translationTable {
+		port.translationTable[i] = new(sync.Map)
+	}
+}
+
+func (port *ipv4Port) initPublicPortPortForwardingEntries() {
+	// Initialize port forwarding rules on public interface
+	for _, fp := range port.ForwardPorts {
+		keyEntry := Tuple{
+			addr: port.Subnet.Addr,
+			port: fp.Port,
+		}
+		valEntry := Tuple{
+			addr: fp.Destination.Addr,
+			port: fp.Destination.Port,
+		}
+		port.translationTable[fp.Protocol].Store(keyEntry, valEntry)
+		if fp.Destination.Addr != 0 {
+			port.opposite.translationTable[fp.Protocol].Store(valEntry, keyEntry)
+		}
+		port.portmap[fp.Protocol][fp.Port] = portMapEntry{
+			lastused:             time.Now(),
+			addr:                 fp.Destination.Addr,
+			finCount:             0,
+			terminationDirection: 0,
+			static:               true,
+		}
+	}
 }
 
 // InitFlows initializes flow graph for all interface pairs.
@@ -229,54 +383,85 @@ func InitFlows() {
 	for i := range Natconfig.PortPairs {
 		pp := &Natconfig.PortPairs[i]
 
+		pp.PublicPort.opposite = &pp.PrivatePort
+		pp.PrivatePort.opposite = &pp.PublicPort
+
 		// Init port pairs state
 		pp.initLocalMACs()
-		pp.allocatePortMap()
-		pp.allocateLookupMap()
+		pp.PrivatePort.allocateLookupMap()
+		pp.PublicPort.allocateLookupMap()
+		pp.PublicPort.allocatePublicPortPortMap()
+		pp.lastport = portStart
+		pp.PublicPort.initPublicPortPortForwardingEntries()
 
 		// Handler context with handler index
 		context := new(pairIndex)
 		context.index = i
 
+		var fromPubKNI, fromPrivKNI, toPub, toPriv *flow.Flow
+		var pubKNI, privKNI *flow.Kni
+		var outsPub = uint(2)
+		var outsPriv = uint(2)
+
 		// Initialize public to private flow
 		publicToPrivate, err := flow.SetReceiver(pp.PublicPort.Index)
-		if err != nil {
-			log.Fatal(err)
+		flow.CheckFatal(err)
+		if pp.PublicPort.KNIName != "" {
+			outsPub = 3
 		}
-		if flow.SetHandlerDrop(publicToPrivate, PublicToPrivateTranslation, context) != nil {
-			log.Fatal(err)
+		pubTranslationOut, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation, outsPub, context)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetStopper(pubTranslationOut[dirDROP]))
+
+		// Initialize public KNI interface if requested
+		if pp.PublicPort.KNIName != "" {
+			pubKNI, err = flow.CreateKniDevice(pp.PublicPort.Index, pp.PublicPort.KNIName)
+			flow.CheckFatal(err)
+			flow.CheckFatal(flow.SetSenderKNI(pubTranslationOut[dirKNI], pubKNI))
+			fromPubKNI = flow.SetReceiverKNI(pubKNI)
 		}
 
 		// Initialize private to public flow
 		privateToPublic, err := flow.SetReceiver(pp.PrivatePort.Index)
-		if err != nil {
-			log.Fatal(err)
+		flow.CheckFatal(err)
+		if pp.PrivatePort.KNIName != "" {
+			outsPriv = 3
 		}
-		if flow.SetHandlerDrop(privateToPublic, PrivateToPublicTranslation, context) != nil {
-			log.Fatal(err)
+		privTranslationOut, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation, outsPriv, context)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetStopper(privTranslationOut[dirDROP]))
+
+		// Initialize private KNI interface if requested
+		if pp.PrivatePort.KNIName != "" {
+			privKNI, err = flow.CreateKniDevice(pp.PrivatePort.Index, pp.PrivatePort.KNIName)
+			flow.CheckFatal(err)
+			flow.CheckFatal(flow.SetSenderKNI(privTranslationOut[dirKNI], privKNI))
+			fromPrivKNI = flow.SetReceiverKNI(privKNI)
 		}
 
-		err = flow.SetSender(publicToPrivate, pp.PrivatePort.Index)
-		if err != nil {
-			log.Fatal(err)
+		// Merge traffic coming from public KNI with translated
+		// traffic from private side
+		if fromPubKNI != nil {
+			toPub, err = flow.SetMerger(fromPubKNI, privTranslationOut[dirSEND])
+			flow.CheckFatal(err)
+		} else {
+			toPub = privTranslationOut[dirSEND]
 		}
-		err = flow.SetSender(privateToPublic, pp.PublicPort.Index)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 
-	asize := len(Natconfig.PortPairs)
-	if !dumptogether {
-		asize *= 2
-	}
-	if debugDump {
-		fdump = make([]*os.File, asize)
-		dumpsync = make([]sync.Mutex, asize)
-	}
-	if debugDrop {
-		fdrop = make([]*os.File, asize)
-		dropsync = make([]sync.Mutex, asize)
+		// Merge traffic coming from private KNI with translated
+		// traffic from public side
+		if fromPrivKNI != nil {
+			toPriv, err = flow.SetMerger(fromPrivKNI, pubTranslationOut[dirSEND])
+			flow.CheckFatal(err)
+		} else {
+			toPriv = pubTranslationOut[dirSEND]
+		}
+
+		// Set senders to output packets
+		err = flow.SetSender(toPriv, pp.PrivatePort.Index)
+		flow.CheckFatal(err)
+		err = flow.SetSender(toPub, pp.PublicPort.Index)
+		flow.CheckFatal(err)
 	}
 }
 

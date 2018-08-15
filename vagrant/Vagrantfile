@@ -120,27 +120,14 @@ SHELL
       if i % vm_group_size != 0
         # Define backward inter-VM virtual network links
         (1..vm_links_number).each do |j|
-          if (i % vm_group_size) == vm_group_size - 1 && j == 1
-            # Workaround hardcoded MAC address for server VM until we implement ARP completely
-            node.vm.network "private_network",
-                            auto_config: false,
-                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
-                            :mac => '3cfdfea4ddf0',
-                            :model_type => 'virtio',
-                            :libvirt__forward_mode => 'none',
-                            :libvirt__tunnel_type => 'udp',
-                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
-                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
-          else
-            node.vm.network "private_network",
-                            auto_config: false,
-                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
-                            :model_type => 'virtio',
-                            :libvirt__forward_mode => 'none',
-                            :libvirt__tunnel_type => 'udp',
-                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
-                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
-          end
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
+                          :model_type => 'virtio',
+                          :libvirt__forward_mode => 'none',
+                          :libvirt__tunnel_type => 'udp',
+                          :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
+                          :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
         end
       end
 

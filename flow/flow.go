@@ -1614,8 +1614,8 @@ func (timer *Timer) Stop() {
 func CheckFatal(err error) {
 	if err != nil {
 		if nfErr := common.GetNFError(err); nfErr != nil {
-			common.LogFatalf(common.Debug, "failed with message and code: %+v\n", nfErr)
+			common.LogFatalf(common.No, "failed with message and code: %+v\n", nfErr)
 		}
-		common.LogFatalf(common.Debug, "failed with message: %s\n", err.Error())
+		common.LogFatalf(common.No, "failed with message: %s\n", err.Error())
 	}
 }
