@@ -470,7 +470,7 @@ func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, 
 
 // Stop - dequeue and free packets.
 func Stop(IN Rings, flag *int32, coreID int) {
-	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.

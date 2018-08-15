@@ -402,14 +402,14 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32
 	*flag = wasStopped;
 }
 
-void nff_go_stop(struct rte_ring **in_rings, volatile int *flag, int coreId) {
+void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	// Flag is used for both scheduler and stop.
 	// stopRequest will stop scheduler and this loop will stop with stopRequest+1
 	while (*flag == process || *flag == stopRequest) {
-		for (int q = 0; q < 50 /*Maximum possible rings*/; q++) {
+		for (int q = 0; q < len; q++) {
 			// Get packets for freeing from ring
 			uint16_t pkts_for_free_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 
