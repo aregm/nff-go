@@ -29,8 +29,8 @@ func (dir terminationDirection) String() string {
 }
 
 func (pp *portPair) deleteOldConnection(protocol uint8, port int) {
-	pubTable := &pp.pub2priTable[protocol]
-	pm := pp.portmap[protocol]
+	pubTable := pp.PublicPort.translationTable[protocol]
+	pm := pp.PublicPort.portmap[protocol]
 
 	pub2priKey := Tuple{
 		addr: pm[port].addr,
@@ -39,7 +39,7 @@ func (pp *portPair) deleteOldConnection(protocol uint8, port int) {
 	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
-		pp.pri2pubTable[protocol].Delete(pri2pubKey)
+		pp.PrivatePort.translationTable[protocol].Delete(pri2pubKey)
 		pubTable.Delete(pub2priKey)
 	}
 	pm[port] = portMapEntry{}
@@ -48,10 +48,10 @@ func (pp *portPair) deleteOldConnection(protocol uint8, port int) {
 // This function currently is not thread safe and should be executed
 // under a global lock
 func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
-	pm := pp.portmap[protocol]
+	pm := pp.PublicPort.portmap[protocol]
 	for {
 		for p := pp.lastport; p < portEnd; p++ {
-			if time.Since(pm[p].lastused) > connectionTimeout {
+			if !pm[p].static && time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil
@@ -59,7 +59,7 @@ func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
 		}
 
 		for p := portStart; p < pp.lastport; p++ {
-			if time.Since(pm[p].lastused) > connectionTimeout {
+			if !pm[p].static && time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil

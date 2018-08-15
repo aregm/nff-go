@@ -37,6 +37,7 @@ func main() {
 		HWTXChecksum:     !nat.NoHWTXChecksum,
 		DPDKArgs:         []string{*dpdkLogLevel},
 		DisableScheduler: *noscheduler,
+		NeedKNI:          nat.NeedKNI,
 	}
 
 	flow.CheckFatal(flow.SystemInit(&nffgoconfig))

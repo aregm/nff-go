@@ -92,11 +92,11 @@ const (
 	// No - no output even after fatal errors
 	No LogType = 1 << iota
 	// Initialization - output during system initialization
-	Initialization
+	Initialization = 2
 	// Debug - output during execution one time per time period (scheduler ticks)
-	Debug
+	Debug = 4
 	// Verbose - output during execution as soon as something happens. Can influence performance
-	Verbose
+	Verbose = 8
 )
 
 // TCPFlags contains set TCP flags.
