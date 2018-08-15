@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2017-2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -56,22 +56,13 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry Tuple)
 func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
+	port := &pp.PublicPort
 
-	dumpPacket(pkt, pi.index, iPUBLIC)
+	port.dumpPacket(pkt)
 
 	// Parse packet type and address
-	pktVLAN := pkt.ParseL3CheckVLAN()
-	pktIPv4 := pkt.GetIPv4CheckVLAN()
+	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		arp := pkt.GetARPCheckVLAN()
-		if arp != nil {
-			if pp.PublicPort.handleARP(pkt, pi.index, iPUBLIC) == false {
-				dumpDrop(pkt, pi.index, iPUBLIC)
-			}
-			return false
-		}
-		// We don't currently support anything except for IPv4 and ARP
-		dumpDrop(pkt, pi.index, iPUBLIC)
 		return false
 	}
 
@@ -94,7 +85,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		}
 		pub2priKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		dumpDrop(pkt, pi.index, iPUBLIC)
+		port.dumpDrop(pkt)
 		return false
 	}
 
@@ -105,7 +96,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		dumpDrop(pkt, pi.index, iPUBLIC)
+		port.dumpDrop(pkt)
 		return false
 	}
 	value := v.(Tuple)
@@ -119,7 +110,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		pp.mutex.Lock()
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
-		dumpDrop(pkt, pi.index, iPUBLIC)
+		port.dumpDrop(pkt)
 		return false
 	}
 
@@ -147,7 +138,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
-	dumpPacket(pkt, pi.index, iPRIVATE)
+	port.dumpPacket(pkt)
 	return true
 }
 
@@ -155,22 +146,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
+	port := &pp.PrivatePort
 
-	dumpPacket(pkt, pi.index, iPRIVATE)
+	port.dumpPacket(pkt)
 
 	// Parse packet type and address
-	pktVLAN := pkt.ParseL3CheckVLAN()
-	pktIPv4 := pkt.GetIPv4CheckVLAN()
+	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		arp := pkt.GetARPCheckVLAN()
-		if arp != nil {
-			if pp.PrivatePort.handleARP(pkt, pi.index, iPRIVATE) == false {
-				dumpDrop(pkt, pi.index, iPRIVATE)
-			}
-			return false
-		}
-		// We don't currently support anything except for IPv4 and ARP
-		dumpDrop(pkt, pi.index, iPRIVATE)
 		return false
 	}
 
@@ -195,7 +177,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		}
 		pri2pubKey.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		dumpDrop(pkt, pi.index, iPRIVATE)
+		port.dumpDrop(pkt)
 		return false
 	}
 
@@ -211,7 +193,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
-			dumpDrop(pkt, pi.index, iPRIVATE)
+			port.dumpDrop(pkt)
 			return false
 		}
 	} else {
@@ -243,7 +225,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	}
 
-	dumpPacket(pkt, pi.index, iPUBLIC)
+	port.dumpPacket(pkt)
 	return true
 }
 
@@ -285,7 +267,25 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 	}
 }
 
-func (port *ipv4Port) handleARP(pkt *packet.Packet, index int, isPrivate interfaceType) bool {
+func (port *ipv4Port) parsePacketAndCheckARP(pkt *packet.Packet) (vhdr *packet.VLANHdr, iphdr *packet.IPv4Hdr) {
+	pktVLAN := pkt.ParseL3CheckVLAN()
+	pktIPv4 := pkt.GetIPv4CheckVLAN()
+	if pktIPv4 == nil {
+		arp := pkt.GetARPCheckVLAN()
+		if arp != nil {
+			if port.handleARP(pkt) == false {
+				port.dumpDrop(pkt)
+			}
+			return pktVLAN, nil
+		}
+		// We don't currently support anything except for IPv4 and ARP
+		port.dumpDrop(pkt)
+		return pktVLAN, nil
+	}
+	return pktVLAN, pktIPv4
+}
+
+func (port *ipv4Port) handleARP(pkt *packet.Packet) bool {
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
@@ -319,7 +319,7 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet, index int, isPrivate interfa
 		answerPacket.AddVLANTag(packet.SwapBytesUint16(vlan.TCI))
 	}
 
-	dumpPacket(answerPacket, index, isPrivate)
+	port.dumpPacket(answerPacket)
 	answerPacket.SendPacket(port.Index)
 
 	return true
@@ -367,7 +367,7 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet, index int, isPrivate interf
 	(answerPacket.GetICMPNoCheck()).Type = common.ICMPTypeEchoResponse
 	setIPv4ICMPChecksum(answerPacket, !NoCalculateChecksum, !NoHWTXChecksum)
 
-	dumpPacket(answerPacket, index, isPrivate)
+	port.dumpPacket(answerPacket)
 	answerPacket.SendPacket(port.Index)
 	return false
 }

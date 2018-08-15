@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2017-2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -53,8 +53,14 @@ type ipv4Port struct {
 	Subnet        ipv4Subnet `json:"subnet"`
 	Vlan          uint16     `json:"vlan-tag"`
 	SrcMACAddress macAddress
+	Type          interfaceType
 	// ARP lookup table
 	ArpTable sync.Map
+	// Debug dump stuff
+	fdump    *os.File
+	dumpsync sync.Mutex
+	fdrop    *os.File
+	dropsync sync.Mutex
 }
 
 // Config for one port pair.
@@ -98,13 +104,6 @@ var (
 	// Debug variables
 	debugDump = false
 	debugDrop = false
-	// Controls whether debug dump files are separate for private and
-	// public interface or both traces are dumped in the same file.
-	dumptogether = false
-	fdump        []*os.File
-	dumpsync     []sync.Mutex
-	fdrop        []*os.File
-	dropsync     []sync.Mutex
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -186,6 +185,10 @@ func ReadConfig(fileName string) error {
 
 	for i := range Natconfig.PortPairs {
 		pp := &Natconfig.PortPairs[i]
+
+		pp.PrivatePort.Type = iPRIVATE
+		pp.PublicPort.Type = iPUBLIC
+
 		if pp.PrivatePort.Vlan == 0 && pp.PublicPort.Vlan != 0 {
 			return errors.New("Private port with index " +
 				strconv.Itoa(int(pp.PrivatePort.Index)) +
@@ -264,19 +267,6 @@ func InitFlows() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	asize := len(Natconfig.PortPairs)
-	if !dumptogether {
-		asize *= 2
-	}
-	if debugDump {
-		fdump = make([]*os.File, asize)
-		dumpsync = make([]sync.Mutex, asize)
-	}
-	if debugDrop {
-		fdrop = make([]*os.File, asize)
-		dropsync = make([]sync.Mutex, asize)
 	}
 }
 

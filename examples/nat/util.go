@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2017-2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -45,17 +45,8 @@ func swapAddrIPv4(pkt *packet.Packet) {
 	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
 }
 
-func startTrace(name string, aindex, index int, isPrivate interfaceType) *os.File {
-	var fname string
-	if !dumptogether {
-		if isPrivate != 0 {
-			fname = fmt.Sprintf("%dpriv%s.pcap", index, name)
-		} else {
-			fname = fmt.Sprintf("%dpub%s.pcap", index, name)
-		}
-	} else {
-		fname = fmt.Sprintf("%d%s.pcap", index, name)
-	}
+func (port *ipv4Port) startTrace(name string) *os.File {
+	fname := fmt.Sprintf("%s-%d-%s.pcap", name, port.Index, packet.MACToString(port.SrcMACAddress))
 
 	file, err := os.Create(fname)
 	if err != nil {
@@ -65,60 +56,50 @@ func startTrace(name string, aindex, index int, isPrivate interfaceType) *os.Fil
 	return file
 }
 
-func dumpPacket(pkt *packet.Packet, index int, isPrivate interfaceType) {
+func (port *ipv4Port) dumpPacket(pkt *packet.Packet) {
 	if debugDump {
-		aindex := index
-		if !dumptogether {
-			aindex = index*2 + int(isPrivate)
+		port.dumpsync.Lock()
+		if port.fdump == nil {
+			port.fdump = port.startTrace("dump")
 		}
 
-		dumpsync[aindex].Lock()
-		if fdump[aindex] == nil {
-			fdump[aindex] = startTrace("dump", aindex, index, isPrivate)
-		}
-
-		err := pkt.WritePcapOnePacket(fdump[aindex])
+		err := pkt.WritePcapOnePacket(port.fdump)
 		if err != nil {
 			log.Fatal(err)
 		}
-		dumpsync[aindex].Unlock()
+		port.dumpsync.Unlock()
 	}
 }
 
-func dumpDrop(pkt *packet.Packet, index int, isPrivate interfaceType) {
+func (port *ipv4Port) dumpDrop(pkt *packet.Packet) {
 	if debugDrop {
-		aindex := index
-		if !dumptogether {
-			aindex = index*2 + int(isPrivate)
+		port.dropsync.Lock()
+		if port.fdrop == nil {
+			port.fdrop = port.startTrace("drop")
 		}
-		dropsync[aindex].Lock()
-		if fdrop[aindex] == nil {
-			fdrop[aindex] = startTrace("drop", aindex, index, isPrivate)
-		}
-		err := pkt.WritePcapOnePacket(fdrop[aindex])
+		err := pkt.WritePcapOnePacket(port.fdrop)
 		if err != nil {
 			log.Fatal(err)
 		}
-		dropsync[aindex].Unlock()
+		port.dropsync.Unlock()
 	}
+}
+
+func closeTrace(f *os.File) {
+	if f != nil {
+		f.Close()
+	}
+}
+
+func (port *ipv4Port) closePortTraces() {
+	closeTrace(port.fdump)
+	closeTrace(port.fdrop)
 }
 
 // CloseAllDumpFiles closes all debug dump files.
 func CloseAllDumpFiles() {
-	if debugDump {
-		debugDump = false
-		for i := range fdump {
-			if fdump[i] != nil {
-				fdump[i].Close()
-			}
-		}
-	}
-	if debugDrop {
-		debugDrop = false
-		for i := range fdrop {
-			if fdump[i] != nil {
-				fdump[i].Close()
-			}
-		}
+	for i := range Natconfig.PortPairs {
+		Natconfig.PortPairs[i].PrivatePort.closePortTraces()
+		Natconfig.PortPairs[i].PublicPort.closePortTraces()
 	}
 }
