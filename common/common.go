@@ -147,6 +147,8 @@ const (
 	MultipleReceivePort
 	MultipleKNIPort
 	WrongPort
+	FailToInitDPDK
+	FailToCreateKNI
 )
 
 // NFError is error type returned by nff-go functions

@@ -487,11 +487,17 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) {
-	C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
-
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) error {
+	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
+	if ret < 0 {
+		return common.WrapWithNFError(nil, "Error with EAL initialization\n", common.FailToInitDPDK)
+	}
+	if ret > 0 {
+		return common.WrapWithNFError(nil, "rte_eal_init can't parse all parameters\n", common.FailToInitDPDK)
+	}
 	mbufNumberT = mbufNumber
 	mbufCacheSizeT = mbufCacheSize
+	return nil
 }
 
 func StopDPDK() {
@@ -634,9 +640,12 @@ func ReportMempoolsState() {
 }
 
 // CreateKni creates a KNI device
-func CreateKni(portId uint16, core uint, name string) {
+func CreateKni(portId uint16, core uint, name string) error {
 	mempool := (*C.struct_rte_mempool)(CreateMempool("KNI"))
-	C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool)
+	if C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool) != 0 {
+		common.WrapWithNFError(nil, "Error with KNI allocation\n", common.FailToCreateKNI)
+	}
+	return nil
 }
 
 // CreateLPM creates LPM table
