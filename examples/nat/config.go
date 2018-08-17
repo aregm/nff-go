@@ -7,7 +7,6 @@ package nat
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -28,6 +27,10 @@ const (
 
 	iPUBLIC  interfaceType = 0
 	iPRIVATE interfaceType = 1
+
+	dirDROP = 0
+	dirSEND = 1
+	dirKNI  = 2
 
 	connectionTimeout time.Duration = 1 * time.Minute
 	portReuseTimeout  time.Duration = 1 * time.Second
@@ -81,7 +84,7 @@ type ipv4Port struct {
 	DstMACAddress macAddress      `json:"dst-mac"`
 	Subnet        ipv4Subnet      `json:"subnet"`
 	Vlan          uint16          `json:"vlan-tag"`
-	KNIEnabled    bool            `json:"kni-enabled"`
+	KNIName       string          `json:"kni-name"`
 	ForwardPorts  []forwardedPort `json:"forward-ports"`
 	SrcMACAddress macAddress
 	Type          interfaceType
@@ -131,6 +134,7 @@ var (
 	// HWTXChecksum is a flag whether checksums calculation should be
 	// offloaded to HW.
 	NoHWTXChecksum bool
+	NeedKNI        bool
 
 	// Debug variables
 	debugDump = false
@@ -275,10 +279,10 @@ func ReadConfig(fileName string) error {
 			for fpi := range port.ForwardPorts {
 				fp := &port.ForwardPorts[fpi]
 				if fp.Destination.Addr == 0 {
-					if !port.KNIEnabled {
+					if port.KNIName == "" {
 						return errors.New("Port with index " +
 							strconv.Itoa(int(port.Index)) +
-							" should have \"kni-enabled\" setting if you want to forward packets to KNI address 0.0.0.0")
+							" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0")
 					}
 					fp.forwardToKNI = true
 					if fp.Destination.Port != fp.Port {
@@ -286,6 +290,7 @@ func ReadConfig(fileName string) error {
 							strconv.Itoa(int(fp.Port)) + " and " +
 							strconv.Itoa(int(fp.Destination.Port)))
 					}
+					NeedKNI = true
 				} else {
 					if !opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
 						return errors.New("Destination address " +
@@ -340,32 +345,62 @@ func InitFlows() {
 		context := new(pairIndex)
 		context.index = i
 
+		var fromPubKNI, fromPrivKNI, toPub, toPriv *flow.Flow
+		var pubKNI, privKNI *flow.Kni
+
 		// Initialize public to private flow
 		publicToPrivate, err := flow.SetReceiver(pp.PublicPort.Index)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if flow.SetHandlerDrop(publicToPrivate, PublicToPrivateTranslation, context) != nil {
-			log.Fatal(err)
+		flow.CheckFatal(err)
+		pubTranslationOut, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation, 3, context)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetStopper(pubTranslationOut[dirDROP]))
+
+		// Initialize public KNI interface if requested
+		if pp.PublicPort.KNIName != "" {
+			pubKNI, err = flow.CreateKniDevice(pp.PublicPort.Index, pp.PublicPort.KNIName)
+			flow.CheckFatal(err)
+			flow.CheckFatal(flow.SetSenderKNI(pubTranslationOut[dirKNI], pubKNI))
+			fromPubKNI = flow.SetReceiverKNI(pubKNI)
 		}
 
 		// Initialize private to public flow
 		privateToPublic, err := flow.SetReceiver(pp.PrivatePort.Index)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if flow.SetHandlerDrop(privateToPublic, PrivateToPublicTranslation, context) != nil {
-			log.Fatal(err)
+		flow.CheckFatal(err)
+		privTranslationOut, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation, 3, context)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetStopper(privTranslationOut[dirDROP]))
+
+		// Initialize private KNI interface if requested
+		if pp.PrivatePort.KNIName != "" {
+			privKNI, err = flow.CreateKniDevice(pp.PrivatePort.Index, pp.PrivatePort.KNIName)
+			flow.CheckFatal(err)
+			flow.CheckFatal(flow.SetSenderKNI(privTranslationOut[dirKNI], privKNI))
+			fromPrivKNI = flow.SetReceiverKNI(privKNI)
 		}
 
-		err = flow.SetSender(publicToPrivate, pp.PrivatePort.Index)
-		if err != nil {
-			log.Fatal(err)
+		// Merge traffic coming from public KNI with translated
+		// traffic from private side
+		if fromPubKNI != nil {
+			toPub, err = flow.SetMerger(fromPubKNI, privTranslationOut[dirSEND])
+			flow.CheckFatal(err)
+		} else {
+			toPub = privTranslationOut[dirSEND]
 		}
-		err = flow.SetSender(privateToPublic, pp.PublicPort.Index)
-		if err != nil {
-			log.Fatal(err)
+
+		// Merge traffic coming from private KNI with translated
+		// traffic from public side
+		if fromPrivKNI != nil {
+			toPriv, err = flow.SetMerger(fromPrivKNI, pubTranslationOut[dirSEND])
+			flow.CheckFatal(err)
+		} else {
+			toPriv = pubTranslationOut[dirSEND]
 		}
+
+		// Set senders to output packets
+		err = flow.SetSender(toPriv, pp.PrivatePort.Index)
+		flow.CheckFatal(err)
+		err = flow.SetSender(toPub, pp.PublicPort.Index)
+		flow.CheckFatal(err)
 	}
 }
 

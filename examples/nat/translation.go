@@ -53,7 +53,7 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry *Tuple
 }
 
 // PublicToPrivateTranslation does ingress translation.
-func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
+func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 	port := &pp.PublicPort
@@ -63,7 +63,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Parse packet type and address
 	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		return false
+		return dirDROP
 	}
 
 	// Create a lookup key from packet destination address and port
@@ -71,7 +71,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	protocol := pktIPv4.NextProtoID
 	pub2priKey := port.generateLookupKeyFromDstAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
 	if pub2priKey == nil {
-		return false
+		return dirDROP
 	}
 
 	// Do lookup
@@ -82,7 +82,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// packet is ignored.
 	if !found {
 		port.dumpDrop(pkt)
-		return false
+		return dirDROP
 	}
 	value := v.(Tuple)
 
@@ -96,7 +96,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
 		port.dumpDrop(pkt)
-		return false
+		return dirDROP
 	}
 
 	// Check whether TCP connection could be reused
@@ -114,11 +114,11 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	setPacketDstPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
 
 	port.dumpPacket(pkt)
-	return true
+	return dirSEND
 }
 
 // PrivateToPublicTranslation does egress translation.
-func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
+func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pi := ctx.(pairIndex)
 	pp := &Natconfig.PortPairs[pi.index]
 	port := &pp.PrivatePort
@@ -128,7 +128,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Parse packet type and address
 	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		return false
+		return dirDROP
 	}
 
 	// Create a lookup key from packet source address and port
@@ -136,7 +136,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	protocol := pktIPv4.NextProtoID
 	pri2pubKey := port.generateLookupKeyFromSrcAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
 	if pri2pubKey == nil {
-		return false
+		return dirDROP
 	}
 
 	// Do lookup
@@ -152,7 +152,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
 			port.dumpDrop(pkt)
-			return false
+			return dirDROP
 		}
 	} else {
 		value = v.(Tuple)
@@ -174,7 +174,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) bool {
 	setPacketSrcPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
 
 	port.dumpPacket(pkt)
-	return true
+	return dirSEND
 }
 
 func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) *Tuple {
