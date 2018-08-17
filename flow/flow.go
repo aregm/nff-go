@@ -1011,7 +1011,7 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 		OutputMbufs[index] = make([]uintptr, burstSize)
 		countOfPackets[index] = 0
 	}
-	var currentSpeed reportPair
+	var currentState reportPair
 	var pause int
 	firstFunc := lp.firstFunc
 	// For scalar part
@@ -1045,11 +1045,11 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 				// For any events with this function we should restart timer
 				// We don't do it regularly without any events due to performance
 				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
-				currentSpeed = reportPair{}
+				currentState = reportPair{}
 			}
 		case <-tick.C:
-			report <- currentSpeed
-			currentSpeed = reportPair{}
+			report <- currentState
+			currentState = reportPair{}
 		default:
 			for q := int32(1); q < inIndex[0]+1; q++ {
 				n := IN[inIndex[q]].DequeueBurst(InputMbufs, burstSize)
@@ -1063,6 +1063,7 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 						for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
 						}
 					}
+					currentState.ZeroAttempts[q-1]++
 					continue
 				}
 				if scalar { // Scalar code
@@ -1076,7 +1077,7 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 								OutputMbufs[nextIndex][countOfPackets[nextIndex]] = InputMbufs[i]
 								countOfPackets[nextIndex]++
 								if reportMbits {
-									currentSpeed.Bytes += uint64(tempPacket.GetPacketLen())
+									currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
 								}
 								break
 							}
@@ -1088,7 +1089,7 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 							continue
 						}
 						safeEnqueue(OUT[index][inIndex[q]], OutputMbufs[index], uint(countOfPackets[index]))
-						currentSpeed.Packets += uint64(countOfPackets[index])
+						currentState.V.Packets += uint64(countOfPackets[index])
 						countOfPackets[index] = 0
 					}
 				} else { // Vector code
@@ -1105,7 +1106,7 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 							// We have constructSlice -> put packets inside ring, it is an end of segment
 							count := FillSliceFromMask(InputMbufs, &def[st].mask, OutputMbufs[0])
 							safeEnqueue(OUT[answers[0]][inIndex[q]], OutputMbufs[0], uint(count))
-							currentSpeed.Packets += uint64(count)
+							currentState.V.Packets += uint64(count)
 						} else if cur.followingNumber == 1 {
 							// We have simple handle. Mask will remain the same, current function will be changed
 							def[st].f = cur.next[0]
@@ -1177,7 +1178,7 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 	bufs := make([]uintptr, burstSize)
 	var tempPacket *packet.Packet
 	tempPackets := make([]*packet.Packet, burstSize)
-	var currentSpeed reportPair
+	var currentState reportPair
 	var pause int
 	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
 	stopper[1] <- 2 // Answer that function is ready
@@ -1196,11 +1197,11 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 				// For any events with this function we should restart timer
 				// We don't do it regularly without any events due to performance
 				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
-				currentSpeed = reportPair{}
+				currentState = reportPair{}
 			}
 		case <-tick.C:
-			report <- currentSpeed
-			currentSpeed = reportPair{}
+			report <- currentState
+			currentState = reportPair{}
 		default:
 			err := low.AllocateMbufs(bufs, mempool, burstSize)
 			if err != nil {
@@ -1213,7 +1214,7 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 					tempPacket = packet.ExtractPacket(bufs[i])
 					generateFunction(tempPacket, context[0])
 					if reportMbits {
-						currentSpeed.Bytes += uint64(tempPacket.GetPacketLen())
+						currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
 					}
 				}
 			} else {
@@ -1221,7 +1222,7 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 				vectorGenerateFunction(tempPackets, context[0])
 			}
 			safeEnqueue(OUT[0], bufs, burstSize)
-			currentSpeed.Packets += uint64(burstSize)
+			currentState.V.Packets += uint64(burstSize)
 			// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 			// we just want to slow goroutine down without parking, so loop is OK for this.
 			// time.Now lasts approximately 70ns and this satisfies us
@@ -1246,7 +1247,7 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 	bufs2 := make([]uintptr, burstSize)
 	var tempPacket1 *packet.Packet
 	var tempPacket2 *packet.Packet
-	var currentSpeed reportPair
+	var currentState reportPair
 	var pause int
 	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
 	stopper[1] <- 2 // Answer that function is ready
@@ -1263,11 +1264,11 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 				// For any events with this function we should restart timer
 				// We don't do it regularly without any events due to performance
 				tick = time.NewTicker(time.Duration(schedTime) * time.Millisecond)
-				currentSpeed = reportPair{}
+				currentState = reportPair{}
 			}
 		case <-tick.C:
-			report <- currentSpeed
-			currentSpeed = reportPair{}
+			report <- currentState
+			currentState = reportPair{}
 		default:
 			for q := int32(1); q < inIndex[0]+1; q++ {
 				n := IN[inIndex[q]].DequeueBurst(bufs1, burstSize)
@@ -1281,17 +1282,18 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 						tempPacket2 = packet.ExtractPacket(bufs2[i])
 						packet.GeneratePacketFromByte(tempPacket2, tempPacket1.GetRawPacketBytes())
 						if reportMbits {
-							currentSpeed.Bytes += uint64(tempPacket1.GetPacketLen())
+							currentState.V.Bytes += uint64(tempPacket1.GetPacketLen())
 						}
 					}
 					safeEnqueue(OUT[inIndex[q]], bufs1, uint(n))
 					safeEnqueue(OUTCopy[inIndex[q]], bufs2, uint(n))
-					currentSpeed.Packets += uint64(n)
+					currentState.V.Packets += uint64(n)
 				}
 				// GO parks goroutines while Sleep. So Sleep lasts more time than our precision
 				// we just want to slow goroutine down without parking, so loop is OK for this.
 				// time.Now lasts approximately 70ns and this satisfies us
 				if pause != 0 {
+					currentState.ZeroAttempts[q-1]++
 					// pause should be non 0 only if function works with ONE inIndex
 					a := time.Now()
 					for time.Since(a) < time.Duration(pause*int(burstSize))*time.Nanosecond {
