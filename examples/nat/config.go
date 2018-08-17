@@ -16,6 +16,7 @@ import (
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
 )
 
 type terminationDirection uint8
@@ -32,9 +33,37 @@ const (
 	portReuseTimeout  time.Duration = 1 * time.Second
 )
 
+type hostPort struct {
+	Addr uint32
+	Port uint16
+}
+
+type forwardedPort struct {
+	Port         uint16   `json:"port"`
+	Destination  hostPort `json:"destination"`
+	forwardToKNI bool
+}
+
 type ipv4Subnet struct {
 	Addr uint32
 	Mask uint32
+}
+
+func (subnet *ipv4Subnet) String() string {
+	// Count most significant set bits
+	mask := uint32(1) << 31
+	i := 0
+	for ; i <= 32; i++ {
+		if subnet.Mask&mask == 0 {
+			break
+		}
+		mask >>= 1
+	}
+	return packet.IPv4ToString(subnet.Addr) + "/" + strconv.Itoa(i)
+}
+
+func (subnet *ipv4Subnet) checkAddrWithingSubnet(addr uint32) bool {
+	return addr&subnet.Mask == subnet.Addr&subnet.Mask
 }
 
 type macAddress [common.EtherAddrLen]uint8
@@ -48,10 +77,12 @@ type portMapEntry struct {
 
 // Type describing a network port
 type ipv4Port struct {
-	Index         uint16     `json:"index"`
-	DstMACAddress macAddress `json:"dst-mac"`
-	Subnet        ipv4Subnet `json:"subnet"`
-	Vlan          uint16     `json:"vlan-tag"`
+	Index         uint16          `json:"index"`
+	DstMACAddress macAddress      `json:"dst-mac"`
+	Subnet        ipv4Subnet      `json:"subnet"`
+	Vlan          uint16          `json:"vlan-tag"`
+	KNIEnabled    bool            `json:"kni-enabled"`
+	ForwardPorts  []forwardedPort `json:"forward-ports"`
 	SrcMACAddress macAddress
 	Type          interfaceType
 	// ARP lookup table
@@ -154,6 +185,41 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 	return errors.New("Failed to parse address " + s)
 }
 
+// UnmarshalJSON parses ipv4 host:port string. Port may be omitted and
+// is set to zero in this case.
+func (out *hostPort) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	hostStr, portStr, err := net.SplitHostPort(s)
+	if err != nil {
+		return err
+	}
+
+	ipArray := net.ParseIP(hostStr)
+	if ipArray == nil {
+		return errors.New("Bad IPv4 address specified: " + hostStr)
+	}
+	out.Addr, err = convertIPv4(ipArray.To4())
+	if err != nil {
+		return err
+	}
+
+	if portStr != "" {
+		port, err := strconv.ParseInt(portStr, 10, 32)
+		if err != nil {
+			return err
+		}
+		out.Port = uint16(port)
+	} else {
+		out.Port = 0
+	}
+
+	return nil
+}
+
 // UnmarshalJSON parses MAC address.
 func (out *macAddress) UnmarshalJSON(b []byte) error {
 	var s string
@@ -201,6 +267,39 @@ func ReadConfig(fileName string) error {
 				" has non-zero vlan tag while public port with index " +
 				strconv.Itoa(int(pp.PublicPort.Index)) +
 				" has zero vlan tag. Transition between VLAN-enabled and VLAN-disabled networks is not supported yet.")
+		}
+
+		port := &pp.PrivatePort
+		opposite := &pp.PublicPort
+		for pi := 0; pi < 2; pi++ {
+			for fpi := range port.ForwardPorts {
+				fp := &port.ForwardPorts[fpi]
+				if fp.Destination.Addr == 0 {
+					if !port.KNIEnabled {
+						return errors.New("Port with index " +
+							strconv.Itoa(int(port.Index)) +
+							" should have \"kni-enabled\" setting if you want to forward packets to KNI address 0.0.0.0")
+					}
+					fp.forwardToKNI = true
+					if fp.Destination.Port != fp.Port {
+						return errors.New("When address 0.0.0.0 is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
+							strconv.Itoa(int(fp.Port)) + " and " +
+							strconv.Itoa(int(fp.Destination.Port)))
+					}
+				} else {
+					if !opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
+						return errors.New("Destination address " +
+							packet.IPv4ToString(fp.Destination.Addr) +
+							" should be within subnet " +
+							opposite.Subnet.String())
+					}
+					if fp.Destination.Port == 0 {
+						fp.Destination.Port = fp.Port
+					}
+				}
+			}
+			port = &pp.PublicPort
+			opposite = &pp.PrivatePort
 		}
 	}
 

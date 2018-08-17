@@ -100,12 +100,14 @@ type IPv4Hdr struct {
 	DstAddr        uint32 // destination address
 }
 
+func IPv4ToString(addr uint32) string {
+	return fmt.Sprintln("    IPv4 Source:", byte(addr), ":", byte(addr>>8), ":", byte(addr>>16), ":", byte(addr>>24))
+}
+
 func (hdr *IPv4Hdr) String() string {
 	r0 := "    L3 protocol: IPv4\n"
-	s := hdr.SrcAddr
-	r1 := fmt.Sprintln("    IPv4 Source:", byte(s), ":", byte(s>>8), ":", byte(s>>16), ":", byte(s>>24))
-	d := hdr.DstAddr
-	r2 := fmt.Sprintln("    IPv4 Destination:", byte(d), ":", byte(d>>8), ":", byte(d>>16), ":", byte(d>>24))
+	r1 := IPv4ToString(hdr.SrcAddr)
+	r2 := IPv4ToString(hdr.DstAddr)
 	return r0 + r1 + r2
 }
 
