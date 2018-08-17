@@ -5,10 +5,10 @@
 package generator
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"math"
-	"math/big"
 	"math/rand"
 	"os"
 	"sync/atomic"
@@ -49,16 +49,36 @@ func ReadConfig(fileName string) ([]*MixConfig, error) {
 	return cfg, nil
 }
 
+func addAddr(a *[]byte, b []byte) {
+	var offset int
+	aLen := len(*a)
+	bLen := len(b)
+	if aLen < bLen {
+		add := make([]byte, bLen-aLen)
+		*a = append(add, *a...)
+	} else {
+		offset = aLen - bLen
+	}
+	var next byte
+	for i := bLen - 1; i >= 0; i-- {
+		add := (*a)[i+offset] + b[i] + next
+		if add > 255 {
+			next = 1
+			(*a)[i+offset] = byte(255) - add
+		} else {
+			(*a)[i+offset] = add
+			next = 0
+		}
+	}
+}
+
 func getNextAddr(addr *AddrRange) []uint8 {
-	if addr.Incr == 0 {
-		return addr.Current.Bytes()
-	}
-	addr.Current.Add(big.NewInt(int64(addr.Incr)), addr.Current)
+	addAddr(&(addr.Current), addr.Incr)
 	// if current < min or current > max, copy min to current
-	if addr.Current.Cmp(addr.Min) < 0 || addr.Current.Cmp(addr.Max) > 0 {
-		addr.Current = addr.Min
+	if bytes.Compare(addr.Current, addr.Min) < 0 || bytes.Compare(addr.Current, addr.Max) > 0 {
+		copy(addr.Current, addr.Min)
 	}
-	return addr.Current.Bytes()
+	return addr.Current
 }
 
 func copyAddr(destination []uint8, source []uint8, size int) {

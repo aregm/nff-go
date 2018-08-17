@@ -6,6 +6,7 @@ package generator
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -23,10 +24,10 @@ var mixPattern = regexp.MustCompile(`^mix[0-9]*$`)
 
 // AddrRange describes range of addresses.
 type AddrRange struct {
-	Min     *big.Int
-	Max     *big.Int
-	Current *big.Int
-	Incr    uint64
+	Min     []byte
+	Max     []byte
+	Current []byte
+	Incr    []byte
 }
 
 func (ar *AddrRange) String() string {
@@ -242,7 +243,7 @@ func ParseMixConfig(in map[string]interface{}) (config []*MixConfig, err error) 
 }
 
 func parseEtherHdr(in map[string]interface{}) (EtherConfig, error) {
-	ethConfig := EtherConfig{DAddr: allocAddrRange(), SAddr: allocAddrRange(), VLAN: nil, DType: NONE}
+	ethConfig := EtherConfig{DAddr: AddrRange{}, SAddr: AddrRange{}, VLAN: nil, DType: NONE}
 	for k, v := range in {
 		switch strings.ToLower(k) {
 		case "saddr":
@@ -655,10 +656,13 @@ func parseMacAddr(value interface{}) (AddrRange, error) {
 		if err != nil {
 			return AddrRange{}, fmt.Errorf("parsing mac saddr returned: %v", err)
 		}
-		ret := allocAddrRange()
-		ret.Min.SetBytes(saddr)
-		ret.Max.SetBytes(saddr)
-		ret.Current.SetBytes(saddr)
+		ret := AddrRange{}
+		ret.Min = make([]byte, len(saddr))
+		copy(ret.Min, saddr)
+		ret.Max = make([]byte, len(saddr))
+		copy(ret.Max, saddr)
+		ret.Current = make([]byte, len(saddr))
+		copy(ret.Current, saddr)
 		return ret, nil
 	}
 	return AddrRange{}, fmt.Errorf("unknown type")
@@ -678,14 +682,6 @@ func parseRawMACAddr(rawAddr string) ([]uint8, error) {
 		return nil, fmt.Errorf("parsing mac addr returned: %v for %s", err, rawAddr)
 	}
 	return addr, nil
-}
-
-func allocAddrRange() AddrRange {
-	addr := AddrRange{}
-	addr.Min = big.NewInt(0)
-	addr.Max = big.NewInt(0)
-	addr.Current = big.NewInt(0)
-	return addr
 }
 
 func parseIPAddr(value interface{}) (AddrRange, error) {
@@ -708,10 +704,13 @@ func parseIPAddr(value interface{}) (AddrRange, error) {
 		if err != nil {
 			return AddrRange{}, fmt.Errorf("parsing ip addr returned: %v", err)
 		}
-		ret := allocAddrRange()
-		ret.Min.SetBytes(saddr)
-		ret.Max.SetBytes(saddr)
-		ret.Current.SetBytes(saddr)
+		ret := AddrRange{}
+		ret.Min = make([]byte, len(saddr))
+		copy(ret.Min, saddr)
+		ret.Max = make([]byte, len(saddr))
+		copy(ret.Max, saddr)
+		ret.Current = make([]byte, len(saddr))
+		copy(ret.Current, saddr)
 		return ret, nil
 	}
 	return AddrRange{}, fmt.Errorf("unknown type")
@@ -720,7 +719,7 @@ func parseIPAddr(value interface{}) (AddrRange, error) {
 type fn func(string) ([]uint8, error)
 
 func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) {
-	addr := allocAddrRange()
+	addr := AddrRange{}
 	wasMin, wasMax, wasStart, wasIncr := false, false, false, false
 	for k, v := range in {
 		switch strings.ToLower(k) {
@@ -729,27 +728,27 @@ func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) 
 			if err != nil {
 				return AddrRange{}, fmt.Errorf("parsing min returned: %v", err)
 			}
-			addr.Min = big.NewInt(0)
-			addr.Min.SetBytes(min)
+			addr.Min = make([]byte, len(min))
+			copy(addr.Min, min)
 			wasMin = true
 		case "max":
 			max, err := parseFunc(v.(string))
 			if err != nil {
 				return AddrRange{}, fmt.Errorf("parsing max returned: %v", err)
 			}
-			addr.Max = big.NewInt(0)
-			addr.Max.SetBytes(max)
+			addr.Max = make([]byte, len(max))
+			copy(addr.Max, max)
 			wasMax = true
 		case "start":
 			start, err := parseFunc(v.(string))
 			if err != nil {
 				return AddrRange{}, fmt.Errorf("parsing start returned: %v", err)
 			}
-			addr.Current = big.NewInt(0)
-			addr.Current.SetBytes(start)
+			addr.Current = make([]byte, len(start))
+			copy(addr.Current, start)
 			wasStart = true
 		case "incr":
-			addr.Incr = (uint64)(v.(float64))
+			addr.Incr = big.NewInt((int64)(v.(float64))).Bytes()
 			wasIncr = true
 		default:
 			return AddrRange{}, fmt.Errorf("unknown key %s", k)
@@ -758,19 +757,19 @@ func parseAddrRange(in map[string]interface{}, parseFunc fn) (AddrRange, error) 
 	if !wasMax || !wasMin {
 		return AddrRange{}, fmt.Errorf("Min and max values should be given for range")
 	}
-	if addr.Max.Cmp(addr.Min) < 0 {
+	if bytes.Compare(addr.Max, addr.Min) < 0 {
 		return AddrRange{}, fmt.Errorf("Min value should be less than Max")
 	}
 	if !wasStart {
-		addr.Current = big.NewInt(0)
-		*(addr.Current) = *(addr.Min)
+		addr.Current = make([]byte, len(addr.Min))
+		copy(addr.Current, addr.Min)
 	}
 
-	if addr.Current.Cmp(addr.Min) < 0 || addr.Current.Cmp(addr.Max) > 0 {
-		return AddrRange{}, fmt.Errorf(fmt.Sprintf("Start value should be between min and max: start=%v, min=%v, max=%v", addr.Current.Bytes(), addr.Min.Bytes(), addr.Max.Bytes()))
+	if bytes.Compare(addr.Current, addr.Min) < 0 || bytes.Compare(addr.Current, addr.Max) > 0 {
+		return AddrRange{}, fmt.Errorf(fmt.Sprintf("Start value should be between min and max: start=%v, min=%v, max=%v", addr.Current, addr.Min, addr.Max))
 	}
 	if !wasIncr {
-		addr.Incr = 1
+		addr.Incr = []byte{1}
 	}
 	return addr, nil
 }

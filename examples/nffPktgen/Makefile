@@ -6,4 +6,4 @@ PATH_TO_MK = ../../mk
 IMAGENAME = nff-pktgen
 SUBDIRS = sendGetBack perfTest
 
-include $(PATH_TO_MK)/leaf.mk
+include $(PATH_TO_MK)/intermediate.mk
