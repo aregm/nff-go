@@ -41,10 +41,33 @@ type hostPort struct {
 	Port uint16
 }
 
+type protocolId uint8
+
 type forwardedPort struct {
-	Port         uint16   `json:"port"`
-	Destination  hostPort `json:"destination"`
+	Port         uint16     `json:"port"`
+	Destination  hostPort   `json:"destination"`
+	Protocol     protocolId `json:"protocol"`
 	forwardToKNI bool
+}
+
+var protocolIdLookup map[string]protocolId = map[string]protocolId{
+	"TCP": common.TCPNumber,
+	"UDP": common.UDPNumber,
+}
+
+func (out *protocolId) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	result, ok := protocolIdLookup[s]
+	if !ok {
+		return errors.New("Bad protocol name: " + s)
+	}
+
+	*out = result
+	return nil
 }
 
 type ipv4Subnet struct {
@@ -76,6 +99,7 @@ type portMapEntry struct {
 	addr                 uint32
 	finCount             uint8
 	terminationDirection terminationDirection
+	static               bool
 }
 
 // Type describing a network port
@@ -91,10 +115,8 @@ type ipv4Port struct {
 	// ARP lookup table
 	ArpTable sync.Map
 	// Debug dump stuff
-	fdump    *os.File
-	dumpsync sync.Mutex
-	fdrop    *os.File
-	dropsync sync.Mutex
+	fdump    [dirKNI + 1]*os.File
+	dumpsync [dirKNI + 1]sync.Mutex
 }
 
 // Config for one port pair.
@@ -292,6 +314,9 @@ func ReadConfig(fileName string) error {
 					}
 					NeedKNI = true
 				} else {
+					if pi == 0 {
+						return errors.New("Only KNI port forwarding is allowed on private port. All translated connections from private to public network can be initiated without any forwarding rules.")
+					}
 					if !opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
 						return errors.New("Destination address " +
 							packet.IPv4ToString(fp.Destination.Addr) +
@@ -327,8 +352,44 @@ func (pp *portPair) allocatePortMap() {
 }
 
 func (pp *portPair) allocateLookupMap() {
-	pp.pri2pubTable = make([]sync.Map, common.UDPNumber+1)
 	pp.pub2priTable = make([]sync.Map, common.UDPNumber+1)
+	pp.pri2pubTable = make([]sync.Map, common.UDPNumber+1)
+
+	// Initialize port forwarding rules on public interface
+	for _, fp := range pp.PublicPort.ForwardPorts {
+		keyEntry := Tuple{
+			addr: pp.PublicPort.Subnet.Addr,
+			port: fp.Port,
+		}
+		valEntry := Tuple{
+			addr: fp.Destination.Addr,
+			port: fp.Destination.Port,
+		}
+		pp.pub2priTable[fp.Protocol].Store(keyEntry, valEntry)
+		if fp.Destination.Addr != 0 {
+			pp.pri2pubTable[fp.Protocol].Store(valEntry, keyEntry)
+		}
+		pp.portmap[fp.Protocol][fp.Port] = portMapEntry{
+			lastused:             time.Now(),
+			addr:                 fp.Destination.Addr,
+			finCount:             0,
+			terminationDirection: 0,
+			static:               true,
+		}
+	}
+
+	// All ports forwarded on private interface are to KNI
+	for _, fp := range pp.PrivatePort.ForwardPorts {
+		keyEntry := Tuple{
+			addr: pp.PrivatePort.Subnet.Addr,
+			port: fp.Port,
+		}
+		valEntry := Tuple{
+			addr: 0, // Zero address means to translate to KNI
+			port: fp.Destination.Port,
+		}
+		pp.pri2pubTable[fp.Protocol].Store(keyEntry, valEntry)
+	}
 }
 
 // InitFlows initializes flow graph for all interface pairs.

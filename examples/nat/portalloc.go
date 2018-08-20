@@ -51,7 +51,7 @@ func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
 	pm := pp.portmap[protocol]
 	for {
 		for p := pp.lastport; p < portEnd; p++ {
-			if time.Since(pm[p].lastused) > connectionTimeout {
+			if !pm[p].static && time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil
@@ -59,7 +59,7 @@ func (pp *portPair) allocNewPort(protocol uint8) (int, error) {
 		}
 
 		for p := portStart; p < pp.lastport; p++ {
-			if time.Since(pm[p].lastused) > connectionTimeout {
+			if !pm[p].static && time.Since(pm[p].lastused) > connectionTimeout {
 				pp.lastport = p
 				pp.deleteOldConnection(protocol, p)
 				return p, nil

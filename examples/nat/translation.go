@@ -18,10 +18,6 @@ type Tuple struct {
 	port uint16
 }
 
-var (
-	emptyEntry = Tuple{addr: 0, port: 0}
-)
-
 func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry *Tuple) (Tuple, error) {
 	pp.mutex.Lock()
 
@@ -42,6 +38,7 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry *Tuple
 		addr:                 publicAddr,
 		finCount:             0,
 		terminationDirection: 0,
+		static:               false,
 	}
 
 	// Add lookup entries for packet translation
@@ -58,12 +55,12 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pp := &Natconfig.PortPairs[pi.index]
 	port := &pp.PublicPort
 
-	port.dumpPacket(pkt)
+	port.dumpPacket(pkt, dirSEND)
 
 	// Parse packet type and address
-	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
+	dir, pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		return dirDROP
+		return dir
 	}
 
 	// Create a lookup key from packet destination address and port
@@ -81,13 +78,13 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// (private to public) packet. So if lookup fails, this incoming
 	// packet is ignored.
 	if !found {
-		port.dumpDrop(pkt)
+		port.dumpPacket(pkt, dirDROP)
 		return dirDROP
 	}
 	value := v.(Tuple)
 
 	// Check whether connection is too old
-	if time.Since(pp.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
+	if pp.portmap[protocol][pub2priKey.port].static || time.Since(pp.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
 		pp.portmap[protocol][pub2priKey.port].lastused = time.Now()
 	} else {
 		// There was no transfer on this port for too long
@@ -95,26 +92,31 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		pp.mutex.Lock()
 		pp.deleteOldConnection(protocol, int(pub2priKey.port))
 		pp.mutex.Unlock()
-		port.dumpDrop(pkt)
+		port.dumpPacket(pkt, dirDROP)
 		return dirDROP
 	}
 
-	// Check whether TCP connection could be reused
-	if protocol == common.TCPNumber {
-		pp.checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
-	}
+	if value.addr != 0 {
+		// Check whether TCP connection could be reused
+		if protocol == common.TCPNumber {
+			pp.checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
+		}
 
-	// Do packet translation
-	pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
-	pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
-	if pktVLAN != nil {
-		pktVLAN.SetVLANTagIdentifier(pp.PrivatePort.Vlan)
-	}
-	pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
-	setPacketDstPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
+		// Do packet translation
+		pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
+		pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
+		if pktVLAN != nil {
+			pktVLAN.SetVLANTagIdentifier(pp.PrivatePort.Vlan)
+		}
+		pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
+		setPacketDstPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
 
-	port.dumpPacket(pkt)
-	return dirSEND
+		port.dumpPacket(pkt, dirSEND)
+		return dirSEND
+	} else {
+		port.dumpPacket(pkt, dirKNI)
+		return dirKNI
+	}
 }
 
 // PrivateToPublicTranslation does egress translation.
@@ -123,12 +125,12 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	pp := &Natconfig.PortPairs[pi.index]
 	port := &pp.PrivatePort
 
-	port.dumpPacket(pkt)
+	port.dumpPacket(pkt, dirSEND)
 
 	// Parse packet type and address
-	pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
+	dir, pktVLAN, pktIPv4 := port.parsePacketAndCheckARP(pkt)
 	if pktIPv4 == nil {
-		return dirDROP
+		return dir
 	}
 
 	// Create a lookup key from packet source address and port
@@ -151,7 +153,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 		if err != nil {
 			println("Warning! Failed to allocate new connection", err)
-			port.dumpDrop(pkt)
+			port.dumpPacket(pkt, dirDROP)
 			return dirDROP
 		}
 	} else {
@@ -159,22 +161,27 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		pp.portmap[protocol][value.port].lastused = time.Now()
 	}
 
-	// Check whether TCP connection could be reused
-	if pktTCP != nil {
-		pp.checkTCPTermination(pktTCP, int(value.port), pri2pub)
-	}
+	if value.addr != 0 {
+		// Check whether TCP connection could be reused
+		if pktTCP != nil {
+			pp.checkTCPTermination(pktTCP, int(value.port), pri2pub)
+		}
 
-	// Do packet translation
-	pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
-	pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
-	if pktVLAN != nil {
-		pktVLAN.SetVLANTagIdentifier(pp.PublicPort.Vlan)
-	}
-	pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
-	setPacketSrcPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
+		// Do packet translation
+		pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
+		pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
+		if pktVLAN != nil {
+			pktVLAN.SetVLANTagIdentifier(pp.PublicPort.Vlan)
+		}
+		pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
+		setPacketSrcPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
 
-	port.dumpPacket(pkt)
-	return dirSEND
+		port.dumpPacket(pkt, dirSEND)
+		return dirSEND
+	} else {
+		port.dumpPacket(pkt, dirKNI)
+		return dirKNI
+	}
 }
 
 func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) *Tuple {
@@ -194,7 +201,7 @@ func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, 
 		}
 		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		port.dumpDrop(pkt)
+		port.dumpPacket(pkt, dirDROP)
 		return nil
 	}
 	return &key
@@ -218,7 +225,7 @@ func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, 
 		}
 		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
-		port.dumpDrop(pkt)
+		port.dumpPacket(pkt, dirDROP)
 		return nil
 	}
 	return &key
@@ -288,30 +295,30 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 	}
 }
 
-func (port *ipv4Port) parsePacketAndCheckARP(pkt *packet.Packet) (vhdr *packet.VLANHdr, iphdr *packet.IPv4Hdr) {
+func (port *ipv4Port) parsePacketAndCheckARP(pkt *packet.Packet) (dir uint, vhdr *packet.VLANHdr, iphdr *packet.IPv4Hdr) {
 	pktVLAN := pkt.ParseL3CheckVLAN()
 	pktIPv4 := pkt.GetIPv4CheckVLAN()
 	if pktIPv4 == nil {
 		arp := pkt.GetARPCheckVLAN()
 		if arp != nil {
-			if port.handleARP(pkt) == false {
-				port.dumpDrop(pkt)
-			}
-			return pktVLAN, nil
+			dir := port.handleARP(pkt)
+			port.dumpPacket(pkt, dir)
+			return dir, pktVLAN, nil
 		}
 		// We don't currently support anything except for IPv4 and ARP
-		port.dumpDrop(pkt)
-		return pktVLAN, nil
+		port.dumpPacket(pkt, dirDROP)
+		return dirDROP, pktVLAN, nil
 	}
-	return pktVLAN, pktIPv4
+	return dirSEND, pktVLAN, pktIPv4
 }
 
-func (port *ipv4Port) handleARP(pkt *packet.Packet) bool {
+func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
-		// We don't care about replies so far
-		return false
+		// All replies go to KNI since we don't ask for anything
+		// ourself
+		return dirKNI
 	}
 
 	// Check that someone is asking about MAC of my IP address and HW
@@ -320,12 +327,12 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet) bool {
 		println("Warning! Got an ARP packet with target IPv4 address", StringIPv4Array(arp.TPA),
 			"different from IPv4 address on interface. Should be", StringIPv4Int(port.Subnet.Addr),
 			". ARP request ignored.")
-		return false
+		return dirDROP
 	}
 	if arp.THA != [common.EtherAddrLen]byte{} {
 		println("Warning! Got an ARP packet with non-zero MAC address", StringMAC(arp.THA),
 			". ARP request ignored.")
-		return false
+		return dirDROP
 	}
 
 	// Prepare an answer to this request
@@ -340,10 +347,10 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet) bool {
 		answerPacket.AddVLANTag(packet.SwapBytesUint16(vlan.TCI))
 	}
 
-	port.dumpPacket(answerPacket)
+	port.dumpPacket(answerPacket, dirSEND)
 	answerPacket.SendPacket(port.Index)
 
-	return true
+	return dirDROP
 }
 
 func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
@@ -388,7 +395,7 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) bool {
 	(answerPacket.GetICMPNoCheck()).Type = common.ICMPTypeEchoResponse
 	setIPv4ICMPChecksum(answerPacket, !NoCalculateChecksum, !NoHWTXChecksum)
 
-	port.dumpPacket(answerPacket)
+	port.dumpPacket(answerPacket, dirSEND)
 	answerPacket.SendPacket(port.Index)
 	return false
 }

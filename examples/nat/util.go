@@ -45,8 +45,14 @@ func swapAddrIPv4(pkt *packet.Packet) {
 	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
 }
 
-func (port *ipv4Port) startTrace(name string) *os.File {
-	fname := fmt.Sprintf("%s-%d-%s.pcap", name, port.Index, packet.MACToString(port.SrcMACAddress))
+func (port *ipv4Port) startTrace(dir uint) *os.File {
+	dumpNameLookup := [dirKNI + 1]string{
+		"drop",
+		"dump",
+		"kni",
+	}
+
+	fname := fmt.Sprintf("%s-%d-%s.pcap", dumpNameLookup[dir], port.Index, packet.MACToString(port.SrcMACAddress))
 
 	file, err := os.Create(fname)
 	if err != nil {
@@ -56,44 +62,27 @@ func (port *ipv4Port) startTrace(name string) *os.File {
 	return file
 }
 
-func (port *ipv4Port) dumpPacket(pkt *packet.Packet) {
+func (port *ipv4Port) dumpPacket(pkt *packet.Packet, dir uint) {
 	if debugDump {
-		port.dumpsync.Lock()
-		if port.fdump == nil {
-			port.fdump = port.startTrace("dump")
+		port.dumpsync[dir].Lock()
+		if port.fdump[dir] == nil {
+			port.fdump[dir] = port.startTrace(dir)
 		}
 
-		err := pkt.WritePcapOnePacket(port.fdump)
+		err := pkt.WritePcapOnePacket(port.fdump[dir])
 		if err != nil {
 			log.Fatal(err)
 		}
-		port.dumpsync.Unlock()
-	}
-}
-
-func (port *ipv4Port) dumpDrop(pkt *packet.Packet) {
-	if debugDrop {
-		port.dropsync.Lock()
-		if port.fdrop == nil {
-			port.fdrop = port.startTrace("drop")
-		}
-		err := pkt.WritePcapOnePacket(port.fdrop)
-		if err != nil {
-			log.Fatal(err)
-		}
-		port.dropsync.Unlock()
-	}
-}
-
-func closeTrace(f *os.File) {
-	if f != nil {
-		f.Close()
+		port.dumpsync[dir].Unlock()
 	}
 }
 
 func (port *ipv4Port) closePortTraces() {
-	closeTrace(port.fdump)
-	closeTrace(port.fdrop)
+	for _, f := range port.fdump {
+		if f != nil {
+			f.Close()
+		}
+	}
 }
 
 // CloseAllDumpFiles closes all debug dump files.

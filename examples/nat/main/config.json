@@ -8,7 +8,8 @@
                 "forward-ports": [
                     {
                         "port": 22,
-                        "destination": "0.0.0.0:22"
+                        "destination": "0.0.0.0:22",
+                        "protocol": "TCP"
                     }
                 ]
             },
@@ -20,11 +21,13 @@
                 "forward-ports": [
                     {
                         "port": 22,
-                        "destination": "0.0.0.0:22"
+                        "destination": "0.0.0.0:22",
+                        "protocol": "TCP"
                     },
                     {
                         "port": 8080,
-                        "destination": "192.168.14.2:80"
+                        "destination": "192.168.14.2:80",
+                        "protocol": "TCP"
                     }
                 ]
             }
