@@ -66,9 +66,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Create a lookup key from packet destination address and port
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 	protocol := pktIPv4.NextProtoID
-	pub2priKey := port.generateLookupKeyFromDstAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
+	pub2priKey, dir := port.generateLookupKeyFromDstAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
 	if pub2priKey == nil {
-		return dirDROP
+		return dir
 	}
 
 	// Do lookup
@@ -136,9 +136,9 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Create a lookup key from packet source address and port
 	pktTCP, pktUDP, pktICMP := pkt.ParseAllKnownL4ForIPv4()
 	protocol := pktIPv4.NextProtoID
-	pri2pubKey := port.generateLookupKeyFromSrcAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
+	pri2pubKey, dir := port.generateLookupKeyFromSrcAndHandleICMP(pkt, pktIPv4, pktTCP, pktUDP, pktICMP)
 	if pri2pubKey == nil {
-		return dirDROP
+		return dir
 	}
 
 	// Do lookup
@@ -184,7 +184,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	}
 }
 
-func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) *Tuple {
+func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) (*Tuple, uint) {
 	key := Tuple{
 		addr: packet.SwapBytesUint32(pktIPv4.DstAddr),
 	}
@@ -196,18 +196,19 @@ func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, 
 	} else if pktICMP != nil {
 		// Check if this ICMP packet destination is NAT itself. If
 		// yes, reply back with ICMP and stop packet processing.
-		if port.handleICMP(pkt) == false {
-			return nil
+		dir := port.handleICMP(pkt)
+		if dir != dirSEND {
+			return nil, dir
 		}
 		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		port.dumpPacket(pkt, dirDROP)
-		return nil
+		return nil, dirDROP
 	}
-	return &key
+	return &key, dirSEND
 }
 
-func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) *Tuple {
+func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) (*Tuple, uint) {
 	key := Tuple{
 		addr: packet.SwapBytesUint32(pktIPv4.SrcAddr),
 	}
@@ -219,16 +220,18 @@ func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, 
 		key.port = packet.SwapBytesUint16(pktUDP.SrcPort)
 	} else if pktICMP != nil {
 		// Check if this ICMP packet destination is NAT itself. If
-		// yes, reply back with ICMP and stop packet processing.
-		if port.handleICMP(pkt) == false {
-			return nil
+		// yes, reply back with ICMP and stop packet processing or
+		// direct to KNI if KNI is present.
+		dir := port.handleICMP(pkt)
+		if dir != dirSEND {
+			return nil, dir
 		}
 		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		port.dumpPacket(pkt, dirDROP)
-		return nil
+		return nil, dirDROP
 	}
-	return &key
+	return &key, dirSEND
 }
 
 func setPacketDstPort(pkt *packet.Packet, port uint16, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) {
@@ -313,12 +316,16 @@ func (port *ipv4Port) parsePacketAndCheckARP(pkt *packet.Packet) (dir uint, vhdr
 }
 
 func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
+	// If there is a KNI interface, direct all ARP traffic to it
+	if port.KNIName != "" {
+		return dirKNI
+	}
+
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
-		// All replies go to KNI since we don't ask for anything
-		// ourself
-		return dirKNI
+		// We don't care about replies so far
+		return dirDROP
 	}
 
 	// Check that someone is asking about MAC of my IP address and HW
@@ -364,12 +371,18 @@ func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
 	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 }
 
-func (port *ipv4Port) handleICMP(pkt *packet.Packet) bool {
+func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 	ipv4 := pkt.GetIPv4NoCheck()
 
-	// Check that received ICMP packet is addressed at this host
+	// Check that received ICMP packet is addressed at this host. If
+	// not, packet should be translated
 	if packet.SwapBytesUint32(ipv4.DstAddr) != port.Subnet.Addr {
-		return true
+		return dirSEND
+	}
+
+	// If there is KNI interface, direct all ICMP traffic to it
+	if port.KNIName != "" {
+		return dirKNI
 	}
 
 	icmp := pkt.GetICMPNoCheck()
@@ -379,7 +392,7 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) bool {
 	// NAT way. Maybe these are packets which should be passed through
 	// translation.
 	if icmp.Type != common.ICMPTypeEchoRequest || icmp.Code != 0 {
-		return true
+		return dirSEND
 	}
 
 	// Return a packet back to sender
@@ -397,5 +410,5 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) bool {
 
 	port.dumpPacket(answerPacket, dirSEND)
 	answerPacket.SendPacket(port.Index)
-	return false
+	return dirDROP
 }
