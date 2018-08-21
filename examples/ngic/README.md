@@ -39,7 +39,7 @@ Basic Flow Diagram:
 #### Install
 ---------------
 
-- ../nff-go/scripts/install_nffgo.sh
+- ./scripts/install_nffgo.sh
     This script will do the following:
     1. Install Go (if not installed) , set GOPATH and GOROOT
     2. Create a nff directory set it as GOROOT
@@ -54,7 +54,7 @@ Basic Flow Diagram:
    ```
    it will create /opt/nff directory and set it as GOROOT and install the nff-go with ngic-dp example.
 
-- ../nff-go/scripts/setgoenv.sh
+- ./scripts/setgoenv.sh
 This script sets up the environment variables(GOPATH and GOROOT) once nff-go is installed as described in the above step. User can just source this file (from the location where it setup e.g. /opt/) and it will export the required environment variables and land the user to nff-go directory.
 
 #### Configuration
