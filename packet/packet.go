@@ -101,7 +101,7 @@ type IPv4Hdr struct {
 }
 
 func IPv4ToString(addr uint32) string {
-	return fmt.Sprintln("    IPv4 Source:", byte(addr), ":", byte(addr>>8), ":", byte(addr>>16), ":", byte(addr>>24))
+	return fmt.Sprintf("IPv4 address: %d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
 }
 
 func (hdr *IPv4Hdr) String() string {

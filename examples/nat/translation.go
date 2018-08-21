@@ -103,10 +103,15 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		}
 
 		// Do packet translation
-		pkt.Ether.DAddr = pp.PrivatePort.getMACForIP(value.addr)
-		pkt.Ether.SAddr = pp.PrivatePort.SrcMACAddress
+		mac, found := port.opposite.getMACForIP(value.addr)
+		if !found {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
+		}
+		pkt.Ether.DAddr = mac
+		pkt.Ether.SAddr = port.SrcMACAddress
 		if pktVLAN != nil {
-			pktVLAN.SetVLANTagIdentifier(pp.PrivatePort.Vlan)
+			pktVLAN.SetVLANTagIdentifier(port.opposite.Vlan)
 		}
 		pktIPv4.DstAddr = packet.SwapBytesUint32(value.addr)
 		setPacketDstPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
@@ -154,7 +159,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	if !found {
 		var err error
 		// Store new local network entry in ARP cache
-		pp.PrivatePort.ArpTable.Store(pri2pubKey.addr, pkt.Ether.SAddr)
+		port.arpTable.Store(pri2pubKey.addr, pkt.Ether.SAddr)
 		// Allocate new connection from private to public network
 		value, err = pp.allocateNewEgressConnection(protocol, pri2pubKey)
 
@@ -175,10 +180,15 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		}
 
 		// Do packet translation
-		pkt.Ether.DAddr = pp.PublicPort.DstMACAddress
-		pkt.Ether.SAddr = pp.PublicPort.SrcMACAddress
+		mac, found := port.opposite.getMACForIP(packet.SwapBytesUint32(pktIPv4.DstAddr))
+		if !found {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
+		}
+		pkt.Ether.DAddr = mac
+		pkt.Ether.SAddr = port.SrcMACAddress
 		if pktVLAN != nil {
-			pktVLAN.SetVLANTagIdentifier(pp.PublicPort.Vlan)
+			pktVLAN.SetVLANTagIdentifier(port.opposite.Vlan)
 		}
 		pktIPv4.SrcAddr = packet.SwapBytesUint32(value.addr)
 		setPacketSrcPort(pkt, value.port, pktTCP, pktUDP, pktICMP)
@@ -333,7 +343,10 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
-		// We don't care about replies so far
+		if packet.SwapBytesUint16(arp.Operation) == packet.ARPReply {
+			ipv4 := packet.SwapBytesUint32(packet.BytesToIPv4(arp.SPA[0], arp.SPA[1], arp.SPA[2], arp.SPA[3]))
+			port.arpTable.Store(ipv4, arp.SHA)
+		}
 		return dirDROP
 	}
 
@@ -369,15 +382,30 @@ func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
 	return dirDROP
 }
 
-func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
-	v, found := port.ArpTable.Load(ip)
+func (port *ipv4Port) getMACForIP(ip uint32) (macAddress, bool) {
+	v, found := port.arpTable.Load(ip)
 	if found {
-		return macAddress(v.([common.EtherAddrLen]byte))
+		return macAddress(v.([common.EtherAddrLen]byte)), true
 	}
-	println("Warning! IP address",
-		byte(ip), ".", byte(ip>>8), ".", byte(ip>>16), ".", byte(ip>>24),
-		"not found in ARP cache on port", port.Index)
-	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	port.sendARPRequest(ip)
+	return macAddress{}, false
+}
+
+func (port *ipv4Port) sendARPRequest(ip uint32) {
+	// Prepare an answer to this request
+	requestPacket, err := packet.NewPacket()
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
+
+	packet.InitARPRequestPacket(requestPacket, port.SrcMACAddress,
+		packet.SwapBytesUint32(port.Subnet.Addr), packet.SwapBytesUint32(ip))
+	if port.Vlan != 0 {
+		requestPacket.AddVLANTag(port.Vlan)
+	}
+
+	port.dumpPacket(requestPacket, dirSEND)
+	requestPacket.SendPacket(port.Index)
 }
 
 func (port *ipv4Port) handleICMP(pkt *packet.Packet, key *Tuple) uint {

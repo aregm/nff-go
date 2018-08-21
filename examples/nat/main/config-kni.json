@@ -15,8 +15,7 @@
             },
             "public-port": {
                 "index": 1,
-                "dst-mac": "3C:FD:FE:A4:DD:F0",
-                "subnet": "192.168.16.1",
+                "subnet": "192.168.16.1/24",
                 "kni-name": "pub1",
                 "forward-ports": [
                     {
@@ -27,6 +26,11 @@
                     {
                         "port": 8080,
                         "destination": "192.168.14.2:80",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "port": 2222,
+                        "destination": "192.168.14.2:22",
                         "protocol": "TCP"
                     }
                 ]

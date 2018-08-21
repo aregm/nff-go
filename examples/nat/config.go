@@ -105,7 +105,6 @@ type portMapEntry struct {
 // Type describing a network port
 type ipv4Port struct {
 	Index         uint16          `json:"index"`
-	DstMACAddress macAddress      `json:"dst-mac"`
 	Subnet        ipv4Subnet      `json:"subnet"`
 	Vlan          uint16          `json:"vlan-tag"`
 	KNIName       string          `json:"kni-name"`
@@ -119,7 +118,7 @@ type ipv4Port struct {
 	// Main lookup table which contains entries for packets coming at this port
 	translationTable []*sync.Map
 	// ARP lookup table
-	ArpTable sync.Map
+	arpTable sync.Map
 	// Debug dump stuff
 	fdump    [dirKNI + 1]*os.File
 	dumpsync [dirKNI + 1]sync.Mutex
