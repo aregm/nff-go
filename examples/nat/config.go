@@ -112,6 +112,12 @@ type ipv4Port struct {
 	ForwardPorts  []forwardedPort `json:"forward-ports"`
 	SrcMACAddress macAddress
 	Type          interfaceType
+	// Pointer to an opposite port in a pair
+	opposite *ipv4Port
+	// Map of allocated IP ports on public interface
+	portmap [][]portMapEntry
+	// Main lookup table which contains entries for packets coming at this port
+	translationTable []*sync.Map
 	// ARP lookup table
 	ArpTable sync.Map
 	// Debug dump stuff
@@ -123,18 +129,10 @@ type ipv4Port struct {
 type portPair struct {
 	PrivatePort ipv4Port `json:"private-port"`
 	PublicPort  ipv4Port `json:"public-port"`
-	// Main lookup table which contains entries for private to public translation
-	pri2pubTable []sync.Map
-	// Main lookup table which contains entries for public to private translation
-	pub2priTable []sync.Map
 	// Synchronization point for lookup table modifications
 	mutex sync.Mutex
-	// Map of allocated IP ports on public interface
-	portmap [][]portMapEntry
 	// Port that was allocated last
 	lastport int
-	// Maximum allowed port number
-	maxport int
 }
 
 // Config for NAT.
@@ -342,53 +340,42 @@ func (pp *portPair) initLocalMACs() {
 	pp.PrivatePort.SrcMACAddress = flow.GetPortMACAddress(pp.PrivatePort.Index)
 }
 
-func (pp *portPair) allocatePortMap() {
-	pp.maxport = portEnd
-	pp.portmap = make([][]portMapEntry, common.UDPNumber+1)
-	pp.portmap[common.ICMPNumber] = make([]portMapEntry, pp.maxport)
-	pp.portmap[common.TCPNumber] = make([]portMapEntry, pp.maxport)
-	pp.portmap[common.UDPNumber] = make([]portMapEntry, pp.maxport)
-	pp.lastport = portStart
+func (port *ipv4Port) allocatePublicPortPortMap() {
+	port.portmap = make([][]portMapEntry, common.UDPNumber+1)
+	port.portmap[common.ICMPNumber] = make([]portMapEntry, portEnd)
+	port.portmap[common.TCPNumber] = make([]portMapEntry, portEnd)
+	port.portmap[common.UDPNumber] = make([]portMapEntry, portEnd)
 }
 
-func (pp *portPair) allocateLookupMap() {
-	pp.pub2priTable = make([]sync.Map, common.UDPNumber+1)
-	pp.pri2pubTable = make([]sync.Map, common.UDPNumber+1)
+func (port *ipv4Port) allocateLookupMap() {
+	port.translationTable = make([]*sync.Map, common.UDPNumber+1)
+	for i := range port.translationTable {
+		port.translationTable[i] = new(sync.Map)
+	}
+}
 
+func (port *ipv4Port) initPublicPortPortForwardingEntries() {
 	// Initialize port forwarding rules on public interface
-	for _, fp := range pp.PublicPort.ForwardPorts {
+	for _, fp := range port.ForwardPorts {
 		keyEntry := Tuple{
-			addr: pp.PublicPort.Subnet.Addr,
+			addr: port.Subnet.Addr,
 			port: fp.Port,
 		}
 		valEntry := Tuple{
 			addr: fp.Destination.Addr,
 			port: fp.Destination.Port,
 		}
-		pp.pub2priTable[fp.Protocol].Store(keyEntry, valEntry)
+		port.translationTable[fp.Protocol].Store(keyEntry, valEntry)
 		if fp.Destination.Addr != 0 {
-			pp.pri2pubTable[fp.Protocol].Store(valEntry, keyEntry)
+			port.opposite.translationTable[fp.Protocol].Store(valEntry, keyEntry)
 		}
-		pp.portmap[fp.Protocol][fp.Port] = portMapEntry{
+		port.portmap[fp.Protocol][fp.Port] = portMapEntry{
 			lastused:             time.Now(),
 			addr:                 fp.Destination.Addr,
 			finCount:             0,
 			terminationDirection: 0,
 			static:               true,
 		}
-	}
-
-	// All ports forwarded on private interface are to KNI
-	for _, fp := range pp.PrivatePort.ForwardPorts {
-		keyEntry := Tuple{
-			addr: pp.PrivatePort.Subnet.Addr,
-			port: fp.Port,
-		}
-		valEntry := Tuple{
-			addr: 0, // Zero address means to translate to KNI
-			port: fp.Destination.Port,
-		}
-		pp.pri2pubTable[fp.Protocol].Store(keyEntry, valEntry)
 	}
 }
 
@@ -397,10 +384,16 @@ func InitFlows() {
 	for i := range Natconfig.PortPairs {
 		pp := &Natconfig.PortPairs[i]
 
+		pp.PublicPort.opposite = &pp.PrivatePort
+		pp.PrivatePort.opposite = &pp.PublicPort
+
 		// Init port pairs state
 		pp.initLocalMACs()
-		pp.allocatePortMap()
-		pp.allocateLookupMap()
+		pp.PrivatePort.allocateLookupMap()
+		pp.PublicPort.allocateLookupMap()
+		pp.PublicPort.allocatePublicPortPortMap()
+		pp.lastport = portStart
+		pp.PublicPort.initPublicPortPortForwardingEntries()
 
 		// Handler context with handler index
 		context := new(pairIndex)
@@ -408,11 +401,16 @@ func InitFlows() {
 
 		var fromPubKNI, fromPrivKNI, toPub, toPriv *flow.Flow
 		var pubKNI, privKNI *flow.Kni
+		var outsPub = uint(2)
+		var outsPriv = uint(2)
 
 		// Initialize public to private flow
 		publicToPrivate, err := flow.SetReceiver(pp.PublicPort.Index)
 		flow.CheckFatal(err)
-		pubTranslationOut, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation, 3, context)
+		if pp.PublicPort.KNIName != "" {
+			outsPub = 3
+		}
+		pubTranslationOut, err := flow.SetSplitter(publicToPrivate, PublicToPrivateTranslation, outsPub, context)
 		flow.CheckFatal(err)
 		flow.CheckFatal(flow.SetStopper(pubTranslationOut[dirDROP]))
 
@@ -427,7 +425,10 @@ func InitFlows() {
 		// Initialize private to public flow
 		privateToPublic, err := flow.SetReceiver(pp.PrivatePort.Index)
 		flow.CheckFatal(err)
-		privTranslationOut, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation, 3, context)
+		if pp.PrivatePort.KNIName != "" {
+			outsPriv = 3
+		}
+		privTranslationOut, err := flow.SetSplitter(privateToPublic, PrivateToPublicTranslation, outsPriv, context)
 		flow.CheckFatal(err)
 		flow.CheckFatal(flow.SetStopper(privTranslationOut[dirDROP]))
 

@@ -33,7 +33,7 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry *Tuple
 		port: uint16(port),
 	}
 
-	pp.portmap[protocol][port] = portMapEntry{
+	pp.PublicPort.portmap[protocol][port] = portMapEntry{
 		lastused:             time.Now(),
 		addr:                 publicAddr,
 		finCount:             0,
@@ -42,8 +42,8 @@ func (pp *portPair) allocateNewEgressConnection(protocol uint8, privEntry *Tuple
 	}
 
 	// Add lookup entries for packet translation
-	pp.pri2pubTable[protocol].Store(*privEntry, pubEntry)
-	pp.pub2priTable[protocol].Store(pubEntry, *privEntry)
+	pp.PublicPort.translationTable[protocol].Store(pubEntry, *privEntry)
+	pp.PrivatePort.translationTable[protocol].Store(*privEntry, pubEntry)
 
 	pp.mutex.Unlock()
 	return pubEntry, nil
@@ -72,7 +72,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	}
 
 	// Do lookup
-	v, found := pp.pub2priTable[protocol].Load(*pub2priKey)
+	v, found := port.translationTable[protocol].Load(*pub2priKey)
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
@@ -84,8 +84,8 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	value := v.(Tuple)
 
 	// Check whether connection is too old
-	if pp.portmap[protocol][pub2priKey.port].static || time.Since(pp.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
-		pp.portmap[protocol][pub2priKey.port].lastused = time.Now()
+	if port.portmap[protocol][pub2priKey.port].static || time.Since(port.portmap[protocol][pub2priKey.port].lastused) <= connectionTimeout {
+		port.portmap[protocol][pub2priKey.port].lastused = time.Now()
 	} else {
 		// There was no transfer on this port for too long
 		// time. We don't allow it any more
@@ -143,7 +143,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	// Do lookup
 	var value Tuple
-	v, found := pp.pri2pubTable[protocol].Load(*pri2pubKey)
+	v, found := port.translationTable[protocol].Load(*pri2pubKey)
 	if !found {
 		var err error
 		// Store new local network entry in ARP cache
@@ -158,7 +158,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		}
 	} else {
 		value = v.(Tuple)
-		pp.portmap[protocol][value.port].lastused = time.Now()
+		pp.PublicPort.portmap[protocol][value.port].lastused = time.Now()
 	}
 
 	if value.addr != 0 {
@@ -184,6 +184,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	}
 }
 
+// Used to generate key in public to private translation
 func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) (*Tuple, uint) {
 	key := Tuple{
 		addr: packet.SwapBytesUint32(pktIPv4.DstAddr),
@@ -196,11 +197,11 @@ func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, 
 	} else if pktICMP != nil {
 		// Check if this ICMP packet destination is NAT itself. If
 		// yes, reply back with ICMP and stop packet processing.
-		dir := port.handleICMP(pkt)
+		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
+		dir := port.handleICMP(pkt, &key)
 		if dir != dirSEND {
 			return nil, dir
 		}
-		key.port = packet.SwapBytesUint16(pktICMP.Identifier)
 	} else {
 		port.dumpPacket(pkt, dirDROP)
 		return nil, dirDROP
@@ -208,6 +209,7 @@ func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, 
 	return &key, dirSEND
 }
 
+// Used to generate key in private to public translation
 func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) (*Tuple, uint) {
 	key := Tuple{
 		addr: packet.SwapBytesUint32(pktIPv4.SrcAddr),
@@ -222,7 +224,7 @@ func (port *ipv4Port) generateLookupKeyFromSrcAndHandleICMP(pkt *packet.Packet, 
 		// Check if this ICMP packet destination is NAT itself. If
 		// yes, reply back with ICMP and stop packet processing or
 		// direct to KNI if KNI is present.
-		dir := port.handleICMP(pkt)
+		dir := port.handleICMP(pkt, nil)
 		if dir != dirSEND {
 			return nil, dir
 		}
@@ -266,7 +268,7 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 		// First check for FIN
 		pp.mutex.Lock()
 
-		pme := &pp.portmap[common.TCPNumber][port]
+		pme := &pp.PublicPort.portmap[common.TCPNumber][port]
 		if pme.finCount == 0 {
 			pme.finCount = 1
 			pme.terminationDirection = dir
@@ -286,7 +288,7 @@ func (pp *portPair) checkTCPTermination(hdr *packet.TCPHdr, port int, dir termin
 		// FIN
 		pp.mutex.Lock()
 
-		pme := &pp.portmap[common.TCPNumber][port]
+		pme := &pp.PublicPort.portmap[common.TCPNumber][port]
 		if pme.finCount == 2 {
 			pp.deleteOldConnection(common.TCPNumber, port)
 			// Set some time while port cannot be used before
@@ -371,7 +373,7 @@ func (port *ipv4Port) getMACForIP(ip uint32) macAddress {
 	return macAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 }
 
-func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
+func (port *ipv4Port) handleICMP(pkt *packet.Packet, key *Tuple) uint {
 	ipv4 := pkt.GetIPv4NoCheck()
 
 	// Check that received ICMP packet is addressed at this host. If
@@ -380,12 +382,18 @@ func (port *ipv4Port) handleICMP(pkt *packet.Packet) uint {
 		return dirSEND
 	}
 
-	// If there is KNI interface, direct all ICMP traffic to it
-	if port.KNIName != "" {
-		return dirKNI
-	}
-
 	icmp := pkt.GetICMPNoCheck()
+
+	// If there is KNI interface, direct all ICMP traffic which
+	// doesn't have an active translation entry
+	if port.KNIName != "" {
+		if key != nil {
+			_, ok := port.translationTable[common.ICMPNumber].Load(*key)
+			if !ok || time.Since(port.portmap[common.ICMPNumber][key.port].lastused) > connectionTimeout {
+				return dirKNI
+			}
+		}
+	}
 
 	// Check that received ICMP packet is echo request packet. We
 	// don't support any other messages yet, so process them in normal
