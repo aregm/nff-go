@@ -141,6 +141,13 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		return dir
 	}
 
+	// If traffic is directed at private interface IP and KNI is
+	// present, this traffic is directed to KNI
+	if port.KNIName != "" && port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr) {
+		port.dumpPacket(pkt, dirKNI)
+		return dirKNI
+	}
+
 	// Do lookup
 	var value Tuple
 	v, found := port.translationTable[protocol].Load(*pri2pubKey)
