@@ -76,10 +76,16 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// For ingress connections packets are allowed only if a
 	// connection has been previosly established with a egress
 	// (private to public) packet. So if lookup fails, this incoming
-	// packet is ignored.
+	// packet is ignored unless there is a KNI interface. If KNI is
+	// present, traffic is directed there.
 	if !found {
-		port.dumpPacket(pkt, dirDROP)
-		return dirDROP
+		if port.KNIName != "" {
+			dir = dirKNI
+		} else {
+			dir = dirDROP
+		}
+		port.dumpPacket(pkt, dir)
+		return dir
 	}
 	value := v.(Tuple)
 
@@ -206,6 +212,7 @@ func (port *ipv4Port) generateLookupKeyFromDstAndHandleICMP(pkt *packet.Packet, 
 	key := Tuple{
 		addr: packet.SwapBytesUint32(pktIPv4.DstAddr),
 	}
+
 	// Parse packet destination port
 	if pktTCP != nil {
 		key.port = packet.SwapBytesUint16(pktTCP.DstPort)
