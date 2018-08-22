@@ -171,21 +171,27 @@ type scheduler struct {
 	pAttempts         []uint64
 	maxInIndex        int32
 	measureRings      low.Rings
+	numaDistribution  map[ffType]int
 }
 
 type core struct {
 	id     int
 	isfree bool
+	numaNode int
 }
 
 func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDedicatedCore bool,
-	stopRing low.Rings, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int, anyway bool) *scheduler {
+	stopRing low.Rings, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int, anyway bool, numaDistribution  map[ffType]int) *scheduler {
 	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(scheduler)
 	scheduler.cores = make([]core, coresNumber, coresNumber)
 	for i, cpu := range cpus {
-		scheduler.cores[i] = core{id: cpu, isfree: true}
+		numaId, err := low.GetCoreNumaUnit(cpu)
+		if err != nil {
+			panic(err)
+		}
+		scheduler.cores[i] = core{id: cpu, isfree: true, numaNode: numaId}
 	}
 	scheduler.off = schedulerOff
 	scheduler.offRemove = schedulerOff || schedulerOffRemove
@@ -197,7 +203,10 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDe
 	scheduler.maxRecv = maxRecv
 	scheduler.anyway = anyway
 	scheduler.pAttempts = make([]uint64, len(scheduler.cores), len(scheduler.cores))
-
+	scheduler.numaDistribution = make(map[ffType]int)
+	for k, v := range numaDistribution {
+		scheduler.numaDistribution[k] = v
+	}
 	return scheduler
 }
 
@@ -251,7 +260,14 @@ func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) 
 
 func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 	ff := ffi.ff
-	core, index, err := scheduler.getCore()
+	var core, index int
+	if val, ok := scheduler.numaDistribution[ff.fType]; ok {
+		core, index, err = scheduler.getCoreNumaNode(val)
+		common.LogDebug(common.Debug, "Try to start new clone for", ff.name, "instance", n, "at", core, "core", val, "node.......")
+	} else {
+		core, index, err = scheduler.getCore()
+		common.LogDebug(common.Debug, "Try to start new clone for", ff.name, "instance", n, "at", core, "core.......")
+	}
 	if err != nil {
 		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, "instance", n)
 		return err
@@ -659,6 +675,19 @@ func (ff *flowFunction) updateReportedState() {
 func (scheduler *scheduler) setCoreByIndex(i int) {
 	scheduler.cores[i].isfree = true
 	scheduler.usedCores--
+}
+
+func (scheduler *scheduler) getCoreNumaNode(node int) (int, int, error) {
+	if scheduler.usedCores < 4 {
+		for i := range scheduler.cores {
+			if scheduler.cores[i].isfree == true  && scheduler.cores[i].numaNode == node {
+				scheduler.cores[i].isfree = false
+				scheduler.usedCores++
+				return scheduler.cores[i].id, i, nil
+			}
+		}
+	}
+	return 0, 0, common.WrapWithNFError(nil, "Requested number of cores in a numa node isn't enough.", common.NotEnoughCores)
 }
 
 func (scheduler *scheduler) getCore() (int, int, error) {

@@ -433,6 +433,7 @@ type Config struct {
 	// Scheduler should clone functions even if ti can lead to reordering.
 	// This option should be switch off for all high level reassembling like TCP or HTTP
 	RestrictedCloning bool
+	NumaDistribution  map[int]int
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -514,6 +515,12 @@ func SystemInit(args *Config) error {
 	if args.MaxInIndex != 0 {
 		maxInIndex = args.MaxInIndex
 	}
+	numaDistribution := make(map[ffType]int)
+	if args.NumaDistribution != nil {
+		for k, v := range args.NumaDistribution {
+		numaDistribution[ffType(k)] = v
+		}
+	}
 
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
@@ -539,7 +546,7 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRings(burstSize*sizeMultiplier, maxInIndex)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
-	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
+	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway, numaDistribution)
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
 	for i := 0; i < 10; i++ {

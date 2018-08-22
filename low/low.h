@@ -12,6 +12,7 @@
 #include <rte_ring.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <utmpx.h>
 
 #include <rte_cycles.h>
 #include <rte_ip_frag.h>
@@ -104,6 +105,12 @@ void setAffinity(int coreId) {
 	CPU_ZERO(&cpuset);
 	CPU_SET(coreId, &cpuset);
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
+}
+
+int getCoreNumaUnit(uint32_t core) {
+	int ret = numa_node_of_cpu(core);
+	fprintf(stderr, "DEBUG: got numa node %d for core %d\n", ret, core);
+	return ret;
 }
 
 int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {

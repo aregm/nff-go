@@ -383,6 +383,14 @@ func nffgoRingMpDoEnqueue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) u
 	return n
 }
 
+func GetCoreNumaUnit(core int) (int, error) {
+	num := int(C.getCoreNumaUnit(C.uint32_t(core)))
+	if num < 0 {
+		return num, common.WrapWithNFError(nil, "failed to get numa node of cpu\n", common.Fail)
+	}
+	return num, nil
+}
+
 // Heavily based on DPDK mc_do_dequeue
 func nffgoRingMcDoDequeue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var consHead, prodTail C.uint32_t
