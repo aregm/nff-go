@@ -335,19 +335,22 @@ func (port *ipv4Port) parsePacketAndCheckARP(pkt *packet.Packet) (dir uint, vhdr
 }
 
 func (port *ipv4Port) handleARP(pkt *packet.Packet) uint {
-	// If there is a KNI interface, direct all ARP traffic to it
-	if port.KNIName != "" {
-		return dirKNI
-	}
-
 	arp := pkt.GetARPNoCheck()
 
 	if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest {
 		if packet.SwapBytesUint16(arp.Operation) == packet.ARPReply {
-			ipv4 := packet.SwapBytesUint32(packet.BytesToIPv4(arp.SPA[0], arp.SPA[1], arp.SPA[2], arp.SPA[3]))
+			ipv4 := packet.SwapBytesUint32(packet.ArrayToIPv4(arp.SPA))
 			port.arpTable.Store(ipv4, arp.SHA)
 		}
+		if port.KNIName != "" {
+			return dirKNI
+		}
 		return dirDROP
+	}
+
+	// If there is a KNI interface, direct all ARP traffic to it
+	if port.KNIName != "" {
+		return dirKNI
 	}
 
 	// Check that someone is asking about MAC of my IP address and HW
