@@ -22,7 +22,7 @@ script:
   # Build standalone examples
   - docker exec -i test-nff-go bash -c "cd examples && make gopacketParserExample && cd .."
   - docker exec -i test-nff-go bash -c "cd examples && make nffPktgen && cd -"
-  #- docker exec -i test-nff-go make -C examples/dpi
+  - docker exec -i test-nff-go make -C examples/dpi
   # Run unit tests
   - docker exec -i test-nff-go sysctl -w vm.nr_hugepages=1024
   - docker exec -i test-nff-go sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'
