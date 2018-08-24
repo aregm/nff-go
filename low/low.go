@@ -383,14 +383,6 @@ func nffgoRingMpDoEnqueue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) u
 	return n
 }
 
-func GetCoreNumaUnit(core int) (int, error) {
-	num := int(C.getCoreNumaUnit(C.uint32_t(core)))
-	if num < 0 {
-		return num, common.WrapWithNFError(nil, "failed to get numa node of cpu\n", common.Fail)
-	}
-	return num, nil
-}
-
 // Heavily based on DPDK mc_do_dequeue
 func nffgoRingMcDoDequeue(r *C.struct_nff_go_ring, objTable []uintptr, n uint) uint {
 	var consHead, prodTail C.uint32_t
@@ -452,6 +444,14 @@ func nffgoRingMcDequeueBurst(r *C.struct_nff_go_ring, objTable []uintptr, n uint
 // GetRingCount gets number of objects in ring.
 func (ring *Ring) GetRingCount() uint32 {
 	return uint32((ring.DPDK_ring.prod.tail - ring.DPDK_ring.cons.tail) & ring.DPDK_ring.mask)
+}
+
+func GetPortSocket(port uint16) int {
+	return int(C.rte_eth_dev_socket_id(C.uint16_t(port)))
+}
+
+func GetCoreSocket(coreID uint16) int {
+	return int(C.rte_lcore_to_socket_id(C.uint(coreID)))
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.

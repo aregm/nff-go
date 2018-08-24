@@ -378,6 +378,7 @@ type port struct {
 	port           uint16
 	MAC            [common.EtherAddrLen]uint8
 	InIndex        int32
+	numaNode int
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -433,7 +434,6 @@ type Config struct {
 	// Scheduler should clone functions even if ti can lead to reordering.
 	// This option should be switch off for all high level reassembling like TCP or HTTP
 	RestrictedCloning bool
-	NumaDistribution  map[int]int
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -515,13 +515,6 @@ func SystemInit(args *Config) error {
 	if args.MaxInIndex != 0 {
 		maxInIndex = args.MaxInIndex
 	}
-	numaDistribution := make(map[ffType]int)
-	if args.NumaDistribution != nil {
-		for k, v := range args.NumaDistribution {
-		numaDistribution[ffType(k)] = v
-		}
-	}
-
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
@@ -546,7 +539,11 @@ func SystemInit(args *Config) error {
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRings(burstSize*sizeMultiplier, maxInIndex)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
-	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway, numaDistribution)
+	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
+	schedState.numaPorts = make(map[uint16]int)
+	for i := range createdPorts {
+		schedState.numaPorts[uint16(i)] = low.GetPortSocket(uint16(i))
+	}
 	// Init packet processing
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
 	for i := 0; i < 10; i++ {

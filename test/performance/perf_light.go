@@ -14,28 +14,19 @@ import (
 func main() {
 	var mode uint
 	flag.UintVar(&mode, "mode", 0, "Benching mode: 0 - empty, 1 - parsing, 2 - parsing, reading, writing")
-	outport1 := flag.Uint("outport", 1, "port for 1st sender")
+	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
+	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
 	inport := flag.Uint("inport", 0, "port for receiver")
 	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
 	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
 	cores := flag.String("cores", "0-43", "Cores mask. Avoid hyperthreading here")
-	outport1 := flag.Int("outport", 1, "port for 1st sender")
 	flag.Parse()
-
-	nd := make (map[int]int)
-	//segm
-	nd[0] = int(sgm)
-	//recv
-	nd[2] = int(rcv)
-	//send
-	nd[3] = int(snd)
 
 	// Initialize NFF-GO library
 	config := flow.Config{
 		DisableScheduler: *noscheduler,
 		DPDKArgs:         []string{*dpdkLogLevel},
 		CPUList:          *cores,
-		NumaDistribution: nd,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
@@ -52,7 +43,12 @@ func main() {
 		flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc2, nil))
 	}
 
+	// Split for two senders and send
+	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
+	flow.CheckFatal(err)
+
 	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport1)))
+	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
 
 	flow.CheckFatal(flow.SystemStart())
 }
