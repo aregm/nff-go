@@ -101,13 +101,13 @@ type IPv4Hdr struct {
 }
 
 func IPv4ToString(addr uint32) string {
-	return fmt.Sprintf("IPv4 address: %d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
+	return fmt.Sprintf("%d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
 }
 
 func (hdr *IPv4Hdr) String() string {
 	r0 := "    L3 protocol: IPv4\n"
-	r1 := IPv4ToString(hdr.SrcAddr)
-	r2 := IPv4ToString(hdr.DstAddr)
+	r1 := "    IPv4 Source: " + IPv4ToString(hdr.SrcAddr) + "\n"
+	r2 := "    IPv4 Destination: " + IPv4ToString(hdr.DstAddr) + "\n"
 	return r0 + r1 + r2
 }
 
