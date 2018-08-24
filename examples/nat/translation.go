@@ -104,7 +104,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if value.addr != 0 {
 		// Check whether TCP connection could be reused
-		if protocol == common.TCPNumber {
+		if pktTCP != nil && !pp.PublicPort.portmap[protocol][value.port].static {
 			pp.checkTCPTermination(pktTCP, int(pub2priKey.port), pub2pri)
 		}
 
@@ -181,7 +181,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if value.addr != 0 {
 		// Check whether TCP connection could be reused
-		if pktTCP != nil {
+		if pktTCP != nil && !pp.PublicPort.portmap[protocol][value.port].static {
 			pp.checkTCPTermination(pktTCP, int(value.port), pri2pub)
 		}
 
