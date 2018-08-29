@@ -688,7 +688,7 @@ func (ffi *instance) checkInputRingClonable(min uint32) bool {
 		}
 	case *receiveParameters:
 		for q := int32(0); q < ffi.inIndex[0]; q++ {
-			if low.CheckRSSPacketCount(ffi.ff.Parameters.(*receiveParameters).port, int16(ffi.inIndex[q+1])) > min {
+			if low.CheckRSSPacketCount(ffi.ff.Parameters.(*receiveParameters).port, int16(ffi.inIndex[q+1])) > int64(min) {
 				return true
 			}
 		}
