@@ -52,6 +52,9 @@ func main() {
 	// Initialize flows and necessary state
 	nat.InitFlows()
 
+	// Start GRPC server
+	flow.CheckFatal(nat.StartGRPCServer())
+
 	// Start flow scheduler
 	go func() {
 		flow.CheckFatal(flow.SystemStart())

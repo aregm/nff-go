@@ -3,6 +3,6 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../mk
-SUBDIRS = main
+SUBDIRS = main client
 
 include $(PATH_TO_MK)/intermediate.mk

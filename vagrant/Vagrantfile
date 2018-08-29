@@ -61,7 +61,7 @@ fi
 
 echo Installing system packages
 sudo dnf update -y
-sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim
+sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim protobuf-compiler
 sudo systemctl enable NetworkManager
 sudo systemctl start NetworkManager
 SHELL
@@ -69,7 +69,7 @@ SHELL
 $provision_ubuntu = <<SHELL
 echo Installing system packages
 sudo apt-get update
-sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager protobuf-compiler
 sudo systemctl enable network-manager
 sudo systemctl start network-manager
 SHELL
