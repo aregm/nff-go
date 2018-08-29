@@ -18,6 +18,7 @@ before_script:
 
 script:
   - docker exec -i test-nff-go ./scripts/get-depends.sh
+  - docker exec -i test-nff-go apt-get install -y protobuf-compiler
   - docker exec -i test-nff-go make
   # Build standalone examples
   - docker exec -i test-nff-go bash -c "cd examples && make gopacketParserExample && cd .."

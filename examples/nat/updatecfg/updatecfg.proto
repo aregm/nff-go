@@ -1,0 +1,64 @@
+// Copyright 2018 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_outer_classname = "UpdateNatCfg";
+
+package updatecfg;
+
+service Updater {
+  rpc ControlDump (DumpControlRequest) returns (Reply) {}
+  rpc ChangeInterfaceAddress (InterfaceAddressChangeRequest) returns (Reply) {}
+  rpc ChangePortForwarding (PortForwardingChangeRequest) returns (Reply) {}
+}
+
+enum TraceType {
+  DUMP_DROP = 0;
+  DUMP_TRANSLATE = 1;
+  DUMP_KNI = 2;
+}
+
+message DumpControlRequest {
+  bool enable_trace = 1;
+  TraceType trace_type = 2;
+}
+
+enum Protocol {
+  UNKNOWN = 0;
+  TCP = 0x06;
+  UDP = 0x11;
+}
+
+message IPAddress {
+  bytes address = 1;
+}
+
+message Subnet {
+  IPAddress address = 1;
+  uint32 mask_bits_number = 2;
+}
+
+message InterfaceAddressChangeRequest {
+  uint32 interface_id = 1;
+  Subnet port_subnet = 2;
+}
+
+message ForwardedPort {
+  uint32 source_port_number = 1;
+  IPAddress target_address = 2;
+  uint32 target_port_number = 3;
+  Protocol protocol = 4;
+}
+
+message PortForwardingChangeRequest {
+  bool enable_forwarding = 1;
+  uint32 interface_id = 2;
+  ForwardedPort port = 3;
+}
+
+message Reply {
+  string msg = 2;
+}
