@@ -474,7 +474,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						for q := 0; q < ff.instanceNumber; q++ {
 							var q1 int32
 							for q1 = 1; q1 < ff.instance[q].inIndex[0]+1; q1++ {
-								if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port, int16(ff.instance[q].inIndex[q1])) > RSSCloneMin {
+								if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port, int16(ff.instance[q].inIndex[q1])) > int64(RSSCloneMin) {
 									break
 								}
 							}

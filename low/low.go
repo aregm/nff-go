@@ -71,8 +71,8 @@ func GetPort(n uint16) *Port {
 	return p
 }
 
-func CheckRSSPacketCount(p *Port, queue int16) uint32 {
-	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), (C.int16_t(queue))))
+func CheckRSSPacketCount(p *Port, queue int16) int64 {
+	return int64(C.checkRSSPacketCount((*C.struct_cPort)(p), (C.int16_t(queue))))
 }
 
 // GetPortMACAddress gets MAC address of given port.
