@@ -55,9 +55,18 @@ func main() {
 	// Start GRPC server
 	flow.CheckFatal(nat.StartGRPCServer())
 
+	// Perform all network initialization so that DHCP client could
+	// start sending packets
+	flow.CheckFatal(flow.SystemInitPortsAndMemory())
+
+	// Start DHCP client
+	if nat.NeedDHCP {
+		nat.StartDHCPClient()
+	}
+
 	// Start flow scheduler
 	go func() {
-		flow.CheckFatal(flow.SystemStart())
+		flow.CheckFatal(flow.SystemStartScheduler())
 	}()
 
 	// Wait for interrupt

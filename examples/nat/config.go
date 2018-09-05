@@ -74,8 +74,10 @@ func (out *protocolId) UnmarshalJSON(b []byte) error {
 }
 
 type ipv4Subnet struct {
-	Addr uint32
-	Mask uint32
+	Addr            uint32
+	Mask            uint32
+	addressAcquired bool
+	ds              dhcpState
 }
 
 func (fp *forwardedPort) String() string {
@@ -83,16 +85,19 @@ func (fp *forwardedPort) String() string {
 }
 
 func (subnet *ipv4Subnet) String() string {
-	// Count most significant set bits
-	mask := uint32(1) << 31
-	i := 0
-	for ; i <= 32; i++ {
-		if subnet.Mask&mask == 0 {
-			break
+	if subnet.addressAcquired {
+		// Count most significant set bits
+		mask := uint32(1) << 31
+		i := 0
+		for ; i <= 32; i++ {
+			if subnet.Mask&mask == 0 {
+				break
+			}
+			mask >>= 1
 		}
-		mask >>= 1
+		return packet.IPv4ToString(packet.SwapBytesUint32(subnet.Addr)) + "/" + strconv.Itoa(i)
 	}
-	return packet.IPv4ToString(packet.SwapBytesUint32(subnet.Addr)) + "/" + strconv.Itoa(i)
+	return "DHCP address not acquired"
 }
 
 func (subnet *ipv4Subnet) checkAddrWithingSubnet(addr uint32) bool {
@@ -143,6 +148,7 @@ type portPair struct {
 
 // Config for NAT.
 type Config struct {
+	HostName  string     `json:"host-name"`
 	PortPairs []portPair `json:"port-pairs"`
 }
 
@@ -161,6 +167,7 @@ var (
 	// offloaded to HW.
 	NoHWTXChecksum bool
 	NeedKNI        bool
+	NeedDHCP       bool
 
 	// Debug variables
 	DumpEnabled [dirKNI + 1]bool
@@ -193,6 +200,13 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if s == "dhcp" {
+		out.Addr = uint32(0)
+		out.Mask = uint32(0)
+		out.addressAcquired = false
+		return nil
+	}
+
 	if ip, ipnet, err := net.ParseCIDR(s); err == nil {
 		if out.Addr, err = convertIPv4(ip.To4()); err != nil {
 			return err
@@ -200,6 +214,7 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 		if out.Mask, err = convertIPv4(ipnet.Mask); err != nil {
 			return err
 		}
+		out.addressAcquired = true
 		return nil
 	}
 
@@ -209,6 +224,7 @@ func (out *ipv4Subnet) UnmarshalJSON(b []byte) error {
 			return err
 		}
 		out.Mask = 0xffffffff
+		out.addressAcquired = true
 		return nil
 	}
 	return errors.New("Failed to parse address " + s)
@@ -302,6 +318,13 @@ func ReadConfig(fileName string) error {
 
 		port := &pp.PrivatePort
 		for pi := 0; pi < 2; pi++ {
+			if !port.Subnet.addressAcquired {
+				if Natconfig.HostName == "" {
+					return fmt.Errorf("DHCP option for port %d requires that you set host-name configuration option", port.Index)
+				}
+				NeedDHCP = true
+			}
+
 			for fpi := range port.ForwardPorts {
 				fp := &port.ForwardPorts[fpi]
 				err := port.checkPortForwarding(fp)
