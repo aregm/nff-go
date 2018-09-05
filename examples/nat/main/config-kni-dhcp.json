@@ -1,0 +1,51 @@
+{
+    "host-name": "nat",
+    "port-pairs": [
+        {
+            "private-port": {
+                "index": 0,
+                "subnet": "dhcp",
+                "kni-name": "priv0",
+                "forward-ports": [
+                    {
+                        "port": 22,
+                        "destination": "0.0.0.0:22",
+                        "protocol": "TCP"
+                    }
+                ]
+            },
+            "public-port": {
+                "index": 1,
+                "subnet": "dhcp",
+                "kni-name": "pub1",
+                "forward-ports": [
+                    {
+                        "port": 22,
+                        "destination": "0.0.0.0:22",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "port": 8080,
+                        "destination": "192.168.14.3:80",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "port": 2222,
+                        "destination": "192.168.14.3:22",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "port": 8081,
+                        "destination": "192.168.14.4:80",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "port": 2223,
+                        "destination": "192.168.14.4:22",
+                        "protocol": "TCP"
+                    }
+                ]
+            }
+        }
+    ]
+}
