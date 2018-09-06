@@ -95,7 +95,7 @@ func (v *VmbusDevice) ID() string {
 }
 
 func (v *VmbusDevice) String() string {
-	return VmbusDeviceStringer.With(v.UUID, v.Driver)
+	return vmbusDeviceStringer.With(v.UUID, v.Driver)
 }
 
 // GetCurrentVmbusDriver update the current driver device bound to.
@@ -122,17 +122,17 @@ func bindVmbusDeviceDriver(devUUID, driver string, prepares ...prepareFunc) erro
 			return err
 		}
 	}
-	return writeToTargetWithData(PathSysVmbusDriversBind.With(driver), os.O_WRONLY, 0200, devUUID)
+	return writeToTargetWithData(pathSysVmbusDriversBind.With(driver), os.O_WRONLY, 0200, devUUID)
 }
 
 func bindVmbusDeviceDpdkDriver(devUUID, driver string, prepares ...prepareFunc) error {
 	// NOTE: ignore error of write vmbus driver new_id
-	writeToTargetWithData(PathSysVmbusDriversNewID.With(driver), os.O_WRONLY, 0200, newNetUUID())
+	writeToTargetWithData(pathSysVmbusDriversNewID.With(driver), os.O_WRONLY, 0200, newNetUUID())
 	return bindVmbusDeviceDriver(devUUID, driver, prepares...)
 }
 
 func unbindVmbusDeviceDriver(devUUID, driver string) error {
-	return writeToTargetWithData(PathSysVmbusDriversUnbind.With(driver), os.O_WRONLY, 0200, devUUID)
+	return writeToTargetWithData(pathSysVmbusDriversUnbind.With(driver), os.O_WRONLY, 0200, devUUID)
 }
 
 func isValidDpdkVmbusDriver(driver string) bool {

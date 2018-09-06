@@ -130,7 +130,7 @@ func bindPciDeviceDriver(devID, driver, vendor, device string) error {
 		defer cleanOverrideDriver(devID)
 
 		// normal way to bind pci driver
-		if err := writeToTargetWithData(PathSysPciDriversBind.With(driver), os.O_WRONLY, 0200, devID); err != nil {
+		if err := writeToTargetWithData(pathSysPciDriversBind.With(driver), os.O_WRONLY, 0200, devID); err != nil {
 			return err
 		}
 
@@ -146,9 +146,9 @@ func bindPciDeviceDriver(devID, driver, vendor, device string) error {
 }
 
 func unbindPciDeviceDriver(devID, driver string) error {
-	// first trying write to PathSysPciDevicesUnbindWithDevID, if fails, try next, write to PathSysPciDriversUnbindWithDriver
-	if err := writeToTargetWithData(PathSysPciDevicesUnbind.With(devID), os.O_WRONLY, 0200, devID); err != nil {
-		if err := writeToTargetWithData(PathSysPciDriversUnbind.With(driver), os.O_WRONLY, 0200, devID); err != nil {
+	// first trying write to pathSysPciDevicesUnbindWithDevID, if fails, try next, write to pathSysPciDriversUnbindWithDriver
+	if err := writeToTargetWithData(pathSysPciDevicesUnbind.With(devID), os.O_WRONLY, 0200, devID); err != nil {
+		if err := writeToTargetWithData(pathSysPciDriversUnbind.With(driver), os.O_WRONLY, 0200, devID); err != nil {
 			return err
 		}
 	}
@@ -171,7 +171,7 @@ func probePciDriver(devID string) error {
 }
 
 func overrideDriver(devID, driver string) error {
-	return writeToTargetWithData(PathSysPciDevicesOverrideDriver.With(devID), os.O_WRONLY|os.O_TRUNC, 0755, driver)
+	return writeToTargetWithData(pathSysPciDevicesOverrideDriver.With(devID), os.O_WRONLY|os.O_TRUNC, 0755, driver)
 }
 
 func cleanOverrideDriver(devID string) error {
@@ -188,11 +188,11 @@ func addToDriver(devID, driver, vendor, device string) error {
 	// CCCC Class
 	// MMMM Class Mask
 	// PPPP Private Driver Data
-	return writeToTargetWithData(PathSysPciDriversNewID.With(driver), os.O_WRONLY, 0200, vendor+" "+device)
+	return writeToTargetWithData(pathSysPciDriversNewID.With(driver), os.O_WRONLY, 0200, vendor+" "+device)
 }
 
 func (p *PciDevice) String() string {
-	return PciDeviceStringer.With(p.ID, p.Class, p.Vendor, p.Device, p.Driver)
+	return pciDeviceStringer.With(p.ID, p.Class, p.Vendor, p.Device, p.Driver)
 }
 
 // GetCurrentPciDriver update the current driver device bound to.
