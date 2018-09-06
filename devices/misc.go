@@ -12,6 +12,8 @@ import (
 
 var defaultTimeoutLimitation = 5 * time.Second
 
+// FindDefaultDpdkDriver returns a default DPDK driver that the given NIC can
+// use.
 func FindDefaultDpdkDriver(nicName string) string {
 	driver, err := readlinkBaseCmd(pathSysClassNetDeviceDriver.With(nicName))
 	if err != nil {
@@ -25,6 +27,7 @@ func FindDefaultDpdkDriver(nicName string) string {
 	}
 }
 
+// GetDeviceID returns the device ID of given NIC name.
 func GetDeviceID(nicName string) (string, error) {
 	// DEV_ID=$(basename $(readlink /sys/class/net/<nicName>/device))
 	return readlinkBaseCmd(pathSysClassNetDevice.With(nicName))
