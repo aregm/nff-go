@@ -9,7 +9,6 @@ const (
 	DriverUioPciGeneric = "uio_pci_generic"
 	DriverIgUio         = "ig_uio"
 	DriverVfioPci       = "vfio-pci"
-	DriverVfioPciKoName = "vfio_pci"
 	DriverUioHvGeneric  = "uio_hv_generic"
 )
 
@@ -24,36 +23,36 @@ const (
 	PathSysVmbusDrivers = "/sys/bus/vmbus/drivers"
 )
 
-type StringBuilder string
+type stringBuilder string
 
-func (s StringBuilder) With(args ...interface{}) string {
+func (s stringBuilder) With(args ...interface{}) string {
 	return fmt.Sprintf(string(s), args...)
 }
 
 var (
-	PathSysPciDevicesBind           StringBuilder = "/sys/bus/pci/devices/%s/driver/bind"
-	PathSysPciDevicesUnbind         StringBuilder = "/sys/bus/pci/devices/%s/driver/unbind"
-	PathSysPciDevicesOverrideDriver StringBuilder = "/sys/bus/pci/devices/%s/driver_override"
+	PathSysPciDevicesBind           stringBuilder = "/sys/bus/pci/devices/%s/driver/bind"
+	PathSysPciDevicesUnbind         stringBuilder = "/sys/bus/pci/devices/%s/driver/unbind"
+	PathSysPciDevicesOverrideDriver stringBuilder = "/sys/bus/pci/devices/%s/driver_override"
 
-	PathSysPciDriversBind   StringBuilder = "/sys/bus/pci/drivers/%s/bind"
-	PathSysPciDriversUnbind StringBuilder = "/sys/bus/pci/drivers/%s/unbind"
-	PathSysPciDriversNewID  StringBuilder = "/sys/bus/pci/drivers/%s/new_id"
+	PathSysPciDriversBind   stringBuilder = "/sys/bus/pci/drivers/%s/bind"
+	PathSysPciDriversUnbind stringBuilder = "/sys/bus/pci/drivers/%s/unbind"
+	PathSysPciDriversNewID  stringBuilder = "/sys/bus/pci/drivers/%s/new_id"
 )
 
 var (
-	PathSysVmbusDriversBind   StringBuilder = "/sys/bus/vmbus/drivers/%s/bind"
-	PathSysVmbusDriversUnbind StringBuilder = "/sys/bus/vmbus/drivers/%s/unbind"
-	PathSysVmbusDriversNewID  StringBuilder = "/sys/bus/vmbus/drivers/%s/new_id"
+	PathSysVmbusDriversBind   stringBuilder = "/sys/bus/vmbus/drivers/%s/bind"
+	PathSysVmbusDriversUnbind stringBuilder = "/sys/bus/vmbus/drivers/%s/unbind"
+	PathSysVmbusDriversNewID  stringBuilder = "/sys/bus/vmbus/drivers/%s/new_id"
 )
 
 var (
-	PathSysClassNetDeviceDriver StringBuilder = "/sys/class/net/%s/device/driver"
-	PathSysClassNetDevice       StringBuilder = "/sys/class/net/%s/device"
+	PathSysClassNetDeviceDriver stringBuilder = "/sys/class/net/%s/device/driver"
+	PathSysClassNetDevice       stringBuilder = "/sys/class/net/%s/device"
 )
 
 var (
-	VmbusDeviceStringer StringBuilder = "ID: %s\nClass:\t%s\nDriver:\t%s"
-	PciDeviceStringer   StringBuilder = "ID: %s\nClass:\t%s\nVendor:\t%s\nDevice:\t%s\nDriver:\t%s"
+	VmbusDeviceStringer stringBuilder = "ID: %s\nClass:\t%s\nDriver:\t%s"
+	PciDeviceStringer   stringBuilder = "ID: %s\nClass:\t%s\nVendor:\t%s\nDevice:\t%s\nDriver:\t%s"
 )
 
 var (
