@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// Errors of devices package
 var (
 	ErrNoBoundDriver         = errors.New("no driver is bound to the device")
 	ErrAlreadyBoundDriver    = errors.New("device has already bound the selected driver")
