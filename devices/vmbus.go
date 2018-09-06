@@ -147,12 +147,13 @@ func isValidDpdkVmbusDriver(driver string) bool {
 
 // newNetUUID returns a valid net UUID
 // FIXME: Dummy implement, always return same result - see
-// https://doc.dpdk.org/guides/nics/netvsc.html NET_UUID
+// https://doc.dpdk.org/guides/nics/netvsc.html#installation NET_UUID
 func newNetUUID() string {
 	return "f8615163-df3e-46c5-913f-f2d2f965ed0e"
 }
 
 // bindVmbusDeviceDriverKernelGreaterThan418 is only available on linux kernel >= 4.18
+// XXX: see https://doc.dpdk.org/guides/nics/netvsc.html#installation
 func bindVmbusDeviceDriverKernelGreaterThan418(devUUID, driver string) error {
 	// driverctl -b vmbus set-override $DEV_UUID uio_hv_generic
 	_, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "driverctl", "-b", "vmbus", "set-override", devUUID, driver)
