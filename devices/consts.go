@@ -5,6 +5,7 @@ import (
 	"regexp"
 )
 
+// Driver names
 const (
 	DriverHvNetvcs      = "hv_netvcs"
 	DriverUioPciGeneric = "uio_pci_generic"
@@ -13,15 +14,36 @@ const (
 	DriverUioHvGeneric  = "uio_hv_generic"
 )
 
+// Path to PCI
 const (
 	PathSysPciDevices     = "/sys/bus/pci/devices"
 	PathSysPciDrivers     = "/sys/bus/pci/drivers"
 	PathSysPciDriverProbe = "/sys/bus/pci/drivers_probe"
 )
 
+// Path to VMBus
 const (
 	PathSysVmbusDevices = "/sys/bus/vmbus/devices"
 	PathSysVmbusDrivers = "/sys/bus/vmbus/drivers"
+)
+
+// Path to net
+const (
+	PathSysClassNet = "/sys/class/net"
+)
+
+// Regular expressions for PCI-ID and UUID
+var (
+	IsPciID *regexp.Regexp
+	IsUUID  *regexp.Regexp
+)
+
+// DPDK related drivers
+var (
+	DefaultDpdkDriver = DriverUioPciGeneric
+	DpdkDrivers       = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci, DriverUioHvGeneric}
+	DpdkPciDrivers    = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci}
+	DpdkVmbusDrivers  = [...]string{DriverUioHvGeneric}
 )
 
 type stringBuilder string
@@ -31,54 +53,43 @@ func (s stringBuilder) With(args ...interface{}) string {
 }
 
 var (
-	PathSysPciDevicesBind           stringBuilder = "/sys/bus/pci/devices/%s/driver/bind"
-	PathSysPciDevicesUnbind         stringBuilder = "/sys/bus/pci/devices/%s/driver/unbind"
-	PathSysPciDevicesOverrideDriver stringBuilder = "/sys/bus/pci/devices/%s/driver_override"
+	pathSysPciDevicesBind           stringBuilder = PathSysPciDevices + "/%s/driver/bind"
+	pathSysPciDevicesUnbind         stringBuilder = PathSysPciDevices + "/%s/driver/unbind"
+	pathSysPciDevicesOverrideDriver stringBuilder = PathSysPciDevices + "/%s/driver_override"
 
-	PathSysPciDriversBind   stringBuilder = "/sys/bus/pci/drivers/%s/bind"
-	PathSysPciDriversUnbind stringBuilder = "/sys/bus/pci/drivers/%s/unbind"
-	PathSysPciDriversNewID  stringBuilder = "/sys/bus/pci/drivers/%s/new_id"
+	pathSysPciDriversBind   stringBuilder = PathSysPciDrivers + "/%s/bind"
+	pathSysPciDriversUnbind stringBuilder = PathSysPciDrivers + "/%s/unbind"
+	pathSysPciDriversNewID  stringBuilder = PathSysPciDrivers + "/%s/new_id"
 )
 
 var (
-	PathSysVmbusDriversBind   stringBuilder = "/sys/bus/vmbus/drivers/%s/bind"
-	PathSysVmbusDriversUnbind stringBuilder = "/sys/bus/vmbus/drivers/%s/unbind"
-	PathSysVmbusDriversNewID  stringBuilder = "/sys/bus/vmbus/drivers/%s/new_id"
+	pathSysVmbusDriversBind   stringBuilder = PathSysVmbusDrivers + "/%s/bind"
+	pathSysVmbusDriversUnbind stringBuilder = PathSysVmbusDrivers + "/%s/unbind"
+	pathSysVmbusDriversNewID  stringBuilder = PathSysVmbusDrivers + "/%s/new_id"
 )
 
 var (
-	PathSysClassNetDeviceDriver stringBuilder = "/sys/class/net/%s/device/driver"
-	PathSysClassNetDevice       stringBuilder = "/sys/class/net/%s/device"
+	pathSysClassNetDeviceDriver stringBuilder = PathSysClassNet + "/%s/device/driver"
+	pathSysClassNetDevice       stringBuilder = PathSysClassNet + "/%s/device"
 )
 
 var (
-	VmbusDeviceStringer stringBuilder = "ID: %s\nClass:\t%s\nDriver:\t%s"
-	PciDeviceStringer   stringBuilder = "ID: %s\nClass:\t%s\nVendor:\t%s\nDevice:\t%s\nDriver:\t%s"
+	vmbusDeviceStringer stringBuilder = "ID: %s\nClass:\t%s\nDriver:\t%s"
+	pciDeviceStringer   stringBuilder = "ID: %s\nClass:\t%s\nVendor:\t%s\nDevice:\t%s\nDriver:\t%s"
 )
 
 var (
-	DefaultDpdkDriver = DriverUioPciGeneric
-	DpdkDrivers       = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci, DriverUioHvGeneric}
-	DpdkPciDrivers    = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci}
-	DpdkVmbusDrivers  = [...]string{DriverUioHvGeneric}
-)
-
-var (
-	// NOTE: this is for ethtool output
+	// for ethtool output
 	rPciIDForEthtool *regexp.Regexp
 
-	// NOTE: these is for lspci output
+	// for lspci output
 	rPciClass  *regexp.Regexp
 	rPciVendor *regexp.Regexp
 	rPciDevice *regexp.Regexp
 	rPciDriver *regexp.Regexp
 
+	// for find output
 	rVmbusDriver *regexp.Regexp
-)
-
-var (
-	IsPciID *regexp.Regexp
-	IsUUID  *regexp.Regexp
 )
 
 func init() {

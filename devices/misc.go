@@ -13,7 +13,7 @@ import (
 var defaultTimeoutLimitation = 5 * time.Second
 
 func FindDefaultDpdkDriver(nicName string) string {
-	driver, err := readlinkBaseCmd(PathSysClassNetDeviceDriver.With(nicName))
+	driver, err := readlinkBaseCmd(pathSysClassNetDeviceDriver.With(nicName))
 	if err != nil {
 		return DefaultDpdkDriver
 	}
@@ -27,7 +27,7 @@ func FindDefaultDpdkDriver(nicName string) string {
 
 func GetDeviceID(nicName string) (string, error) {
 	// DEV_ID=$(basename $(readlink /sys/class/net/<nicName>/device))
-	return readlinkBaseCmd(PathSysClassNetDevice.With(nicName))
+	return readlinkBaseCmd(pathSysClassNetDevice.With(nicName))
 }
 
 // IsModuleLoaded checks if the kernel has already loaded the driver or not.
