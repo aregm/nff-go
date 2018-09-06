@@ -63,6 +63,7 @@ func (v *VmbusDevice) Bind(driver string) error {
 			return fmt.Errorf("bindVmbusDeviceDriver: %s", err.Error())
 		}
 	}
+
 	// update Driver
 	v.Driver = driver
 
@@ -89,12 +90,27 @@ func (v *VmbusDevice) Probe() error {
 	return ErrNotProbe
 }
 
-func (v *VmbusDevice) Id() string {
+func (v *VmbusDevice) ID() string {
 	return v.UUID
 }
 
 func (v *VmbusDevice) String() string {
 	return VmbusDeviceStringer.With(v.UUID, v.Driver)
+}
+
+// GetCurrentVmbusDriver update the current driver device bound to.
+func GetCurrentVmbusDriver(uuid string) (string, error) {
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "find", PathSysVmbusDrivers, "-type", "l", "-iname", uuid)
+	if err != nil {
+		return "", fmt.Errorf("Cmd Execute find failed: %s", err.Error())
+	}
+
+	matches := rVmbusDriver.FindSubmatch(output)
+	if len(matches) >= 2 {
+		return string(matches[1]), nil
+	}
+
+	return "", nil
 }
 
 func bindVmbusDeviceDriver(devUUID, driver string, prepares ...prepareFunc) error {
@@ -111,7 +127,7 @@ func bindVmbusDeviceDriver(devUUID, driver string, prepares ...prepareFunc) erro
 
 func bindVmbusDeviceDpdkDriver(devUUID, driver string, prepares ...prepareFunc) error {
 	// NOTE: ignore error of write vmbus driver new_id
-	writeToTargetWithData(PathSysVmbusDriversNewID.With(driver), os.O_WRONLY, 0200, NewNetUUID())
+	writeToTargetWithData(PathSysVmbusDriversNewID.With(driver), os.O_WRONLY, 0200, newNetUUID())
 	return bindVmbusDeviceDriver(devUUID, driver, prepares...)
 }
 
@@ -128,31 +144,17 @@ func isValidDpdkVmbusDriver(driver string) bool {
 	return false
 }
 
-// GetCurrentVmbusDriver update the current driver device bound to.
-func GetCurrentVmbusDriver(uuid string) (string, error) {
-	output, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "find", PathSysVmbusDrivers, "-type", "l", "-iname", uuid)
-	if err != nil {
-		return "", fmt.Errorf("Cmd Execute find failed: %s", err.Error())
-	}
-
-	matches := rVmbusDriver.FindSubmatch(output)
-	if len(matches) >= 2 {
-		return string(matches[1]), nil
-	}
-
-	return "", nil
-}
-
-// NewNetUUID return a net uuid
-// FIXME: dummy implement, always return same result
-func NewNetUUID() string {
+// newNetUUID returns a valid net UUID
+// FIXME: Dummy implement, always return same result - see
+// https://doc.dpdk.org/guides/nics/netvsc.html NET_UUID
+func newNetUUID() string {
 	return "f8615163-df3e-46c5-913f-f2d2f965ed0e"
 }
 
-// bindVmbusDeviceDriverKernelGreaterThan418 only available on linux kernel >= 4.18
+// bindVmbusDeviceDriverKernelGreaterThan418 is only available on linux kernel >= 4.18
 func bindVmbusDeviceDriverKernelGreaterThan418(devUUID, driver string) error {
 	// driverctl -b vmbus set-override $DEV_UUID uio_hv_generic
-	_, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "driverctl", "-b", "vmbus", "set-override", devUUID, driver)
+	_, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "driverctl", "-b", "vmbus", "set-override", devUUID, driver)
 	if err != nil {
 		return fmt.Errorf("Cmd Execute driverctl failed: %s", err.Error())
 	}

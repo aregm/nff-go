@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var DefaultTimeoutLimitation = 5 * time.Second
+var defaultTimeoutLimitation = 5 * time.Second
 
 func FindDefaultDpdkDriver(nicName string) string {
 	driver, err := readlinkBaseCmd(PathSysClassNetDeviceDriver.With(nicName))
@@ -18,20 +18,21 @@ func FindDefaultDpdkDriver(nicName string) string {
 		return DefaultDpdkDriver
 	}
 	switch driver {
-	case "hv_netvcs":
+	case DriverHvNetvcs:
 		return DriverUioHvGeneric
 	default:
 		return DefaultDpdkDriver
 	}
 }
 
-func GetDevID(nicName string) (string, error) {
+func GetDeviceID(nicName string) (string, error) {
 	// DEV_ID=$(basename $(readlink /sys/class/net/<nicName>/device))
 	return readlinkBaseCmd(PathSysClassNetDevice.With(nicName))
 }
 
+// IsModuleLoaded checks if the kernel has already loaded the driver or not.
 func IsModuleLoaded(driver string) bool {
-	output, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "lsmod")
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "lsmod")
 	if err != nil {
 		// Can't run lsmod, return false
 		return false
@@ -48,20 +49,20 @@ func IsModuleLoaded(driver string) bool {
 func writeToTargetWithData(sysfs string, flag int, mode os.FileMode, data string) error {
 	writer, err := os.OpenFile(sysfs, flag, mode)
 	if err != nil {
-		return fmt.Errorf("OpenFile failed %s", err.Error())
+		return fmt.Errorf("OpenFile failed: %s", err.Error())
 	}
 	defer writer.Close()
 
 	_, err = writer.Write([]byte(data))
 	if err != nil {
-		return fmt.Errorf("WriteFile failed %s", err.Error())
+		return fmt.Errorf("WriteFile failed: %s", err.Error())
 	}
 
 	return nil
 }
 
 func readlinkBaseCmd(path string) (string, error) {
-	output, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "readlink", path)
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "readlink", path)
 	if err != nil {
 		return "", fmt.Errorf("Cmd Execute readlink failed: %s", err.Error())
 	}

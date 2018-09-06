@@ -6,21 +6,21 @@ import (
 )
 
 type PciDevice struct {
-	ID     string
+	id     string
 	Class  string
 	Vendor string
 	Device string
 	Driver string
 }
 
-// GetPciDevice Get device info by PCI bus id.
+// GetPciDeviceByPciID gets device info by PCI bus id.
 func GetPciDeviceByPciID(pciID string) (Device, error) {
-	output, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "lspci", "-Dvmmnks", pciID)
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "lspci", "-Dvmmnks", pciID)
 	if err != nil {
 		return nil, err
 	}
 
-	info := &PciDevice{ID: pciID}
+	info := &PciDevice{id: pciID}
 
 	match := rPciClass.FindSubmatch(output)
 	if len(match) < 2 {
@@ -51,27 +51,26 @@ func GetPciDeviceByPciID(pciID string) (Device, error) {
 
 func (p *PciDevice) Bind(driver string) error {
 	var err error
-	p.Driver, err = BindPci(p.ID, driver, p.Vendor, p.Device)
+	p.Driver, err = BindPci(p.id, driver, p.Vendor, p.Device)
 	return err
 }
 
 func (p *PciDevice) Unbind() error {
-	return UnbindPci(p.ID, p.Driver)
+	return UnbindPci(p.id, p.Driver)
 }
 
 func (p *PciDevice) Probe() error {
 	var err error
-	p.Driver, err = ProbePci(p.ID)
+	p.Driver, err = ProbePci(p.id)
 	return err
-
 }
 
 func (p *PciDevice) CurrentDriver() (string, error) {
-	return GetCurrentPciDriver(p.ID)
+	return GetCurrentPciDriver(p.id)
 }
 
-func (p *PciDevice) Id() string {
-	return p.ID
+func (p *PciDevice) ID() string {
+	return p.id
 }
 
 func BindPci(devID, driver, vendor, device string) (string, error) {
@@ -105,7 +104,7 @@ func UnbindPci(devID, driver string) error {
 	if err != nil {
 		return err
 	} else if current == "" {
-		// this device is already not bounding to any driver
+		// this device is already not bound to any driver
 		return nil
 	}
 
@@ -120,7 +119,7 @@ func ProbePci(devID string) (string, error) {
 	return GetCurrentPciDriver(devID)
 }
 
-// bindPciDeviceDriver bind driver to device in follow flow
+// bindPciDeviceDriver binds driver to device in the follow flow:
 // 0. make sure device already unbound to any driver
 // 1. set sysfs device driver_override to target driver
 // 2. try binding driver
@@ -141,13 +140,9 @@ func bindPciDeviceDriver(devID, driver, vendor, device string) error {
 		return nil
 	}
 
-	// NOTE if driver_override failed, means kernel version < 3.15
-	// means we need to use sysfs drivers/.../new_id to bind device
-	if err := addToDriver(devID, driver, vendor, device); err != nil {
-		return err
-	}
-
-	return nil
+	// NOTE if driver_override failed, it means kernel version is less than
+	// 3.15, so we need to use sysfs drivers/.../new_id to bind device
+	return addToDriver(devID, driver, vendor, device)
 }
 
 func unbindPciDeviceDriver(devID, driver string) error {
@@ -163,20 +158,12 @@ func unbindPciDeviceDriver(devID, driver string) error {
 	if err != nil {
 		return err
 	}
+
 	if current != "" {
 		return ErrUnbind
 	}
 
 	return nil
-}
-
-func isValidDpdkPciDriver(driver string) bool {
-	for _, dpdkDriver := range DpdkPciDrivers {
-		if driver == dpdkDriver {
-			return true
-		}
-	}
-	return false
 }
 
 func probePciDriver(devID string) error {
@@ -193,7 +180,7 @@ func cleanOverrideDriver(devID string) error {
 
 func addToDriver(devID, driver, vendor, device string) error {
 	// see https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-bus-pci
-	// The format for the device ID is: VVVV DDDD SVVV SDDD CCCC MMMM PPPP.
+	// The format of the device ID is: VVVV DDDD SVVV SDDD CCCC MMMM PPPP.
 	// VVVV Vendor ID
 	// DDDD Device ID
 	// SVVV Subsystem Vendor ID
@@ -210,7 +197,7 @@ func (p *PciDevice) String() string {
 
 // GetCurrentPciDriver update the current driver device bound to.
 func GetCurrentPciDriver(id string) (string, error) {
-	output, err := cmdOutputWithTimeout(DefaultTimeoutLimitation, "lspci", "-Dvmmnks", id)
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "lspci", "-Dvmmnks", id)
 	if err != nil {
 		return "", fmt.Errorf("Cmd Execute lspci failed: %s", err.Error())
 	}

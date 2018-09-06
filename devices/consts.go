@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	DriverHvNetvcs      = "hv_netvcs"
 	DriverUioPciGeneric = "uio_pci_generic"
 	DriverIgUio         = "ig_uio"
 	DriverVfioPci       = "vfio-pci"
