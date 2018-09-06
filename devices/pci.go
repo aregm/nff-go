@@ -5,12 +5,12 @@ import (
 	"os"
 )
 
-type PciDevice struct {
+type pciDevice struct {
 	id     string
-	Class  string
-	Vendor string
-	Device string
-	Driver string
+	class  string
+	vendor string
+	device string
+	driver string
 }
 
 // GetPciDeviceByPciID gets device info by PCI bus id.
@@ -20,59 +20,64 @@ func GetPciDeviceByPciID(pciID string) (Device, error) {
 		return nil, err
 	}
 
-	info := &PciDevice{id: pciID}
+	info := &pciDevice{id: pciID}
 
 	match := rPciClass.FindSubmatch(output)
 	if len(match) < 2 {
 		return nil, fmt.Errorf("Bad lspci output: %s", output)
 	}
-	info.Class = string(match[1][:])
+	info.class = string(match[1][:])
 
 	match = rPciVendor.FindSubmatch(output)
 	if len(match) < 2 {
 		return nil, fmt.Errorf("Bad lspci output: %s", output)
 	}
-	info.Vendor = string(match[1][:])
+	info.vendor = string(match[1][:])
 
 	match = rPciDevice.FindSubmatch(output)
 	if len(match) < 2 {
 		return nil, fmt.Errorf("Bad lspci output: %s", output)
 	}
-	info.Device = string(match[1][:])
+	info.device = string(match[1][:])
 
 	match = rPciDriver.FindSubmatch(output)
 	// driver may be empty
 	if len(match) >= 2 {
-		info.Driver = string(match[1][:])
+		info.driver = string(match[1][:])
 	}
 
 	return info, nil
 }
 
-func (p *PciDevice) Bind(driver string) error {
+func (p *pciDevice) Bind(driver string) error {
 	var err error
-	p.Driver, err = BindPci(p.id, driver, p.Vendor, p.Device)
+	p.driver, err = BindPci(p.id, driver, p.vendor, p.device)
 	return err
 }
 
-func (p *PciDevice) Unbind() error {
-	return UnbindPci(p.id, p.Driver)
+func (p *pciDevice) Unbind() error {
+	return UnbindPci(p.id, p.driver)
 }
 
-func (p *PciDevice) Probe() error {
+func (p *pciDevice) Probe() error {
 	var err error
-	p.Driver, err = ProbePci(p.id)
+	p.driver, err = ProbePci(p.id)
 	return err
 }
 
-func (p *PciDevice) CurrentDriver() (string, error) {
+func (p *pciDevice) CurrentDriver() (string, error) {
 	return GetCurrentPciDriver(p.id)
 }
 
-func (p *PciDevice) ID() string {
+func (p *pciDevice) ID() string {
 	return p.id
 }
 
+func (p *pciDevice) String() string {
+	return pciDeviceStringer.With(p.ID, p.class, p.vendor, p.device, p.driver)
+}
+
+// BindPci binds the driver to the given device ID
 func BindPci(devID, driver, vendor, device string) (string, error) {
 	current, err := GetCurrentPciDriver(devID)
 	if err != nil {
@@ -99,6 +104,7 @@ func BindPci(devID, driver, vendor, device string) (string, error) {
 	return driver, nil
 }
 
+// UnbindPci unbinds the driver that is bound to the given device ID
 func UnbindPci(devID, driver string) error {
 	current, err := GetCurrentPciDriver(devID)
 	if err != nil {
@@ -117,6 +123,21 @@ func ProbePci(devID string) (string, error) {
 	}
 
 	return GetCurrentPciDriver(devID)
+}
+
+// GetCurrentPciDriver returns the current driver that device bound to.
+func GetCurrentPciDriver(devID string) (string, error) {
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "lspci", "-Dvmmnks", devID)
+	if err != nil {
+		return "", fmt.Errorf("Cmd Execute lspci failed: %s", err.Error())
+	}
+
+	match := rPciDriver.FindSubmatch(output)
+	if len(match) >= 2 {
+		return string(match[1][:]), nil
+	}
+
+	return "", nil
 }
 
 // bindPciDeviceDriver binds driver to device in the follow flow:
@@ -189,23 +210,4 @@ func addToDriver(devID, driver, vendor, device string) error {
 	// MMMM Class Mask
 	// PPPP Private Driver Data
 	return writeToTargetWithData(pathSysPciDriversNewID.With(driver), os.O_WRONLY, 0200, vendor+" "+device)
-}
-
-func (p *PciDevice) String() string {
-	return pciDeviceStringer.With(p.ID, p.Class, p.Vendor, p.Device, p.Driver)
-}
-
-// GetCurrentPciDriver update the current driver device bound to.
-func GetCurrentPciDriver(id string) (string, error) {
-	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "lspci", "-Dvmmnks", id)
-	if err != nil {
-		return "", fmt.Errorf("Cmd Execute lspci failed: %s", err.Error())
-	}
-
-	match := rPciDriver.FindSubmatch(output)
-	if len(match) >= 2 {
-		return string(match[1][:]), nil
-	}
-
-	return "", nil
 }
