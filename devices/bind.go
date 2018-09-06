@@ -1,22 +1,29 @@
 package devices
 
+// Device is a DPDK compatible device and should be able to bind, unbind and
+// probe.
 type Device interface {
 	Bind(driver string) error
 	Unbind() error
 	CurrentDriver() (string, error)
 	Probe() error
-	Id() string
+	ID() string
 }
 
-func NewDevices(devID string) (Device, error) {
-	if IsPciID.Match([]byte(devID)) {
-		return GetPciDeviceByPciID(devID)
-	} else {
-		return GetVmbusDeviceByUUID(devID)
+// New returns a corresponding device by given input
+func New(input string) (Device, error) {
+	switch {
+	case IsPciID.Match([]byte(input)):
+		return NewDeviceByPciID(input)
+	case IsUUID.Match([]byte(input)):
+		return NewDeviceByVmbusID(input)
+	default:
+		return NewDeviceByNicName(input)
 	}
 }
 
-func NewDeviceWithPciID(pciID string) (Device, error) {
+// NewDeviceByPciID returns a PCI device by given PCI ID
+func NewDeviceByPciID(pciID string) (Device, error) {
 	device, err := GetPciDeviceByPciID(pciID)
 	if err != nil {
 		return nil, err
@@ -25,7 +32,8 @@ func NewDeviceWithPciID(pciID string) (Device, error) {
 	return device, nil
 }
 
-func NewDeviceWithUUID(uuid string) (Device, error) {
+// NewDeviceByVmbusID returns a VMBus device by given UUID
+func NewDeviceByVmbusID(uuid string) (Device, error) {
 	device, err := GetVmbusDeviceByUUID(uuid)
 	if err != nil {
 		return nil, err
@@ -34,28 +42,24 @@ func NewDeviceWithUUID(uuid string) (Device, error) {
 	return device, nil
 }
 
+// NewDeviceByNicName returns a device by given NIC name, e.g. eth0.
 func NewDeviceByNicName(nicName string) (Device, error) {
-	devID, err := GetDevID(nicName)
+	devID, err := GetDeviceID(nicName)
 	if err != nil {
 		return nil, err
 	}
 
-	device, err := NewDevices(devID)
+	device, err := newDevice(devID)
 	if err != nil {
 		return nil, err
 	}
 
-	// setup devices by nicName
 	return device, nil
 }
 
-func New(input string) (Device, error) {
-	switch {
-	case IsPciID.Match([]byte(input)):
-		return NewDeviceWithPciID(input)
-	case IsUUID.Match([]byte(input)):
-		return NewDeviceWithUUID(input)
-	default:
-		return NewDeviceByNicName(input)
+func newDevice(id string) (Device, error) {
+	if IsPciID.Match([]byte(id)) {
+		return GetPciDeviceByPciID(id)
 	}
+	return GetVmbusDeviceByUUID(id)
 }
