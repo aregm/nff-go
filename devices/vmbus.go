@@ -21,17 +21,18 @@ import (
 
 type prepareFunc func() error
 
-type VmbusDevice struct {
+type vmbusDevice struct {
 	UUID   string
 	Driver string
 }
 
+// GetVmbusDeviceByUUID returns a VMBus device by given UUID.
 func GetVmbusDeviceByUUID(uuid string) (Device, error) {
-	result := &VmbusDevice{UUID: uuid}
+	result := &vmbusDevice{UUID: uuid}
 	return result, nil
 }
 
-func (v *VmbusDevice) Bind(driver string) error {
+func (v *vmbusDevice) Bind(driver string) error {
 	current, err := GetCurrentVmbusDriver(v.UUID)
 	if err != nil {
 		return fmt.Errorf("GetCurrentVmbusDriver: %s", err.Error())
@@ -70,7 +71,7 @@ func (v *VmbusDevice) Bind(driver string) error {
 	return nil
 }
 
-func (v *VmbusDevice) Unbind() error {
+func (v *vmbusDevice) Unbind() error {
 	current, err := GetCurrentVmbusDriver(v.UUID)
 	if err != nil {
 		return err
@@ -82,19 +83,19 @@ func (v *VmbusDevice) Unbind() error {
 	return unbindVmbusDeviceDriver(v.UUID, current)
 }
 
-func (v *VmbusDevice) CurrentDriver() (string, error) {
+func (v *vmbusDevice) CurrentDriver() (string, error) {
 	return GetCurrentVmbusDriver(v.UUID)
 }
 
-func (v *VmbusDevice) Probe() error {
+func (v *vmbusDevice) Probe() error {
 	return ErrNotProbe
 }
 
-func (v *VmbusDevice) ID() string {
+func (v *vmbusDevice) ID() string {
 	return v.UUID
 }
 
-func (v *VmbusDevice) String() string {
+func (v *vmbusDevice) String() string {
 	return vmbusDeviceStringer.With(v.UUID, v.Driver)
 }
 
