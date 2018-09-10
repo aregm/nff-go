@@ -1,12 +1,11 @@
-# Copyright 2017-2018 Intel Corporation.
+# Copyright 2018 Intel Corporation.
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nff-go-nat
-EXECUTABLES = nat
+EXECUTABLES = client
 
-nat: ../config.go ../translation.go ../portalloc.go ../cksum.go ../util.go ../grpc.go ../updatecfg/updatecfg.pb.go
+nat: client.go ../updatecfg/updatecfg.pb.go
 
 ../updatecfg/updatecfg.pb.go: ../updatecfg/updatecfg.proto
 	protoc -I ../updatecfg --go_out=plugins=grpc:../updatecfg ../updatecfg/updatecfg.proto

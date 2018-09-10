@@ -7,6 +7,7 @@ package nat
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -16,6 +17,8 @@ import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+
+	upd "github.com/intel-go/nff-go/examples/nat/updatecfg"
 )
 
 type terminationDirection uint8
@@ -28,9 +31,9 @@ const (
 	iPUBLIC  interfaceType = 0
 	iPRIVATE interfaceType = 1
 
-	dirDROP = 0
-	dirSEND = 1
-	dirKNI  = 2
+	dirDROP = uint(upd.TraceType_DUMP_DROP)
+	dirSEND = uint(upd.TraceType_DUMP_TRANSLATE)
+	dirKNI  = uint(upd.TraceType_DUMP_KNI)
 
 	connectionTimeout time.Duration = 1 * time.Minute
 	portReuseTimeout  time.Duration = 1 * time.Second
@@ -75,6 +78,10 @@ type ipv4Subnet struct {
 	Mask uint32
 }
 
+func (fp *forwardedPort) String() string {
+	return fmt.Sprintf("Port:%d, Destination:%+v, Protocol: %d", fp.Port, packet.IPv4ToString(fp.Destination.Addr), fp.Protocol)
+}
+
 func (subnet *ipv4Subnet) String() string {
 	// Count most significant set bits
 	mask := uint32(1) << 31
@@ -85,7 +92,7 @@ func (subnet *ipv4Subnet) String() string {
 		}
 		mask >>= 1
 	}
-	return packet.IPv4ToString(subnet.Addr) + "/" + strconv.Itoa(i)
+	return packet.IPv4ToString(packet.SwapBytesUint32(subnet.Addr)) + "/" + strconv.Itoa(i)
 }
 
 func (subnet *ipv4Subnet) checkAddrWithingSubnet(addr uint32) bool {
@@ -156,8 +163,7 @@ var (
 	NeedKNI        bool
 
 	// Debug variables
-	debugDump = false
-	debugDrop = false
+	DumpEnabled [dirKNI + 1]bool
 )
 
 func (pi pairIndex) Copy() interface{} {
@@ -171,7 +177,7 @@ func (pi pairIndex) Delete() {
 
 func convertIPv4(in []byte) (uint32, error) {
 	if in == nil || len(in) > 4 {
-		return 0, errors.New("Only IPv4 addresses are supported now")
+		return 0, fmt.Errorf("Only IPv4 addresses are supported now while your address has %d bytes", len(in))
 	}
 
 	addr := (uint32(in[0]) << 24) | (uint32(in[1]) << 16) |
@@ -277,6 +283,8 @@ func ReadConfig(fileName string) error {
 
 		pp.PrivatePort.Type = iPRIVATE
 		pp.PublicPort.Type = iPUBLIC
+		pp.PublicPort.opposite = &pp.PrivatePort
+		pp.PrivatePort.opposite = &pp.PublicPort
 
 		if pp.PrivatePort.Vlan == 0 && pp.PublicPort.Vlan != 0 {
 			return errors.New("Private port with index " +
@@ -293,43 +301,49 @@ func ReadConfig(fileName string) error {
 		}
 
 		port := &pp.PrivatePort
-		opposite := &pp.PublicPort
 		for pi := 0; pi < 2; pi++ {
 			for fpi := range port.ForwardPorts {
 				fp := &port.ForwardPorts[fpi]
-				if fp.Destination.Addr == 0 {
-					if port.KNIName == "" {
-						return errors.New("Port with index " +
-							strconv.Itoa(int(port.Index)) +
-							" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0")
-					}
-					fp.forwardToKNI = true
-					if fp.Destination.Port != fp.Port {
-						return errors.New("When address 0.0.0.0 is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
-							strconv.Itoa(int(fp.Port)) + " and " +
-							strconv.Itoa(int(fp.Destination.Port)))
-					}
-					NeedKNI = true
-				} else {
-					if pi == 0 {
-						return errors.New("Only KNI port forwarding is allowed on private port. All translated connections from private to public network can be initiated without any forwarding rules.")
-					}
-					if !opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
-						return errors.New("Destination address " +
-							packet.IPv4ToString(fp.Destination.Addr) +
-							" should be within subnet " +
-							opposite.Subnet.String())
-					}
-					if fp.Destination.Port == 0 {
-						fp.Destination.Port = fp.Port
-					}
+				err := port.checkPortForwarding(fp)
+				if err != nil {
+					return err
 				}
 			}
 			port = &pp.PublicPort
-			opposite = &pp.PrivatePort
 		}
 	}
 
+	return nil
+}
+
+func (port *ipv4Port) checkPortForwarding(fp *forwardedPort) error {
+	if fp.Destination.Addr == 0 {
+		if port.KNIName == "" {
+			return errors.New("Port with index " +
+				strconv.Itoa(int(port.Index)) +
+				" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0")
+		}
+		fp.forwardToKNI = true
+		if fp.Destination.Port != fp.Port {
+			return errors.New("When address 0.0.0.0 is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
+				strconv.Itoa(int(fp.Port)) + " and " +
+				strconv.Itoa(int(fp.Destination.Port)))
+		}
+		NeedKNI = true
+	} else {
+		if port.Type == iPRIVATE {
+			return errors.New("Only KNI port forwarding is allowed on private port. All translated connections from private to public network can be initiated without any forwarding rules.")
+		}
+		if !port.opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
+			return errors.New("Destination address " +
+				packet.IPv4ToString(fp.Destination.Addr) +
+				" should be within subnet " +
+				port.opposite.Subnet.String())
+		}
+		if fp.Destination.Port == 0 {
+			fp.Destination.Port = fp.Port
+		}
+	}
 	return nil
 }
 
@@ -355,26 +369,30 @@ func (port *ipv4Port) allocateLookupMap() {
 
 func (port *ipv4Port) initPublicPortPortForwardingEntries() {
 	// Initialize port forwarding rules on public interface
-	for _, fp := range port.ForwardPorts {
-		keyEntry := Tuple{
-			addr: port.Subnet.Addr,
-			port: fp.Port,
-		}
-		valEntry := Tuple{
-			addr: fp.Destination.Addr,
-			port: fp.Destination.Port,
-		}
-		port.translationTable[fp.Protocol].Store(keyEntry, valEntry)
-		if fp.Destination.Addr != 0 {
-			port.opposite.translationTable[fp.Protocol].Store(valEntry, keyEntry)
-		}
-		port.portmap[fp.Protocol][fp.Port] = portMapEntry{
-			lastused:             time.Now(),
-			addr:                 fp.Destination.Addr,
-			finCount:             0,
-			terminationDirection: 0,
-			static:               true,
-		}
+	for i := range port.ForwardPorts {
+		port.enableStaticPortForward(&port.ForwardPorts[i])
+	}
+}
+
+func (port *ipv4Port) enableStaticPortForward(fp *forwardedPort) {
+	keyEntry := Tuple{
+		addr: port.Subnet.Addr,
+		port: fp.Port,
+	}
+	valEntry := Tuple{
+		addr: fp.Destination.Addr,
+		port: fp.Destination.Port,
+	}
+	port.translationTable[fp.Protocol].Store(keyEntry, valEntry)
+	if fp.Destination.Addr != 0 {
+		port.opposite.translationTable[fp.Protocol].Store(valEntry, keyEntry)
+	}
+	port.portmap[fp.Protocol][fp.Port] = portMapEntry{
+		lastused:             time.Now(),
+		addr:                 fp.Destination.Addr,
+		finCount:             0,
+		terminationDirection: 0,
+		static:               true,
 	}
 }
 
@@ -382,9 +400,6 @@ func (port *ipv4Port) initPublicPortPortForwardingEntries() {
 func InitFlows() {
 	for i := range Natconfig.PortPairs {
 		pp := &Natconfig.PortPairs[i]
-
-		pp.PublicPort.opposite = &pp.PrivatePort
-		pp.PrivatePort.opposite = &pp.PublicPort
 
 		// Init port pairs state
 		pp.initLocalMACs()
@@ -474,4 +489,17 @@ func CheckHWOffloading() bool {
 	}
 
 	return flow.CheckHWCapability(flow.HWTXChecksumCapability, ports)
+}
+
+func (c *Config) getPortAndPairByID(portId uint32) (*ipv4Port, *portPair) {
+	for i := range c.PortPairs {
+		pp := &c.PortPairs[i]
+		if uint32(pp.PublicPort.Index) == portId {
+			return &pp.PublicPort, pp
+		}
+		if uint32(pp.PrivatePort.Index) == portId {
+			return &pp.PrivatePort, pp
+		}
+	}
+	return nil, nil
 }

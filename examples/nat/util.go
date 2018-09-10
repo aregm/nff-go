@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 
+	upd "github.com/intel-go/nff-go/examples/nat/updatecfg"
+
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
 )
@@ -63,7 +65,7 @@ func (port *ipv4Port) startTrace(dir uint) *os.File {
 }
 
 func (port *ipv4Port) dumpPacket(pkt *packet.Packet, dir uint) {
-	if debugDump {
+	if DumpEnabled[dir] {
 		port.dumpsync[dir].Lock()
 		if port.fdump[dir] == nil {
 			port.fdump[dir] = port.startTrace(dir)
@@ -91,4 +93,35 @@ func CloseAllDumpFiles() {
 		Natconfig.PortPairs[i].PrivatePort.closePortTraces()
 		Natconfig.PortPairs[i].PublicPort.closePortTraces()
 	}
+}
+
+func convertSubnet(s *upd.Subnet) (*ipv4Subnet, error) {
+	addr, err := convertIPv4(s.GetAddress().GetAddress())
+	if err != nil {
+		return nil, err
+	}
+
+	return &ipv4Subnet{
+		Addr: addr,
+		Mask: uint32(0xffffffff) << (32 - s.GetMaskBitsNumber()),
+	}, nil
+}
+
+func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
+	addr, err := convertIPv4(p.GetTargetAddress().GetAddress())
+	if err != nil {
+		return nil, err
+	}
+	if p.GetProtocol() != common.TCPNumber && p.GetProtocol() != common.UDPNumber {
+		return nil, fmt.Errorf("Bad protocol identifier %d", p.GetProtocol())
+	}
+
+	return &forwardedPort{
+		Port: uint16(p.GetSourcePortNumber()),
+		Destination: hostPort{
+			Addr: addr,
+			Port: uint16(p.GetTargetPortNumber()),
+		},
+		Protocol: protocolId(p.GetProtocol()),
+	}, nil
 }
