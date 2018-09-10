@@ -754,6 +754,10 @@ func constructNewIndex(inIndexNumber int32) []int32 {
 	return newIndex
 }
 
+// This function is used for measuring "wasted" time that framework
+// spends on one "zero get from ring attempt". This function can be
+// replaced by "inline" time measurements which will cost
+// 3 time.Now = ~210nn per each burstSize (32) packets.
 func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 	core, index, err := scheduler.getCore()
 	if err != nil {
@@ -770,6 +774,7 @@ func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 	stopper[0] = make(chan int)
 	stopper[1] = make(chan int)
 	report := make(chan reportPair, 20)
+	var reportedState reportPair
 	var avg uint64
 	t := schedTime
 	pause := clones - 1
@@ -785,11 +790,17 @@ func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 		}()
 		<-stopper[1]
 		stopper[0] <- pause
-		reportedState := <-report
-		reportedState = <-report
+		<-report
+		for reportedState.ZeroAttempts[0] == 0 {
+			reportedState = <-report
+		}
 		stopper[0] <- -1
 		<-stopper[1]
+		for len(report) > 0 {
+			<-report
+		}
 		avg += uint64(schedTime) * 1000000 / reportedState.ZeroAttempts[0]
+		reportedState.ZeroAttempts[0] = 0
 	}
 	scheduler.setCoreByIndex(index)
 	schedTime = t
