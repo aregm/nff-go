@@ -5,4 +5,6 @@
 PATH_TO_MK = ../../mk
 SUBDIRS = main pattern
 
+export GO_COMPILE_FLAGS += -tags hyperscan_v4
+
 include $(PATH_TO_MK)/intermediate.mk

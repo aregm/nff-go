@@ -474,7 +474,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 						for q := 0; q < ff.instanceNumber; q++ {
 							var q1 int32
 							for q1 = 1; q1 < ff.instance[q].inIndex[0]+1; q1++ {
-								if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port, int16(ff.instance[q].inIndex[q1])) > RSSCloneMin {
+								if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port, int16(ff.instance[q].inIndex[q1])) > int64(RSSCloneMin) {
 									break
 								}
 							}
@@ -688,7 +688,7 @@ func (ffi *instance) checkInputRingClonable(min uint32) bool {
 		}
 	case *receiveParameters:
 		for q := int32(0); q < ffi.inIndex[0]; q++ {
-			if low.CheckRSSPacketCount(ffi.ff.Parameters.(*receiveParameters).port, int16(ffi.inIndex[q+1])) > min {
+			if low.CheckRSSPacketCount(ffi.ff.Parameters.(*receiveParameters).port, int16(ffi.inIndex[q+1])) > int64(min) {
 				return true
 			}
 		}
@@ -754,6 +754,10 @@ func constructNewIndex(inIndexNumber int32) []int32 {
 	return newIndex
 }
 
+// This function is used for measuring "wasted" time that framework
+// spends on one "zero get from ring attempt". This function can be
+// replaced by "inline" time measurements which will cost
+// 3 time.Now = ~210nn per each burstSize (32) packets.
 func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 	core, index, err := scheduler.getCore()
 	if err != nil {
@@ -770,6 +774,7 @@ func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 	stopper[0] = make(chan int)
 	stopper[1] = make(chan int)
 	report := make(chan reportPair, 20)
+	var reportedState reportPair
 	var avg uint64
 	t := schedTime
 	pause := clones - 1
@@ -785,11 +790,17 @@ func (scheduler *scheduler) measure(N int32, clones int) uint64 {
 		}()
 		<-stopper[1]
 		stopper[0] <- pause
-		reportedState := <-report
-		reportedState = <-report
+		<-report
+		for reportedState.ZeroAttempts[0] == 0 {
+			reportedState = <-report
+		}
 		stopper[0] <- -1
 		<-stopper[1]
+		for len(report) > 0 {
+			<-report
+		}
 		avg += uint64(schedTime) * 1000000 / reportedState.ZeroAttempts[0]
+		reportedState.ZeroAttempts[0] = 0
 	}
 	scheduler.setCoreByIndex(index)
 	schedTime = t

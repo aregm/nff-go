@@ -75,10 +75,31 @@ type EtherHdr struct {
 }
 
 func (hdr *EtherHdr) String() string {
-	r0 := fmt.Sprintf("L2 protocol: Ethernet\nEtherType: 0x%02x\n", hdr.EtherType)
-	r1 := "Ethernet Source: " + MACToString(hdr.SAddr) + "\n"
-	r2 := "Ethernet Source: " + MACToString(hdr.DAddr) + "\n"
-	return r0 + r1 + r2
+	return fmt.Sprintf(`L2 protocol: Ethernet, EtherType: 0x%04x (%s)
+Ethernet Source: %s
+Ethernet Destination: %s
+`,
+		hdr.EtherType, getEtherTypeName(hdr.EtherType),
+		MACToString(hdr.SAddr),
+		MACToString(hdr.DAddr))
+}
+
+var (
+	etherTypeNameLookupTable = map[uint16]string{
+		SwapIPV4Number: "IPv4",
+		SwapARPNumber:  "ARP",
+		SwapVLANNumber: "VLAN",
+		SwapMPLSNumber: "MPLS",
+		SwapIPV6Number: "IPv6",
+	}
+)
+
+func getEtherTypeName(et uint16) string {
+	ret, ok := etherTypeNameLookupTable[et]
+	if !ok {
+		return "unknown"
+	}
+	return ret
 }
 
 // MACToString return MAC address like string
