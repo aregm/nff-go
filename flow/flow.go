@@ -550,10 +550,9 @@ func SystemInit(args *Config) error {
 	return nil
 }
 
-// SystemStart starts system - begin packet receiving and packet sending.
-// This functions should be always called after flow graph construction.
-// Function can panic during execution.
-func SystemStart() error {
+// SystemInitPortsAndMemory performs all initialization necessary to
+// create and send new packets before scheduler may be started.
+func SystemInitPortsAndMemory() error {
 	if openFlowsNumber != 0 {
 		return common.WrapWithNFError(nil, "Some flows are left open at the end of configuration!", common.OpenedFlowAtTheEnd)
 	}
@@ -571,11 +570,32 @@ func SystemStart() error {
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	// Init low performance mempool
 	packet.SetNonPerfMempool(low.CreateMempool("slow operations"))
+	return nil
+}
+
+// SystemStartScheduler starts scheduler packet processing. Function
+// does not return.
+func SystemStartScheduler() error {
 	if err := schedState.systemStart(); err != nil {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
 	common.LogTitle(common.Initialization, "------------***---------- NFF-GO Started ---------***------------")
 	schedState.schedule(schedTime)
+	return nil
+}
+
+// SystemStart starts system - begin packet receiving and packet sending.
+// This functions should be always called after flow graph construction.
+// Function can panic during execution.
+func SystemStart() error {
+	err := SystemInitPortsAndMemory()
+	if err != nil {
+		return err
+	}
+	err = SystemStartScheduler()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

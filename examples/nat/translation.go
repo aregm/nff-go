@@ -71,15 +71,28 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		return dir
 	}
 
+	// Check for DHCP traffic. We need to get an address if it not set yet
+	if pktUDP != nil {
+		if port.handleDHCP(pkt) {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
+		}
+	}
+
 	// Do lookup
 	v, found := port.translationTable[protocol].Load(*pub2priKey)
-	// For ingress connections packets are allowed only if a
-	// connection has been previosly established with a egress
-	// (private to public) packet. So if lookup fails, this incoming
-	// packet is ignored unless there is a KNI interface. If KNI is
-	// present, traffic is directed there.
+
 	if !found {
-		if port.KNIName != "" {
+		// Store new local network entry in ARP cache
+		port.arpTable.Store(pktIPv4.SrcAddr, pkt.Ether.SAddr)
+
+		// For ingress connections packets are allowed only if a
+		// connection has been previosly established with a egress
+		// (private to public) packet. So if lookup fails, this
+		// incoming packet is ignored unless there is a KNI
+		// interface. If KNI is present and its IP address is known,
+		// traffic is directed there.
+		if port.KNIName != "" && port.Subnet.addressAcquired {
 			dir = dirKNI
 		} else {
 			dir = dirDROP
@@ -152,9 +165,17 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		return dir
 	}
 
+	// Check for DHCP traffic. We need to get an address if it not set yet
+	if pktUDP != nil {
+		if port.handleDHCP(pkt) {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
+		}
+	}
+
 	// If traffic is directed at private interface IP and KNI is
 	// present, this traffic is directed to KNI
-	if port.KNIName != "" && port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr) {
+	if port.KNIName != "" && port.Subnet.addressAcquired && port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr) {
 		port.dumpPacket(pkt, dirKNI)
 		return dirKNI
 	}
@@ -162,10 +183,18 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Do lookup
 	var value Tuple
 	v, found := port.translationTable[protocol].Load(*pri2pubKey)
+
 	if !found {
 		var err error
 		// Store new local network entry in ARP cache
 		port.arpTable.Store(pri2pubKey.addr, pkt.Ether.SAddr)
+
+		if !port.Subnet.addressAcquired || !port.opposite.Subnet.addressAcquired {
+			// No packets are allowed yet because ports address is not
+			// known yet
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
+		}
 		// Allocate new connection from private to public network
 		value, err = pp.allocateNewEgressConnection(protocol, pri2pubKey)
 
