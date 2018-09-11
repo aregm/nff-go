@@ -9,6 +9,7 @@ import (
 	"github.com/intel-go/nff-go/devices"
 )
 
+// Example that shows how to bind a driver to a NIC
 func main() {
 	nic := flag.String("nic", "enp0s9", "network interface to run DPDK")
 	bind := flag.String("bind", "igb_uio", "dpdk uio driver")
@@ -26,11 +27,11 @@ func main() {
 	defer func() {
 		flow.SystemStop()
 
-		// Bind to origin driver
+		// Re-Bind to original driver
 		device.Bind(driver)
 	}()
 
-	// Bind igb_uio driver
+	// Bind to new user specified driver
 	device.Bind(*bind)
 
 	config := &flow.Config{
