@@ -77,7 +77,7 @@ func (acra *addresChangeRequestArray) String() string {
 }
 
 func (acra *addresChangeRequestArray) Set(value string) error {
-	parts := strings.Split(value, ":")
+	parts := strings.Split(value, ",")
 	if len(parts) != 2 {
 		return fmt.Errorf("Bad port index and subnet address specified \"%s\"", value)
 	}
@@ -90,16 +90,13 @@ func (acra *addresChangeRequestArray) Set(value string) error {
 	if err != nil {
 		return err
 	}
-	if ip.To4() == nil {
-		return fmt.Errorf("Only IPv4 addresses are supported yet: %s", parts[1])
-	}
 	ones, _ := ipnet.Mask.Size()
 
 	*acra = append(*acra, &upd.InterfaceAddressChangeRequest{
 		InterfaceId: uint32(index),
 		PortSubnet: &upd.Subnet{
 			Address: &upd.IPAddress{
-				Address: ip.To4(),
+				Address: ip,
 			},
 			MaskBitsNumber: uint32(ones),
 		},
@@ -116,7 +113,7 @@ func (pfra *portForwardRequestArray) String() string {
 }
 
 func (pfra *portForwardRequestArray) Set(value string) error {
-	parts := strings.Split(value, ":")
+	parts := strings.Split(value, ",")
 	if len(parts) != 6 {
 		return fmt.Errorf("Bad port forwarding specification \"%s\"", value)
 	}
@@ -148,9 +145,6 @@ func (pfra *portForwardRequestArray) Set(value string) error {
 	if ip == nil {
 		return fmt.Errorf("Bad IP address specified \"%s\"", parts[4])
 	}
-	if ip.To4() == nil {
-		return fmt.Errorf("Only IPv4 addresses are supported yet: %s", parts[1])
-	}
 
 	tport, err := strconv.ParseUint(parts[5], 10, 16)
 	if err != nil {
@@ -163,7 +157,7 @@ func (pfra *portForwardRequestArray) Set(value string) error {
 		Port: &upd.ForwardedPort{
 			SourcePortNumber: uint32(sport),
 			TargetAddress: &upd.IPAddress{
-				Address: ip.To4(),
+				Address: ip,
 			},
 			TargetPortNumber: uint32(tport),
 			Protocol:         upd.Protocol(proto),
@@ -174,7 +168,7 @@ func (pfra *portForwardRequestArray) Set(value string) error {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Printf(`Usage: client [-a server:port] [-d {+|-}{d|t|k}] [-s index:subnet] [-p {TCP|UDP}:port number:target IP address:target port]
+		fmt.Printf(`Usage: client [-a server:port] [-d {+|-}{d|t|k}] [-s index:subnet] [-p {+|-},{TCP|UDP|TCP6|UDP6},port number,target IP address,target port]
 
 Client sends GRPS requests to NAT server controlling packets trace dump,
 ports subnet adresses and forwarded ports. Multiple requests of the same
@@ -192,11 +186,12 @@ e.g. +d or -t or +k:
     t means to trace translated (normally sent) packets,
     k means to trace packets that were sent to KNI interface.`)
 	flag.Var(&addresChangeRequests, "s", `Control network interface subnet in a form of index:subnet,
-e.g. 1:192.168.5.1/24. Port index is DPDK port number. Subnet
-is given in form of port IP address and prefix bits.`)
+e.g. 1,192.168.5.1/24 or 1,fd16::1/128. Port index is DPDK port
+number. Subnet is given in form of port IP address and prefix bits.`)
 	flag.Var(&portForwardRequests, "p", `Control TCP and UDP port forwarding in a form of
-+/-:index:protocol:source port:target IP address:target port, e.g.
-+:1:TCP:2222:192.168.5.7:22 or -:0:TCP:22:0.0.0.0:0. If target
++/-,index,protocol,source port,target IP address,target port, e.g.
++,1,TCP,2222,192.168.5.7,22 or -,0,TCP,22,0.0.0.0,0 or
++,1,TCP6,2222,fd14::3,22 or -,0,TCP6,22,::,0. If target
 address is zero, it means that port is forwarded to corresponding
 network port KNI interface. Port forwarding to a non-zero
 target address (not to a KNI interface) is possible only for

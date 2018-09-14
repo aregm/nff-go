@@ -4,11 +4,13 @@
         {
             "private-port": {
                 "index": 0,
-                "subnet": "dhcp"
+                "subnet": "dhcp",
+                "subnet6": "dhcp"
             },
             "public-port": {
                 "index": 1,
                 "subnet": "dhcp",
+                "subnet6": "dhcp",
                 "forward-ports": [
                     {
                         "port": 8080,
@@ -16,9 +18,19 @@
                         "protocol": "TCP"
                     },
                     {
+                        "port": 8080,
+                        "destination": "[fd14::3]:80",
+                        "protocol": "TCP6"
+                    },
+                    {
                         "port": 2222,
                         "destination": "192.168.14.3:22",
                         "protocol": "TCP"
+                    },
+                    {
+                        "port": 2222,
+                        "destination": "[fd14::3]:22",
+                        "protocol": "TCP6"
                     },
                     {
                         "port": 8081,
@@ -26,9 +38,19 @@
                         "protocol": "TCP"
                     },
                     {
+                        "port": 8081,
+                        "destination": "[fd14::4]:80",
+                        "protocol": "TCP6"
+                    },
+                    {
                         "port": 2223,
                         "destination": "192.168.14.4:22",
                         "protocol": "TCP"
+                    },
+                    {
+                        "port": 2223,
+                        "destination": "[fd14::4]:22",
+                        "protocol": "TCP6"
                     }
                 ]
             }

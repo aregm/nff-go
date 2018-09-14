@@ -12,8 +12,6 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
-	"github.com/vishvananda/netlink"
-
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
 )
@@ -25,8 +23,8 @@ type dhcpState struct {
 
 const (
 	requestInterval = 10 * time.Second
-	DHCPSrcPort     = 68
-	DHCPDstPort     = 67
+	DHCPServerPort  = 67
+	DHCPClientPort  = 68
 	BroadcastIPv4   = uint32(0xffffffff)
 )
 
@@ -80,8 +78,16 @@ func sendDHCPRequests() {
 			if !pp.PublicPort.Subnet.addressAcquired {
 				pp.PublicPort.sendDHCPDiscoverRequest()
 			}
+			if !pp.PublicPort.Subnet6.addressAcquired {
+				pp.PublicPort.setLinkLocalIPv6KNIAddress(pp.PublicPort.Subnet6.llAddr, SingleIPMask)
+				pp.PublicPort.sendDHCPv6SolicitRequest()
+			}
 			if !pp.PrivatePort.Subnet.addressAcquired {
 				pp.PrivatePort.sendDHCPDiscoverRequest()
+			}
+			if !pp.PrivatePort.Subnet6.addressAcquired {
+				pp.PrivatePort.setLinkLocalIPv6KNIAddress(pp.PrivatePort.Subnet6.llAddr, SingleIPMask)
+				pp.PrivatePort.sendDHCPv6SolicitRequest()
 			}
 		}
 		time.Sleep(requestInterval)
@@ -97,7 +103,7 @@ func getDHCPOption(dhcp *layers.DHCPv4, optionType layers.DHCPOpt) *layers.DHCPO
 	return nil
 }
 
-func (port *ipv4Port) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, options []layers.DHCPOption) {
+func (port *ipPort) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, options []layers.DHCPOption) {
 	hwa := make([]byte, common.EtherAddrLen)
 	copy(hwa, port.SrcMACAddress[:])
 
@@ -127,18 +133,25 @@ func (port *ipv4Port) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, op
 	}
 	payloadBuffer := buf.Bytes()
 	packet.InitEmptyIPv4UDPPacket(pkt, uint(len(payloadBuffer)))
-	if port.Vlan != 0 {
-		pkt.AddVLANTag(port.Vlan)
-	}
+
+	// Fill up L2
+	pkt.Ether.SAddr = port.SrcMACAddress
+	pkt.Ether.DAddr = BroadcastMAC
+
+	// Fill up L3
+	pkt.GetIPv4NoCheck().SrcAddr = uint32(0)
+	pkt.GetIPv4NoCheck().DstAddr = BroadcastIPv4
+
+	// Fill up L4
+	pkt.GetUDPNoCheck().SrcPort = packet.SwapBytesUint16(DHCPClientPort)
+	pkt.GetUDPNoCheck().DstPort = packet.SwapBytesUint16(DHCPServerPort)
+
 	payload, _ := pkt.GetPacketPayload()
 	copy(payload, payloadBuffer)
 
-	pkt.Ether.SAddr = port.SrcMACAddress
-	pkt.Ether.DAddr = BroadcastMAC
-	pkt.GetIPv4NoCheck().SrcAddr = uint32(0)
-	pkt.GetIPv4NoCheck().DstAddr = BroadcastIPv4
-	pkt.GetUDPNoCheck().SrcPort = packet.SwapBytesUint16(DHCPSrcPort)
-	pkt.GetUDPNoCheck().DstPort = packet.SwapBytesUint16(DHCPDstPort)
+	if port.Vlan != 0 {
+		pkt.AddVLANTag(port.Vlan)
+	}
 
 	setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	port.dumpPacket(pkt, dirSEND)
@@ -147,26 +160,26 @@ func (port *ipv4Port) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, op
 	port.Subnet.ds.lastDHCPPacketTypeSent = packetType
 }
 
-func (port *ipv4Port) sendDHCPDiscoverRequest() {
+func (port *ipPort) sendDHCPDiscoverRequest() {
 	port.Subnet.ds.dhcpTransactionId = rnd.Uint32()
 	port.composeAndSendDHCPPacket(layers.DHCPMsgTypeDiscover, dhcpOptions)
 }
 
-func (port *ipv4Port) sendDHCPRequestRequest(serverIP, clientIP []byte) {
+func (port *ipPort) sendDHCPRequestRequest(serverIP, clientIP []byte) {
 	port.composeAndSendDHCPPacket(layers.DHCPMsgTypeRequest, append(dhcpOptions,
 		layers.NewDHCPOption(layers.DHCPOptServerID, serverIP),
 		layers.NewDHCPOption(layers.DHCPOptRequestIP, clientIP)))
 }
 
-func (port *ipv4Port) handleDHCP(pkt *packet.Packet) bool {
+func (port *ipPort) handleDHCP(pkt *packet.Packet) bool {
 	if port.Subnet.addressAcquired {
 		// Port already has address, ignore this traffic
 		return false
 	}
 
 	// Check that this is DHCP offer or acknowledgement traffic
-	if pkt.GetUDPNoCheck().DstPort != packet.SwapBytesUint16(DHCPSrcPort) ||
-		pkt.GetUDPNoCheck().SrcPort != packet.SwapBytesUint16(DHCPDstPort) {
+	if pkt.GetUDPNoCheck().DstPort != packet.SwapBytesUint16(DHCPClientPort) ||
+		pkt.GetUDPNoCheck().SrcPort != packet.SwapBytesUint16(DHCPServerPort) {
 		return false
 	}
 
@@ -201,11 +214,11 @@ func (port *ipv4Port) handleDHCP(pkt *packet.Packet) bool {
 	return true
 }
 
-func (port *ipv4Port) handleDHCPOffer(pkt *packet.Packet, dhcp *layers.DHCPv4) {
+func (port *ipPort) handleDHCPOffer(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	port.sendDHCPRequestRequest(dhcp.NextServerIP, dhcp.YourClientIP)
 }
 
-func (port *ipv4Port) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
+func (port *ipPort) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	maskOption := getDHCPOption(dhcp, layers.DHCPOptSubnetMask)
 	if maskOption == nil {
 		println("Warning! Received a DHCP response without subnet mask! Trying again with discover request.")
@@ -216,21 +229,8 @@ func (port *ipv4Port) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	port.Subnet.Addr, _ = convertIPv4(dhcp.YourClientIP.To4())
 	port.Subnet.Mask, _ = convertIPv4(maskOption.Data)
 	port.Subnet.addressAcquired = true
-	println("Successfully acquired IP address:", port.Subnet.String())
+	println("Successfully acquired IP address:", port.Subnet.String(), "on port", port.Index)
 
 	// Set address on KNI interface if present
-	if port.KNIName != "" {
-		myKNI, err := netlink.LinkByName(port.KNIName)
-		if err != nil {
-			println("Failed to get KNI interface", port.KNIName, ":", err)
-			return
-		}
-		addr := &netlink.Addr{
-			IPNet: &net.IPNet{
-				IP:   dhcp.YourClientIP,
-				Mask: maskOption.Data,
-			},
-		}
-		netlink.AddrAdd(myKNI, addr)
-	}
+	port.setLinkLocalIPv4KNIAddress(port.Subnet.Addr, port.Subnet.Mask)
 }
