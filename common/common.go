@@ -48,13 +48,18 @@ const (
 	IPNumber     = 0x04
 	TCPNumber    = 0x06
 	UDPNumber    = 0x11
-	NoNextHeader = 0x3B
+	ICMPv6Number = 0x3a
+	NoNextHeader = 0x3b
 )
 
 // Supported ICMP Types
 const (
-	ICMPTypeEchoRequest  uint8 = 8
-	ICMPTypeEchoResponse uint8 = 0
+	ICMPTypeEchoRequest         uint8 = 8
+	ICMPTypeEchoResponse        uint8 = 0
+	ICMPv6TypeEchoRequest       uint8 = 128
+	ICMPv6TypeEchoResponse      uint8 = 129
+	ICMPv6NeighborSolicitation  uint8 = 135
+	ICMPv6NeighborAdvertisement uint8 = 136
 )
 
 // These constants keep length of supported headers in bytes.

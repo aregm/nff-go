@@ -12,7 +12,7 @@ include $(PATH_TO_MK)/include.mk
 
 ifdef NFF_GO_DEBUG
 # Flags to build Go files without optimizations
-export GO_COMPILE_FLAGS += -gcflags '-N -l'
+export GO_COMPILE_FLAGS += -gcflags=all='-N -l'
 endif
 
 $(EXECUTABLES) : % : %.go
