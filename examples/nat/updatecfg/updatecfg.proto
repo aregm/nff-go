@@ -30,6 +30,9 @@ enum Protocol {
   UNKNOWN = 0;
   TCP = 0x06;
   UDP = 0x11;
+  IPv6_Flag = 0x10000;
+  TCP6 = 0x10006;
+  UDP6 = 0x10011;
 }
 
 message IPAddress {
@@ -55,8 +58,8 @@ message ForwardedPort {
 
 message PortForwardingChangeRequest {
   bool enable_forwarding = 1;
-  uint32 interface_id = 2;
-  ForwardedPort port = 3;
+  uint32 interface_id = 3;
+  ForwardedPort port = 4;
 }
 
 message Reply {

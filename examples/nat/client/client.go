@@ -174,7 +174,7 @@ func (pfra *portForwardRequestArray) Set(value string) error {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Printf(`Usage: client [-a server:port] [-d {+|-}{d|t|k}] [-s index:subnet] [-p {TCP|UDP}:port number:target IP address:target port]
+		fmt.Printf(`Usage: client [-a server:port] [-d {+|-}{d|t|k}] [-s index:subnet] [-p {TCP|UDP|TCP6|UDP6}:port number:target IP address:target port]
 
 Client sends GRPS requests to NAT server controlling packets trace dump,
 ports subnet adresses and forwarded ports. Multiple requests of the same
