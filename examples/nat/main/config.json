@@ -3,31 +3,35 @@
         {
             "private-port": {
                 "index": 0,
-                "subnet": "192.168.14.1/24"
+                "subnet": "192.168.14.1/24",
+                "subnet6": "fd14::1/64",
+                "dst6-mac": "52:54:00:0f:b6:fc"
             },
             "public-port": {
                 "index": 1,
                 "subnet": "192.168.16.1/24",
+                "subnet6": "fd16::1/64",
+                "dst6-mac": "3c:fd:fe:a4:dd:f0",
                 "forward-ports": [
                     {
                         "port": 8080,
                         "destination": "192.168.14.3:80",
-                        "protocol": "TCP"
+                        "protocol": "TCP6"
                     },
                     {
                         "port": 2222,
                         "destination": "192.168.14.3:22",
-                        "protocol": "TCP"
+                        "protocol": "TCP6"
                     },
                     {
                         "port": 8081,
                         "destination": "192.168.14.4:80",
-                        "protocol": "TCP"
+                        "protocol": "TCP6"
                     },
                     {
                         "port": 2223,
                         "destination": "192.168.14.4:22",
-                        "protocol": "TCP"
+                        "protocol": "TCP6"
                     }
                 ]
             }

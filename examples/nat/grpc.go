@@ -88,7 +88,7 @@ func (s *server) ChangePortForwarding(ctx context.Context, in *upd.PortForwardin
 	}
 
 	pp.mutex.Lock()
-	pp.deleteOldConnection(uint8(fp.Protocol), int(fp.Port))
+	pp.deleteOldConnection(fp.Protocol.ipv6, fp.Protocol.id, int(fp.Port))
 	if in.GetEnableForwarding() {
 		port.enableStaticPortForward(fp)
 	}

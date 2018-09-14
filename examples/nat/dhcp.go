@@ -97,7 +97,7 @@ func getDHCPOption(dhcp *layers.DHCPv4, optionType layers.DHCPOpt) *layers.DHCPO
 	return nil
 }
 
-func (port *ipv4Port) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, options []layers.DHCPOption) {
+func (port *ipPort) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, options []layers.DHCPOption) {
 	hwa := make([]byte, common.EtherAddrLen)
 	copy(hwa, port.SrcMACAddress[:])
 
@@ -147,18 +147,18 @@ func (port *ipv4Port) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, op
 	port.Subnet.ds.lastDHCPPacketTypeSent = packetType
 }
 
-func (port *ipv4Port) sendDHCPDiscoverRequest() {
+func (port *ipPort) sendDHCPDiscoverRequest() {
 	port.Subnet.ds.dhcpTransactionId = rnd.Uint32()
 	port.composeAndSendDHCPPacket(layers.DHCPMsgTypeDiscover, dhcpOptions)
 }
 
-func (port *ipv4Port) sendDHCPRequestRequest(serverIP, clientIP []byte) {
+func (port *ipPort) sendDHCPRequestRequest(serverIP, clientIP []byte) {
 	port.composeAndSendDHCPPacket(layers.DHCPMsgTypeRequest, append(dhcpOptions,
 		layers.NewDHCPOption(layers.DHCPOptServerID, serverIP),
 		layers.NewDHCPOption(layers.DHCPOptRequestIP, clientIP)))
 }
 
-func (port *ipv4Port) handleDHCP(pkt *packet.Packet) bool {
+func (port *ipPort) handleDHCP(pkt *packet.Packet) bool {
 	if port.Subnet.addressAcquired {
 		// Port already has address, ignore this traffic
 		return false
@@ -201,11 +201,11 @@ func (port *ipv4Port) handleDHCP(pkt *packet.Packet) bool {
 	return true
 }
 
-func (port *ipv4Port) handleDHCPOffer(pkt *packet.Packet, dhcp *layers.DHCPv4) {
+func (port *ipPort) handleDHCPOffer(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	port.sendDHCPRequestRequest(dhcp.NextServerIP, dhcp.YourClientIP)
 }
 
-func (port *ipv4Port) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
+func (port *ipPort) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	maskOption := getDHCPOption(dhcp, layers.DHCPOptSubnetMask)
 	if maskOption == nil {
 		println("Warning! Received a DHCP response without subnet mask! Trying again with discover request.")

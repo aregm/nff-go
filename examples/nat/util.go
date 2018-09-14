@@ -47,7 +47,14 @@ func swapAddrIPv4(pkt *packet.Packet) {
 	ipv4.SrcAddr, ipv4.DstAddr = ipv4.DstAddr, ipv4.SrcAddr
 }
 
-func (port *ipv4Port) startTrace(dir uint) *os.File {
+func swapAddrIPv6(pkt *packet.Packet) {
+	ipv6 := pkt.GetIPv6NoCheck()
+
+	pkt.Ether.SAddr, pkt.Ether.DAddr = pkt.Ether.DAddr, pkt.Ether.SAddr
+	ipv6.SrcAddr, ipv6.DstAddr = ipv6.DstAddr, ipv6.SrcAddr
+}
+
+func (port *ipPort) startTrace(dir uint) *os.File {
 	dumpNameLookup := [dirKNI + 1]string{
 		"drop",
 		"dump",
@@ -64,7 +71,7 @@ func (port *ipv4Port) startTrace(dir uint) *os.File {
 	return file
 }
 
-func (port *ipv4Port) dumpPacket(pkt *packet.Packet, dir uint) {
+func (port *ipPort) dumpPacket(pkt *packet.Packet, dir uint) {
 	if DumpEnabled[dir] {
 		port.dumpsync[dir].Lock()
 		if port.fdump[dir] == nil {
@@ -79,7 +86,7 @@ func (port *ipv4Port) dumpPacket(pkt *packet.Packet, dir uint) {
 	}
 }
 
-func (port *ipv4Port) closePortTraces() {
+func (port *ipPort) closePortTraces() {
 	for _, f := range port.fdump {
 		if f != nil {
 			f.Close()
@@ -112,7 +119,7 @@ func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.GetProtocol() != common.TCPNumber && p.GetProtocol() != common.UDPNumber {
+	if uint8(p.GetProtocol()) != common.TCPNumber && uint8(p.GetProtocol()) != common.UDPNumber {
 		return nil, fmt.Errorf("Bad protocol identifier %d", p.GetProtocol())
 	}
 
@@ -122,6 +129,88 @@ func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
 			Addr: addr,
 			Port: uint16(p.GetTargetPortNumber()),
 		},
-		Protocol: protocolId(p.GetProtocol()),
+		Protocol: protocolId{
+			id:   uint8(p.GetProtocol()),
+			ipv6: p.GetProtocol()&upd.Protocol_IPv6_Flag != 0,
+		},
 	}, nil
+}
+
+func setPacketDstPort(pkt *packet.Packet, ipv6 bool, port uint16, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) {
+	if pktTCP != nil {
+		pktTCP.DstPort = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	} else if pktUDP != nil {
+		pktUDP.DstPort = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	} else {
+		pktICMP.Identifier = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	}
+}
+
+func setPacketSrcPort(pkt *packet.Packet, ipv6 bool, port uint16, pktTCP *packet.TCPHdr, pktUDP *packet.UDPHdr, pktICMP *packet.ICMPHdr) {
+	if pktTCP != nil {
+		pktTCP.SrcPort = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4TCPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	} else if pktUDP != nil {
+		pktUDP.SrcPort = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	} else {
+		pktICMP.Identifier = packet.SwapBytesUint16(port)
+		if ipv6 {
+			setIPv6ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		} else {
+			setIPv4ICMPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
+		}
+	}
+}
+
+func ParseAllKnownL4(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktIPv6 *packet.IPv6Hdr) (uint8, *packet.TCPHdr, *packet.UDPHdr, *packet.ICMPHdr, uint16, uint16) {
+	var protocol uint8
+
+	if pktIPv4 != nil {
+		protocol = pktIPv4.NextProtoID
+		pkt.ParseL4ForIPv4()
+	} else {
+		protocol = pktIPv6.Proto
+		pkt.ParseL4ForIPv6()
+	}
+
+	switch protocol {
+	case common.TCPNumber:
+		pktTCP := (*packet.TCPHdr)(pkt.L4)
+		return protocol, pktTCP, nil, nil, packet.SwapBytesUint16(pktTCP.SrcPort), packet.SwapBytesUint16(pktTCP.DstPort)
+	case common.UDPNumber:
+		pktUDP := (*packet.UDPHdr)(pkt.L4)
+		return protocol, nil, pktUDP, nil, packet.SwapBytesUint16(pktUDP.SrcPort), packet.SwapBytesUint16(pktUDP.DstPort)
+	case common.ICMPNumber:
+		pktICMP := (*packet.ICMPHdr)(pkt.L4)
+		return protocol, nil, nil, pktICMP, packet.SwapBytesUint16(pktICMP.Identifier), packet.SwapBytesUint16(pktICMP.Identifier)
+	case common.ICMPv6Number:
+		pktICMP := (*packet.ICMPHdr)(pkt.L4)
+		return protocol, nil, nil, pktICMP, packet.SwapBytesUint16(pktICMP.Identifier), packet.SwapBytesUint16(pktICMP.Identifier)
+	default:
+		return 0, nil, nil, nil, 0, 0
+	}
 }

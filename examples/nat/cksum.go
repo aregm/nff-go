@@ -64,8 +64,55 @@ func setIPv4ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum boo
 			l3.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(l3))
 		}
 		l4 := pkt.GetICMPNoCheck()
-		l4.Cksum = 0
+		l4.Cksum = 0 // Need to zero l4.Cksum or otherwise it is included into calculation
 		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(l3, l4,
 			unsafe.Pointer(uintptr(unsafe.Pointer(l4))+common.ICMPLen)))
+	}
+}
+
+func setIPv6UDPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
+	if calculateChecksum {
+		l3 := pkt.GetIPv6NoCheck()
+		l4 := pkt.GetUDPNoCheck()
+		if hWTXChecksum {
+			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6UDPCksum(l3, l4))
+			l2len := uint32(common.EtherLen)
+			if pkt.Ether.EtherType == common.SwapVLANNumber {
+				l2len += common.VLANLen
+			}
+			pkt.SetTXIPv6UDPOLFlags(l2len, common.IPv6Len)
+		} else {
+			l4.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(l3, l4,
+				unsafe.Pointer(uintptr(unsafe.Pointer(l4))+uintptr(common.UDPLen))))
+		}
+	}
+}
+
+func setIPv6TCPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
+	if calculateChecksum {
+		l3 := pkt.GetIPv6NoCheck()
+		l4 := pkt.GetTCPNoCheck()
+		if hWTXChecksum {
+			l4.Cksum = packet.SwapBytesUint16(packet.CalculatePseudoHdrIPv6TCPCksum(l3))
+			l2len := uint32(common.EtherLen)
+			if pkt.Ether.EtherType == common.SwapVLANNumber {
+				l2len += common.VLANLen
+			}
+			pkt.SetTXIPv6TCPOLFlags(l2len, common.IPv6Len)
+		} else {
+			l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(l3, l4,
+				unsafe.Pointer(uintptr(unsafe.Pointer(l4))+common.TCPMinLen)))
+		}
+	}
+}
+
+func setIPv6ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum bool) {
+	if calculateChecksum {
+		l3 := pkt.GetIPv6NoCheck()
+
+		l4 := pkt.GetICMPNoCheck()
+		l4.Cksum = 0 // Need to zero l4.Cksum or otherwise it is included into calculation
+		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(l3,
+			unsafe.Pointer(l4)))
 	}
 }
