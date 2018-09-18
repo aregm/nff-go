@@ -353,7 +353,7 @@ func (packet *Packet) GetICMPNoCheck() *ICMPHdr {
 // GetICMPForIPv6 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv6 type.
 func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
-	if packet.GetIPv6NoCheck().Proto == ICMPNumber {
+	if packet.GetIPv6NoCheck().Proto == ICMPv6Number {
 		return (*ICMPHdr)(packet.L4)
 	}
 	return nil
@@ -406,6 +406,8 @@ func (packet *Packet) ParseL7(protocol uint) {
 	case UDPNumber:
 		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(UDPLen))
 	case ICMPNumber:
+		fallthrough
+	case ICMPv6Number:
 		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(ICMPLen))
 	}
 }
