@@ -27,32 +27,8 @@ func (port *ipPort) handleIPv6NeighborDiscovery(pkt *packet.Packet) uint {
 			if err != nil {
 				common.LogFatal(common.Debug, err)
 			}
-			packet.GeneratePacketFromByte(answerPacket, pkt.GetRawPacketBytes())
 
-			// Fill up L2
-			answerPacket.ParseL3CheckVLAN()
-			answerPacket.Ether.DAddr = answerPacket.Ether.SAddr
-			answerPacket.Ether.SAddr = port.SrcMACAddress
-
-			// Fill up L3
-			ipv6 := answerPacket.GetIPv6NoCheck()
-			ipv6.DstAddr = ipv6.SrcAddr
-			ipv6.SrcAddr = port.Subnet6.Addr
-
-			// Fill up L4
-			answerPacket.ParseL4ForIPv6()
-			icmp := answerPacket.GetICMPNoCheck()
-			icmp.Type = common.ICMPv6NeighborAdvertisement
-			icmp.Identifier = packet.SwapBytesUint16(packet.ICMPv6NDSolicitedFlag | packet.ICMPv6NDOverrideFlag)
-			icmp.SeqNum = 0
-
-			// Fill up L7
-			answerPacket.ParseL7(common.ICMPv6Number)
-			msg := answerPacket.GetICMPv6NeighborAdvertisementMessage()
-			msg.TargetAddr = port.Subnet6.Addr
-			option := answerPacket.GetICMPv6NDTargetLinkLayerAddressOption(packet.ICMPv6NeighborAdvertisementMessageSize)
-			option.Type = packet.ICMPv6NDTargetLinkLayerAddress
-			option.LinkLayerAddress = port.SrcMACAddress
+			packet.InitICMPv6NeighborAdvertisementPacket(answerPacket, port.SrcMACAddress, option.LinkLayerAddress, port.Subnet6.Addr, pkt.GetIPv6NoCheck().SrcAddr)
 
 			vlan := pkt.GetVLAN()
 			if vlan != nil {
@@ -79,4 +55,31 @@ func (port *ipPort) handleIPv6NeighborDiscovery(pkt *packet.Packet) uint {
 	}
 
 	return dirDROP
+}
+
+func (port *ipPort) getMACForIPv6(ip [common.IPv6AddrLen]uint8) (macAddress, bool) {
+	v, found := port.arpTable.Load(ip)
+	if found {
+		return macAddress(v.([common.EtherAddrLen]byte)), true
+	}
+	port.sendNDNeighborSolicitationRequest(ip)
+	return macAddress{}, false
+}
+
+func (port *ipPort) sendNDNeighborSolicitationRequest(ip [common.IPv6AddrLen]uint8) {
+	requestPacket, err := packet.NewPacket()
+	if err != nil {
+		common.LogFatal(common.Debug, err)
+	}
+
+	packet.InitICMPv6NeighborSolicitationPacket(requestPacket, port.SrcMACAddress,
+		port.Subnet6.Addr, ip)
+
+	if port.Vlan != 0 {
+		requestPacket.AddVLANTag(port.Vlan)
+	}
+
+	setIPv6ICMPChecksum(requestPacket, !NoCalculateChecksum, !NoHWTXChecksum)
+	port.dumpPacket(requestPacket, dirSEND)
+	requestPacket.SendPacket(port.Index)
 }

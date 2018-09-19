@@ -694,7 +694,7 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + ICMPLen)
 
 	packet.ParseL3()
-	fillIPv6Default(packet, uint16(ICMPLen+plSize), ICMPNumber)
+	fillIPv6Default(packet, uint16(ICMPLen+plSize), ICMPv6Number)
 	packet.ParseL4ForIPv6()
 	return true
 }

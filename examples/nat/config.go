@@ -40,9 +40,7 @@ const (
 )
 
 var (
-	ipv6LinkLocalPrefix          = []uint8{0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	ipv6LinkLocalMulticastPrefix = []uint8{0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0xff}
-	zeroIPv6Addr                 = [common.IPv6AddrLen]uint8{}
+	zeroIPv6Addr = [common.IPv6AddrLen]uint8{}
 )
 
 type hostPort struct {
@@ -146,15 +144,14 @@ type portMapEntry struct {
 
 // Type describing a network port
 type ipPort struct {
-	Index          uint16          `json:"index"`
-	Subnet         ipv4Subnet      `json:"subnet"`
-	Subnet6        ipv6Subnet      `json:"subnet6"`
-	Dst6MACAddress macAddress      `json:"dst6-mac"`
-	Vlan           uint16          `json:"vlan-tag"`
-	KNIName        string          `json:"kni-name"`
-	ForwardPorts   []forwardedPort `json:"forward-ports"`
-	SrcMACAddress  macAddress
-	Type           interfaceType
+	Index         uint16          `json:"index"`
+	Subnet        ipv4Subnet      `json:"subnet"`
+	Subnet6       ipv6Subnet      `json:"subnet6"`
+	Vlan          uint16          `json:"vlan-tag"`
+	KNIName       string          `json:"kni-name"`
+	ForwardPorts  []forwardedPort `json:"forward-ports"`
+	SrcMACAddress macAddress
+	Type          interfaceType
 	// Pointer to an opposite port in a pair
 	opposite *ipPort
 	// Map of allocated IP ports on public interface
@@ -447,25 +444,8 @@ func (pp *portPair) initLocalMACs() {
 
 func (port *ipPort) initIPv6LLAddresses() {
 	if port.Subnet6.Addr != zeroIPv6Addr {
-		// Generate IPv6 link local address using interface MAC address
-		copy(port.Subnet6.llAddr[:], ipv6LinkLocalPrefix)
-		port.Subnet6.llAddr[8] = port.SrcMACAddress[0] ^ 0x02
-		port.Subnet6.llAddr[9] = port.SrcMACAddress[1]
-		port.Subnet6.llAddr[10] = port.SrcMACAddress[2]
-		port.Subnet6.llAddr[11] = 0xff
-		port.Subnet6.llAddr[12] = 0xfe
-		port.Subnet6.llAddr[13] = port.SrcMACAddress[3]
-		port.Subnet6.llAddr[14] = port.SrcMACAddress[4]
-		port.Subnet6.llAddr[15] = port.SrcMACAddress[5]
-
-		// Generate IPv6 multicast address that other hosts use to
-		// solicit its MAC address. This address is used as
-		// destination for all Neighbor Solicitation ICMPv6 messages
-		// and NAT should answer packets coming to it.
-		copy(port.Subnet6.llMulticastAddr[:], ipv6LinkLocalMulticastPrefix)
-		port.Subnet6.llMulticastAddr[13] = port.Subnet6.Addr[13]
-		port.Subnet6.llMulticastAddr[14] = port.Subnet6.Addr[14]
-		port.Subnet6.llMulticastAddr[15] = port.Subnet6.Addr[15]
+		packet.CalculateIPv6LinkLocalAddrForMAC(&port.Subnet6.llAddr, port.SrcMACAddress)
+		packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.llMulticastAddr, port.Subnet6.Addr)
 	}
 }
 

@@ -108,7 +108,9 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	if !found {
 		// Store new local network entry in ARP cache
-		if !ipv6 {
+		if ipv6 {
+			port.arpTable.Store(pktIPv6.SrcAddr, pkt.Ether.SAddr)
+		} else {
 			port.arpTable.Store(pktIPv4.SrcAddr, pkt.Ether.SAddr)
 		}
 
@@ -150,16 +152,15 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 		// Find corresponding MAC address
 		var mac macAddress
+		var found bool
 		if ipv6 {
-			mac = port.opposite.Dst6MACAddress
+			mac, found = port.opposite.getMACForIPv6(v6addr)
 		} else {
-			var found bool
-			mac, found = port.opposite.getMACForIP(v4addr)
-
-			if !found {
-				port.dumpPacket(pkt, dirDROP)
-				return dirDROP
-			}
+			mac, found = port.opposite.getMACForIPv4(v4addr)
+		}
+		if !found {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
 		}
 
 		// Do packet translation
@@ -270,15 +271,15 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 		// Find corresponding MAC address
 		var mac macAddress
+		var found bool
 		if pktIPv6 != nil {
-			mac = port.opposite.Dst6MACAddress
+			mac, found = port.opposite.getMACForIPv6(pktIPv6.DstAddr)
 		} else {
-			var found bool
-			mac, found = port.opposite.getMACForIP(packet.SwapBytesUint32(pktIPv4.DstAddr))
-			if !found {
-				port.dumpPacket(pkt, dirDROP)
-				return dirDROP
-			}
+			mac, found = port.opposite.getMACForIPv4(packet.SwapBytesUint32(pktIPv4.DstAddr))
+		}
+		if !found {
+			port.dumpPacket(pkt, dirDROP)
+			return dirDROP
 		}
 
 		// Do packet translation

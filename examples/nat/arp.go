@@ -60,7 +60,7 @@ func (port *ipPort) handleARP(pkt *packet.Packet) uint {
 	return dirDROP
 }
 
-func (port *ipPort) getMACForIP(ip uint32) (macAddress, bool) {
+func (port *ipPort) getMACForIPv4(ip uint32) (macAddress, bool) {
 	v, found := port.arpTable.Load(ip)
 	if found {
 		return macAddress(v.([common.EtherAddrLen]byte)), true
@@ -70,7 +70,6 @@ func (port *ipPort) getMACForIP(ip uint32) (macAddress, bool) {
 }
 
 func (port *ipPort) sendARPRequest(ip uint32) {
-	// Prepare an answer to this request
 	requestPacket, err := packet.NewPacket()
 	if err != nil {
 		common.LogFatal(common.Debug, err)
