@@ -142,13 +142,19 @@ type IPv6Hdr struct {
 	DstAddr    [IPv6AddrLen]uint8 // IP address of destination host(s)
 }
 
+func IPv6ToString(addr [IPv6AddrLen]uint8) string {
+	return fmt.Sprintf("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
+		addr[0], addr[1], addr[2], addr[3],
+		addr[4], addr[5], addr[6], addr[7],
+		addr[8], addr[9], addr[10], addr[11],
+		addr[12], addr[13], addr[14], addr[15])
+}
+
 func (hdr *IPv6Hdr) String() string {
-	r0 := "    L3 protocol: IPv6\n"
-	s := hdr.SrcAddr
-	r1 := fmt.Sprintf("    IPv6 Source: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9], s[10], s[11], s[12], s[13], s[14], s[15])
-	d := hdr.DstAddr
-	r2 := fmt.Sprintf("    IPv6 Destination %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15])
-	return r0 + r1 + r2
+	return fmt.Sprintf(`    L3 protocol: IPv6
+    IPv6 Source: %s
+    IPv6 Destination %s
+`, IPv6ToString(hdr.SrcAddr), IPv6ToString(hdr.DstAddr))
 }
 
 // TCPHdr L4 header from DPDK: lib/librte_net/rte_tcp.h

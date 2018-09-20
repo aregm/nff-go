@@ -115,19 +115,32 @@ func convertSubnet(s *upd.Subnet) (*ipv4Subnet, error) {
 }
 
 func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
-	addr, err := convertIPv4(p.GetTargetAddress().GetAddress())
+	bytes := p.GetTargetAddress().GetAddress()
+	addr, err := convertIPv4(bytes)
+	var addr6 [common.IPv6AddrLen]uint8
+	var ipv6 bool
 	if err != nil {
-		return nil, err
+		if len(bytes) == common.IPv6AddrLen {
+			copy(addr6[:], bytes)
+			ipv6 = true
+		} else {
+			return nil, err
+		}
 	}
-	if uint8(p.GetProtocol()) != common.TCPNumber && uint8(p.GetProtocol()) != common.UDPNumber {
+	if uint8(p.GetProtocol()) != common.TCPNumber &&
+		uint8(p.GetProtocol()) != common.UDPNumber &&
+		p.GetProtocol() != (common.TCPNumber|upd.Protocol_IPv6_Flag) &&
+		p.GetProtocol() != (common.UDPNumber|upd.Protocol_IPv6_Flag) {
 		return nil, fmt.Errorf("Bad protocol identifier %d", p.GetProtocol())
 	}
 
 	return &forwardedPort{
 		Port: uint16(p.GetSourcePortNumber()),
 		Destination: hostPort{
-			Addr: addr,
-			Port: uint16(p.GetTargetPortNumber()),
+			Addr4: addr,
+			Addr6: addr6,
+			Port:  uint16(p.GetTargetPortNumber()),
+			ipv6:  ipv6,
 		},
 		Protocol: protocolId{
 			id:   uint8(p.GetProtocol()),

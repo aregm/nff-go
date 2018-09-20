@@ -44,8 +44,10 @@ var (
 )
 
 type hostPort struct {
-	Addr uint32
-	Port uint16
+	Addr4 uint32
+	Addr6 [common.IPv6AddrLen]uint8
+	Port  uint16
+	ipv6  bool
 }
 
 type protocolId struct {
@@ -102,7 +104,11 @@ type ipv4Subnet struct {
 }
 
 func (fp *forwardedPort) String() string {
-	return fmt.Sprintf("Port:%d, Destination:%+v, Protocol: %d", fp.Port, packet.IPv4ToString(fp.Destination.Addr), fp.Protocol)
+	return fmt.Sprintf("Port:%d, Destination IPv4: %v, Destination IPv6: %v, Protocol: %d",
+		fp.Port,
+		packet.IPv4ToString(fp.Destination.Addr4),
+		packet.IPv6ToString(fp.Destination.Addr6),
+		fp.Protocol)
 }
 
 func (subnet *ipv4Subnet) String() string {
@@ -131,6 +137,33 @@ type ipv6Subnet struct {
 	llAddr          [common.IPv6AddrLen]uint8
 	llMulticastAddr [common.IPv6AddrLen]uint8
 	addressAcquired bool
+}
+
+func (subnet *ipv6Subnet) String() string {
+	if subnet.addressAcquired {
+		// Count most significant set bits
+		i := 0
+		for ; i <= 128; i++ {
+			mask := uint8(1) << uint(7-(i&7))
+			if subnet.Mask[i>>3]&mask == 0 {
+				break
+			}
+		}
+		return packet.IPv6ToString(subnet.Addr) + "/" + strconv.Itoa(i)
+	}
+	return "DHCP address not acquired"
+}
+
+func (subnet *ipv6Subnet) andMask(addr [common.IPv6AddrLen]uint8) [common.IPv6AddrLen]uint8 {
+	var result [common.IPv6AddrLen]uint8
+	for i := range addr {
+		result[i] = addr[i] & subnet.Mask[i]
+	}
+	return result
+}
+
+func (subnet *ipv6Subnet) checkAddrWithingSubnet(addr [common.IPv6AddrLen]uint8) bool {
+	return subnet.andMask(addr) == subnet.andMask(subnet.Addr)
 }
 
 type macAddress [common.EtherAddrLen]uint8
@@ -311,11 +344,16 @@ func (out *hostPort) UnmarshalJSON(b []byte) error {
 
 	ipArray := net.ParseIP(hostStr)
 	if ipArray == nil {
-		return errors.New("Bad IPv4 address specified: " + hostStr)
+		return errors.New("Bad IP address specified: " + hostStr)
 	}
-	out.Addr, err = convertIPv4(ipArray.To4())
+	out.Addr4, err = convertIPv4(ipArray.To4())
 	if err != nil {
-		return err
+		ipv6addr := ipArray.To16()
+		if ipv6addr == nil {
+			return err
+		}
+		copy(out.Addr6[:], ipv6addr)
+		out.ipv6 = true
 	}
 
 	if portStr != "" {
@@ -406,15 +444,26 @@ func ReadConfig(fileName string) error {
 }
 
 func (port *ipPort) checkPortForwarding(fp *forwardedPort) error {
-	if fp.Destination.Addr == 0 {
+	if fp.Destination.ipv6 != fp.Protocol.ipv6 {
+		return fmt.Errorf("Port forwarding protocol should be TCP or UDP for IPv4 addresses and TCP6 or UDP6 for IPv6 addresses")
+	}
+
+	var isAddrZero bool
+	if fp.Destination.ipv6 {
+		isAddrZero = fp.Destination.Addr6 == zeroIPv6Addr
+	} else {
+		isAddrZero = fp.Destination.Addr4 == 0
+	}
+
+	if isAddrZero {
 		if port.KNIName == "" {
 			return errors.New("Port with index " +
 				strconv.Itoa(int(port.Index)) +
-				" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0")
+				" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0 or [::]")
 		}
 		fp.forwardToKNI = true
 		if fp.Destination.Port != fp.Port {
-			return errors.New("When address 0.0.0.0 is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
+			return errors.New("When address 0.0.0.0 or [::] is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
 				strconv.Itoa(int(fp.Port)) + " and " +
 				strconv.Itoa(int(fp.Destination.Port)))
 		}
@@ -423,12 +472,23 @@ func (port *ipPort) checkPortForwarding(fp *forwardedPort) error {
 		if port.Type == iPRIVATE {
 			return errors.New("Only KNI port forwarding is allowed on private port. All translated connections from private to public network can be initiated without any forwarding rules.")
 		}
-		if !port.opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr) {
-			return errors.New("Destination address " +
-				packet.IPv4ToString(fp.Destination.Addr) +
-				" should be within subnet " +
-				port.opposite.Subnet.String())
+
+		if fp.Destination.ipv6 {
+			if !port.opposite.Subnet6.checkAddrWithingSubnet(fp.Destination.Addr6) {
+				return errors.New("Destination address " +
+					packet.IPv6ToString(fp.Destination.Addr6) +
+					" should be within subnet " +
+					port.opposite.Subnet6.String())
+			}
+		} else {
+			if !port.opposite.Subnet.checkAddrWithingSubnet(fp.Destination.Addr4) {
+				return errors.New("Destination address " +
+					packet.IPv4ToString(fp.Destination.Addr4) +
+					" should be within subnet " +
+					port.opposite.Subnet.String())
+			}
 		}
+
 		if fp.Destination.Port == 0 {
 			fp.Destination.Port = fp.Port
 		}
@@ -475,23 +535,44 @@ func (port *ipPort) initPublicPortPortForwardingEntries() {
 }
 
 func (port *ipPort) enableStaticPortForward(fp *forwardedPort) {
-	keyEntry := Tuple{
-		addr: port.Subnet.Addr,
-		port: fp.Port,
-	}
-	valEntry := Tuple{
-		addr: fp.Destination.Addr,
-		port: fp.Destination.Port,
-	}
-	port.translationTable[fp.Protocol.id].Store(keyEntry, valEntry)
-	if fp.Destination.Addr != 0 {
-		port.opposite.translationTable[fp.Protocol.id].Store(valEntry, keyEntry)
-	}
-	port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
-		lastused:             time.Now(),
-		finCount:             0,
-		terminationDirection: 0,
-		static:               true,
+	if fp.Protocol.ipv6 {
+		keyEntry := Tuple6{
+			addr: port.Subnet6.Addr,
+			port: fp.Port,
+		}
+		valEntry := Tuple6{
+			addr: fp.Destination.Addr6,
+			port: fp.Destination.Port,
+		}
+		port.translationTable[fp.Protocol.id].Store(keyEntry, valEntry)
+		if fp.Destination.Addr6 != zeroIPv6Addr {
+			port.opposite.translationTable[fp.Protocol.id].Store(valEntry, keyEntry)
+		}
+		port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
+			lastused:             time.Now(),
+			finCount:             0,
+			terminationDirection: 0,
+			static:               true,
+		}
+	} else {
+		keyEntry := Tuple{
+			addr: port.Subnet.Addr,
+			port: fp.Port,
+		}
+		valEntry := Tuple{
+			addr: fp.Destination.Addr4,
+			port: fp.Destination.Port,
+		}
+		port.translationTable[fp.Protocol.id].Store(keyEntry, valEntry)
+		if fp.Destination.Addr4 != 0 {
+			port.opposite.translationTable[fp.Protocol.id].Store(valEntry, keyEntry)
+		}
+		port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
+			lastused:             time.Now(),
+			finCount:             0,
+			terminationDirection: 0,
+			static:               true,
+		}
 	}
 }
 

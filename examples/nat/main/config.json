@@ -13,22 +13,22 @@
                 "forward-ports": [
                     {
                         "port": 8080,
-                        "destination": "192.168.14.3:80",
+                        "destination": "[fd14::3]:80",
                         "protocol": "TCP6"
                     },
                     {
                         "port": 2222,
-                        "destination": "192.168.14.3:22",
+                        "destination": "[fd14::3]:22",
                         "protocol": "TCP6"
                     },
                     {
                         "port": 8081,
-                        "destination": "192.168.14.4:80",
+                        "destination": "[fd14::4]:80",
                         "protocol": "TCP6"
                     },
                     {
                         "port": 2223,
-                        "destination": "192.168.14.4:22",
+                        "destination": "[fd14::4]:22",
                         "protocol": "TCP6"
                     }
                 ]

@@ -49,7 +49,7 @@ const (
 	TCPNumber    = 0x06
 	UDPNumber    = 0x11
 	ICMPv6Number = 0x3a
-	NoNextHeader = 0x3B
+	NoNextHeader = 0x3b
 )
 
 // Supported ICMP Types
