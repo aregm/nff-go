@@ -105,13 +105,17 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	// Do lookup
 	v, found := port.translationTable[protocol].Load(pub2priKey)
 	ipv6 := pktIPv6 != nil
+	kniPresent := port.KNIName != ""
 
 	if !found {
 		// Store new local network entry in ARP cache
+		var addressAcquired bool
 		if ipv6 {
 			port.arpTable.Store(pktIPv6.SrcAddr, pkt.Ether.SAddr)
+			addressAcquired = port.Subnet6.addressAcquired
 		} else {
 			port.arpTable.Store(pktIPv4.SrcAddr, pkt.Ether.SAddr)
+			addressAcquired = port.Subnet.addressAcquired
 		}
 
 		// For ingress connections packets are allowed only if a
@@ -120,7 +124,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		// incoming packet is ignored unless there is a KNI
 		// interface. If KNI is present and its IP address is known,
 		// traffic is directed there.
-		if port.KNIName != "" && port.Subnet.addressAcquired {
+		if kniPresent && addressAcquired {
 			dir = dirKNI
 		} else {
 			dir = dirDROP
@@ -221,10 +225,21 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 			return dirDROP
 		}
 	}
+	ipv6 := pktIPv6 != nil
+	kniPresent := port.KNIName != ""
+	var addressAcquired bool
+	var packetSentToUs bool
+	if ipv6 {
+		addressAcquired = port.Subnet6.addressAcquired
+		packetSentToUs = port.Subnet6.Addr == pktIPv6.DstAddr
+	} else {
+		addressAcquired = port.Subnet.addressAcquired
+		packetSentToUs = port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr)
+	}
 
 	// If traffic is directed at private interface IP and KNI is
 	// present, this traffic is directed to KNI
-	if port.KNIName != "" && port.Subnet.addressAcquired && port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr) {
+	if kniPresent && addressAcquired && packetSentToUs {
 		port.dumpPacket(pkt, dirKNI)
 		return dirKNI
 	}
@@ -236,7 +251,6 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	var v6addr [common.IPv6AddrLen]uint8
 	var newPort uint16
 	var zeroAddr bool
-	ipv6 := pktIPv6 != nil
 
 	if !found {
 		var err error
