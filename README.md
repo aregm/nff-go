@@ -65,7 +65,7 @@ func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 ```
 NFF-GO is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
-available in the master branch.
+available in the *_develop_* branch. master branch provides the latest stable released version under the appropriate tag. 
 
 ## Getting NFF-GO
 
