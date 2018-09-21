@@ -1,12 +1,22 @@
+// Copyright 2018 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package devices helps to query DPDK compatibles devices and to bind/unbind drivers
 package devices
 
 // Device is a DPDK compatible device and should be able to bind, unbind and
 // probe.
 type Device interface {
+	// Binds a driver to the device
 	Bind(driver string) error
+	// Unbinds the current driver from the device
 	Unbind() error
+	// Returns the name of the driver that is currently bound
 	CurrentDriver() (string, error)
+	// Probes the currently bound driver and checks if there is an error
 	Probe() error
+	// Returns the ID of the device
 	ID() string
 }
 

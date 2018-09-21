@@ -1,3 +1,8 @@
+// Copyright 2018 Intel Corporation.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package devices helps to query DPDK compatibles devices and to bind/unbind drivers
 package devices
 
 import (
