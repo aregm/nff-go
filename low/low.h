@@ -183,7 +183,7 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 			.mq_mode = ETH_MQ_RX_RSS    },
 	    .txmode = { .mq_mode = ETH_MQ_TX_NONE, },
 	    .rx_adv_conf.rss_conf.rss_key = NULL,
-	    .rx_adv_conf.rss_conf.rss_hf = ETH_RSS_PROTO_MASK
+	    .rx_adv_conf.rss_conf.rss_hf = dev_info.flow_type_rss_offloads
 	};
 
 	/* Configure the Ethernet device. */
