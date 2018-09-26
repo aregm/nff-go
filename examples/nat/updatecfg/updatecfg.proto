@@ -58,8 +58,8 @@ message ForwardedPort {
 
 message PortForwardingChangeRequest {
   bool enable_forwarding = 1;
-  uint32 interface_id = 3;
-  ForwardedPort port = 4;
+  uint32 interface_id = 2;
+  ForwardedPort port = 3;
 }
 
 message Reply {
