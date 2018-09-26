@@ -25,8 +25,8 @@ type dhcpState struct {
 
 const (
 	requestInterval = 10 * time.Second
-	DHCPSrcPort     = 68
-	DHCPDstPort     = 67
+	DHCPServerPort  = 67
+	DHCPClientPort  = 68
 	BroadcastIPv4   = uint32(0xffffffff)
 )
 
@@ -80,8 +80,14 @@ func sendDHCPRequests() {
 			if !pp.PublicPort.Subnet.addressAcquired {
 				pp.PublicPort.sendDHCPDiscoverRequest()
 			}
+			if !pp.PublicPort.Subnet6.addressAcquired {
+				pp.PublicPort.sendDHCPv6SolicitRequest()
+			}
 			if !pp.PrivatePort.Subnet.addressAcquired {
 				pp.PrivatePort.sendDHCPDiscoverRequest()
+			}
+			if !pp.PrivatePort.Subnet6.addressAcquired {
+				pp.PrivatePort.sendDHCPv6SolicitRequest()
 			}
 		}
 		time.Sleep(requestInterval)
@@ -127,18 +133,25 @@ func (port *ipPort) composeAndSendDHCPPacket(packetType layers.DHCPMsgType, opti
 	}
 	payloadBuffer := buf.Bytes()
 	packet.InitEmptyIPv4UDPPacket(pkt, uint(len(payloadBuffer)))
-	if port.Vlan != 0 {
-		pkt.AddVLANTag(port.Vlan)
-	}
+
+	// Fill up L2
+	pkt.Ether.SAddr = port.SrcMACAddress
+	pkt.Ether.DAddr = BroadcastMAC
+
+	// Fill up L3
+	pkt.GetIPv4NoCheck().SrcAddr = uint32(0)
+	pkt.GetIPv4NoCheck().DstAddr = BroadcastIPv4
+
+	// Fill up L4
+	pkt.GetUDPNoCheck().SrcPort = packet.SwapBytesUint16(DHCPClientPort)
+	pkt.GetUDPNoCheck().DstPort = packet.SwapBytesUint16(DHCPServerPort)
+
 	payload, _ := pkt.GetPacketPayload()
 	copy(payload, payloadBuffer)
 
-	pkt.Ether.SAddr = port.SrcMACAddress
-	pkt.Ether.DAddr = BroadcastMAC
-	pkt.GetIPv4NoCheck().SrcAddr = uint32(0)
-	pkt.GetIPv4NoCheck().DstAddr = BroadcastIPv4
-	pkt.GetUDPNoCheck().SrcPort = packet.SwapBytesUint16(DHCPSrcPort)
-	pkt.GetUDPNoCheck().DstPort = packet.SwapBytesUint16(DHCPDstPort)
+	if port.Vlan != 0 {
+		pkt.AddVLANTag(port.Vlan)
+	}
 
 	setIPv4UDPChecksum(pkt, !NoCalculateChecksum, !NoHWTXChecksum)
 	port.dumpPacket(pkt, dirSEND)
@@ -165,8 +178,8 @@ func (port *ipPort) handleDHCP(pkt *packet.Packet) bool {
 	}
 
 	// Check that this is DHCP offer or acknowledgement traffic
-	if pkt.GetUDPNoCheck().DstPort != packet.SwapBytesUint16(DHCPSrcPort) ||
-		pkt.GetUDPNoCheck().SrcPort != packet.SwapBytesUint16(DHCPDstPort) {
+	if pkt.GetUDPNoCheck().DstPort != packet.SwapBytesUint16(DHCPClientPort) ||
+		pkt.GetUDPNoCheck().SrcPort != packet.SwapBytesUint16(DHCPServerPort) {
 		return false
 	}
 

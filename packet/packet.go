@@ -508,12 +508,14 @@ func fillIPv4Default(packet *Packet, plLen uint16, nextProto uint8) {
 	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
 	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(plLen)
 	packet.GetIPv4NoCheck().NextProtoID = nextProto
+	packet.GetIPv4NoCheck().TimeToLive = 64
 }
 
 func fillIPv6Default(packet *Packet, totalLen uint16, nextProto uint8) {
 	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(totalLen)
 	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
 	packet.GetIPv6NoCheck().Proto = nextProto
+	packet.GetIPv6NoCheck().HopLimits = 255
 }
 
 // InitEmptyIPv4Packet initializes input packet with preallocated plSize of bytes for payload

@@ -94,9 +94,16 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 			return dir
 		}
 	}
+	ipv6 := pktIPv6 != nil
 	// Check for DHCP traffic. We need to get an address if it not set yet
 	if pktUDP != nil {
-		if port.handleDHCP(pkt) {
+		var handled bool
+		if ipv6 {
+			handled = port.handleDHCPv6(pkt)
+		} else {
+			handled = port.handleDHCP(pkt)
+		}
+		if handled {
 			port.dumpPacket(pkt, dirDROP)
 			return dirDROP
 		}
@@ -104,7 +111,6 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 
 	// Do lookup
 	v, found := port.translationTable[protocol].Load(pub2priKey)
-	ipv6 := pktIPv6 != nil
 	kniPresent := port.KNIName != ""
 
 	if !found {
@@ -218,20 +224,27 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 			return dir
 		}
 	}
+	ipv6 := pktIPv6 != nil
 	// Check for DHCP traffic. We need to get an address if it not set yet
 	if pktUDP != nil {
-		if port.handleDHCP(pkt) {
+		var handled bool
+		if ipv6 {
+			handled = port.handleDHCPv6(pkt)
+		} else {
+			handled = port.handleDHCP(pkt)
+		}
+		if handled {
 			port.dumpPacket(pkt, dirDROP)
 			return dirDROP
 		}
 	}
-	ipv6 := pktIPv6 != nil
+
 	kniPresent := port.KNIName != ""
 	var addressAcquired bool
 	var packetSentToUs bool
 	if ipv6 {
 		addressAcquired = port.Subnet6.addressAcquired
-		packetSentToUs = port.Subnet6.Addr == pktIPv6.DstAddr
+		packetSentToUs = port.Subnet6.Addr == pktIPv6.DstAddr || port.Subnet6.llAddr == pktIPv6.DstAddr
 	} else {
 		addressAcquired = port.Subnet.addressAcquired
 		packetSentToUs = port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr)
@@ -257,7 +270,14 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 		// Store new local network entry in ARP cache
 		port.arpTable.Store(saddr, pkt.Ether.SAddr)
 
-		if !port.Subnet.addressAcquired || !port.opposite.Subnet.addressAcquired {
+		var publicAddressAcquired bool
+		if ipv6 {
+			publicAddressAcquired = port.opposite.Subnet6.addressAcquired
+		} else {
+			publicAddressAcquired = port.opposite.Subnet.addressAcquired
+		}
+
+		if !addressAcquired || !publicAddressAcquired {
 			// No packets are allowed yet because ports address is not
 			// known yet
 			port.dumpPacket(pkt, dirDROP)

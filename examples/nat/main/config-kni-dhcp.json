@@ -5,18 +5,25 @@
             "private-port": {
                 "index": 0,
                 "subnet": "dhcp",
+                "subnet6": "dhcp",
                 "kni-name": "priv0",
                 "forward-ports": [
                     {
                         "port": 22,
                         "destination": "0.0.0.0:22",
                         "protocol": "TCP"
+                    },
+                    {
+                        "port": 22,
+                        "destination": "[::]:22",
+                        "protocol": "TCP6"
                     }
                 ]
             },
             "public-port": {
                 "index": 1,
                 "subnet": "dhcp",
+                "subnet6": "dhcp",
                 "kni-name": "pub1",
                 "forward-ports": [
                     {
@@ -25,9 +32,19 @@
                         "protocol": "TCP"
                     },
                     {
+                        "port": 22,
+                        "destination": "[::]:22",
+                        "protocol": "TCP6"
+                    },
+                    {
                         "port": 8080,
                         "destination": "192.168.14.3:80",
                         "protocol": "TCP"
+                    },
+                    {
+                        "port": 8080,
+                        "destination": "[fd14::3]:80",
+                        "protocol": "TCP6"
                     },
                     {
                         "port": 2222,
@@ -35,14 +52,29 @@
                         "protocol": "TCP"
                     },
                     {
+                        "port": 2222,
+                        "destination": "[fd14::3]:22",
+                        "protocol": "TCP6"
+                    },
+                    {
                         "port": 8081,
                         "destination": "192.168.14.4:80",
                         "protocol": "TCP"
                     },
                     {
+                        "port": 8081,
+                        "destination": "[fd14::4]:80",
+                        "protocol": "TCP6"
+                    },
+                    {
                         "port": 2223,
                         "destination": "192.168.14.4:22",
                         "protocol": "TCP"
+                    },
+                    {
+                        "port": 2223,
+                        "destination": "[fd14::4]:22",
+                        "protocol": "TCP6"
                     }
                 ]
             }

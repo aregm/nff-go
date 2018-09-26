@@ -172,7 +172,6 @@ func InitICMPv6NeighborSolicitationPacket(packet *Packet, srcMAC [common.EtherAd
 
 	// Fill up L3
 	ipv6 := packet.GetIPv6NoCheck()
-	ipv6.HopLimits = 255
 	ipv6.DstAddr = targetMulticastAddr
 	ipv6.SrcAddr = srcIP
 
@@ -204,7 +203,6 @@ func InitICMPv6NeighborAdvertisementPacket(packet *Packet, srcMAC, dstMAC [commo
 
 	// Fill up L3
 	ipv6 := packet.GetIPv6NoCheck()
-	ipv6.HopLimits = 255
 	ipv6.DstAddr = dstIP
 	ipv6.SrcAddr = srcIP
 

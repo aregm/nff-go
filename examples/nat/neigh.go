@@ -18,7 +18,7 @@ func (port *ipPort) handleIPv6NeighborDiscovery(pkt *packet.Packet) uint {
 		}
 		pkt.ParseL7(common.ICMPv6Number)
 		msg := pkt.GetICMPv6NeighborSolicitationMessage()
-		if msg.TargetAddr != port.Subnet6.Addr {
+		if msg.TargetAddr != port.Subnet6.Addr && msg.TargetAddr != port.Subnet6.llAddr {
 			return dirDROP
 		}
 		option := pkt.GetICMPv6NDSourceLinkLayerAddressOption(packet.ICMPv6NeighborSolicitationMessageSize)
@@ -28,7 +28,7 @@ func (port *ipPort) handleIPv6NeighborDiscovery(pkt *packet.Packet) uint {
 				common.LogFatal(common.Debug, err)
 			}
 
-			packet.InitICMPv6NeighborAdvertisementPacket(answerPacket, port.SrcMACAddress, option.LinkLayerAddress, port.Subnet6.Addr, pkt.GetIPv6NoCheck().SrcAddr)
+			packet.InitICMPv6NeighborAdvertisementPacket(answerPacket, port.SrcMACAddress, option.LinkLayerAddress, msg.TargetAddr, pkt.GetIPv6NoCheck().SrcAddr)
 
 			vlan := pkt.GetVLAN()
 			if vlan != nil {

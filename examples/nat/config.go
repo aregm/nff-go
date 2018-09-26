@@ -133,10 +133,12 @@ func (subnet *ipv4Subnet) checkAddrWithingSubnet(addr uint32) bool {
 
 type ipv6Subnet struct {
 	Addr            [common.IPv6AddrLen]uint8
+	multicastAddr   [common.IPv6AddrLen]uint8
 	Mask            [common.IPv6AddrLen]uint8
 	llAddr          [common.IPv6AddrLen]uint8
 	llMulticastAddr [common.IPv6AddrLen]uint8
 	addressAcquired bool
+	ds              dhcpv6State
 }
 
 func (subnet *ipv6Subnet) String() string {
@@ -145,7 +147,7 @@ func (subnet *ipv6Subnet) String() string {
 		i := 0
 		for ; i <= 128; i++ {
 			mask := uint8(1) << uint(7-(i&7))
-			if subnet.Mask[i>>3]&mask == 0 {
+			if i == 128 || subnet.Mask[i>>3]&mask == 0 {
 				break
 			}
 		}
@@ -503,9 +505,10 @@ func (pp *portPair) initLocalMACs() {
 }
 
 func (port *ipPort) initIPv6LLAddresses() {
+	packet.CalculateIPv6LinkLocalAddrForMAC(&port.Subnet6.llAddr, port.SrcMACAddress)
+	packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.llMulticastAddr, port.Subnet6.llAddr)
 	if port.Subnet6.Addr != zeroIPv6Addr {
-		packet.CalculateIPv6LinkLocalAddrForMAC(&port.Subnet6.llAddr, port.SrcMACAddress)
-		packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.llMulticastAddr, port.Subnet6.Addr)
+		packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.multicastAddr, port.Subnet6.Addr)
 	}
 }
 

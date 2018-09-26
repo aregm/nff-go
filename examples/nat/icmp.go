@@ -25,10 +25,12 @@ func (port *ipPort) handleICMP(protocol uint8, pkt *packet.Packet, key interface
 	} else {
 		// If message is not targeted at NAT host, it is subject of
 		// address translation
-		if pkt.GetIPv6NoCheck().DstAddr == port.Subnet6.Addr ||
-			pkt.GetIPv6NoCheck().DstAddr == port.Subnet6.llAddr {
+		ipv6 := pkt.GetIPv6NoCheck()
+		if ipv6.DstAddr == port.Subnet6.Addr ||
+			ipv6.DstAddr == port.Subnet6.llAddr {
 			packetSentToUs = true
-		} else if pkt.GetIPv6NoCheck().DstAddr == port.Subnet6.llMulticastAddr {
+		} else if ipv6.DstAddr == port.Subnet6.multicastAddr ||
+			ipv6.DstAddr == port.Subnet6.llMulticastAddr {
 			packetSentToMulticast = true
 		}
 		requestCode = common.ICMPv6TypeEchoRequest
