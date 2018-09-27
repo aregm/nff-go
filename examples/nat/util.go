@@ -7,7 +7,10 @@ package nat
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
+
+	"github.com/vishvananda/netlink"
 
 	upd "github.com/intel-go/nff-go/examples/nat/updatecfg"
 
@@ -102,16 +105,23 @@ func CloseAllDumpFiles() {
 	}
 }
 
-func convertSubnet(s *upd.Subnet) (*ipv4Subnet, error) {
-	addr, err := convertIPv4(s.GetAddress().GetAddress())
+func convertSubnet(s *upd.Subnet) (*ipv4Subnet, *ipv6Subnet, error) {
+	a := s.GetAddress().GetAddress()
+	addr, err := convertIPv4(a)
 	if err != nil {
-		return nil, err
+		if net.IP(a).To16() == nil {
+			return nil, nil, err
+		}
+		ret := ipv6Subnet{}
+		copy(ret.Addr[:], a)
+		copy(ret.Mask[:], net.CIDRMask(int(s.GetMaskBitsNumber()), 128))
+		return nil, &ret, nil
 	}
 
 	return &ipv4Subnet{
 		Addr: addr,
 		Mask: uint32(0xffffffff) << (32 - s.GetMaskBitsNumber()),
-	}, nil
+	}, nil, nil
 }
 
 func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
@@ -143,7 +153,7 @@ func convertForwardedPort(p *upd.ForwardedPort) (*forwardedPort, error) {
 			ipv6:  ipv6,
 		},
 		Protocol: protocolId{
-			id:   uint8(p.GetProtocol()),
+			id:   uint8(p.GetProtocol() &^ upd.Protocol_IPv6_Flag),
 			ipv6: p.GetProtocol()&upd.Protocol_IPv6_Flag != 0,
 		},
 	}, nil
@@ -225,5 +235,52 @@ func ParseAllKnownL4(pkt *packet.Packet, pktIPv4 *packet.IPv4Hdr, pktIPv6 *packe
 		return protocol, nil, nil, pktICMP, packet.SwapBytesUint16(pktICMP.Identifier), packet.SwapBytesUint16(pktICMP.Identifier)
 	default:
 		return 0, nil, nil, nil, 0, 0
+	}
+}
+
+func (port *ipPort) setLinkLocalIPv4KNIAddress(ipv4addr, mask uint32) {
+	if port.KNIName != "" {
+		myKNI, err := netlink.LinkByName(port.KNIName)
+		if err != nil {
+			fmt.Println("Failed to get KNI interface", port.KNIName, ":", err)
+			return
+		}
+		a := packet.IPv4ToBytes(ipv4addr)
+		m := packet.IPv4ToBytes(mask)
+		addr := &netlink.Addr{
+			IPNet: &net.IPNet{
+				IP:   net.IPv4(a[3], a[2], a[1], a[0]),
+				Mask: net.IPv4Mask(m[3], m[2], m[1], m[0]),
+			},
+		}
+		fmt.Println("Setting address", addr)
+		err = netlink.AddrAdd(myKNI, addr)
+		if err != nil {
+			fmt.Println("Failed to set interface", port.KNIName, "address", addr, ":")
+		} else {
+			fmt.Println("Set address", addr, "on KNI interface", port.KNIName)
+		}
+	}
+}
+
+func (port *ipPort) setLinkLocalIPv6KNIAddress(ipv6addr, mask [common.IPv6AddrLen]uint8) {
+	if port.KNIName != "" {
+		myKNI, err := netlink.LinkByName(port.KNIName)
+		if err != nil {
+			fmt.Println("Failed to get KNI interface", port.KNIName, ":", err)
+			return
+		}
+		addr := &netlink.Addr{
+			IPNet: &net.IPNet{
+				IP:   ipv6addr[:],
+				Mask: mask[:],
+			},
+		}
+		err = netlink.AddrAdd(myKNI, addr)
+		if err != nil {
+			fmt.Println("Failed to set interface", port.KNIName, "address", addr, ":", err)
+		} else {
+			fmt.Println("Set address", addr, "on KNI interface", port.KNIName)
+		}
 	}
 }

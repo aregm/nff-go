@@ -15,6 +15,7 @@ import (
 	upd "github.com/intel-go/nff-go/examples/nat/updatecfg"
 
 	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/packet"
 )
 
 const (
@@ -60,14 +61,30 @@ func (s *server) ChangeInterfaceAddress(ctx context.Context, in *upd.InterfaceAd
 	if port == nil {
 		return nil, fmt.Errorf("Interface with ID %d not found", portId)
 	}
-	subnet, err := convertSubnet(in.GetPortSubnet())
+	subnet4, subnet6, err := convertSubnet(in.GetPortSubnet())
 	if err != nil {
 		return nil, err
 	}
-	port.Subnet = *subnet
+	var str string
+	if subnet4 != nil {
+		port.Subnet.Addr = subnet4.Addr
+		port.Subnet.Mask = subnet4.Mask
+		port.Subnet.addressAcquired = true
+		port.setLinkLocalIPv4KNIAddress(port.Subnet.Addr, port.Subnet.Mask)
+		str = port.Subnet.String()
+	}
+	if subnet6 != nil {
+		port.Subnet6.Addr = subnet6.Addr
+		port.Subnet6.Mask = subnet6.Mask
+		port.Subnet6.addressAcquired = true
+		port.setLinkLocalIPv6KNIAddress(port.Subnet6.Addr, port.Subnet6.Mask)
+		packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.multicastAddr, port.Subnet6.Addr)
+		port.setLinkLocalIPv6KNIAddress(port.Subnet6.llAddr, SingleIPMask)
+		str = port.Subnet6.String()
+	}
 
 	return &upd.Reply{
-		Msg: fmt.Sprintf("Successfully set port %d subnet to %s", portId, subnet.String()),
+		Msg: fmt.Sprintf("Successfully set port %d subnet to %s", portId, str),
 	}, nil
 }
 
@@ -88,7 +105,11 @@ func (s *server) ChangePortForwarding(ctx context.Context, in *upd.PortForwardin
 	}
 
 	pp.mutex.Lock()
-	pp.deleteOldConnection(fp.Protocol.ipv6, fp.Protocol.id, int(fp.Port))
+	if port.Type == iPUBLIC {
+		pp.deleteOldConnection(fp.Protocol.ipv6, fp.Protocol.id, int(fp.Port))
+	} else {
+		port.deletePortForwardingEntry(fp.Protocol.ipv6, fp.Protocol.id, int(fp.Port))
+	}
 	if in.GetEnableForwarding() {
 		port.enableStaticPortForward(fp)
 	}

@@ -12,8 +12,6 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 
-	"github.com/vishvananda/netlink"
-
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
 )
@@ -81,12 +79,14 @@ func sendDHCPRequests() {
 				pp.PublicPort.sendDHCPDiscoverRequest()
 			}
 			if !pp.PublicPort.Subnet6.addressAcquired {
+				pp.PublicPort.setLinkLocalIPv6KNIAddress(pp.PublicPort.Subnet6.llAddr, SingleIPMask)
 				pp.PublicPort.sendDHCPv6SolicitRequest()
 			}
 			if !pp.PrivatePort.Subnet.addressAcquired {
 				pp.PrivatePort.sendDHCPDiscoverRequest()
 			}
 			if !pp.PrivatePort.Subnet6.addressAcquired {
+				pp.PrivatePort.setLinkLocalIPv6KNIAddress(pp.PrivatePort.Subnet6.llAddr, SingleIPMask)
 				pp.PrivatePort.sendDHCPv6SolicitRequest()
 			}
 		}
@@ -229,21 +229,8 @@ func (port *ipPort) handleDHCPAck(pkt *packet.Packet, dhcp *layers.DHCPv4) {
 	port.Subnet.Addr, _ = convertIPv4(dhcp.YourClientIP.To4())
 	port.Subnet.Mask, _ = convertIPv4(maskOption.Data)
 	port.Subnet.addressAcquired = true
-	println("Successfully acquired IP address:", port.Subnet.String())
+	println("Successfully acquired IP address:", port.Subnet.String(), "on port", port.Index)
 
 	// Set address on KNI interface if present
-	if port.KNIName != "" {
-		myKNI, err := netlink.LinkByName(port.KNIName)
-		if err != nil {
-			println("Failed to get KNI interface", port.KNIName, ":", err)
-			return
-		}
-		addr := &netlink.Addr{
-			IPNet: &net.IPNet{
-				IP:   dhcp.YourClientIP,
-				Mask: maskOption.Data,
-			},
-		}
-		netlink.AddrAdd(myKNI, addr)
-	}
+	port.setLinkLocalIPv4KNIAddress(port.Subnet.Addr, port.Subnet.Mask)
 }

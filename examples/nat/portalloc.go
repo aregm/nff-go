@@ -28,11 +28,16 @@ func (dir terminationDirection) String() string {
 	}
 }
 
+func (port *ipPort) deletePortForwardingEntry(ipv6 bool, protocol uint8, portNumber int) {
+	key := port.makePortAddrTuple(ipv6, uint16(portNumber))
+	port.translationTable[protocol].Delete(key)
+}
+
 func (pp *portPair) deleteOldConnection(ipv6 bool, protocol uint8, port int) {
 	pubTable := pp.PublicPort.translationTable[protocol]
 	pm := pp.getPublicPortPortmap(ipv6, protocol)
 
-	pub2priKey := pp.makePublicPortTuple(ipv6, uint16(port))
+	pub2priKey := pp.PublicPort.makePortAddrTuple(ipv6, uint16(port))
 	pri2pubKey, found := pubTable.Load(pub2priKey)
 
 	if found {
@@ -74,16 +79,16 @@ func (pp *portPair) getPublicPortPortmap(ipv6 bool, protocol uint8) []portMapEnt
 	}
 }
 
-func (pp *portPair) makePublicPortTuple(ipv6 bool, port uint16) interface{} {
+func (port *ipPort) makePortAddrTuple(ipv6 bool, portNumber uint16) interface{} {
 	if ipv6 {
 		return Tuple6{
-			addr: pp.PublicPort.Subnet6.Addr,
-			port: uint16(port),
+			addr: port.Subnet6.Addr,
+			port: uint16(portNumber),
 		}
 	} else {
 		return Tuple{
-			addr: pp.PublicPort.Subnet.Addr,
-			port: uint16(port),
+			addr: port.Subnet.Addr,
+			port: uint16(portNumber),
 		}
 	}
 }

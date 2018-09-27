@@ -91,6 +91,7 @@ func PublicToPrivateTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	if pktICMP != nil {
 		dir := port.handleICMP(protocol, pkt, pub2priKey)
 		if dir != dirSEND {
+			port.dumpPacket(pkt, dir)
 			return dir
 		}
 	}
@@ -221,6 +222,7 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	if pktICMP != nil {
 		dir := port.handleICMP(protocol, pkt, pri2pubKey)
 		if dir != dirSEND {
+			port.dumpPacket(pkt, dir)
 			return dir
 		}
 	}
@@ -244,7 +246,10 @@ func PrivateToPublicTranslation(pkt *packet.Packet, ctx flow.UserContext) uint {
 	var packetSentToUs bool
 	if ipv6 {
 		addressAcquired = port.Subnet6.addressAcquired
-		packetSentToUs = port.Subnet6.Addr == pktIPv6.DstAddr || port.Subnet6.llAddr == pktIPv6.DstAddr
+		packetSentToUs = port.Subnet6.Addr == pktIPv6.DstAddr ||
+			port.Subnet6.llAddr == pktIPv6.DstAddr ||
+			port.Subnet6.multicastAddr == pktIPv6.DstAddr ||
+			port.Subnet6.llMulticastAddr == pktIPv6.DstAddr
 	} else {
 		addressAcquired = port.Subnet.addressAcquired
 		packetSentToUs = port.Subnet.Addr == packet.SwapBytesUint32(pktIPv4.DstAddr)

@@ -56,10 +56,9 @@ type protocolId struct {
 }
 
 type forwardedPort struct {
-	Port         uint16     `json:"port"`
-	Destination  hostPort   `json:"destination"`
-	Protocol     protocolId `json:"protocol"`
-	forwardToKNI bool
+	Port        uint16     `json:"port"`
+	Destination hostPort   `json:"destination"`
+	Protocol    protocolId `json:"protocol"`
 }
 
 var protocolIdLookup map[string]protocolId = map[string]protocolId{
@@ -463,7 +462,6 @@ func (port *ipPort) checkPortForwarding(fp *forwardedPort) error {
 				strconv.Itoa(int(port.Index)) +
 				" should have \"kni-name\" setting if you want to forward packets to KNI address 0.0.0.0 or [::]")
 		}
-		fp.forwardToKNI = true
 		if fp.Destination.Port != fp.Port {
 			return errors.New("When address 0.0.0.0 or [::] is specified, it means that packets are forwarded to KNI interface. In this case destination port should be equal to forwarded port. You have different values: " +
 				strconv.Itoa(int(fp.Port)) + " and " +
@@ -506,9 +504,12 @@ func (pp *portPair) initLocalMACs() {
 
 func (port *ipPort) initIPv6LLAddresses() {
 	packet.CalculateIPv6LinkLocalAddrForMAC(&port.Subnet6.llAddr, port.SrcMACAddress)
+	println("Configured link local address", packet.IPv6ToString(port.Subnet6.llAddr), "for port", port.Index)
 	packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.llMulticastAddr, port.Subnet6.llAddr)
+	println("Configured link local multicast address", packet.IPv6ToString(port.Subnet6.llMulticastAddr), "for port", port.Index)
 	if port.Subnet6.Addr != zeroIPv6Addr {
 		packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.multicastAddr, port.Subnet6.Addr)
+		println("Configured multicast address", packet.IPv6ToString(port.Subnet6.multicastAddr), "for port", port.Index)
 	}
 }
 
@@ -530,7 +531,7 @@ func (port *ipPort) allocateLookupMap() {
 	}
 }
 
-func (port *ipPort) initPublicPortPortForwardingEntries() {
+func (port *ipPort) initPortPortForwardingEntries() {
 	// Initialize port forwarding rules on public interface
 	for i := range port.ForwardPorts {
 		port.enableStaticPortForward(&port.ForwardPorts[i])
@@ -551,11 +552,13 @@ func (port *ipPort) enableStaticPortForward(fp *forwardedPort) {
 		if fp.Destination.Addr6 != zeroIPv6Addr {
 			port.opposite.translationTable[fp.Protocol.id].Store(valEntry, keyEntry)
 		}
-		port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
-			lastused:             time.Now(),
-			finCount:             0,
-			terminationDirection: 0,
-			static:               true,
+		if port.Type == iPUBLIC {
+			port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
+				lastused:             time.Now(),
+				finCount:             0,
+				terminationDirection: 0,
+				static:               true,
+			}
 		}
 	} else {
 		keyEntry := Tuple{
@@ -570,11 +573,13 @@ func (port *ipPort) enableStaticPortForward(fp *forwardedPort) {
 		if fp.Destination.Addr4 != 0 {
 			port.opposite.translationTable[fp.Protocol.id].Store(valEntry, keyEntry)
 		}
-		port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
-			lastused:             time.Now(),
-			finCount:             0,
-			terminationDirection: 0,
-			static:               true,
+		if port.Type == iPUBLIC {
+			port.getPortmap(fp.Protocol.ipv6, fp.Protocol.id)[fp.Port] = portMapEntry{
+				lastused:             time.Now(),
+				finCount:             0,
+				terminationDirection: 0,
+				static:               true,
+			}
 		}
 	}
 }
@@ -600,7 +605,8 @@ func InitFlows() {
 		pp.PublicPort.allocateLookupMap()
 		pp.PublicPort.allocatePublicPortPortMap()
 		pp.lastport = portStart
-		pp.PublicPort.initPublicPortPortForwardingEntries()
+		pp.PrivatePort.initPortPortForwardingEntries()
+		pp.PublicPort.initPortPortForwardingEntries()
 
 		// Handler context with handler index
 		context := new(pairIndex)

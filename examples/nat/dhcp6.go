@@ -7,14 +7,11 @@ package nat
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"net"
 	"strings"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-
-	"github.com/vishvananda/netlink"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
@@ -222,8 +219,6 @@ func (port *ipPort) handleDHCPv6(pkt *packet.Packet) bool {
 	} else if port.Subnet6.ds.lastDHCPv6PacketTypeSent == layers.DHCPv6MsgTypeRequest && dhcpv6.MsgType == layers.DHCPv6MsgTypeReply {
 		port.handleDHCPv6Reply(pkt, &dhcpv6)
 	} else {
-		fmt.Println("last packet = ", port.Subnet6.ds.lastDHCPv6PacketTypeSent, int(port.Subnet6.ds.lastDHCPv6PacketTypeSent))
-		fmt.Println("packet:", dhcpv6)
 		println("Warning! Received some bad response from DHCPv6 server", dhcpv6.MsgType.String())
 		port.Subnet6.addressAcquired = false
 		port.Subnet6.ds = dhcpv6State{}
@@ -271,23 +266,10 @@ func (port *ipPort) handleDHCPv6Reply(pkt *packet.Packet, dhcpv6 *layers.DHCPv6)
 	packet.CalculateIPv6MulticastAddrForDstIP(&port.Subnet6.multicastAddr, port.Subnet6.Addr)
 	port.Subnet6.Mask = SingleIPMask
 	port.Subnet6.addressAcquired = true
-	println("Successfully acquired IP address:", port.Subnet6.String())
+	println("Successfully acquired IP address:", port.Subnet6.String(), "on port", port.Index)
 
 	// Set address on KNI interface if present
-	if port.KNIName != "" {
-		myKNI, err := netlink.LinkByName(port.KNIName)
-		if err != nil {
-			println("Failed to get KNI interface", port.KNIName, ":", err)
-			return
-		}
-		addr := &netlink.Addr{
-			IPNet: &net.IPNet{
-				IP:   ia.Address,
-				Mask: SingleIPNetMask,
-			},
-		}
-		netlink.AddrAdd(myKNI, addr)
-	}
+	port.setLinkLocalIPv6KNIAddress(port.Subnet6.Addr, port.Subnet6.Mask)
 }
 
 type DHCPv6FQDNFlags byte

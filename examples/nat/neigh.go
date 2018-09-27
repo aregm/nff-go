@@ -51,6 +51,9 @@ func (port *ipPort) handleIPv6NeighborDiscovery(pkt *packet.Packet) uint {
 			return dirKNI
 		}
 	} else {
+		if port.KNIName != "" {
+			return dirKNI
+		}
 		return dirSEND
 	}
 
