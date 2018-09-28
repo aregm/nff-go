@@ -588,7 +588,7 @@ func generateIPv6ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
 	if !hwol {
 		pIPv6 := emptyPacket.GetIPv6()
 		pICMP := emptyPacket.GetICMPForIPv6()
-		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, emptyPacket.Data))
+		pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP))
 	}
 }
 

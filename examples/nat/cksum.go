@@ -112,7 +112,6 @@ func setIPv6ICMPChecksum(pkt *packet.Packet, calculateChecksum, hWTXChecksum boo
 
 		l4 := pkt.GetICMPNoCheck()
 		l4.Cksum = 0 // Need to zero l4.Cksum or otherwise it is included into calculation
-		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(l3,
-			unsafe.Pointer(l4)))
+		l4.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(l3, l4))
 	}
 }
