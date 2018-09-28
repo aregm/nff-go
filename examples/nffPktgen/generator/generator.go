@@ -445,7 +445,7 @@ func generateICMPIP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pktIP, pktICMP, pkt.Data))
 	} else if l3.Version == 6 {
 		pktIP := (*packet.IPv6Hdr)(pkt.L3)
-		pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pktIP, pkt.Data))
+		pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pktIP, pktICMP))
 	}
 }
 
