@@ -137,7 +137,7 @@ func TestCalculateIPv6ICMPChecksum(t *testing.T) {
 	initICMP(pkt.GetICMPForIPv6())
 
 	want := wantIPv6ICMP
-	got := CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPForIPv6(), pkt.Data)
+	got := CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.Data)
 
 	if got != want {
 		t.Errorf("Incorrect result:\ngot: %x, \nwant: %x\n\n", got, want)
