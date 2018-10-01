@@ -132,7 +132,6 @@ func TestCalculateIPv4ICMPChecksum(t *testing.T) {
 	pkt.GetIPv4().HdrChecksum = SwapBytesUint16(ipcksum)
 
 	want := wantIPv4ICMP
-	pkt.GetICMPNoCheck().Cksum = 0
 	got := CalculateIPv4ICMPChecksum(pkt.GetIPv4(), pkt.GetICMPForIPv4(), pkt.Data)
 
 	if got != want {
@@ -150,7 +149,7 @@ func TestCalculateIPv6ICMPChecksum(t *testing.T) {
 
 	want := wantIPv6ICMP
 	pkt.GetICMPNoCheck().Cksum = 0
-	got := CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPNoCheck())
+	got := CalculateIPv6ICMPChecksum(pkt.GetIPv6(), pkt.GetICMPNoCheck(), pkt.Data)
 
 	if got != want {
 		t.Errorf("Incorrect result:\ngot: %x, \nwant: %x\n\n", got, want)
