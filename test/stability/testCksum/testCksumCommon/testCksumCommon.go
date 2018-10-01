@@ -96,9 +96,9 @@ func CheckPacketChecksums(p *packet.Packet) bool {
 			} else {
 				status = true
 			}
-		} else if pIPv6.Proto == common.ICMPNumber {
+		} else if pIPv6.Proto == common.ICMPv6Number {
 			pICMP := p.GetICMPForIPv6()
-			csum := packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP)
+			csum := packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP, p.Data)
 			if packet.SwapBytesUint16(pICMP.Cksum) != csum {
 				println("IPv6 ICMP checksum mismatch", packet.SwapBytesUint16(pICMP.Cksum), "should be", csum)
 			} else {
@@ -141,9 +141,9 @@ func CalculateChecksum(p *packet.Packet) {
 		} else if pIPv6.Proto == common.TCPNumber {
 			pTCP := p.GetTCPForIPv6()
 			pTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pIPv6, pTCP, p.Data))
-		} else if pIPv6.Proto == common.ICMPNumber {
+		} else if pIPv6.Proto == common.ICMPv6Number {
 			pICMP := p.GetICMPForIPv6()
-			pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP))
+			pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pIPv6, pICMP, p.Data))
 		} else {
 			println("Unknown IPv6 protocol number", pIPv6.Proto)
 			println("TEST FAILED")
