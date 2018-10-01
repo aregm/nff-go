@@ -103,9 +103,9 @@ type IPv4Hdr struct {
 func (hdr *IPv4Hdr) String() string {
 	r0 := "    L3 protocol: IPv4\n"
 	s := hdr.SrcAddr
-	r1 := fmt.Sprintln("    IPv4 Source:", byte(s), ":", byte(s>>8), ":", byte(s>>16), ":", byte(s>>24))
+	r1 := fmt.Sprintln("    IPv4 Source:", byte(s), ".", byte(s>>8), ".", byte(s>>16), ".", byte(s>>24))
 	d := hdr.DstAddr
-	r2 := fmt.Sprintln("    IPv4 Destination:", byte(d), ":", byte(d>>8), ":", byte(d>>16), ":", byte(d>>24))
+	r2 := fmt.Sprintln("    IPv4 Destination:", byte(d), ".", byte(d>>8), ".", byte(d>>16), ".", byte(d>>24))
 	return r0 + r1 + r2
 }
 
