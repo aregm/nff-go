@@ -10,9 +10,3 @@ go get -v golang.org/x/tools/cmd/stringer
 go get -v github.com/vishvananda/netlink
 go get -v github.com/google/gopacket
 
-# GRPC support for NAT example
-go get -v google.golang.org/grpc
-go get -v github.com/golang/protobuf/protoc-gen-go
-if ! command -v protoc &> /dev/null; then
-    echo You should install protobuf compiler package, e.g. \"sudo dnf install protobuf-compiler\" or \"sudo apt-get install protobuf-compiler\"
-fi
