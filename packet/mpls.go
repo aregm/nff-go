@@ -31,6 +31,21 @@ func (hdr *MPLSHdr) SetMPLSLabel(tag uint32) {
 	hdr.mpls = SwapBytesUint32((SwapBytesUint32(hdr.mpls) & 0xfff) | (tag << 12))
 }
 
+// GetMPLSTC returns the Traffic Class (formerly known as EXP).
+func (hdr *MPLSHdr) GetMPLSTC() uint32 {
+	return (SwapBytesUint32(hdr.mpls) >> 9) & 0x00000007
+}
+
+// GetMPLSS returns the Bottom-Of-Stack value
+func (hdr *MPLSHdr) GetMPLSS() uint32 {
+	return (SwapBytesUint32(hdr.mpls) >> 8) & 1
+}
+
+// GetMPLSTTL returns the Time-to-Live value
+func (hdr *MPLSHdr) GetMPLSTTL() uint32 {
+	return SwapBytesUint32(hdr.mpls) & 0x000000ff
+}
+
 // GetMPLS returns MPLS header pointer if it is present in the packet.
 func (packet *Packet) GetMPLS() *MPLSHdr {
 	// MPLS shouldn't be used with VLAN tags, so we don't check any VLAN tags here
