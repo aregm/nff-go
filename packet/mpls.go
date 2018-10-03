@@ -17,8 +17,7 @@ type MPLSHdr struct {
 
 func (hdr *MPLSHdr) String() string {
 	return fmt.Sprintf(`MPLS: Label: %d, EXP: %d, S: %d TTL: %d`,
-		SwapBytesUint32(hdr.mpls)>>12, (SwapBytesUint32(hdr.mpls)>>9)&0x00000007,
-		(SwapBytesUint32(hdr.mpls)>>8)&1, SwapBytesUint32(hdr.mpls)&0x000000ff)
+		hdr.GetMPLSLabel(), hdr.GetMPLSTC(), hdr.GetMPLSS(), hdr.GetMPLSTTL())
 }
 
 // GetMPLSLabel returns Label (20 first bits of MPLS header).
