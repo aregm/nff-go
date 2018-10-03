@@ -205,7 +205,7 @@ downloaded automatically.
 
 If you want to contribute to NFF-Go, check our [Contributing
 guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
-recommend checking the 'janitorial' bugs in our list of open issues; these bugs
+recommend checking the bugs with 'help-wanted' or 'easyfix' in our list of open issues; these bugs
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 
