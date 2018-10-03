@@ -108,6 +108,9 @@ void setAffinity(int coreId) {
 
 int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
+	const struct rte_pci_device *pci_dev;
+	const struct rte_bus *bus = NULL;
+
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
@@ -117,9 +120,13 @@ int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbu
 	conf_default.core_id = core; // Core ID to bind kernel thread on
 	conf_default.group_id = port;
 	conf_default.mbuf_size = 2048;
-	if (dev_info.pci_dev) {
-		conf_default.addr = dev_info.pci_dev->addr;
-		conf_default.id = dev_info.pci_dev->id;
+	if (dev_info.device) {
+		bus = rte_bus_find_by_device(dev_info.device);
+	}
+	if (bus && !strcmp(bus->name, "pci")) {
+		pci_dev = RTE_DEV_TO_PCI(dev_info.device);
+		conf_default.addr = pci_dev->addr;
+		conf_default.id = pci_dev->id;
 	}
 	conf_default.force_bind = 1; // Flag to bind kernel thread
 	rte_eth_macaddr_get(port, (struct ether_addr *)&conf_default.mac_addr);
@@ -179,12 +186,17 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 		return -1;
 
 	struct rte_eth_conf port_conf_default = {
-	    .rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN,
-			.mq_mode = ETH_MQ_RX_RSS    },
-	    .txmode = { .mq_mode = ETH_MQ_TX_NONE, },
-	    .rx_adv_conf.rss_conf.rss_key = NULL,
-	    .rx_adv_conf.rss_conf.rss_hf = dev_info.flow_type_rss_offloads
+		.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN,
+					.mq_mode = ETH_MQ_RX_RSS    },
+		.txmode = { .mq_mode = ETH_MQ_TX_NONE, },
+		.rx_adv_conf.rss_conf.rss_key = NULL,
+		.rx_adv_conf.rss_conf.rss_hf = dev_info.flow_type_rss_offloads
 	};
+
+	if (hwtxchecksum) {
+        /* Enable everything that is supported by hardware */
+        port_conf_default.txmode.offloads = dev_info.tx_offload_capa;
+	}
 
 	/* Configure the Ethernet device. */
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
@@ -197,11 +209,6 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 				rte_eth_dev_socket_id(port), NULL, mbuf_pools[q]);
 		if (retval < 0)
 			return retval;
-	}
-
-	if (hwtxchecksum) {
-		/* Default TX settings are to disable offload operations, need to fix it */
-		dev_info.default_txconf.txq_flags = 0;
 	}
 
 	/* Allocate and set up TX queues per Ethernet port. */

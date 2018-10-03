@@ -1,4 +1,4 @@
-export DPDK_VERSION=18.02
+export DPDK_VERSION=18.08
 export GOPATH="$HOME"/go
 export GOROOT=/opt/go
 export NFF_GO="$GOPATH"/src/github.com/intel-go/nff-go

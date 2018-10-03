@@ -6,12 +6,12 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
-DPDK_VERSION = 18.02
+DPDK_VERSION = 18.08
 DPDK_DIR = dpdk-$(DPDK_VERSION)
 ifndef DPDK_URL
 DPDK_URL=http://fast.dpdk.org/rel/dpdk-$(DPDK_VERSION).tar.xz
 endif
-PKTGEN_VERSION=3.4.9
+PKTGEN_VERSION=3.5.2
 PKTGEN_DIR=pktgen-dpdk-pktgen-$(PKTGEN_VERSION)
 ifndef PKTGEN_URL
 PKTGEN_URL=http://git.dpdk.org/apps/pktgen-dpdk/snapshot/pktgen-dpdk-pktgen-$(PKTGEN_VERSION).tar.xz
