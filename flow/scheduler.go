@@ -42,9 +42,14 @@ const RSSCloneMin = 5
 const RSSCloneMax = 39
 
 // Tuple of current speed in packets and bytes
-type reportPair struct {
+type speedPair struct {
 	Packets uint64
 	Bytes   uint64
+}
+
+type reportPair struct {
+	V            speedPair
+	ZeroAttempts [32]uint64
 }
 
 // Clones of flow functions. They are determined
@@ -55,6 +60,27 @@ type clonePair struct {
 	flag    int32
 }
 
+type instance struct {
+	// Indexes of input rings that are handle by this instance
+	// inIndex[0] - number of this input rings
+	inIndex []int32
+	// Clones of this instance
+	clone []*clonePair
+	// Channel for returning current state of this instance
+	report chan reportPair
+	// Current state of this instance, returned from working thread
+	reportedState reportPair
+	// Speed with "+1" number of clones. Set while removing clone
+	increasedSpeed uint64
+	// Speed with "-1" number of clones. Set while adding clone
+	decreasedSpeed uint64
+	// Number of clones of this instance
+	cloneNumber int
+	pause       int
+	ff          *flowFunction
+	removed     bool
+}
+
 // UserContext is used inside flow packet and is going for user via it
 type UserContext interface {
 	Copy() interface{}
@@ -62,9 +88,9 @@ type UserContext interface {
 }
 
 // Function types which are used inside flow functions
-type uncloneFlowFunction func(interface{}, [2]chan int)
-type cloneFlowFunction func(interface{}, [2]chan int, chan reportPair, []UserContext)
-type cFlowFunction func(interface{}, *int32, int)
+type uncloneFlowFunction func(interface{}, []int32, [2]chan int)
+type cloneFlowFunction func(interface{}, []int32, [2]chan int, chan reportPair, []UserContext)
+type cFlowFunction func(interface{}, []int32, *int32, int)
 
 type ffType int
 
@@ -87,29 +113,21 @@ type flowFunction struct {
 	cFunction cFlowFunction
 	// Main body of clonable flow function
 	cloneFunction cloneFlowFunction
-	// Number of clones of this function
-	cloneNumber int
-	// Clones of this function. They are determined
-	// by their core and their stopper channel
-	clone []*clonePair
-	// Channel for reporting current speed.
-	// It is one for all clones
-	report chan reportPair
-	// Current saved speed when making a clone.
-	// It will be compared with immediate current speed to stop a clone.
-	previousSpeed []reportPair
-	// For debug purposes
-	currentSpeed reportPair
+	// Number of instances of this function
+	instanceNumber int
+	// Instances of this function
+	instance     []*instance
+	oneCoreSpeed reportPair
 	// Name of flow function
-	name    string
-	context *[]UserContext
-	pause   int
-	fType   ffType
+	name          string
+	context       *[]UserContext
+	fType         ffType
+	inIndexNumber int32
 }
 
 // Adding every flow function to scheduler list
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
-	par interface{}, context *[]UserContext, fType ffType) {
+	par interface{}, context *[]UserContext, fType ffType, inIndexNumber int32) {
 	ff := new(flowFunction)
 	nameC := 1
 	tName := name
@@ -124,10 +142,12 @@ func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFl
 	ff.cFunction = Cfn
 	ff.cloneFunction = cfn
 	ff.Parameters = par
-	ff.report = make(chan reportPair, 50)
 	ff.context = context
-	ff.previousSpeed = make([]reportPair, len(scheduler.cores), len(scheduler.cores))
 	ff.fType = fType
+	ff.inIndexNumber = inIndexNumber
+	if inIndexNumber > scheduler.maxInIndex {
+		scheduler.maxInIndex = inIndexNumber
+	}
 	scheduler.ff = append(scheduler.ff, ff)
 }
 
@@ -136,8 +156,9 @@ type scheduler struct {
 	cores             []core
 	off               bool
 	offRemove         bool
+	anyway            bool
 	stopDedicatedCore bool
-	StopRing          *low.Ring
+	StopRing          low.Rings
 	usedCores         uint8
 	checkTime         uint
 	debugTime         uint
@@ -145,6 +166,11 @@ type scheduler struct {
 	maxPacketsToClone uint32
 	stopFlag          int32
 	maxRecv           int
+	Timers            []*Timer
+	nAttempts         []uint64
+	pAttempts         []uint64
+	maxInIndex        int32
+	measureRings      low.Rings
 }
 
 type core struct {
@@ -152,8 +178,8 @@ type core struct {
 	isfree bool
 }
 
-func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
-	stopDedicatedCore bool, stopRing *low.Ring, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int) *scheduler {
+func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDedicatedCore bool,
+	stopRing low.Rings, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int, anyway bool) *scheduler {
 	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(scheduler)
@@ -163,12 +189,14 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool,
 	}
 	scheduler.off = schedulerOff
 	scheduler.offRemove = schedulerOff || schedulerOffRemove
-	scheduler.StopRing = stopRing
 	scheduler.stopDedicatedCore = stopDedicatedCore
+	scheduler.StopRing = stopRing
 	scheduler.checkTime = checkTime
 	scheduler.debugTime = debugTime
 	scheduler.maxPacketsToClone = maxPacketsToClone
 	scheduler.maxRecv = maxRecv
+	scheduler.anyway = anyway
+	scheduler.pAttempts = make([]uint64, len(scheduler.cores), len(scheduler.cores))
 
 	return scheduler
 }
@@ -195,59 +223,103 @@ func (scheduler *scheduler) systemStart() (err error) {
 		low.Stop(scheduler.StopRing, &scheduler.stopFlag, core)
 	}()
 	for i := range scheduler.ff {
-		if err = scheduler.startFF(scheduler.ff[i]); err != nil {
+		if err = scheduler.ff[i].startNewInstance(constructNewIndex(scheduler.ff[i].inIndexNumber), scheduler); err != nil {
 			return err
 		}
 	}
-	// We need this to get a chance to all started goroutines to log their warnings.
-	time.Sleep(time.Millisecond)
+	scheduler.measureRings = low.CreateRings(burstSize*sizeMultiplier, scheduler.maxInIndex+1)
+	scheduler.nAttempts = make([]uint64, scheduler.maxInIndex+1, scheduler.maxInIndex+1)
+	for i := int32(1); i < scheduler.maxInIndex+1; i++ {
+		scheduler.nAttempts[i] = scheduler.measure(int32(i), 1)
+	}
 	return nil
 }
 
-func (scheduler *scheduler) startFF(ff *flowFunction) (err error) {
+func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) (err error) {
+	ffi := new(instance)
+	common.LogDebug(common.Debug, "Start new instance for", ff.name)
+	ffi.inIndex = inIndex
+	ffi.report = make(chan reportPair, len(scheduler.cores)-1)
+	ffi.ff = ff
+	err = ffi.startNewClone(scheduler, ff.instanceNumber)
+	if err == nil {
+		ff.instance = append(ff.instance, ffi)
+		ff.instanceNumber++
+	}
+	return err
+}
+
+func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
+	ff := ffi.ff
 	core, index, err := scheduler.getCore()
 	if err != nil {
+		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, "instance", n)
 		return err
 	}
-	common.LogDebug(common.Initialization, "Start new FlowFunction or clone for", ff.name, "at", core, "core")
-	ff.clone = append(ff.clone, &clonePair{index, [2]chan int{nil, nil}, process})
-	ff.cloneNumber++
+	common.LogDebug(common.Debug, "Start new clone for", ff.name, "instance", n, "at", core, "core")
+	ffi.clone = append(ffi.clone, &clonePair{index, [2]chan int{nil, nil}, process})
+	ffi.cloneNumber++
 	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
-		ff.clone[ff.cloneNumber-1].channel[0] = make(chan int)
-		ff.clone[ff.cloneNumber-1].channel[1] = make(chan int)
+		ffi.clone[ffi.cloneNumber-1].channel[0] = make(chan int)
+		ffi.clone[ffi.cloneNumber-1].channel[1] = make(chan int)
 	}
 	go func() {
 		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
 			if err := low.SetAffinity(core); err != nil {
-				common.LogFatal(common.Initialization, "Failed to set affinity to", core, "core: ", err)
+				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
 			}
 			if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
-				ff.cloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel, ff.report, cloneContext(ff.context))
+				ff.cloneFunction(ff.Parameters, ffi.inIndex, ffi.clone[ffi.cloneNumber-1].channel, ffi.report, cloneContext(ff.context))
 			} else {
-				ff.uncloneFunction(ff.Parameters, ff.clone[ff.cloneNumber-1].channel)
+				ff.uncloneFunction(ff.Parameters, ffi.inIndex, ffi.clone[ffi.cloneNumber-1].channel)
 			}
 		} else {
-			ff.cFunction(ff.Parameters, &ff.clone[ff.cloneNumber-1].flag, core)
+			ff.cFunction(ff.Parameters, ffi.inIndex, &ffi.clone[ffi.cloneNumber-1].flag, core)
 		}
 	}()
+	if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
+		<-ffi.clone[ffi.cloneNumber-1].channel[1]
+	}
 	return nil
 }
 
-func (scheduler *scheduler) stopFF(ff *flowFunction) {
-	if ff.clone[ff.cloneNumber-1].channel[0] != nil {
-		ff.clone[ff.cloneNumber-1].channel[0] <- -1
-		<-ff.clone[ff.cloneNumber-1].channel[1]
-		close(ff.clone[ff.cloneNumber-1].channel[0])
-		close(ff.clone[ff.cloneNumber-1].channel[1])
+func (ff *flowFunction) stopClone(ffi *instance, scheduler *scheduler) {
+	common.LogDebug(common.Debug, "Stop clone")
+	if ffi.clone[ffi.cloneNumber-1].channel[0] != nil {
+		ffi.clone[ffi.cloneNumber-1].channel[0] <- -1
+		<-ffi.clone[ffi.cloneNumber-1].channel[1]
+		close(ffi.clone[ffi.cloneNumber-1].channel[0])
+		close(ffi.clone[ffi.cloneNumber-1].channel[1])
 	} else {
-		atomic.StoreInt32(&ff.clone[ff.cloneNumber-1].flag, stopRequest)
-		for atomic.LoadInt32(&ff.clone[ff.cloneNumber-1].flag) != wasStopped {
+		atomic.StoreInt32(&ffi.clone[ffi.cloneNumber-1].flag, stopRequest)
+		for atomic.LoadInt32(&ffi.clone[ffi.cloneNumber-1].flag) != wasStopped {
 			runtime.Gosched()
 		}
 	}
-	scheduler.setCoreByIndex(ff.clone[ff.cloneNumber-1].index)
-	ff.clone = ff.clone[:len(ff.clone)-1]
-	ff.cloneNumber--
+	scheduler.setCoreByIndex(ffi.clone[ffi.cloneNumber-1].index)
+	ffi.clone = ffi.clone[:len(ffi.clone)-1]
+	ffi.cloneNumber--
+	ffi.removed = true
+}
+
+func (ff *flowFunction) stopInstance(from int, to int, scheduler *scheduler) {
+	common.LogDebug(common.Debug, "Stop instance for", ff.name)
+	fromInstance := ff.instance[from]
+	for fromInstance.cloneNumber != 0 {
+		ff.stopClone(fromInstance, scheduler)
+	}
+	if fromInstance.report != nil {
+		close(fromInstance.report)
+	}
+	if to != -1 {
+		toInstance := ff.instance[to]
+		for q := int32(0); q < fromInstance.inIndex[0]; q++ {
+			toInstance.inIndex[toInstance.inIndex[0]+q+1] = fromInstance.inIndex[q+1]
+		}
+		toInstance.inIndex[0] += fromInstance.inIndex[0]
+		ff.instance = append(ff.instance[:from], ff.instance[from+1:]...)
+	}
+	ff.instanceNumber--
 }
 
 func (scheduler *scheduler) systemStop() {
@@ -257,11 +329,8 @@ func (scheduler *scheduler) systemStop() {
 		runtime.Gosched()
 	}
 	for i := range scheduler.ff {
-		for scheduler.ff[i].cloneNumber != 0 {
-			scheduler.stopFF(scheduler.ff[i])
-		}
-		if scheduler.ff[i].report != nil {
-			close(scheduler.ff[i].report)
+		for scheduler.ff[i].instanceNumber != 0 {
+			scheduler.ff[i].stopInstance(0, -1, scheduler)
 		}
 	}
 	scheduler.setCoreByIndex(0) // scheduler
@@ -278,11 +347,42 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 	checkRequired := false
 	for atomic.LoadInt32(&scheduler.stopFlag) == process {
 		time.Sleep(time.Millisecond * time.Duration(schedTime))
+		// We have an array of Timers which can be increated by AddTimer function
+		// Timer has duration and handler common for all Timer variants, so firstly
+		// we check that timer ticker channel is ready:
+		for _, t := range scheduler.Timers {
+			select {
+			case <-t.t.C:
+				// If this timer was ticked we check all checks of all variants
+				// Timer. We need variants because one TCP timer will handle
+				// different TCP sessions. Variant's context is a difference of
+				// current session from other sessions. Variant's check is a
+				// variable that user will set to "true" if he wants to reset timer
+				// for example if packet of this session was arrived.
+				for i, c := range t.checks {
+					// We set all checks to false. If we saw false check it means
+					// that user didn't see any event and timer handler should be called.
+					// We use boolean checks for performance reasons because reset timer
+					// after each packet is quite slow.
+					if *c == false {
+						t.handler(t.contexts[i])
+						// We remove current variant after handler calling, because this
+						// session was finished.
+						t.contexts = append(t.contexts[:i], t.contexts[i+1:]...)
+						t.checks = append(t.checks[:i], t.checks[i+1:]...)
+						continue
+					}
+					*c = false
+				}
+			default:
+			}
+		}
 		select {
 		case <-tick:
 			checkRequired = true
 		case <-debugTick:
 			// Report current state of system
+			common.LogDebug(common.Debug, "---------------")
 			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.cores))-scheduler.usedCores, "cores are left available.")
 			low.Statistics(float32(scheduler.debugTime) / 1000)
 			for i := range scheduler.ff {
@@ -295,58 +395,98 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 				scheduler.Dropped = 0
 			}
 			low.ReportMempoolsState()
-			common.LogDebug(common.Debug, "---------------")
 		default:
 		}
 		// Procced with each flow function
 		for i := range scheduler.ff {
 			ff := scheduler.ff[i]
 			if ff.fType == segmentCopy || ff.fType == fastGenerate {
-				ff.updateCurrentSpeed()
+				ff.updateReportedState() // TODO also for debug
 			}
 			// Firstly we check removing clones. We can remove one clone if:
 			// 1. flow function has clones or it is fastGenerate
 			// 2. scheduler removing is switched on
-			if (ff.cloneNumber > 1 || ff.fType == fastGenerate) && (scheduler.offRemove == false) {
+			if scheduler.offRemove == false {
 				switch ff.fType {
-				case segmentCopy:
-					// 3. current speed of flow function is lower, than saved speed with less number of clones
-					if ff.currentSpeed.Packets < ff.previousSpeed[ff.cloneNumber-1].Packets {
-						// Save current speed as speed of flow function with this number of clones before removing
-						ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
-						scheduler.stopFF(ff)
-						ff.updatePause(ff.cloneNumber)
-						// After removing a clone we don't want to try to add clone immediately
-						continue
-					}
-				case fastGenerate:
-					targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
-					speedPKTS := float64(ff.currentSpeed.normalize(schedTime).Packets)
-					// 3. Current speed is much bigger than target speed
-					if speedPKTS > 1.1*targetSpeed {
-						// 4. TODO strange heuristic, it is required to check this
-						if ff.cloneNumber > 1 && targetSpeed/float64(ff.cloneNumber+1)*float64(ff.cloneNumber) > speedPKTS {
-							scheduler.stopFF(ff)
-							ff.updatePause(0)
-							continue
+				case segmentCopy: // Both instances and clones
+					maxZeroAttempts0 := -1
+					maxZeroAttempts1 := -1
+					for q := 0; q < ff.instanceNumber; q++ {
+						ffi := ff.instance[q]
+						if ffi.cloneNumber > 1 {
+							ffi.reportedState.ZeroAttempts[0] = ffi.reportedState.ZeroAttempts[0] * scheduler.pAttempts[ffi.cloneNumber]
+							if ffi.reportedState.ZeroAttempts[0] > uint64(schedTime)*uint64(1000000*1.05) || ffi.decreasedSpeed > ffi.reportedState.V.Packets {
+								// Save current speed as speed of flow function with this number of clones before removing
+								ffi.increasedSpeed = ffi.reportedState.V.Packets
+								ffi.decreasedSpeed = 0
+								ff.stopClone(ffi, scheduler)
+								ffi.updatePause(ffi.cloneNumber - 1)
+							}
 						} else {
-							if ff.pause == 0 {
-								// This is proportion between required and current speeds.
-								// 1000000000 is converting to nanoseconds
-								ff.updatePause(int((speedPKTS - targetSpeed) / speedPKTS / targetSpeed * 1000000000))
-							} else if float64(ff.pause)*generatePauseStep < 2 {
-								// Multiplying can't be used here due to integer truncation
-								ff.updatePause(ff.pause + 3)
-							} else {
-								ff.updatePause(int((1 + generatePauseStep) * float64(ff.pause)))
+							for z := int32(0); z < ffi.inIndex[0]; z++ {
+								if ffi.reportedState.ZeroAttempts[z] < ffi.reportedState.ZeroAttempts[0] {
+									ffi.reportedState.ZeroAttempts[0] = ffi.reportedState.ZeroAttempts[z]
+								}
+							}
+							ffi.reportedState.ZeroAttempts[0] = ffi.reportedState.ZeroAttempts[0] * scheduler.nAttempts[ffi.inIndex[0]]
+							if maxZeroAttempts0 == -1 || ffi.reportedState.ZeroAttempts[0] > ff.instance[maxZeroAttempts0].reportedState.ZeroAttempts[0] {
+								maxZeroAttempts1 = maxZeroAttempts0
+								maxZeroAttempts0 = q
+							} else if maxZeroAttempts1 == -1 || ffi.reportedState.ZeroAttempts[0] > ff.instance[maxZeroAttempts1].reportedState.ZeroAttempts[0] {
+								maxZeroAttempts1 = q
 							}
 						}
 					}
-				case receiveRSS:
-					if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port) < RSSCloneMin {
-						scheduler.stopFF(ff)
-						low.DecreaseRSS((ff.Parameters.(*receiveParameters)).port)
-						continue
+					if maxZeroAttempts0 != -1 && maxZeroAttempts1 != -1 && ff.instance[maxZeroAttempts1].reportedState.ZeroAttempts[0] != 0 {
+						if ff.instance[maxZeroAttempts0].reportedState.ZeroAttempts[0]+ff.instance[maxZeroAttempts1].reportedState.ZeroAttempts[0] > uint64(schedTime)*uint64(1.05*1000000) {
+							toInstance := ff.instance[maxZeroAttempts1]
+							ff.stopInstance(maxZeroAttempts0, maxZeroAttempts1, scheduler)
+							toInstance.updatePause(0)
+						}
+					}
+				case fastGenerate: // Only clones, no instances
+					targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
+					speedPKTS := float64(ff.instance[0].reportedState.V.normalize(schedTime).Packets)
+					// 3. Current speed is much bigger than target speed
+					if speedPKTS > 1.1*targetSpeed {
+						ffi := ff.instance[0]
+						// 4. TODO strange heuristic, it is required to check this
+						if ffi.cloneNumber > 1 && targetSpeed/float64(ffi.cloneNumber+1)*float64(ffi.cloneNumber) > speedPKTS {
+							ff.stopClone(ffi, scheduler)
+							ffi.updatePause(0)
+							continue
+						} else {
+							if ffi.pause == 0 {
+								// This is proportion between required and current speeds.
+								// 1000000000 is converting to nanoseconds
+								ffi.updatePause(int((speedPKTS - targetSpeed) / speedPKTS / targetSpeed * 1000000000))
+							} else if float64(ffi.pause)*generatePauseStep < 2 {
+								// Multiplying can't be used here due to integer truncation
+								ffi.updatePause(ffi.pause + 3)
+							} else {
+								ffi.updatePause(int((1 + generatePauseStep) * float64(ffi.pause)))
+							}
+						}
+					}
+				case receiveRSS: // Only instances, no clones
+					if ff.instanceNumber > 1 {
+						first := -1
+						for q := 0; q < ff.instanceNumber; q++ {
+							var q1 int32
+							for q1 = 1; q1 < ff.instance[q].inIndex[0]+1; q1++ {
+								if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port, int16(ff.instance[q].inIndex[q1])) > int64(RSSCloneMin) {
+									break
+								}
+							}
+							if q1 == ff.instance[q].inIndex[0]+1 {
+								if first == -1 {
+									first = q
+								} else {
+									ff.stopInstance(first, q, scheduler)
+									break
+								}
+							}
+						}
 					}
 				case readWrite, generate, sendReceiveKNI:
 				}
@@ -354,55 +494,72 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			// Secondly we check adding clones. We can add one clone if:
 			// 1. scheduler is switched on
 			// 2. ouput ring is quite empty
-			if scheduler.off == false && ff.checkOutputRingClonable(scheduler.maxPacketsToClone) {
+			if scheduler.off == false {
 				switch ff.fType {
-				case segmentCopy:
-					// 3. check function signals that we need to clone
-					// 4. we don't know flow function speed with more clones, or we know it and it is bigger than current speed
-					if ff.checkInputRingClonable(scheduler.maxPacketsToClone) &&
-						(ff.previousSpeed[ff.cloneNumber+1].Packets == 0 || ff.previousSpeed[ff.cloneNumber+1].Packets > ff.currentSpeed.Packets) {
-						// Save current speed as speed of flow function with this number of clones before adding
-						ff.previousSpeed[ff.cloneNumber] = ff.currentSpeed
-						if scheduler.startFF(ff) == nil {
-							// Add a pause to all clones. This pause depends on the number of clones.
-							ff.updatePause(ff.cloneNumber)
-						} else {
-							common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
+				case segmentCopy: // Both instances and clones
+					l := ff.instanceNumber
+					a := true
+					for q := 0; q < l; q++ {
+						ffi := ff.instance[q]
+						if ffi.inIndex[0] > 1 && ffi.checkInputRingClonable(scheduler.maxPacketsToClone) {
+							if ff.startNewInstance(constructZeroIndex(ffi.inIndex), scheduler) == nil {
+								constructDuplicatedIndex(ffi.inIndex, ff.instance[ff.instanceNumber-1].inIndex)
+								a = false
+								ffi.updatePause(0)
+							}
 						}
-						continue
 					}
-					// Scheduler can't add new clones if saved flow function speed with more
-					// clones is slower than current. However this speed can be changed due to
-					// external reasons. So flow function should check and update this speed
-					// regular time.
-					if checkRequired == true {
-						// Regular flow function speed check after each checkTime milliseconds,
-						// it is done by erasing previously measured speed data. After this scheduler can
-						// add new clone. If performance decreases with added clone, it will be stopped
-						// with setting speed data.
-						ff.previousSpeed[ff.cloneNumber+1].Packets = 0
+					if a == true {
+						for q := 0; q < l; q++ {
+							ffi := ff.instance[q]
+							if ffi.removed {
+								ffi.removed = false
+								continue
+							}
+							if ffi.inIndex[0] == 1 && scheduler.anyway && ffi.checkInputRingClonable(scheduler.maxPacketsToClone) &&
+								ffi.checkOutputRingClonable(scheduler.maxPacketsToClone) &&
+								(ffi.increasedSpeed == 0 || ffi.increasedSpeed > ffi.reportedState.V.Packets) {
+								if scheduler.pAttempts[ffi.cloneNumber+1] == 0 {
+									scheduler.pAttempts[ffi.cloneNumber+1] = scheduler.measure(1, ffi.cloneNumber+1)
+								}
+								if ffi.startNewClone(scheduler, q) == nil {
+									ffi.decreasedSpeed = ffi.reportedState.V.Packets
+									ffi.increasedSpeed = 0
+									ffi.updatePause(ffi.cloneNumber - 1)
+									continue
+								}
+							}
+							// Scheduler can't add new clones if saved instance speed with more
+							// clones is slower than current. However this speed can be changed due to
+							// external reasons. So flow function should "forget" this speed regularly
+							// to try to clone function and get new increasedSpeed.
+							if checkRequired == true {
+								ffi.increasedSpeed = 0
+							}
+						}
 					}
-				case fastGenerate:
+				case fastGenerate: // Only clones, no instances
 					// 3. speed is not enough
-					if float64(ff.currentSpeed.normalize(schedTime).Packets) < (ff.Parameters.(*generateParameters)).targetSpeed {
-						if ff.pause != 0 {
-							ff.updatePause(int((1 - generatePauseStep) * float64(ff.pause)))
-						} else {
+					if float64(ff.instance[0].reportedState.V.normalize(schedTime).Packets) < (ff.Parameters.(*generateParameters)).targetSpeed {
+						if ff.instance[0].pause != 0 {
+							ff.instance[0].updatePause(int((1 - generatePauseStep) * float64(ff.instance[0].pause)))
+						} else if ff.instance[0].checkOutputRingClonable(scheduler.maxPacketsToClone) {
 							// 3. there is no pause
-							if scheduler.startFF(ff) == nil {
-								ff.updatePause(0)
-							} else {
-								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
+							if ff.instance[0].startNewClone(scheduler, 0) == nil {
+								ff.instance[0].updatePause(0)
 							}
 							continue
 						}
 					}
-				case receiveRSS:
+				case receiveRSS: // Only instances, no clones
 					// 3. Number of packets in RSS is big enogh to cause overwrite (drop) problems
-					if ff.checkInputRingClonable(RSSCloneMax) && ff.cloneNumber < scheduler.maxRecv {
-						if low.IncreaseRSS((ff.Parameters.(*receiveParameters)).port) {
-							if scheduler.startFF(ff) != nil {
-								common.LogWarning(common.Debug, "Can't start new clone for", ff.name)
+					if ff.instanceNumber < scheduler.maxRecv && ff.inIndexNumber > 1 {
+						for q := 0; q < ff.instanceNumber; q++ {
+							if ff.instance[q].checkInputRingClonable(RSSCloneMax) && ff.instance[q].checkOutputRingClonable(scheduler.maxPacketsToClone) {
+								if ff.startNewInstance(constructZeroIndex(ff.instance[q].inIndex), scheduler) == nil {
+									constructDuplicatedIndex(ff.instance[q].inIndex, ff.instance[ff.instanceNumber-1].inIndex)
+								}
+								break
 							}
 						}
 					}
@@ -429,54 +586,73 @@ func cloneContext(ctx *[]UserContext) []UserContext {
 	return ret
 }
 
-func (ff *flowFunction) updatePause(pause int) {
-	ff.pause = pause
-	for j := 0; j < ff.cloneNumber; j++ {
-		ff.clone[j].channel[0] <- ff.pause
+func (ffi *instance) updatePause(pause int) {
+	ffi.pause = pause
+	for j := 0; j < ffi.cloneNumber; j++ {
+		ffi.clone[j].channel[0] <- ffi.pause
 	}
 }
 
 func (ff *flowFunction) printDebug(schedTime uint) {
 	switch ff.fType {
 	case segmentCopy:
-		out := ff.currentSpeed.normalize(schedTime)
-		if reportMbits {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s")
-		} else {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S")
+		for q := 0; q < ff.instanceNumber; q++ {
+			out := ff.instance[q].reportedState.V.normalize(schedTime)
+			if reportMbits {
+				common.LogDebug(common.Debug, "Current speed of", q, "instance of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s")
+			} else {
+				common.LogDebug(common.Debug, "Current speed of", q, "instance of", ff.name, "is", out.Packets, "PKT/S, cloneNumber:", ff.instance[q].cloneNumber, "queue number:", ff.instance[q].inIndex[0])
+			}
 		}
 	case fastGenerate:
 		targetSpeed := (ff.Parameters.(*generateParameters)).targetSpeed
-		out := ff.currentSpeed.normalize(schedTime)
+		out := ff.instance[0].reportedState.V.normalize(schedTime)
 		if reportMbits {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s, target speed is", int64(targetSpeed), "PKT/S")
+			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S,", out.Bytes, "Mbits/s, target speed is", uint64(targetSpeed), "PKT/S")
 		} else {
-			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S, target speed is", int64(targetSpeed), "PKT/S")
+			common.LogDebug(common.Debug, "Current speed of", ff.name, "is", out.Packets, "PKT/S, target speed is", uint64(targetSpeed), "PKT/S")
 		}
 	case readWrite, generate, sendReceiveKNI, receiveRSS:
 	}
 }
 
-func (current reportPair) normalize(schedTime uint) reportPair {
+func (V speedPair) normalize(schedTime uint) speedPair {
 	// We should multiply by 1000 because schedTime is in milliseconds
 	// We multiply by 8 to translate bytes to bits
 	// We add 24 because 4 is checksum + 20 is before/after packet gaps in 40GB ethernet
 	// We divide by 1000 and 1000 because networking suppose that megabit has 1000 kilobits instead of 1024
-	return reportPair{current.Packets * 1000 / uint64(schedTime), (current.Bytes + current.Packets*24) * 1000 / uint64(schedTime) * 8 / 1000 / 1000}
+	return speedPair{V.Packets * 1000 / uint64(schedTime), (V.Bytes + V.Packets*24) * 1000 / uint64(schedTime) * 8 / 1000 / 1000}
 }
 
-func (ff *flowFunction) updateCurrentSpeed() {
+func (ff *flowFunction) updateReportedState() {
 	// Gather and sum current speeds from all clones of current flow function
 	// Flow function itself and all clones put their speeds in one channel
-	ff.currentSpeed = reportPair{}
-	t := len(ff.report) - ff.cloneNumber
-	for k := 0; k < t; k++ {
-		<-ff.report
-	}
-	for k := 0; k < ff.cloneNumber; k++ {
-		temp := <-ff.report
-		ff.currentSpeed.Packets += temp.Packets
-		ff.currentSpeed.Bytes += temp.Bytes
+	for q := 0; q < ff.instanceNumber; q++ {
+		ffi := ff.instance[q]
+		ffi.reportedState = reportPair{}
+		t := len(ffi.report) - ffi.cloneNumber
+		for k := 0; k < t; k++ {
+			<-ffi.report
+		}
+		for k := 0; k < ffi.cloneNumber; k++ {
+			temp := <-ffi.report
+			ffi.reportedState.V.Packets += temp.V.Packets
+			ffi.reportedState.V.Bytes += temp.V.Bytes
+			if ff.fType == segmentCopy {
+				for z := int32(0); z < ffi.inIndex[0]; z++ {
+					ffi.reportedState.ZeroAttempts[z] += temp.ZeroAttempts[z]
+				}
+			}
+		}
+		// If any flow functions wait in a queue to put their
+		// reports immidiately after reading- we should remove them.
+		// They will put reports again after scheduling time.
+		t = len(ffi.report)
+		if t != 0 {
+			for k := 0; k < t; k++ {
+				<-ffi.report
+			}
+		}
 	}
 }
 
@@ -496,46 +672,140 @@ func (scheduler *scheduler) getCore() (int, int, error) {
 	return 0, 0, common.WrapWithNFError(nil, "Requested number of cores isn't enough.", common.NotEnoughCores)
 }
 
-func (ff *flowFunction) checkInputRingClonable(min uint32) bool {
-	switch ff.Parameters.(type) {
+func (ffi *instance) checkInputRingClonable(min uint32) bool {
+	switch ffi.ff.Parameters.(type) {
 	case *segmentParameters:
-		if ff.Parameters.(*segmentParameters).in.GetRingCount() > min {
-			return true
+		for q := int32(0); q < ffi.inIndex[0]; q++ {
+			if ffi.ff.Parameters.(*segmentParameters).in[ffi.inIndex[q+1]].GetRingCount() > min {
+				return true
+			}
 		}
 	case *copyParameters:
-		if ff.Parameters.(*copyParameters).in.GetRingCount() > min {
-			return true
+		for q := int32(0); q < ffi.inIndex[0]; q++ {
+			if ffi.ff.Parameters.(*copyParameters).in[ffi.inIndex[q+1]].GetRingCount() > min {
+				return true
+			}
 		}
 	case *receiveParameters:
-		if low.CheckRSSPacketCount(ff.Parameters.(*receiveParameters).port) > min {
-			return true
-		}
-	}
-	return false
-}
-
-func (ff *flowFunction) checkOutputRingClonable(max uint32) bool {
-	switch ff.Parameters.(type) {
-	case *receiveParameters:
-		if ff.Parameters.(*receiveParameters).out.GetRingCount() <= max {
-			return true
-		}
-	case *generateParameters:
-		if ff.Parameters.(*generateParameters).out.GetRingCount() <= max {
-			return true
-		}
-	case *copyParameters:
-		if ff.Parameters.(*copyParameters).out.GetRingCount() <= max ||
-			ff.Parameters.(*copyParameters).outCopy.GetRingCount() <= max {
-			return true
-		}
-	case *segmentParameters:
-		p := *(ff.Parameters.(*segmentParameters).out)
-		for i := range p {
-			if p[i].GetRingCount() <= max {
+		for q := int32(0); q < ffi.inIndex[0]; q++ {
+			if low.CheckRSSPacketCount(ffi.ff.Parameters.(*receiveParameters).port, int16(ffi.inIndex[q+1])) > int64(min) {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func (ffi *instance) checkOutputRingClonable(max uint32) bool {
+	switch ffi.ff.Parameters.(type) {
+	case *generateParameters:
+		if ffi.ff.Parameters.(*generateParameters).out[0].GetRingCount() <= max {
+			return true
+		}
+	case *receiveParameters:
+		for q := int32(0); q < ffi.inIndex[0]; q++ {
+			if ffi.ff.Parameters.(*receiveParameters).out[ffi.inIndex[q+1]].GetRingCount() <= max {
+				return true
+			}
+		}
+	case *copyParameters:
+		for q := int32(0); q < ffi.inIndex[0]; q++ {
+			if ffi.ff.Parameters.(*copyParameters).out[ffi.inIndex[q+1]].GetRingCount() <= max ||
+				ffi.ff.Parameters.(*copyParameters).outCopy[ffi.inIndex[q+1]].GetRingCount() <= max {
+				return true
+			}
+		}
+	case *segmentParameters:
+		p := *(ffi.ff.Parameters.(*segmentParameters).out)
+		for i := range p {
+			for q := int32(0); q < ffi.inIndex[0]; q++ {
+				if p[i][ffi.inIndex[q+1]].GetRingCount() <= max {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func constructZeroIndex(old []int32) []int32 {
+	return make([]int32, len(old), len(old))
+}
+
+func constructDuplicatedIndex(old []int32, newIndex []int32) {
+	oldLen := old[0]/2 + old[0]%2
+	newLen := old[0] / 2
+	for q := int32(0); q < newLen; q++ {
+		newIndex[q+1] = old[q+1+oldLen]
+	}
+	newIndex[0] = newLen
+	old[0] = oldLen
+}
+
+func constructNewIndex(inIndexNumber int32) []int32 {
+	if inIndexNumber == 0 {
+		return nil
+	}
+	newIndex := make([]int32, inIndexNumber+1, inIndexNumber+1)
+	for q := int32(0); q < inIndexNumber; q++ {
+		newIndex[q+1] = q
+	}
+	newIndex[0] = inIndexNumber
+	return newIndex
+}
+
+// This function is used for measuring "wasted" time that framework
+// spends on one "zero get from ring attempt". This function can be
+// replaced by "inline" time measurements which will cost
+// 3 time.Now = ~210nn per each burstSize (32) packets.
+func (scheduler *scheduler) measure(N int32, clones int) uint64 {
+	core, index, err := scheduler.getCore()
+	if err != nil {
+		return 0
+	}
+	par := new(segmentParameters)
+	par.in = scheduler.measureRings
+	out := make([]low.Rings, 0, 0)
+	par.out = &out
+	stype := uint8(0)
+	par.stype = &stype
+	inIndex := constructNewIndex(N)
+	var stopper [2]chan int
+	stopper[0] = make(chan int)
+	stopper[1] = make(chan int)
+	report := make(chan reportPair, 20)
+	var reportedState reportPair
+	var avg uint64
+	t := schedTime
+	pause := clones - 1
+	if pause == 0 {
+		schedTime = 5
+	} else {
+		schedTime = 15
+	}
+	for o := 0; o < 5; o++ {
+		go func() {
+			low.SetAffinity(core)
+			segmentProcess(par, inIndex, stopper, report, nil)
+		}()
+		<-stopper[1]
+		stopper[0] <- pause
+		<-report
+		for reportedState.ZeroAttempts[0] == 0 {
+			reportedState = <-report
+		}
+		stopper[0] <- -1
+		<-stopper[1]
+		for len(report) > 0 {
+			<-report
+		}
+		avg += uint64(schedTime) * 1000000 / reportedState.ZeroAttempts[0]
+		reportedState.ZeroAttempts[0] = 0
+	}
+	scheduler.setCoreByIndex(index)
+	schedTime = t
+	close(stopper[0])
+	close(stopper[1])
+	close(report)
+	return avg / 5
 }

@@ -15,9 +15,10 @@ DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export WORKDIR=/workdir
 
 # Disable FSGSBASE and F16C to run in VMs and Docker containers.
-export EXTRA_CFLAGS=-mno-fsgsbase -mno-f16c
-# Uncomment to build DEBUG DPDK
-# export EXTRA_CFLAGS=-mno-fsgsbase -mno-f16c -g -O0
+export EXTRA_CFLAGS = -mno-fsgsbase -mno-f16c
+ifdef NFF_GO_DEBUG
+export EXTRA_CFLAGS += -g -O0
+endif
 
 all: pktgen
 	cp $(PKTGEN_DIR)/Pktgen.lua .

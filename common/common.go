@@ -48,13 +48,18 @@ const (
 	IPNumber     = 0x04
 	TCPNumber    = 0x06
 	UDPNumber    = 0x11
-	NoNextHeader = 0x3B
+	ICMPv6Number = 0x3a
+	NoNextHeader = 0x3b
 )
 
 // Supported ICMP Types
 const (
-	ICMPTypeEchoRequest  uint8 = 8
-	ICMPTypeEchoResponse uint8 = 0
+	ICMPTypeEchoRequest         uint8 = 8
+	ICMPTypeEchoResponse        uint8 = 0
+	ICMPv6TypeEchoRequest       uint8 = 128
+	ICMPv6TypeEchoResponse      uint8 = 129
+	ICMPv6NeighborSolicitation  uint8 = 135
+	ICMPv6NeighborAdvertisement uint8 = 136
 )
 
 // These constants keep length of supported headers in bytes.
@@ -92,11 +97,11 @@ const (
 	// No - no output even after fatal errors
 	No LogType = 1 << iota
 	// Initialization - output during system initialization
-	Initialization
+	Initialization = 2
 	// Debug - output during execution one time per time period (scheduler ticks)
-	Debug
+	Debug = 4
 	// Verbose - output during execution as soon as something happens. Can influence performance
-	Verbose
+	Verbose = 8
 )
 
 // TCPFlags contains set TCP flags.
@@ -147,6 +152,8 @@ const (
 	MultipleReceivePort
 	MultipleKNIPort
 	WrongPort
+	FailToInitDPDK
+	FailToCreateKNI
 )
 
 // NFError is error type returned by nff-go functions

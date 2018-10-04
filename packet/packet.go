@@ -75,10 +75,31 @@ type EtherHdr struct {
 }
 
 func (hdr *EtherHdr) String() string {
-	r0 := fmt.Sprintf("L2 protocol: Ethernet\nEtherType: 0x%02x\n", hdr.EtherType)
-	r1 := "Ethernet Source: " + MACToString(hdr.SAddr) + "\n"
-	r2 := "Ethernet Source: " + MACToString(hdr.DAddr) + "\n"
-	return r0 + r1 + r2
+	return fmt.Sprintf(`L2 protocol: Ethernet, EtherType: 0x%04x (%s)
+Ethernet Source: %s
+Ethernet Destination: %s
+`,
+		hdr.EtherType, getEtherTypeName(hdr.EtherType),
+		MACToString(hdr.SAddr),
+		MACToString(hdr.DAddr))
+}
+
+var (
+	etherTypeNameLookupTable = map[uint16]string{
+		SwapIPV4Number: "IPv4",
+		SwapARPNumber:  "ARP",
+		SwapVLANNumber: "VLAN",
+		SwapMPLSNumber: "MPLS",
+		SwapIPV6Number: "IPv6",
+	}
+)
+
+func getEtherTypeName(et uint16) string {
+	ret, ok := etherTypeNameLookupTable[et]
+	if !ok {
+		return "unknown"
+	}
+	return ret
 }
 
 // MACToString return MAC address like string
@@ -100,12 +121,14 @@ type IPv4Hdr struct {
 	DstAddr        uint32 // destination address
 }
 
+func IPv4ToString(addr uint32) string {
+	return fmt.Sprintf("%d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
+}
+
 func (hdr *IPv4Hdr) String() string {
 	r0 := "    L3 protocol: IPv4\n"
-	s := hdr.SrcAddr
-	r1 := fmt.Sprintln("    IPv4 Source:", byte(s), ":", byte(s>>8), ":", byte(s>>16), ":", byte(s>>24))
-	d := hdr.DstAddr
-	r2 := fmt.Sprintln("    IPv4 Destination:", byte(d), ":", byte(d>>8), ":", byte(d>>16), ":", byte(d>>24))
+	r1 := "    IPv4 Source: " + IPv4ToString(hdr.SrcAddr) + "\n"
+	r2 := "    IPv4 Destination: " + IPv4ToString(hdr.DstAddr) + "\n"
 	return r0 + r1 + r2
 }
 
@@ -119,13 +142,19 @@ type IPv6Hdr struct {
 	DstAddr    [IPv6AddrLen]uint8 // IP address of destination host(s)
 }
 
+func IPv6ToString(addr [IPv6AddrLen]uint8) string {
+	return fmt.Sprintf("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
+		addr[0], addr[1], addr[2], addr[3],
+		addr[4], addr[5], addr[6], addr[7],
+		addr[8], addr[9], addr[10], addr[11],
+		addr[12], addr[13], addr[14], addr[15])
+}
+
 func (hdr *IPv6Hdr) String() string {
-	r0 := "    L3 protocol: IPv6\n"
-	s := hdr.SrcAddr
-	r1 := fmt.Sprintf("    IPv6 Source: %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", s[0], s[1], s[2], s[3], s[4], s[5], s[6], s[7], s[8], s[9], s[10], s[11], s[12], s[13], s[14], s[15])
-	d := hdr.DstAddr
-	r2 := fmt.Sprintf("    IPv6 Destination %02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x\n", d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12], d[13], d[14], d[15])
-	return r0 + r1 + r2
+	return fmt.Sprintf(`    L3 protocol: IPv6
+    IPv6 Source: %s
+    IPv6 Destination %s
+`, IPv6ToString(hdr.SrcAddr), IPv6ToString(hdr.DstAddr))
 }
 
 // TCPHdr L4 header from DPDK: lib/librte_net/rte_tcp.h
@@ -330,7 +359,7 @@ func (packet *Packet) GetICMPNoCheck() *ICMPHdr {
 // GetICMPForIPv6 ensures if L4 type is ICMP and cast L4 pointer to *ICMPHdr type.
 // L3 supposed to be parsed before and of IPv6 type.
 func (packet *Packet) GetICMPForIPv6() *ICMPHdr {
-	if packet.GetIPv6NoCheck().Proto == ICMPNumber {
+	if packet.GetIPv6NoCheck().Proto == ICMPv6Number {
 		return (*ICMPHdr)(packet.L4)
 	}
 	return nil
@@ -383,6 +412,8 @@ func (packet *Packet) ParseL7(protocol uint) {
 	case UDPNumber:
 		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(UDPLen))
 	case ICMPNumber:
+		fallthrough
+	case ICMPv6Number:
 		packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(ICMPLen))
 	}
 }
@@ -473,6 +504,20 @@ func InitEmptyPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+func fillIPv4Default(packet *Packet, plLen uint16, nextProto uint8) {
+	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
+	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(plLen)
+	packet.GetIPv4NoCheck().NextProtoID = nextProto
+	packet.GetIPv4NoCheck().TimeToLive = 64
+}
+
+func fillIPv6Default(packet *Packet, totalLen uint16, nextProto uint8) {
+	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(totalLen)
+	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
+	packet.GetIPv6NoCheck().Proto = nextProto
+	packet.GetIPv6NoCheck().HopLimits = 255
+}
+
 // InitEmptyIPv4Packet initializes input packet with preallocated plSize of bytes for payload
 // and init pointers to Ethernet and IPv4 headers.
 func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
@@ -483,16 +528,12 @@ func InitEmptyIPv4Packet(packet *Packet, plSize uint) bool {
 		LogWarning(Debug, "InitEmptyIPv4Packet: Cannot append mbuf")
 		return false
 	}
-
-	// After packet is parsed, we can write to packet struct known protocol types
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + plSize))
-	packet.GetIPv4NoCheck().NextProtoID = NoNextHeader
+	fillIPv4Default(packet, uint16(IPv4MinLen+plSize), NoNextHeader)
+
 	if hwtxchecksum {
 		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4OLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
@@ -512,10 +553,7 @@ func InitEmptyIPv6Packet(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-	packet.GetIPv6NoCheck().Proto = NoNextHeader
-
+	fillIPv6Default(packet, uint16(plSize), NoNextHeader)
 	return true
 }
 
@@ -546,15 +584,12 @@ func InitEmptyIPv4TCPPacket(packet *Packet, plSize uint) bool {
 	}
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = TCPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen + plSize))
-
+	fillIPv4Default(packet, uint16(IPv4MinLen+TCPMinLen+plSize), TCPNumber)
 	packet.ParseL4ForIPv4()
 	packet.GetTCPNoCheck().DataOff = TCPMinDataOffset
 	packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(packet.GetTCPNoCheck().DataOff&0xf0)>>2)
+
 	if hwtxchecksum {
 		packet.GetIPv4NoCheck().HdrChecksum = 0
 		low.SetTXIPv4TCPOLFlags(packet.CMbuf, EtherLen, IPv4MinLen)
@@ -575,12 +610,8 @@ func InitEmptyIPv4UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen + UDPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = UDPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + UDPLen + plSize))
-
+	fillIPv4Default(packet, uint16(IPv4MinLen+UDPLen+plSize), UDPNumber)
 	packet.ParseL4ForIPv4()
 	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
@@ -604,11 +635,8 @@ func InitEmptyIPv4ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV4Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv4MinLen + ICMPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv4NoCheck().NextProtoID = ICMPNumber
-	packet.GetIPv4NoCheck().VersionIhl = IPv4VersionIhl
-	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(uint16(IPv4MinLen + ICMPLen + plSize))
+	fillIPv4Default(packet, uint16(IPv4MinLen+ICMPLen+plSize), ICMPNumber)
 	packet.ParseL4ForIPv4()
 	return true
 }
@@ -627,13 +655,11 @@ func InitEmptyIPv6TCPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = TCPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(TCPMinLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-
+	fillIPv6Default(packet, uint16(TCPMinLen+plSize), TCPNumber)
 	packet.ParseL4ForIPv6()
 	packet.GetTCPNoCheck().DataOff = TCPMinDataOffset
 	packet.Data = unsafe.Pointer(uintptr(packet.L4) + uintptr(packet.GetTCPNoCheck().DataOff&0xf0)>>2)
+
 	if hwtxchecksum {
 		low.SetTXIPv6TCPOLFlags(packet.CMbuf, EtherLen, IPv6Len)
 	}
@@ -654,10 +680,7 @@ func InitEmptyIPv6UDPPacket(packet *Packet, plSize uint) bool {
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + UDPLen)
 
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = UDPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
-
+	fillIPv6Default(packet, uint16(UDPLen+plSize), UDPNumber)
 	packet.ParseL4ForIPv6()
 	packet.GetUDPNoCheck().DgramLen = SwapBytesUint16(uint16(UDPLen + plSize))
 
@@ -678,11 +701,8 @@ func InitEmptyIPv6ICMPPacket(packet *Packet, plSize uint) bool {
 	packet.Ether.EtherType = SwapBytesUint16(IPV6Number)
 	packet.Data = unsafe.Pointer(uintptr(packet.unparsed()) + IPv6Len + ICMPLen)
 
-	// Next fields not required by pktgen to accept packet. But set anyway
 	packet.ParseL3()
-	packet.GetIPv6NoCheck().Proto = ICMPNumber
-	packet.GetIPv6NoCheck().PayloadLen = SwapBytesUint16(uint16(UDPLen + plSize))
-	packet.GetIPv6NoCheck().VtcFlow = IPv6VtcFlow
+	fillIPv6Default(packet, uint16(ICMPLen+plSize), ICMPv6Number)
 	packet.ParseL4ForIPv6()
 	return true
 }

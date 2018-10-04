@@ -4,19 +4,17 @@
 
 PATH_TO_MK = ../mk
 IMAGENAME = nff-go-examples
-EXECUTABLES = dump clonablePcapDumper kni copy errorHandling \
-			  createPacket sendFixedPktsNumber gtpu pingReplay
-SUBDIRS = nat tutorial antiddos demo fileReadWrite firewall forwarding
+EXECUTABLES = dump clonablePcapDumper kni copy errorHandling timer \
+			  createPacket sendFixedPktsNumber gtpu pingReplay \
+			  netlink gopacketParserExample devbind
+SUBDIRS = tutorial antiddos demo fileReadWrite firewall forwarding
 
-gopacket:
-	go get -v github.com/google/gopacket
-
-gopacketParserExample: gopacket
-	go build gopacketParserExample.go
-
-.PHONY: dpi
+.PHONY: dpi nffPktgen
 dpi:
 	$(MAKE) -C dpi
+
+nffPktgen:
+	$(MAKE) -C nffPktgen
 
 include $(PATH_TO_MK)/intermediate.mk
 include $(PATH_TO_MK)/leaf.mk

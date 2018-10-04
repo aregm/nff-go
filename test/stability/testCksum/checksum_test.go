@@ -5,12 +5,13 @@
 package main
 
 import (
+	"log"
 	"testing"
 )
 
-func TestInit(t *testing.T) {
+func init() {
 	if err := initTest(); err != nil {
-		t.Fatalf("fail to initialize with error: %+v\n", err)
+		log.Fatalf("fail to initialize with error: %+v\n", err)
 	}
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation.
+// Copyright 2017-2018 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -108,7 +108,7 @@ var rulesL3Ctxt = rawL3RuleTestCtxt{
 				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
-		{"dead::beaf/16",
+		{"dead::beef/16",
 			gtAddr6{
 				[16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 				[16]uint8{0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -128,9 +128,9 @@ var rulesL3Ctxt = rawL3RuleTestCtxt{
 				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
-		{"dead::beaf/128",
+		{"dead::beef/128",
 			gtAddr6{
-				[16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xaf},
+				[16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xef},
 				[16]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 			},
 		},
@@ -1033,7 +1033,7 @@ func TestInternal_l3ACL_l4ACL_packetIPv6_ICMP(t *testing.T) {
 			{id: 0, mask: 0, ok: true},
 			{id: 6, mask: 0xff, ok: false},
 			{id: 17, mask: 0xff, ok: false},
-			{id: 1, mask: 0xff, ok: true}, // ICMP
+			{id: 58, mask: 0xff, ok: true}, // ICMPv6
 		},
 		srcRange: []portRange{
 			{min: 0, max: 65535, valid: false, ok: true},

@@ -13,6 +13,8 @@ Dockerfile: Makefile
 	if [ -n '${http_proxy}' ]; then					\
 		echo 'ENV http_proxy ${http_proxy}' >> Dockerfile;	\
 		echo 'ENV https_proxy ${http_proxy}' >> Dockerfile;	\
+		echo 'RUN echo proxy=${http_proxy} >> /etc/dnf/dnf.conf' >> Dockerfile;	\
+		echo 'RUN echo proxy=${http_proxy} >> /etc/dnf/dnf.conf' >> Dockerfile;	\
 	fi
 	echo 'RUN dnf -y install numactl-libs.x86_64; dnf clean all' >> Dockerfile
 	echo 'CMD ["/bin/bash"]' >> Dockerfile

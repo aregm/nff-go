@@ -13,7 +13,7 @@ package low
 // it increases executable size and build time.
 
 /*
-#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_timer -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
 #include "low.h"
 */
 import "C"
@@ -44,6 +44,7 @@ func DirectSend(m *Mbuf, port uint16) bool {
 
 // Ring is a ring buffer for pointers
 type Ring C.struct_nff_go_ring
+type Rings []*Ring
 
 // Mbuf is a message buffer.
 type Mbuf C.struct_rte_mbuf
@@ -70,16 +71,8 @@ func GetPort(n uint16) *Port {
 	return p
 }
 
-func CheckRSSPacketCount(p *Port) uint32 {
-	return uint32(C.checkRSSPacketCount((*C.struct_cPort)(p), C.int16_t(p.QueuesNumber-1)))
-}
-
-func DecreaseRSS(p *Port) {
-	C.changeRSSReta((*C.struct_cPort)(p), false)
-}
-
-func IncreaseRSS(p *Port) bool {
-	return bool(C.changeRSSReta((*C.struct_cPort)(p), true))
+func CheckRSSPacketCount(p *Port, queue int16) int64 {
+	return int64(C.checkRSSPacketCount((*C.struct_cPort)(p), (C.int16_t(queue))))
 }
 
 // GetPortMACAddress gets MAC address of given port.
@@ -240,6 +233,15 @@ func CreateRing(count uint) *Ring {
 
 	// Flag 0x0000 means ring default mode which is Multiple Consumer / Multiple Producer
 	return (*Ring)(unsafe.Pointer(C.nff_go_ring_create(C.CString(name), C.uint(count), C.SOCKET_ID_ANY, 0x0000)))
+}
+
+// CreateRings creates ring with given name and count.
+func CreateRings(count uint, inIndexNumber int32) Rings {
+	rings := make(Rings, inIndexNumber, inIndexNumber)
+	for i := int32(0); i < inIndexNumber; i++ {
+		rings[i] = CreateRing(count)
+	}
+	return rings
 }
 
 // EnqueueBurst enqueues data to ring buffer.
@@ -445,11 +447,11 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, queue int16, OUT *Ring, flag *int32, coreID int) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.receiveRSS(C.uint16_t(port), C.int16_t(queue), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // ReceiveKNI - get packets from Linux core and enqueue on a Ring.
@@ -458,17 +460,17 @@ func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN *Ring, flag *int32, coreID int) {
+func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int) {
 	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
 	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN *Ring, flag *int32, coreID int) {
-	C.nff_go_stop(IN.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func Stop(IN Rings, flag *int32, coreID int) {
+	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -485,11 +487,17 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) {
-	C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
-
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) error {
+	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
+	if ret < 0 {
+		return common.WrapWithNFError(nil, "Error with EAL initialization\n", common.FailToInitDPDK)
+	}
+	if ret > 0 {
+		return common.WrapWithNFError(nil, "rte_eal_init can't parse all parameters\n", common.FailToInitDPDK)
+	}
 	mbufNumberT = mbufNumber
 	mbufCacheSizeT = mbufCacheSize
+	return nil
 }
 
 func StopDPDK() {
@@ -512,16 +520,21 @@ func GetPortsNumber() int {
 	return int(C.rte_eth_dev_count())
 }
 
+func CheckPortRSS(port uint16) int32 {
+	return int32(C.check_port_rss(C.uint16_t(port)))
+}
+
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool) error {
-	var mempool *C.struct_rte_mempool
+func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
+	var mempools **C.struct_rte_mempool
 	if willReceive {
-		mempool = (*C.struct_rte_mempool)(CreateMempool("receive"))
+		m := CreateMempools("receive", inIndex)
+		mempools = (**C.struct_rte_mempool)(unsafe.Pointer(&(m[0])))
 	} else {
-		mempool = nil
+		mempools = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
-		mempool, C._Bool(promiscuous), C._Bool(hwtxchecksum)) != 0 {
+		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
@@ -541,6 +554,14 @@ func CreateMempool(name string) *Mempool {
 	mempool := C.createMempool(C.uint32_t(mbufNumberT), C.uint32_t(mbufCacheSizeT))
 	usedMempools = append(usedMempools, mempoolPair{mempool, tName})
 	return (*Mempool)(mempool)
+}
+
+func CreateMempools(name string, inIndex int32) []*Mempool {
+	m := make([]*Mempool, inIndex, inIndex)
+	for i := int32(0); i < inIndex; i++ {
+		m[i] = CreateMempool(name)
+	}
+	return m
 }
 
 // SetAffinity sets cpu affinity mask.
@@ -611,7 +632,7 @@ func Statistics(N float32) {
 func ReportMempoolsState() {
 	for _, m := range usedMempools {
 		use := C.getMempoolSpace(m.mempool)
-		common.LogDebug(common.Debug, "Mempool usage", m.name, use, "from", mbufNumberT)
+		common.LogDebug(common.Verbose, "Mempool usage", m.name, use, "from", mbufNumberT)
 		if float32(mbufNumberT-uint(use))/float32(mbufNumberT)*100 < 10 {
 			common.LogDrop(common.Debug, m.name, "mempool has less than 10% free space. This can lead to dropping packets while receive.")
 		}
@@ -619,9 +640,12 @@ func ReportMempoolsState() {
 }
 
 // CreateKni creates a KNI device
-func CreateKni(portId uint16, core uint, name string) {
+func CreateKni(portId uint16, core uint, name string) error {
 	mempool := (*C.struct_rte_mempool)(CreateMempool("KNI"))
-	C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool)
+	if C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool) != 0 {
+		common.WrapWithNFError(nil, "Error with KNI allocation\n", common.FailToCreateKNI)
+	}
+	return nil
 }
 
 // CreateLPM creates LPM table

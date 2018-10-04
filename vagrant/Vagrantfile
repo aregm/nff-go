@@ -20,7 +20,7 @@ Vagrant.configure(2) do |config|
   vm_second_port_base = vm_port_base + (vm_links_number + 1) * vm_total_number
 
 #  config.vm.box = "ubuntu/xenial64"
-  config.vm.box = "fedora/27-cloud-base"
+  config.vm.box = "fedora/28-cloud-base"
 
   # Docker server port
   config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
@@ -61,7 +61,7 @@ fi
 
 echo Installing system packages
 sudo dnf update -y
-sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim
+sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim protobuf-compiler
 sudo systemctl enable NetworkManager
 sudo systemctl start NetworkManager
 SHELL
@@ -69,17 +69,18 @@ SHELL
 $provision_ubuntu = <<SHELL
 echo Installing system packages
 sudo apt-get update
-sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager protobuf-compiler
 sudo systemctl enable network-manager
 sudo systemctl start network-manager
 SHELL
 
 $provision_common = <<SHELL
-echo Reassigning \'Wired connection 1\' interface to system name
-sudo nmcli c mod 'Wired connection 1' connection.id 'System connection'
+syscon=$(nmcli --fields device,name,type,state -t c s | grep activated | grep -v bridge | cut -d: -f2)
+echo Reassigning "${syscon}" interface to system name
+sudo nmcli c mod "${syscon}" connection.id 'System connection'
 
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.10.1.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.11.1.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
@@ -119,27 +120,14 @@ SHELL
       if i % vm_group_size != 0
         # Define backward inter-VM virtual network links
         (1..vm_links_number).each do |j|
-          if (i % vm_group_size) == vm_group_size - 1 && j == 1
-            # Workaround hardcoded MAC address for server VM until we implement ARP completely
-            node.vm.network "private_network",
-                            auto_config: false,
-                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
-                            :mac => '3cfdfea4ddf0',
-                            :model_type => 'e1000',
-                            :libvirt__forward_mode => 'none',
-                            :libvirt__tunnel_type => 'udp',
-                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
-                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
-          else
-            node.vm.network "private_network",
-                            auto_config: false,
-                            virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
-                            :model_type => 'e1000',
-                            :libvirt__forward_mode => 'none',
-                            :libvirt__tunnel_type => 'udp',
-                            :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
-                            :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
-          end
+          node.vm.network "private_network",
+                          auto_config: false,
+                          virtualbox__intnet: "#{vm_name}-link-#{user}-#{i}-#{j}",
+                          :model_type => 'virtio',
+                          :libvirt__forward_mode => 'none',
+                          :libvirt__tunnel_type => 'udp',
+                          :libvirt__tunnel_local_port => vm_second_port_base + i * vm_links_number + j,
+                          :libvirt__tunnel_port => vm_port_base + i * vm_links_number + j
         end
       end
 
@@ -149,7 +137,7 @@ SHELL
           node.vm.network "private_network",
                           auto_config: false,
                           virtualbox__intnet: "#{vm_name}-link-#{user}-#{i + 1}-#{j}",
-                          :model_type => 'e1000',
+                          :model_type => 'virtio',
                           :libvirt__forward_mode => 'none',
                           :libvirt__tunnel_type => 'udp',
                           :libvirt__tunnel_local_port => vm_port_base + (i + 1) * vm_links_number + j,

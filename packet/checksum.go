@@ -132,6 +132,7 @@ func SetHWOffloadingHdrChecksum(p *Packet) {
 		} else if icmp != nil {
 			// calculate full software checksum for icmp, cause there is no
 			// hardware calculation for icmp packets.
+			p.GetICMPForIPv4().Cksum = 0
 			p.GetICMPForIPv4().Cksum = SwapBytesUint16(CalculateIPv4ICMPChecksum(ipv4, icmp,
 				unsafe.Pointer(uintptr(unsafe.Pointer(icmp))+ICMPLen)))
 		}
@@ -144,6 +145,7 @@ func SetHWOffloadingHdrChecksum(p *Packet) {
 		} else if icmp != nil {
 			// calculate full software checksum for icmp, cause there is no
 			// hardware calculation for icmp packets.
+			p.GetICMPForIPv6().Cksum = 0
 			p.GetICMPForIPv6().Cksum = SwapBytesUint16(CalculateIPv6ICMPChecksum(ipv6, icmp,
 				unsafe.Pointer(uintptr(unsafe.Pointer(icmp))+ICMPLen)))
 		}
@@ -325,12 +327,18 @@ func CalculateIPv4ICMPChecksum(hdr *IPv4Hdr, icmp *ICMPHdr, data unsafe.Pointer)
 // CalculateIPv6ICMPChecksum calculates ICMP checksum in case if L3
 // protocol is IPv6.
 func CalculateIPv6ICMPChecksum(hdr *IPv6Hdr, icmp *ICMPHdr, data unsafe.Pointer) uint16 {
-	dataLength := SwapBytesUint16(hdr.PayloadLen) - ICMPLen
+	dataLength := SwapBytesUint16(hdr.PayloadLen)
 
-	sum := uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
+	// ICMP payload
+	sum := calculateDataChecksum(data, int(dataLength-ICMPLen), 0)
+
+	sum += calculateIPv6AddrChecksum(hdr) + // IPv6 Header
+		uint32(dataLength) +
+		uint32(hdr.Proto) +
+		// ICMP header excluding checksum
+		uint32(uint16(icmp.Type)<<8|uint16(icmp.Code)) +
 		uint32(SwapBytesUint16(icmp.Identifier)) +
-		uint32(SwapBytesUint16(icmp.SeqNum)) +
-		calculateDataChecksum(unsafe.Pointer(data), int(dataLength), 0)
+		uint32(SwapBytesUint16(icmp.SeqNum))
 
 	return ^reduceChecksum(sum)
 }

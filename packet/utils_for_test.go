@@ -4,8 +4,10 @@ package packet
 
 import (
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/low"
@@ -14,13 +16,16 @@ import (
 // isInit is common for all tests
 var isInit bool
 
+const testDevelopmentMode = false
 const payloadSize = 100
 
 func tInitDPDK() {
 	if isInit != true {
 		argc, argv := low.InitDPDKArguments([]string{})
 		// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-		low.InitDPDK(argc, argv, 32, 8191, 250, 0)
+		if err := low.InitDPDK(argc, argv, 32, 8191, 250, 0); err != nil {
+			log.Fatal(err)
+		}
 		nonPerfMempool = low.CreateMempool("Test")
 		isInit = true
 	}
@@ -127,4 +132,27 @@ func getPacket() *Packet {
 		log.Fatal(err)
 	}
 	return pkt
+}
+
+func dumpPacketToPcap(fileName string, pkt *Packet) {
+	if !testDevelopmentMode {
+		return
+	}
+
+	file, err := os.Create(fileName + ".pcap")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = WritePcapGlobalHdr(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = pkt.WritePcapOnePacket(file)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = file.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
 }

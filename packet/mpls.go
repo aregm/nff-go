@@ -17,8 +17,7 @@ type MPLSHdr struct {
 
 func (hdr *MPLSHdr) String() string {
 	return fmt.Sprintf(`MPLS: Label: %d, EXP: %d, S: %d TTL: %d`,
-		SwapBytesUint32(hdr.mpls)>>12, (SwapBytesUint32(hdr.mpls)>>9)&0x00000007,
-		(SwapBytesUint32(hdr.mpls)>>8)&1, SwapBytesUint32(hdr.mpls)&0x000000ff)
+		hdr.GetMPLSLabel(), hdr.GetMPLSTC(), hdr.GetMPLSS(), hdr.GetMPLSTTL())
 }
 
 // GetMPLSLabel returns Label (20 first bits of MPLS header).
@@ -29,6 +28,21 @@ func (hdr *MPLSHdr) GetMPLSLabel() uint32 {
 // SetMPLSLabel sets Label (20 first bits of MPLS header to specified value).
 func (hdr *MPLSHdr) SetMPLSLabel(tag uint32) {
 	hdr.mpls = SwapBytesUint32((SwapBytesUint32(hdr.mpls) & 0xfff) | (tag << 12))
+}
+
+// GetMPLSTC returns the Traffic Class (formerly known as EXP).
+func (hdr *MPLSHdr) GetMPLSTC() uint32 {
+	return (SwapBytesUint32(hdr.mpls) >> 9) & 0x00000007
+}
+
+// GetMPLSS returns the Bottom-Of-Stack value
+func (hdr *MPLSHdr) GetMPLSS() uint32 {
+	return (SwapBytesUint32(hdr.mpls) >> 8) & 1
+}
+
+// GetMPLSTTL returns the Time-to-Live value
+func (hdr *MPLSHdr) GetMPLSTTL() uint32 {
+	return SwapBytesUint32(hdr.mpls) & 0x000000ff
 }
 
 // GetMPLS returns MPLS header pointer if it is present in the packet.

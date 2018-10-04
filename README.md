@@ -139,6 +139,10 @@ Use Go version 1.9 or higher. To check the version of Go, do:
         cd $GOPATH/src/github.com/intel-go/nff-go
         make -j8
 
+## Building NFF-GO in debug mode
+
+		make debug -j8
+
 # Running NFF-GO
 
 ## Documentation 
@@ -202,7 +206,7 @@ downloaded automatically.
 
 If you want to contribute to NFF-Go, check our [Contributing
 guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
-recommend checking the 'janitorial' bugs in our list of open issues; these bugs
+recommend checking the bugs with 'help-wanted' or 'easyfix' in our list of open issues; these bugs
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 

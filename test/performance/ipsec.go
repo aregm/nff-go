@@ -27,7 +27,7 @@ func main() {
 	config := flow.Config{
 		DisableScheduler: *noscheduler,
 		DPDKArgs:         []string{*dpdkLogLevel},
-		CPUList:	  *cores,
+		CPUList:          *cores,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 

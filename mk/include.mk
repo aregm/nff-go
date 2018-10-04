@@ -6,12 +6,12 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
-DPDK_VERSION = 18.02
+DPDK_VERSION = 18.08
 DPDK_DIR = dpdk-$(DPDK_VERSION)
 ifndef DPDK_URL
 DPDK_URL=http://fast.dpdk.org/rel/dpdk-$(DPDK_VERSION).tar.xz
 endif
-PKTGEN_VERSION=3.4.9
+PKTGEN_VERSION=3.5.2
 PKTGEN_DIR=pktgen-dpdk-pktgen-$(PKTGEN_VERSION)
 ifndef PKTGEN_URL
 PKTGEN_URL=http://git.dpdk.org/apps/pktgen-dpdk/snapshot/pktgen-dpdk-pktgen-$(PKTGEN_VERSION).tar.xz
@@ -23,7 +23,6 @@ export RTE_TARGET = x86_64-native-linuxapp-gcc
 # VMs and Docker containers.
 CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-O3					\
-	-g					\
 	-std=gnu11				\
 	-m64					\
 	-pthread				\
@@ -41,8 +40,10 @@ CFLAGS = -I$(RTE_SDK)/$(RTE_TARGET)/include	\
 	-DRTE_MACHINE_CPUFLAG_F16C		\
 	-include rte_config.h			\
 	-Wno-deprecated-declarations
-# DEBUG flags
-# export CFLAGS = -g -O0 -I$(RTE_SDK)/$(RTE_TARGET)/include -std=gnu11 -m64 -pthread -march=native -mno-fsgsbase -mno-f16c -include rte_config.h
+
+ifdef NFF_GO_DEBUG
+export CFLAGS += -g -O0 -D DEBUG
+endif
 
 HAVE_AVX2 := $(shell grep avx2 /proc/cpuinfo)
 ifdef HAVE_AVX2

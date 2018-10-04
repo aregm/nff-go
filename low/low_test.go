@@ -4,15 +4,20 @@
 
 package low
 
-import "unsafe"
-import "testing"
-import "math/rand"
-import "time"
+import (
+	"log"
+	"math/rand"
+	"testing"
+	"time"
+	"unsafe"
+)
 
 func init() {
 	argc, argv := InitDPDKArguments([]string{})
 	// Default: burstSize=32, mbufNumber=8191, mbufCacheSize=250
-	InitDPDK(argc, argv, 32, 8191, 250, 0)
+	if err := InitDPDK(argc, argv, 32, 8191, 250, 0); err != nil {
+		log.Fatalf("fail to initialize with error: %+v\n", err)
+	}
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 

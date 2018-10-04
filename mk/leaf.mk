@@ -9,10 +9,14 @@ include $(PATH_TO_MK)/include.mk
 
 # Build all
 .PHONY: clean
+
+ifdef NFF_GO_DEBUG
+# Flags to build Go files without optimizations
+export GO_COMPILE_FLAGS += -gcflags=all='-N -l'
+endif
+
 $(EXECUTABLES) : % : %.go
-	go build $< $(COMMON_FILES)
-# Use the following line to build Go files without optimizations
-#	go build -gcflags '-N -l' $< $(COMMON_FILES)
+	go build $(GO_COMPILE_FLAGS) $< $(COMMON_FILES)
 
 ifndef NOCHECK_PKTGEN
 all: check-pktgen
