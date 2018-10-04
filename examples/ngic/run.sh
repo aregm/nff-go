@@ -12,6 +12,7 @@ echo "" > log/dp.log
 	   -debug=$DEBUG \
 	   -flow_debug=$FLOW_DEBUG \
 	   -cpu_list $CPUList \
+	   -memory $MEMORY \
 	   -s1u_port $S1U_PORT_IDX \
 	   -sgi_port $SGI_PORT_IDX \
 	   -s1u_ip $S1U_IP \
