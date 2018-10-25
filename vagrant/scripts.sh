@@ -131,14 +131,28 @@ setupdocker ()
         sudo gpasswd -a vagrant docker
     fi
 
+    if [ ! -z "${http_proxy}" ]
+    then
+        sudo mkdir /etc/systemd/system/docker.service.d
+        sudo sh -c 'cat > /etc/systemd/system/docker.service.d/http-proxy.conf <<EOF
+[Service]
+Environment="HTTP_PROXY=${http_proxy}"
+EOF'
+    fi
+
     sudo mkdir /etc/docker
     sudo sh -c 'cat > /etc/docker/daemon.json <<EOF
 {
-    "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]
+    "hosts": ["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"],
+    "ipv6": true,
+    "fixed-cidr-v6": "fdd0::/64"
 }
 EOF'
 
     sudo systemctl enable docker.service
     sudo systemctl daemon-reload
     sudo systemctl restart docker.service
+
+    sudo docker pull robbertkl/ipv6nat
+    sudo docker run -d --restart=always -v /var/run/docker.sock:/var/run/docker.sock:ro --privileged --net=host robbertkl/ipv6nat
 }
