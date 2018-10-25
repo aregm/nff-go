@@ -643,7 +643,7 @@ func ReportMempoolsState() {
 func CreateKni(portId uint16, core uint, name string) error {
 	mempool := (*C.struct_rte_mempool)(CreateMempool("KNI"))
 	if C.create_kni(C.uint16_t(portId), C.uint32_t(core), C.CString(name), mempool) != 0 {
-		common.WrapWithNFError(nil, "Error with KNI allocation\n", common.FailToCreateKNI)
+		return common.WrapWithNFError(nil, "Error with KNI allocation\n", common.FailToCreateKNI)
 	}
 	return nil
 }
