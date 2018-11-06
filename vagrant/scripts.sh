@@ -30,75 +30,11 @@ runpktgen ()
     rc=$?; if [[ $rc == 0 ]]; then reset; fi
 }
 
-# Perform transient NAT client machine configuration. It initializes
-# two network interfaces and sets up default routes to the server
-# network.
-natclient ()
-{
-    sudo ip route add 192.168.16.0/24 via 192.168.14.1 dev $CARD1
-    sudo ip route add 192.168.26.0/24 via 192.168.24.1 dev $CARD2
-}
-
-# Perform one-time configuration needed for NAT client test
-# machine. For it apache package is installed for apache benchmark
-# program.
-setupnatclient ()
-{
-    sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.14.2/24
-    sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.24.2/24
-    sudo nmcli c up $CARD1
-    sudo nmcli c up $CARD2
-
-    natclient
-
-    if [ $DISTRO == Ubuntu ]; then
-        sudo apt-get install -y apache2
-    elif [ $DISTRO == Fedora ]; then
-        sudo dnf -y install httpd
-    fi
-}
-
-# Perform transient configuration for NAT middle machine. It
-# initializes two first network interfaces for NFF-GO bindports
-# command and initializes second interface pair for use with Linux
-# NAT. In this setup enp0s16 is connected to server (public network)
-# and enp0s9 is connected to client (private network).
-natmiddle ()
-{
-    export NFF_GO_CARDS="00:08.0 00:0a.0"
-    export CARD1=ens7
-    export CARD2=ens9
-
-    bindports
-
-    sudo sysctl -w net.ipv4.ip_forward=1
-
-    sudo iptables -t nat -A POSTROUTING -o $CARD2 -j MASQUERADE
-    sudo iptables -A FORWARD -i $CARD2 -o $CARD1 -m state --state RELATED,ESTABLISHED -j ACCEPT
-    sudo iptables -A FORWARD -i $CARD1 -o $CARD2 -j ACCEPT
-}
-
-# Perform one-time configuration needed for NAT middle machine. On
-# Fedora we use firewall daemon to permanently record IP forwarding
-# rules.
-setupnatmiddle ()
-{
-    natmiddle
-
-    sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.24.1/24
-    sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.1/24
-    sudo nmcli c up $CARD1
-    sudo nmcli c up $CARD2
-}
-
-# Perform one-time configuration needed for NAT server side
+# Perform one-time configuration needed for NAT test
 # machine. It installs Apache web server.
-setupnatserver ()
+setuptesthost ()
 {
-    sudo nmcli c add type ethernet ifname $CARD1 con-name $CARD1 ip4 192.168.16.2/24
-    sudo nmcli c add type ethernet ifname $CARD2 con-name $CARD2 ip4 192.168.26.2/24
-    sudo nmcli c up $CARD1
-    sudo nmcli c up $CARD2
+    setupdocker
 
     if [ $DISTRO == Ubuntu ]; then
         sudo apt-get install -y apache2
