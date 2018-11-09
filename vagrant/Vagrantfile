@@ -52,7 +52,10 @@ sudo sed -i -e 's,biosdevname=0,biosdevname=1,' /etc/default/grub
 sudo sed -i -e 's,net.ifnames=0,net.ifnames=1,' /etc/default/grub
 sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 
-if [ $(readlink /etc/udev/rules.d/80-net-setup-link.rules) == /dev/null ]
+echo Disabling SELinux
+sudo sed -i -e 's,SELINUX=enforcing,SELINUX=disabled,' /etc/selinux/config
+
+if [ "$(readlink /etc/udev/rules.d/80-net-setup-link.rules)" == /dev/null ]
 then
     echo Fixing udev to use consistent interface names
     sudo rm /etc/udev/rules.d/80-net-setup-link.rules
@@ -85,11 +88,16 @@ mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
 echo . ~/scripts.sh >> .bashrc
-setupdocker
+setuptesthost
 
-echo Downloading and building NFF-GO
+echo Downloading and building NFF-GO framework
 go get -d -v github.com/intel-go/nff-go
-(cd \"$GOPATH\"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make)
+(cd "${GOPATH}"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make)
+echo Downloading and building NFF-GO NAT example and its dependencies
+go get github.com/golang/protobuf/protoc-gen-go
+git clone -b develop --recurse-submodules http://github.com/intel-go/nff-go-nat
+(cd nff-go-nat; . env.sh; make)
+./nff-go-nat/test/httpperfserv/install-systemd-service.sh "-port 8008"
 
 echo Setting up 1024 huge pages
 sudo sh -c 'echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages'

@@ -64,6 +64,7 @@ setupdocker ()
     elif [ $DISTRO == Fedora ]; then
         sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
         sudo dnf -y install docker-ce
+        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
         sudo gpasswd -a vagrant docker
     fi
 
