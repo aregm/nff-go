@@ -17,7 +17,7 @@
         "OUTPORT1_2": "1",
         "PKTGENCOREMASK": "0x1ff",
         "PKTGENPORT": "[1:2-3].0, [4-5:6].1",
-	"CORES": "0-43"
+	    "CORES": "0-43"
     },
     "tests": [
         {

@@ -50,6 +50,17 @@ var (
 		regexp.MustCompile(`average= *(\d+\.?\d*) μs$`),
 		regexp.MustCompile(`stddev= *(\d+\.?\d*) μs$`),
 	}
+	WrkStatsRegexps = [2]*regexp.Regexp{
+		regexp.MustCompile(`Requests/sec: *(\d+\.?\d*)$`),
+		regexp.MustCompile(`Transfer/sec: *(\d+\.?\d*)([K|M|G|T|P])B$`),
+	}
+	unitScale = map[string]float64{
+		"K": 1.0,
+		"M": 1024.0,
+		"G": 1024.0 * 1024.0,
+		"T": 1024.0 * 1024.0 * 1024.0,
+		"P": 1024.0 * 1024.0 * 1024.0 * 1024.0,
+	}
 
 	NoDeleteContainersOnExit = false
 	username                 string
@@ -77,6 +88,7 @@ type RunningApp struct {
 	CoresStats      []CoresInfo
 	abs             *ApacheBenchmarkStats
 	lats            *LatencyStats
+	wrks            *WrkBenchmarkStats
 	Logger          *Logger
 	benchStartTime  time.Time
 	benchEndTime    time.Time
@@ -138,9 +150,10 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 	app.Status = TestRunning
 	if app.config.Type == TestAppApacheBenchmark {
 		app.abs = &ApacheBenchmarkStats{}
-	}
-	if app.config.Type == TestAppLatency {
+	} else if app.config.Type == TestAppLatency {
 		app.lats = &LatencyStats{}
+	} else if app.config.Type == TestAppWrkBenchmark {
+		app.wrks = &WrkBenchmarkStats{}
 	}
 
 	scanner := bufio.NewScanner(logs)
@@ -156,6 +169,23 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 		} else if TestFailedRegexp.FindStringIndex(str) != nil {
 			status = TestReportedFailed
 		} else {
+			fillstats := func(stats []float64, rexps []*regexp.Regexp) {
+				for iii := range rexps {
+					matches := rexps[iii].FindStringSubmatch(str)
+					if len(matches) >= 2 {
+						var value float64
+						n, err := fmt.Sscanf(matches[1], "%f", &value)
+						if err == nil && n == 1 {
+							stats[iii] = value
+							if len(matches) == 3 {
+								// Next match is unit letter
+								stats[iii] *= unitScale[matches[2]]
+							}
+						}
+					}
+				}
+			}
+
 			// Scan for strings specific to test application type
 			if app.config.Type == TestAppGo {
 				// Get cores number information for NFF-Go application
@@ -175,28 +205,13 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 				}
 			} else if app.config.Type == TestAppApacheBenchmark {
 				// Get Apache Benchmark output
-				for iii := range ABStatsRegexps {
-					matches := ABStatsRegexps[iii].FindStringSubmatch(str)
-					if len(matches) == 2 {
-						var value float32
-						n, err := fmt.Sscanf(matches[1], "%f", &value)
-						if err == nil && n == 1 {
-							app.abs.Stats[iii] = value
-						}
-					}
-				}
+				fillstats(app.abs.Stats[:], ABStatsRegexps[:])
 			} else if app.config.Type == TestAppLatency {
 				// Get Latency perf test output
-				for iii := range LatStatsRegexps {
-					matches := LatStatsRegexps[iii].FindStringSubmatch(str)
-					if len(matches) == 2 {
-						var value float32
-						n, err := fmt.Sscanf(matches[1], "%f", &value)
-						if err == nil && n == 1 {
-							app.lats.Stats[iii] = value
-						}
-					}
-				}
+				fillstats(app.lats.Stats[:], LatStatsRegexps[:])
+			} else if app.config.Type == TestAppWrkBenchmark {
+				// Get Wrk Benchmark output
+				fillstats(app.wrks.Stats[:], WrkStatsRegexps[:])
 			}
 		}
 

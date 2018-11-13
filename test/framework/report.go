@@ -30,6 +30,8 @@ type TestcaseReportInfo struct {
 	ABStats *ApacheBenchmarkStats `json:",omitempty"`
 	// Latency type tests
 	LatStats *LatencyStats `json:",omitempty"`
+	// Latency type tests
+	WStats *WrkBenchmarkStats `json:",omitempty"`
 	// Per application statistics
 	Apps []RunningApp `json:"-"`
 }
@@ -151,7 +153,14 @@ const (
             </tr><tr>
                 <td class="thinrborderstatnames">Requested speed [Pkts/sec]</td><td>{{index .Stats 1}}</td>
             </tr>
-        </table>{{end}}{{/* end with .LatStats */}}{{end}}{{/* end if .LatStats */}}
+        </table>{{end}}{{/* end with .LatStats */}}{{end}}{{/* end if .LatStats */}}{{if .WStats}}{{with .WStats}}
+        <table class="bench">
+            <tr>
+                <td class="thinrborderstatnames">Requests per second [#/sec]</td><td>{{index .Stats 0}}</td>
+            </tr><tr>
+                <td class="thinrborderstatnames">Transfer rate [Kbytes/sec] received</td><td>{{index .Stats 1}}</td>
+            </tr>
+        </table>{{end}}{{/* end with .WStats */}}{{end}}{{/* end if .WStats */}}
     </td>
     </tr>{{range $appindex, $appelement := .Apps}}<tr style='display:none' id='{{genappid $testindex $appindex}}'>
     <td>
