@@ -61,6 +61,7 @@ const (
 	TestAppPktgen
 	TestAppApacheBenchmark
 	TestAppLatency
+	TestAppWrkBenchmark
 )
 
 // UnmarshalJSON unmarshals data and checks app type validity.
@@ -77,6 +78,7 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 		"TestAppPktgen":          TestAppPktgen,
 		"TestAppApacheBenchmark": TestAppApacheBenchmark,
 		"TestAppLatency":         TestAppLatency,
+		"TestAppWrkBenchmark":    TestAppWrkBenchmark,
 	}[s]
 	if !ok {
 		return fmt.Errorf("invalid AppType %q", s)
@@ -91,9 +93,10 @@ type TestType int
 // Constants for different test types.
 const (
 	TestTypeBenchmark TestType = iota
+	TestTypeScenario
 	TestTypeApacheBenchmark
 	TestTypeLatency
-	TestTypeScenario
+	TestTypeWrkBenchmark
 )
 
 // UnmarshalJSON unmarshals data and checks test type validity.
@@ -107,9 +110,10 @@ func (at *TestType) UnmarshalJSON(data []byte) error {
 	// Use map to get int keys for string values
 	got, ok := map[string]TestType{
 		"TestTypeBenchmark":       TestTypeBenchmark,
+		"TestTypeScenario":        TestTypeScenario,
 		"TestTypeApacheBenchmark": TestTypeApacheBenchmark,
 		"TestTypeLatency":         TestTypeLatency,
-		"TestTypeScenario":        TestTypeScenario,
+		"TestTypeWrkBenchmark":    TestTypeWrkBenchmark,
 	}[s]
 	if !ok {
 		return fmt.Errorf("invalid TestType %q", s)
@@ -137,16 +141,16 @@ type ReportCoresInfo struct {
 
 // Indexes in array of Apache Benchmark stats ApacheBenchmarkStats
 const (
-	RequestsPerSecond = iota
-	TimePerRequest
-	TimePerRequestConcurrent
-	TransferRate
+	AbRequestsPerSecond = iota
+	AbTimePerRequest
+	AbTimePerRequestConcurrent
+	AbTransferRate
 )
 
 // ApacheBenchmarkStats has info about running Apache Benchmark web
 // client.
 type ApacheBenchmarkStats struct {
-	Stats [4]float32
+	Stats [4]float64
 }
 
 // Indexes in array of latency stats LatencyStats
@@ -160,7 +164,16 @@ const (
 
 // LatencyStats has info about finished latency perf test
 type LatencyStats struct {
-	Stats [5]float32
+	Stats [5]float64
+}
+
+const (
+	WrkRequestsPerSecond = iota
+	WrkTransferRate
+)
+
+type WrkBenchmarkStats struct {
+	Stats [2]float64
 }
 
 // TestReport has info about test status and application.
