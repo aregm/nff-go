@@ -188,6 +188,14 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 				break
 			}
 		}
+	} else if test.Type == TestTypeWrkBenchmark {
+		// Find which app has Wrk Benchmark statistics report
+		for iii := range apps {
+			if apps[iii].config.Type == TestAppWrkBenchmark {
+				tri.WStats = apps[iii].wrks
+				break
+			}
+		}
 	}
 
 	return &tri

@@ -54,12 +54,7 @@ func testScenarios(t *testing.T, logdir string, tests []TestcaseReportInfo) {
 	}
 
 	for iii := range tests {
-		select {
-		case report.Pipe <- tests[iii]:
-			t.Log("Reported test", iii)
-		case err := <-report.Done:
-			t.Fatal(err)
-		}
+		report.AddTestResult(&tests[iii])
 	}
 
 	report.FinishReport()
@@ -88,6 +83,8 @@ func testManyApps(t *testing.T, testtype TestType) {
 				appConfig[iii].Type = TestAppApacheBenchmark
 			} else if iii == 0 && testtype == TestTypeLatency {
 				appConfig[iii].Type = TestAppLatency
+			} else if iii == 0 && testtype == TestTypeWrkBenchmark {
+				appConfig[iii].Type = TestAppWrkBenchmark
 			} else {
 				appConfig[iii].Type = TestAppGo
 			}
@@ -132,11 +129,15 @@ func testManyApps(t *testing.T, testtype TestType) {
 				}
 			} else if appConfig[iii].Type == TestAppApacheBenchmark {
 				apps[iii].abs = &ApacheBenchmarkStats{
-					Stats: [4]float32{111.111, 222.222, 333.333, 444.444},
+					Stats: [4]float64{111.111, 222.222, 333.333, 444.444},
 				}
 			} else if appConfig[iii].Type == TestAppLatency {
 				apps[iii].lats = &LatencyStats{
-					Stats: [5]float32{111.111, 1000000, 222.222, 333.333, 444.444},
+					Stats: [5]float64{111.111, 1000000, 222.222, 333.333, 444.444},
+				}
+			} else if appConfig[iii].Type == TestAppWrkBenchmark {
+				apps[iii].wrks = &WrkBenchmarkStats{
+					Stats: [2]float64{111.111, 222.222},
 				}
 			} else { // appConfig[iii].Type == TestAppGo
 				apps[iii].CoresStats = make([]CoresInfo, NUM_MEASUREMENTS)
@@ -183,6 +184,13 @@ func testManyApps(t *testing.T, testtype TestType) {
 					break
 				}
 			}
+		} else if testtype == TestTypeWrkBenchmark {
+			for iii := range apps {
+				if apps[iii].config.Type == TestAppWrkBenchmark {
+					tests[jjj].WStats = apps[iii].wrks
+					break
+				}
+			}
 		}
 	}
 
@@ -203,4 +211,8 @@ func TestApacheBenchmarkManyApps(t *testing.T) {
 
 func TestLatencyManyApps(t *testing.T) {
 	testManyApps(t, TestTypeLatency)
+}
+
+func TestWrkBenchmarkManyApps(t *testing.T) {
+	testManyApps(t, TestTypeWrkBenchmark)
 }
