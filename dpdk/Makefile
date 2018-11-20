@@ -20,6 +20,9 @@ ifdef NFF_GO_DEBUG
 export EXTRA_CFLAGS += -g -O0
 endif
 
+.PHONY: dpdk
+dpdk: all
+
 all: pktgen
 	cp $(PKTGEN_DIR)/Pktgen.lua .
 
