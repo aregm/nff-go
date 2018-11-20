@@ -19,4 +19,7 @@ Dockerfile: Makefile
 	echo 'RUN dnf -y install numactl-libs.x86_64; dnf clean all' >> Dockerfile
 	echo 'CMD ["/bin/bash"]' >> Dockerfile
 
+.PHONY: dpdk
+dpdk:
+
 include $(PATH_TO_MK)/leaf.mk
