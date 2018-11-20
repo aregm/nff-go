@@ -14,7 +14,7 @@ import (
 const (
 	DriverHvNetvcs      = "hv_netvcs"
 	DriverUioPciGeneric = "uio_pci_generic"
-	DriverIgUio         = "ig_uio"
+	DriverIgbUio        = "igb_uio"
 	DriverVfioPci       = "vfio-pci"
 	DriverUioHvGeneric  = "uio_hv_generic"
 )
@@ -46,8 +46,8 @@ var (
 // DPDK related drivers
 var (
 	DefaultDpdkDriver = DriverUioPciGeneric
-	DpdkDrivers       = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci, DriverUioHvGeneric}
-	DpdkPciDrivers    = [...]string{DriverUioPciGeneric, DriverIgUio, DriverVfioPci}
+	DpdkDrivers       = [...]string{DriverUioPciGeneric, DriverIgbUio, DriverVfioPci, DriverUioHvGeneric}
+	DpdkPciDrivers    = [...]string{DriverUioPciGeneric, DriverIgbUio, DriverVfioPci}
 	DpdkVmbusDrivers  = [...]string{DriverUioHvGeneric}
 )
 
