@@ -12,12 +12,11 @@ services:
 
 before_script:
   - sudo apt-get install -y linux-headers-$(uname -r)
-  - docker pull ubuntu:bionic
-  - docker build -t test-bionic .
-  - docker run -it -d --privileged -v /usr/src:/usr/src -v /lib/modules:/lib/modules -v /sys/devices/system/node:/sys/devices/system/node --name test-nff-go test-bionic /bin/bash
+  - docker pull ubuntu:cosmic
+  - docker build --build-arg https_proxy=${https_proxy} -t test-cosmic .
+  - docker run -it -d --privileged -v /usr/src:/usr/src -v /lib/modules:/lib/modules -v /sys/devices/system/node:/sys/devices/system/node --name test-nff-go test-cosmic /bin/bash
 
 script:
-  - docker exec -i test-nff-go ./scripts/get-depends.sh
   - docker exec -i test-nff-go make
   # Build standalone examples
   - docker exec -i test-nff-go bash -c "cd examples && make gopacketParserExample && cd .."
