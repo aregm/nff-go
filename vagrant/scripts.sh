@@ -1,8 +1,7 @@
 export DPDK_VERSION=18.11
-export GOPATH="$HOME"/go
 export GOROOT=/opt/go
-export NFF_GO="$GOPATH"/src/github.com/intel-go/nff-go
-export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
+export NFF_GO="$HOME"/nff-go
+export PATH="$HOME"/go/bin:"$GOROOT"/bin:"$PATH"
 export MAKEFLAGS="-j 4"
 export NFF_GO_CARDS="00:06.0 00:07.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
@@ -59,14 +58,13 @@ setupdocker ()
         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
         sudo apt-get update
         sudo apt-get install -y docker-ce
-        sudo gpasswd -a ubuntu docker
-        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H fd://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
     elif [ $DISTRO == Fedora ]; then
         sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
         sudo dnf -y install docker-ce
-        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
-        sudo gpasswd -a vagrant docker
     fi
+
+    sudo gpasswd -a vagrant docker
+    sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
 
     if [ ! -z "${http_proxy}" ]
     then
