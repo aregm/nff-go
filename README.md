@@ -65,7 +65,7 @@ func L3Separator(currentPacket *packet.Packet, context flow.UserContext) bool {
 ```
 NFF-GO is an Open Source BSD licensed project that runs mostly in Linux user
 land. The most recent patches and enhancements provided by the community are
-available in the master branch.
+available in the *_develop_* branch. master branch provides the latest stable released version under the appropriate tag. 
 
 ## Getting NFF-GO
 
@@ -112,7 +112,6 @@ The kernel module, which is required for DPDK user-mode drivers, is built but
 not installed into kernel directory. You can load it using the full path to the
 module file:
 $GOPATH/src/github.com/intel-go/nff-go/test/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-
 
 ### Go
 
