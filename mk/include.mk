@@ -6,18 +6,12 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
-DPDK_VERSION = 18.08
-DPDK_DIR = dpdk-$(DPDK_VERSION)
-ifndef DPDK_URL
-DPDK_URL=http://fast.dpdk.org/rel/dpdk-$(DPDK_VERSION).tar.xz
-endif
-PKTGEN_VERSION=3.5.2
-PKTGEN_DIR=pktgen-dpdk-pktgen-$(PKTGEN_VERSION)
-ifndef PKTGEN_URL
-PKTGEN_URL=http://git.dpdk.org/apps/pktgen-dpdk/snapshot/pktgen-dpdk-pktgen-$(PKTGEN_VERSION).tar.xz
-endif
-export RTE_SDK = $(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
-export RTE_TARGET = x86_64-native-linuxapp-gcc
+DPDK_VERSION=18.11
+DPDK_DIR=dpdk
+PKTGEN_VERSION=3.5.8
+PKTGEN_DIR=pktgen-dpdk
+export RTE_SDK=$(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
+export RTE_TARGET=x86_64-native-linuxapp-gcc
 
 # Configure flags for native code. Disable FSGSBASE and F16C to run in
 # VMs and Docker containers.

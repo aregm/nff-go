@@ -1,0 +1,6 @@
+[submodule "dpdk/dpdk"]
+	path = dpdk/dpdk
+	url = http://dpdk.org/git/dpdk
+[submodule "dpdk/pktgen-dpdk"]
+	path = dpdk/pktgen-dpdk
+	url = http://dpdk.org/git/apps/pktgen-dpdk

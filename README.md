@@ -69,17 +69,11 @@ available in the *_develop_* branch. master branch provides the latest stable re
 
 ## Getting NFF-GO
 
-Use the **go get** command to download NFF-GO. You must first set your GOPATH:
+Starting with release 0.7.0 NFF-Go uses go.mod for getting dependencies,
+therefore Go version 1.11 or later is required. To checkout NFF-Go
+sources use the following command
 
-       export GOPATH=/my/local/directory
-       go get -v -d github.com/intel-go/nff-go
-
-Go will download the sources into $GOPATH/src. It will try to build NFF-GO and
-fail with a message:
-
-        can't load package: package github.com/intel-go/nff-go: no buildable Go source files in /localdisk/work/rscohn1/ws/nff-go-test/src/github.com/intel-go/nff-go
-Ignore the message for now. We need to install some dependencies before you can
-build.
+        git clone --recurse-submodules http://github.com/intel-go/nff-go
 
 ### Working with a github fork
 
@@ -119,21 +113,12 @@ not installed into kernel directory. You can load it using the full path to the
 module file:
 $GOPATH/src/github.com/intel-go/nff-go/test/dpdk/dpdk-17.08/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
-
 ### Go
 
-Use Go version 1.9 or higher. To check the version of Go, do:
+Use Go version 1.11 or higher. To check the version of Go, do:
 
         go version
         
-### Installing NFF dependencies
-
-        $GOPATH/src/github.com/intel-go/nff-go/scripts/get-depends.sh
-
-### environment variables
-    
-        export PATH="$PATH:$GOPATH/bin"
-    
 ## Building NFF-GO
 
         cd $GOPATH/src/github.com/intel-go/nff-go
@@ -148,6 +133,7 @@ Use Go version 1.9 or higher. To check the version of Go, do:
 ## Documentation 
 
 Use:
+
         make doc
 
 to generate full documentation. Alternatively, you can do:
