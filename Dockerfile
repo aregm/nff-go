@@ -1,13 +1,10 @@
-FROM ubuntu:bionic
-
-ENV GO_VERSION 1.9
-ENV GOPATH /gopath
-ENV GOROOT /usr/lib/go-${GO_VERSION}
-
-ENV PATH ${GOROOT}/bin:${GOPATH}/bin:${PATH}
-ENV NFF_GO_DIR /gopath/src/github.com/intel-go/nff-go
+FROM ubuntu:cosmic
 
 ARG MAKEFLAGS=-j2
+
+ENV GOROOT /opt/go
+ENV PATH ${GOROOT}/bin:${GOPATH}/bin:${PATH}
+ENV NFF_GO /nff-go
 
 RUN apt-get -q update && apt-get -q -y install \
     make \
@@ -19,9 +16,12 @@ RUN apt-get -q update && apt-get -q -y install \
     libelf-dev \
     hugepages  \
     libnuma-dev \
-    libhyperscan-dev
+    libhyperscan-dev \
+    liblua5.3-dev
 
-RUN mkdir -p ${NFF_GO_DIR}
-COPY . ${NFF_GO_DIR}
+RUN cd /opt && curl -L -s https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar zx
 
-WORKDIR ${NFF_GO_DIR}
+RUN mkdir -p ${NFF_GO}
+COPY . ${NFF_GO}
+
+WORKDIR ${NFF_GO}
