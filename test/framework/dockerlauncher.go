@@ -227,7 +227,7 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 	}
 }
 
-func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan struct{}) {
+func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan struct{}, start bool) {
 	var connection net.Conn
 	var err error
 	var scanner *bufio.Scanner
@@ -314,10 +314,13 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	app.Logger.LogDebug("Got number of ports", numberOfPorts)
 
 	// Start generating packets on ports
-	app.Logger.LogDebug("Executing startup commands")
-	for _, cmd := range app.test.BenchConf.StartCommands {
-		if writeData(cmd) {
-			return
+	// If we don't start generating - this pktgen will be used for receiving and counting
+	if start {
+		app.Logger.LogDebug("Executing startup commands")
+		for _, cmd := range app.test.BenchConf.StartCommands {
+			if writeData(cmd) {
+				return
+			}
 		}
 	}
 
