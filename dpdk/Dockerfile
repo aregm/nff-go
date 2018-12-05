@@ -13,7 +13,6 @@ RUN dnf -y install pciutils; dnf clean all
 
 WORKDIR /workdir
 COPY pktgen .
-COPY Pktgen.lua .
 # Workaround for linking agains libpcap.so.0.8 on Ubuntu
 RUN ln -s libpcap.so.1 /usr/lib64/libpcap.so.0.8
 

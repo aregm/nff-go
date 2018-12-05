@@ -22,7 +22,6 @@ endif
 dpdk: all
 
 all: pktgen
-	cp $(PKTGEN_DIR)/Pktgen.lua .
 
 $(DPDK_DIR)/$(DPDK_INSTALL_DIR):
 	$(MAKE) -C $(DPDK_DIR) config T=$(RTE_TARGET)
@@ -35,7 +34,6 @@ pktgen: $(PKTGEN_DIR)/app/$(RTE_TARGET)/pktgen
 	cp $(PKTGEN_DIR)/app/$(RTE_TARGET)/pktgen .
 
 clean:
-	-rm pktgen Pktgen.lua
 	-$(MAKE) -C $(DPDK_DIR) clean
 	-rm -rf $(DPDK_DIR)/$(DPDK_INSTALL_DIR) $(DPDK_DIR)/build $(DPDK_DIR)/$(RTE_TARGET)
 	-$(MAKE) -C $(PKTGEN_DIR) realclean
