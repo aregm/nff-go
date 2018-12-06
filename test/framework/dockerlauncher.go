@@ -23,9 +23,9 @@ import (
 
 // Pktgen commands constants
 const (
-	PktgenGetPortsNumberCommand = "printf(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n);"
+	PktgenGetPortsNumberCommand = "io.write(string.format(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n)); io.flush();"
 	PktgenGetPortStatsCommand   = "stat = pktgen.portStats(\"all\", \"rate\");"
-	PktgenPrintPortStatsCommand = "printf(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx);"
+	PktgenPrintPortStatsCommand = "io.write(string.format(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx)); io.flush();"
 	PktgenExitCommand           = "os.exit(0);"
 
 	PktgenGetPortsNumberFormat = "%d"

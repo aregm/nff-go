@@ -5,7 +5,7 @@
 PATH_TO_MK = ../../mk
 SUBDIRS = main
 
-main: apptype_string.go
+main:
 
 %_string.go: types.go
 	go generate
