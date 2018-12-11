@@ -87,6 +87,48 @@ func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	return mac
 }
 
+// GetPortByName gets the port id from device name. The device name should be
+// specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+func GetPortByName(name string) (uint16, error) {
+	var port C.uint16_t
+	ret := C.rte_eth_dev_get_port_by_name(C.CString(name), &port)
+	switch ret {
+	case 0:
+		return uint16(port), nil
+	case -C.ENODEV, -C.EINVAL:
+		msg := common.LogError(common.Debug,
+			"GetPortByName cannot find device: no such device")
+		return 0, common.WrapWithNFError(nil, msg, common.BadArgument)
+	default:
+		msg := common.LogError(common.Debug, "GetPortByName got an unknown error")
+		return 0, common.WrapWithNFError(nil, msg, common.Fail)
+	}
+}
+
+// GetNameByPort gets the device name from port id. The device name is specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:02:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tun0|tap0]
+func GetNameByPort(port uint16) (string, error) {
+	s := make([]C.char, C.RTE_ETH_NAME_MAX_LEN)
+	ret := C.rte_eth_dev_get_name_by_port(C.uint16_t(port), &s[0])
+	switch ret {
+	case 0:
+		return C.GoString(&s[0]), nil
+	case -C.EINVAL:
+		msg := common.LogError(common.Debug, "GetNameByPort cannot find port")
+		return "", common.WrapWithNFError(nil, msg, common.BadArgument)
+	default:
+		msg := common.LogError(common.Debug, "GetNameByPort got an unknown error")
+		return "", common.WrapWithNFError(nil, msg, common.Fail)
+	}
+}
+
 // GetPacketDataStartPointer returns the pointer to the
 // beginning of packet.
 func GetPacketDataStartPointer(mb *Mbuf) uintptr {

@@ -974,6 +974,25 @@ func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
+// GetPortByName gets the port id from device name. The device name should be
+// specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+func GetPortByName(name string) (uint16, error) {
+	return low.GetPortByName(name)
+}
+
+// GetNameByPort gets the device name from port id. The device name is specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:02:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tun0|tap0]
+func GetNameByPort(port uint16) (string, error) {
+	return low.GetNameByPort(port)
+}
+
 // SetIPForPort sets IP for specified port if it was created. Not thread safe.
 // Return error if requested port isn't exist or wasn't previously requested.
 func SetIPForPort(port uint16, ip uint32) error {
