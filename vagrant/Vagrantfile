@@ -79,6 +79,17 @@ network:
       dhcp4: true
       dhcp6: true
       optional: true
+    enp0s3:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+EOF'
+    sudo sh -c 'cat > /etc/netplan/50-vagrant.yaml <<EOF
+---
+network:
+  version: 2
+  renderer: networkd
+  ethernets: {}
 EOF'
 fi
 
@@ -123,12 +134,12 @@ setuptesthost
 
 echo Downloading and building NFF-GO framework
 go get -v golang.org/x/tools/cmd/stringer
-git clone -b develop --recurse-submodules http://github.com/intel-go/nff-go
-(cd nff-go; make -j1)
+git clone -b master --recurse-submodules http://github.com/intel-go/nff-go
+(cd nff-go; go mod download; make)
 echo Downloading and building NFF-GO NAT example and its dependencies
 go get github.com/golang/protobuf/protoc-gen-go
-git clone -b develop --recurse-submodules http://github.com/intel-go/nff-go-nat
-(cd nff-go-nat; . env.sh; make  -j1)
+git clone -b master --recurse-submodules http://github.com/intel-go/nff-go-nat
+(cd nff-go-nat; go mod download; . env.sh; make)
 ./nff-go-nat/test/httpperfserv/install-systemd-service.sh "-port 8008"
 
 echo Setting up 1024 huge pages
