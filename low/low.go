@@ -515,6 +515,13 @@ func StopPort(port uint16) {
 	C.rte_eth_dev_stop(C.uint16_t(port))
 }
 
+func FreeKNI(port uint16) error {
+	if C.free_kni(C.uint16_t(port)) < 0 {
+		return common.WrapWithNFError(nil, "Problem with KNI releasing\n", common.FailToReleaseKNI)
+	}
+	return nil
+}
+
 // GetPortsNumber gets total number of available Ethernet devices.
 func GetPortsNumber() int {
 	return int(C.rte_eth_dev_count())
