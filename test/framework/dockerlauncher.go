@@ -23,9 +23,9 @@ import (
 
 // Pktgen commands constants
 const (
-	PktgenGetPortsNumberCommand = "printf(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n);"
+	PktgenGetPortsNumberCommand = "io.write(string.format(\"%d\\n\", pktgen.portStats(\"all\", \"port\").n)); io.flush();"
 	PktgenGetPortStatsCommand   = "stat = pktgen.portStats(\"all\", \"rate\");"
-	PktgenPrintPortStatsCommand = "printf(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx);"
+	PktgenPrintPortStatsCommand = "io.write(string.format(\"%%d %%d %%d %%d\\n\", stat[%d].pkts_tx, stat[%d].mbits_tx, stat[%d].pkts_rx, stat[%d].mbits_rx)); io.flush();"
 	PktgenExitCommand           = "os.exit(0);"
 
 	PktgenGetPortsNumberFormat = "%d"
@@ -227,7 +227,7 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 	}
 }
 
-func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan struct{}) {
+func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan struct{}, start bool) {
 	var connection net.Conn
 	var err error
 	var scanner *bufio.Scanner
@@ -314,10 +314,13 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	app.Logger.LogDebug("Got number of ports", numberOfPorts)
 
 	// Start generating packets on ports
-	app.Logger.LogDebug("Executing startup commands")
-	for _, cmd := range app.test.BenchConf.StartCommands {
-		if writeData(cmd) {
-			return
+	// If we don't start generating - this pktgen will be used for receiving and counting
+	if start {
+		app.Logger.LogDebug("Executing startup commands")
+		for _, cmd := range app.test.BenchConf.StartCommands {
+			if writeData(cmd) {
+				return
+			}
 		}
 	}
 

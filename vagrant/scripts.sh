@@ -1,8 +1,6 @@
-export DPDK_VERSION=18.11
-export GOPATH="$HOME"/go
 export GOROOT=/opt/go
-export NFF_GO="$GOPATH"/src/github.com/intel-go/nff-go
-export PATH="$GOPATH"/bin:"$GOROOT"/bin:"$PATH"
+export NFF_GO="$HOME"/nff-go
+export PATH="$HOME"/go/bin:"$GOROOT"/bin:"$PATH"
 export MAKEFLAGS="-j 4"
 export NFF_GO_CARDS="00:06.0 00:07.0"
 export DISTRO=$(lsb_release -i | cut -d: -f2 | sed s/'^\t'//)
@@ -13,14 +11,14 @@ export CARD2=ens7
 bindports ()
 {
     sudo modprobe uio
-    sudo insmod "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    sudo "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
+    sudo insmod "$NFF_GO"/dpdk/dpdk/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo "$NFF_GO"/dpdk/dpdk/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
 }
 
 # Bind ports to Linux kernel driver
 unbindports ()
 {
-    sudo "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
+    sudo "$NFF_GO"/dpdk/dpdk/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
 }
 
 # Run pktgen
@@ -59,14 +57,13 @@ setupdocker ()
         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
         sudo apt-get update
         sudo apt-get install -y docker-ce
-        sudo gpasswd -a ubuntu docker
-        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H fd://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
     elif [ $DISTRO == Fedora ]; then
         sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
         sudo dnf -y install docker-ce
-        sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
-        sudo gpasswd -a vagrant docker
     fi
+
+    sudo gpasswd -a vagrant docker
+    sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
 
     if [ ! -z "${http_proxy}" ]
     then

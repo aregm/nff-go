@@ -375,6 +375,7 @@ type port struct {
 	txQueuesNumber int16
 	willReceive    bool // will this port receive packets
 	willKNI        bool // will this port has assigned KNI device
+	KNICoreIndex   int
 	port           uint16
 	MAC            [common.EtherAddrLen]uint8
 	InIndex        int32
@@ -601,7 +602,7 @@ func SystemStart() error {
 
 // SystemStop stops the system. All Flow functions plus resource releasing
 // Doesn't cleanup DPDK
-func SystemStop() {
+func SystemStop() error {
 	// TODO we should release rings here
 	schedState.systemStop()
 	for i := range createdPorts {
@@ -611,8 +612,17 @@ func SystemStop() {
 			createdPorts[i].txQueuesNumber = 0
 			createdPorts[i].willReceive = false
 		}
+		if createdPorts[i].willKNI {
+			err := low.FreeKNI(createdPorts[i].port)
+			if err != nil {
+				return err
+			}
+			schedState.setCoreByIndex(createdPorts[i].KNICoreIndex)
+			createdPorts[i].willKNI = false
+		}
 	}
 	low.FreeMempools()
+	return nil
 }
 
 // SystemReset stops whole framework plus cleanup DPDK
@@ -1566,19 +1576,20 @@ func CreateKniDevice(portId uint16, name string) (*Kni, error) {
 	if createdPorts[portId].willKNI {
 		return nil, common.WrapWithNFError(nil, "Requested KNI port already has KNI. Two KNIs for one port are prohibited.", common.MultipleKNIPort)
 	}
-	if core, _, err := schedState.getCore(); err != nil {
+	if core, coreIndex, err := schedState.getCore(); err != nil {
 		return nil, err
 	} else {
 		if err := low.CreateKni(portId, uint(core), name); err != nil {
 			return nil, err
 		}
+		kni := new(Kni)
+		// Port will be identifier of this KNI
+		// KNI structure itself is stored inside low.c
+		kni.portId = portId
+		createdPorts[portId].willKNI = true
+		createdPorts[portId].KNICoreIndex = coreIndex
+		return kni, nil
 	}
-	kni := new(Kni)
-	// Port will be identifier of this KNI
-	// KNI structure itself is stored inside low.c
-	kni.portId = portId
-	createdPorts[portId].willKNI = true
-	return kni, nil
 }
 
 func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr) uint8 {

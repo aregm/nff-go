@@ -171,6 +171,7 @@ type scheduler struct {
 	pAttempts         []uint64
 	maxInIndex        int32
 	measureRings      low.Rings
+	coreIndex         int
 }
 
 type core struct {
@@ -204,7 +205,7 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDe
 func (scheduler *scheduler) systemStart() (err error) {
 	scheduler.stopFlag = process
 	var core int
-	if core, _, err = scheduler.getCore(); err != nil {
+	if core, scheduler.coreIndex, err = scheduler.getCore(); err != nil {
 		return err
 	}
 	common.LogDebug(common.Initialization, "Start SCHEDULER at", core, "core")
@@ -333,9 +334,9 @@ func (scheduler *scheduler) systemStop() {
 			scheduler.ff[i].stopInstance(0, -1, scheduler)
 		}
 	}
-	scheduler.setCoreByIndex(0) // scheduler
+	scheduler.setCoreByIndex(scheduler.coreIndex)
 	if scheduler.stopDedicatedCore {
-		scheduler.setCoreByIndex(1) // stop
+		scheduler.setCoreByIndex(scheduler.coreIndex + 1)
 	}
 	scheduler.ff = nil
 }

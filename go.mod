@@ -12,5 +12,5 @@ require (
 	github.com/vishvananda/netns v0.0.0-20180720170159-13995c7128cc // indirect
 	golang.org/x/net v0.0.0-20180926154720-4dfa2610cdf3 // indirect
 	golang.org/x/sys v0.0.0-20181004145325-8469e314837c // indirect
-	golang.org/x/tools v0.0.0-20181122213734-04b5d21e00f1 // indirect
+	golang.org/x/tools v0.0.0-20181204185109-3832e276fb48 // indirect
 )

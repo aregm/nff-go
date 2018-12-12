@@ -51,7 +51,7 @@ func main() {
 			for strings.Contains(lines[j], "Average") == false {
 				j++
 			}
-			t := strings.Split(lines[j], "</td><td class=\"rborder\">")[2]
+			t := strings.Split(lines[j], "</td><td class=\"rborder\">")[1]
 			off_MGB, _ := strconv.Atoi(t[:len(t)-5]) // -6 ?
 			t = strings.Split(lines[j+1], "</td>")[0]
 			off_cores, _ := strconv.Atoi(t[40:])
@@ -59,7 +59,7 @@ func main() {
 			for strings.Contains(lines[k], "Average") == false {
 				k++
 			}
-			t = strings.Split(lines[k], "</td><td class=\"rborder\">")[2]
+			t = strings.Split(lines[k], "</td><td class=\"rborder\">")[1]
 			on_MGB, _ := strconv.Atoi(t[:len(t)-5]) // -6 ?
 			t = strings.Split(lines[k+1], "</td>")[0]
 			on_cores, _ := strconv.Atoi(t[40:])

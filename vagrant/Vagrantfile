@@ -19,8 +19,8 @@ Vagrant.configure(2) do |config|
   vm_port_base = ENV.fetch("VM_TUNNEL_PORT_BASE", 12345).to_i
   vm_second_port_base = vm_port_base + (vm_links_number + 1) * vm_total_number
 
-#  config.vm.box = "ubuntu/xenial64"
-  config.vm.box = "fedora/28-cloud-base"
+  config.vm.box = "generic/ubuntu1804"
+#  config.vm.box = "fedora/28-cloud-base"
 
   # Docker server port
   config.vm.network "forwarded_port", guest: 2375, host: 2375, auto_correct: true
@@ -46,15 +46,17 @@ Vagrant.configure(2) do |config|
     end
   end
 
-$provision_fedora = <<SHELL
+$provision_common0 = <<SHELL
 echo Fixing bootloader to use consistent interface names
 sudo sed -i -e 's,biosdevname=0,biosdevname=1,' /etc/default/grub
 sudo sed -i -e 's,net.ifnames=0,net.ifnames=1,' /etc/default/grub
-sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-
-echo Disabling SELinux
-sudo sed -i -e 's,SELINUX=enforcing,SELINUX=disabled,' /etc/selinux/config
-
+sudo sed -i -e 's,quiet,,' /etc/default/grub
+if command -v update-grub &>/dev/null
+then
+   sudo update-grub
+else
+   sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+fi
 if [ "$(readlink /etc/udev/rules.d/80-net-setup-link.rules)" == /dev/null ]
 then
     echo Fixing udev to use consistent interface names
@@ -62,9 +64,46 @@ then
     sudo cp /usr/lib/udev/rules.d/80-net-setup-link.rules /etc/udev/rules.d/
 fi
 
+if [ -d /etc/netplan ]
+then
+    echo Fixing hardcoded DNS configuration
+    sudo sed -i -e 's,DNS=.*,DNS=,' /etc/systemd/resolved.conf
+    sudo sed -i -e 's,DNSSEC=yes,DNSSEC=no,' /etc/systemd/resolved.conf
+
+    sudo sh -c 'cat > /etc/netplan/10-ens5.yaml <<EOF
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    ens5:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+    enp0s3:
+      dhcp4: true
+      dhcp6: true
+      optional: true
+EOF'
+    sudo sh -c 'cat > /etc/netplan/50-vagrant.yaml <<EOF
+---
+network:
+  version: 2
+  renderer: networkd
+  ethernets: {}
+EOF'
+fi
+
+if [ -e /etc/selinux/config ]
+then
+    echo Disabling SELinux
+    sudo sed -i -e 's,SELINUX=enforcing,SELINUX=disabled,' /etc/selinux/config
+fi
+SHELL
+
+$provision_fedora = <<SHELL
 echo Installing system packages
 sudo dnf update -y
-sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim protobuf-compiler
+sudo dnf install -y python make gcc git numactl-devel libpcap-devel elfutils-libelf-devel lua-devel NetworkManager net-tools redhat-lsb-core pciutils kernel-modules kernel-devel wget vim protobuf-compiler
 sudo systemctl enable NetworkManager
 sudo systemctl start NetworkManager
 SHELL
@@ -72,12 +111,15 @@ SHELL
 $provision_ubuntu = <<SHELL
 echo Installing system packages
 sudo apt-get update
-sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev network-manager protobuf-compiler
+sudo apt-get install -y python make gcc git libnuma-dev libpcap0.8-dev libelf-dev liblua5.3-dev network-manager protobuf-compiler
 sudo systemctl enable network-manager
 sudo systemctl start network-manager
+
+echo Switching to NetworkManager to manage network cards
+sudo sed -i -e 's,renderer: networkd,renderer: NetworkManager,' /etc/netplan/50-vagrant.yaml
 SHELL
 
-$provision_common = <<SHELL
+$provision_common1 = <<SHELL
 syscon=$(nmcli --fields device,name,type,state -t c s | grep activated | grep -v bridge | cut -d: -f2)
 echo Reassigning "${syscon}" interface to system name
 sudo nmcli c mod "${syscon}" connection.id 'System connection'
@@ -91,12 +133,13 @@ echo . ~/scripts.sh >> .bashrc
 setuptesthost
 
 echo Downloading and building NFF-GO framework
-go get -d -v github.com/intel-go/nff-go
-(cd "${GOPATH}"/src/github.com/intel-go/nff-go; git checkout develop; ./scripts/get-depends.sh; make)
+go get -v golang.org/x/tools/cmd/stringer
+git clone -b master --recurse-submodules http://github.com/intel-go/nff-go
+(cd nff-go; go mod download; make)
 echo Downloading and building NFF-GO NAT example and its dependencies
 go get github.com/golang/protobuf/protoc-gen-go
-git clone -b develop --recurse-submodules http://github.com/intel-go/nff-go-nat
-(cd nff-go-nat; . env.sh; make)
+git clone -b master --recurse-submodules http://github.com/intel-go/nff-go-nat
+(cd nff-go-nat; go mod download; . env.sh; make)
 ./nff-go-nat/test/httpperfserv/install-systemd-service.sh "-port 8008"
 
 echo Setting up 1024 huge pages
@@ -108,13 +151,15 @@ SHELL
   # Enable provisioning with a shell script. Additional provisioners such as
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  config.vm.provision "shell", privileged: false, inline: $provision_fedora
-  # Optional Ubuntu provisioning, use if you want to work in Ubuntu
+  config.vm.provision "shell", privileged: false, inline: $provision_common0
+  config.vm.provision :reload
+  config.vm.provision "shell", privileged: false, inline: $provision_ubuntu
+  # Optional Fedora provisioning, use if you want to work in Fedora
   # environment.
-  config.vm.provision "shell", privileged: false, run: "never", inline: $provision_ubuntu
+  config.vm.provision "shell", privileged: false, run: "never", inline: $provision_fedora
   # Reboot VM after distro specific provisioning
   config.vm.provision :reload
-  config.vm.provision "shell", privileged: false, inline: $provision_common
+  config.vm.provision "shell", privileged: false, inline: $provision_common1
   # Reboot VM after provisioning
   config.vm.provision :reload
 

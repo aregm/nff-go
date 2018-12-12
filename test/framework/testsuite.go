@@ -60,7 +60,13 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 		for iii := range apps {
 			go apps[iii].testRoutine(report, cancel)
 			if apps[iii].config.Type == TestAppPktgen {
-				go apps[iii].testPktgenRoutine(report, cancel)
+				// We should "start" only first pktgen
+				// Other pktgens will only receive packets
+				if iii == 0 {
+					go apps[iii].testPktgenRoutine(report, cancel, true)
+				} else {
+					go apps[iii].testPktgenRoutine(report, cancel, false)
+				}
 				pktgenAppIndex = iii
 			} else {
 				coresAppIndex = iii

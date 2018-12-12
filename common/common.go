@@ -154,6 +154,7 @@ const (
 	WrongPort
 	FailToInitDPDK
 	FailToCreateKNI
+	FailToReleaseKNI
 )
 
 // NFError is error type returned by nff-go functions
