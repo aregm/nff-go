@@ -150,6 +150,10 @@ int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbu
 	return 0;
 }
 
+int free_kni(uint16_t port) {
+	return rte_kni_release(kni[port]);
+}
+
 int checkRSSPacketCount(struct cPort *port, int16_t queue) {
 	return rte_eth_rx_queue_count(port->PortId, queue);
 }
