@@ -39,6 +39,7 @@ const (
 	IPNumber     = 0x04
 	TCPNumber    = 0x06
 	UDPNumber    = 0x11
+	GRENumber    = 0x2f
 	ICMPv6Number = 0x3a
 	NoNextHeader = 0x3b
 )
@@ -73,6 +74,7 @@ const (
 	UDPLen     = 8
 	ARPLen     = 28
 	GTPMinLen  = 8
+	GRELen     = 4
 )
 
 const (
