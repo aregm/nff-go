@@ -1,4 +1,3 @@
-export DPDK_VERSION=18.11
 export GOROOT=/opt/go
 export NFF_GO="$HOME"/nff-go
 export PATH="$HOME"/go/bin:"$GOROOT"/bin:"$PATH"
@@ -12,14 +11,14 @@ export CARD2=ens7
 bindports ()
 {
     sudo modprobe uio
-    sudo insmod "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
-    sudo "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
+    sudo insmod "$NFF_GO"/dpdk/dpdk/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo "$NFF_GO"/dpdk/dpdk/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
 }
 
 # Bind ports to Linux kernel driver
 unbindports ()
 {
-    sudo "$NFF_GO"/dpdk/dpdk-${DPDK_VERSION}/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
+    sudo "$NFF_GO"/dpdk/dpdk/usertools/dpdk-devbind.py --bind=e1000 $NFF_GO_CARDS
 }
 
 # Run pktgen

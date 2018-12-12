@@ -17,6 +17,7 @@ before_script:
   - docker run -it -d --privileged -v /usr/src:/usr/src -v /lib/modules:/lib/modules -v /sys/devices/system/node:/sys/devices/system/node --name test-nff-go test-cosmic /bin/bash
 
 script:
+  - docker exec -i test-nff-go go mod download
   - docker exec -i test-nff-go make
   # Build standalone examples
   - docker exec -i test-nff-go bash -c "cd examples && make gopacketParserExample && cd .."
