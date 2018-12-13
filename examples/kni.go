@@ -29,6 +29,7 @@ func main() {
 	inport := flag.Uint("inport", 0, "port for receiver")
 	outport := flag.Uint("outport", 0, "port for sender")
 	kniport := flag.Uint("kniport", 0, "port for kni")
+	mode := flag.Uint("mode", 0, "0 - for three cores for KNI send/receive/Linux, 1 - for single core for KNI send/receive, 2 - for one core for all KNI")
 	flag.BoolVar(&ping, "ping", false, "use this for pushing only ARP and ICMP packets to KNI")
 	flag.Parse()
 
@@ -49,8 +50,18 @@ func main() {
 	toKNIFlow, err := flow.SetSeparator(inputFlow, pingSeparator, nil)
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetSenderKNI(toKNIFlow, kni))
-	fromKNIFlow := flow.SetReceiverKNI(kni)
+	var fromKNIFlow *flow.Flow
+	switch *mode {
+	case 0:
+		flow.CheckFatal(flow.SetSenderKNI(toKNIFlow, kni))
+		fromKNIFlow = flow.SetReceiverKNI(kni)
+	case 1:
+		fromKNIFlow, err = flow.SetSenderReceiverKNI(toKNIFlow, kni, false)
+		flow.CheckFatal(err)
+	case 2:
+		fromKNIFlow, err = flow.SetSenderReceiverKNI(toKNIFlow, kni, true)
+		flow.CheckFatal(err)
+	}
 
 	outputFlow, err := flow.SetMerger(inputFlow, fromKNIFlow)
 	flow.CheckFatal(err)

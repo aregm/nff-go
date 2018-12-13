@@ -148,18 +148,36 @@ type Kni struct {
 type receiveParameters struct {
 	out  low.Rings
 	port *low.Port
-	kni  bool
 }
 
-func addReceiver(portId uint16, kni bool, out low.Rings, inIndexNumber int32) {
+func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 	par := new(receiveParameters)
 	par.port = low.GetPort(portId)
 	par.out = out
-	par.kni = kni
-	if kni {
-		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, sendReceiveKNI, 0)
+	schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+}
+
+type KNIParameters struct {
+	in   low.Rings
+	out  low.Rings
+	port *low.Port
+	recv bool
+	send bool
+	linuxCore bool
+}
+
+func addKNI(portId uint16, recv bool, out low.Rings, send bool, in low.Rings, inIndexNumber int32, name string, core bool) {
+	par := new(KNIParameters)
+	par.port = low.GetPort(portId)
+	par.in = in
+	par.out = out
+	par.recv = recv
+	par.send = send
+	par.linuxCore = core
+	if core {
+		schedState.addFF(name, nil, processKNI, nil, par, nil, comboKNI, inIndexNumber)
 	} else {
-		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+		schedState.addFF(name, nil, processKNI, nil, par, nil, sendReceiveKNI, inIndexNumber)
 	}
 }
 
@@ -213,11 +231,7 @@ func addSender(port uint16, queue int16, in low.Rings, inIndexNumber int32) {
 	par.port = port
 	par.queue = queue
 	par.in = in
-	if queue != -1 {
-		schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
-	} else {
-		schedState.addFF("KNI sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
-	}
+	schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
 }
 
 type copyParameters struct {
@@ -669,7 +683,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	createdPorts[portId].wasRequested = true
 	createdPorts[portId].willReceive = true
 	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
-	addReceiver(portId, false, rings, createdPorts[portId].InIndex)
+	addReceiver(portId, rings, createdPorts[portId].InIndex)
 	return newFlow(rings, createdPorts[portId].InIndex), nil
 }
 
@@ -679,8 +693,22 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Returns new opened flow with received packets
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
-	addReceiver(kni.portId, true, rings, 1)
+	addKNI(kni.portId, true, rings, false, nil, 1, "receiver KNI", false)
 	return newFlow(rings, 1)
+}
+
+// SetSenderReceiverKNI adds function send/receive from KNI.
+// Gets KNI device from which packets will be received and flow to send.
+// Returns new opened flow with received packets
+// If linuxCore parameter is true function will use core that was assigned
+// to KNI device in Linux. So all send/receive/device can use one core
+func SetSenderReceiverKNI(IN *Flow, kni *Kni, linuxCore bool) (OUT *Flow, err error) {
+        if err := checkFlow(IN); err != nil {
+                return nil, err
+        }
+        rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+        addKNI(kni.portId, true, rings, true, finishFlow(IN), IN.inIndexNumber, "send-receive KNI", linuxCore)
+        return newFlow(rings, 1), nil
 }
 
 // SetFastGenerator adds clonable generate function to flow graph.
@@ -741,7 +769,7 @@ func SetSenderKNI(IN *Flow, kni *Kni) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	addSender(kni.portId, -1, finishFlow(IN), IN.inIndexNumber)
+	addKNI(kni.portId, false, nil, true, finishFlow(IN), IN.inIndexNumber, "KNI sender", false)
 	return nil
 }
 
@@ -1166,9 +1194,12 @@ func recvRSS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID)
 }
 
-func recvKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
-	srp := parameters.(*receiveParameters)
-	low.ReceiveKNI(uint16(srp.port.PortId), srp.out[0], flag, coreID)
+func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srk := parameters.(*KNIParameters)
+	if srk.linuxCore == true {
+		coreID = schedState.cores[createdPorts[srk.port.PortId].KNICoreIndex].id
+	}
+	low.SrKNI(uint16(srk.port.PortId), flag, coreID, srk.recv, srk.out, srk.send, srk.in)
 }
 
 func pGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int, report chan reportPair, context []UserContext) {
@@ -1336,7 +1367,7 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 
 func send(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.queue, srp.in, inIndex[0], flag, coreID)
+	low.Send(srp.port, srp.queue, srp.in, flag, coreID)
 }
 
 func merge(from low.Rings, to low.Rings) {
@@ -1366,6 +1397,10 @@ func merge(from low.Rings, to low.Rings) {
 			}
 			if parameters.outCopy[0] == from[0] {
 				parameters.outCopy = to
+			}
+		case *KNIParameters:
+			if parameters.out != nil && parameters.out[0] == from[0] {
+				parameters.out = to
 			}
 		}
 	}
