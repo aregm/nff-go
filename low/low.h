@@ -357,27 +357,38 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 	*flag = wasStopped;
 }
 
-void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
+           bool recv, struct rte_ring *out_ring,
+           bool send, struct rte_ring **in_rings, int32_t inIndexNumber) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
+	int q = 0;
 	REASSEMBLY_INIT
-
 	while (*flag == process) {
-		// Get packets from KNI
-     		uint16_t rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
-		rte_kni_handle_request(kni[port]);
-		if (unlikely(rx_pkts_number == 0)) {
-			continue;
+		if (recv == true) {
+			// Get packets from KNI
+			uint16_t rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+			rte_kni_handle_request(kni[port]);
+			if (likely(rx_pkts_number != 0)) {
+				rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+				uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+				// Free any packets which can't be pushed to the ring. The ring is probably full.
+				handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
+			}
 		}
-		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
-
-		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
-		// Free any packets which can't be pushed to the ring. The ring is probably full.
-		handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
-#ifdef DEBUG
-		receive_received += rx_pkts_number;
-		receive_pushed += pushed_pkts_number;
-#endif
+		if (send == true) {
+			(q == inIndexNumber - 1) ? q = 0 : q++;
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+			if (likely(pkts_for_tx_number != 0)) {
+				uint16_t tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+				// Free any unsent packets
+				handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
+			}
+		}
+	}
+	if (in_rings != NULL) {
+		free(in_rings);
 	}
 	*flag = wasStopped;
 }
@@ -396,12 +407,7 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32
 			if (unlikely(pkts_for_tx_number == 0))
 				continue;
 
-			if (queue != -1) {
-				tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
-			} else {
-				// if queue == "-1" this means that this send is to KNI device
-				tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
-			}
+			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG

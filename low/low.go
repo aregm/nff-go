@@ -454,15 +454,22 @@ func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int
 	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
-// ReceiveKNI - get packets from Linux core and enqueue on a Ring.
-func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
-	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings) {
+	var nOut *C.struct_rte_ring
+	var nIn **C.struct_rte_ring
+	if OUT != nil {
+		nOut = OUT[0].DPDK_ring
+	}
+	if IN != nil {
+		nIn = C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN)))
+	}
+	C.nff_go_KNI(C.uint16_t(port), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int) {
-	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
-	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+func Send(port uint16, queue int16, IN Rings, flag *int32, coreID int) {
+	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
