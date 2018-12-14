@@ -478,12 +478,12 @@ void statistics(float N) {
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
 	if (receive_pushed < receive_received) {
-		fprintf(stderr, "DROP: Receive dropped %d packets\n", receive_received - receive_pushed);
+		fprintf(stderr, "DROP: Receive dropped %ld packets\n", receive_received - receive_pushed);
 	}
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	if (send_sent < send_required) {
-		fprintf(stderr, "DROP: Send dropped %d packets\n", send_required - send_sent);
+		fprintf(stderr, "DROP: Send dropped %ld packets\n", send_required - send_sent);
 	}
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more
