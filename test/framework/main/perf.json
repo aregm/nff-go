@@ -26,10 +26,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+			"./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -48,11 +48,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -63,10 +58,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -85,11 +80,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -100,10 +90,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -122,11 +112,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -137,10 +122,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -159,11 +144,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -174,10 +154,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -196,11 +176,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -211,10 +186,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -233,11 +208,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -248,10 +218,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -270,11 +240,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -285,10 +250,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -307,11 +272,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -322,10 +282,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -344,11 +304,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -359,10 +314,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -381,11 +336,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -396,10 +346,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -418,11 +368,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -433,10 +378,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -455,11 +400,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -470,10 +410,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -492,11 +432,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -507,10 +442,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -529,11 +464,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -544,10 +474,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -566,11 +496,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -581,10 +506,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -603,11 +528,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -618,10 +538,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -640,11 +560,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -655,10 +570,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -677,11 +592,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -692,10 +602,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -714,11 +624,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -729,10 +634,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -751,11 +656,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -766,10 +666,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -788,11 +688,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -803,10 +698,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -825,11 +720,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -840,10 +730,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -862,11 +752,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -877,10 +762,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -899,11 +784,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -914,10 +794,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -936,11 +816,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -951,10 +826,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -973,11 +848,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -988,10 +858,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1010,11 +880,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1025,10 +890,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1047,11 +912,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1062,10 +922,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1084,11 +944,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1099,10 +954,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1121,11 +976,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1136,10 +986,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1158,11 +1008,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1173,10 +1018,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1195,11 +1040,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1210,10 +1050,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1232,11 +1072,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1247,10 +1082,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1269,11 +1104,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1284,10 +1114,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1306,11 +1136,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1321,10 +1146,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1343,11 +1168,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1358,10 +1178,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1380,11 +1200,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1395,10 +1210,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1417,11 +1232,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1432,10 +1242,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1454,11 +1264,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1469,10 +1274,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1491,11 +1296,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1506,10 +1306,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1528,11 +1328,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1543,10 +1338,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1565,11 +1360,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1580,10 +1370,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1602,11 +1392,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1617,10 +1402,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1639,11 +1424,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1654,10 +1434,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1676,11 +1456,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1691,10 +1466,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1713,11 +1488,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1728,10 +1498,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1750,11 +1520,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1765,10 +1530,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -1787,11 +1552,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1802,10 +1562,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1824,11 +1584,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1839,10 +1594,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -1861,11 +1616,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -1876,10 +1626,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1898,11 +1648,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1913,10 +1658,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -1935,11 +1680,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -1950,10 +1690,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -1972,11 +1712,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -1987,10 +1722,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2009,11 +1744,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2024,10 +1754,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2046,11 +1776,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2061,10 +1786,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2083,11 +1808,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2098,10 +1818,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2120,11 +1840,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2135,10 +1850,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2157,11 +1872,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2172,10 +1882,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2194,11 +1904,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2209,10 +1914,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2231,11 +1936,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2246,10 +1946,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2268,11 +1968,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2283,10 +1978,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2305,11 +2000,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2320,10 +2010,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2342,11 +2032,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2357,10 +2042,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2379,11 +2064,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2394,10 +2074,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2416,11 +2096,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2431,10 +2106,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2453,11 +2128,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2468,10 +2138,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2490,11 +2160,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2505,10 +2170,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2527,11 +2192,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2542,10 +2202,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2564,11 +2224,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2579,10 +2234,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2601,11 +2256,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2616,10 +2266,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2638,11 +2288,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2653,10 +2298,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2675,11 +2320,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2690,10 +2330,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2712,11 +2352,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2727,10 +2362,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -2749,11 +2384,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2764,10 +2394,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2786,11 +2416,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2801,10 +2426,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -2823,11 +2448,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2838,10 +2458,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2860,11 +2480,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2875,10 +2490,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -2897,11 +2512,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -2912,10 +2522,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2934,11 +2544,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -2949,10 +2554,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -2971,11 +2576,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -2986,10 +2586,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -3008,11 +2608,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -3023,10 +2618,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -3045,11 +2640,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -3060,10 +2650,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -3082,11 +2672,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -3097,10 +2682,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "64", "-v", "28000"
                     ]
                 },
                 {
@@ -3119,11 +2704,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 64);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -3134,10 +2714,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -3156,11 +2736,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -3171,10 +2746,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "128"
                     ]
                 },
                 {
@@ -3193,11 +2768,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 128);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 60000000000,
                 "measure-for": 35000000000
             }
@@ -3208,10 +2778,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -3230,11 +2800,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -3245,10 +2810,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "256"
                     ]
                 },
                 {
@@ -3267,11 +2832,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 256);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
@@ -3282,10 +2842,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -3304,11 +2864,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 15000000000,
                 "measure-for": 15000000000
             }
@@ -3319,10 +2874,10 @@
             "test-type": "TestTypeBenchmark",
             "test-apps": [
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_gen", "-s", "1514"
                     ]
                 },
                 {
@@ -3341,11 +2896,6 @@
                 }
             ],
             "benchmarking-settings": {
-                "pktgen-startup-commands": [
-                    "pktgen.pkt_size(\"0\", \"start\", 1518);",
-                    "pktgen.set_range(\"0\", \"on\");",
-                    "pktgen.start(0);"
-                ],
                 "measure-after": 40000000000,
                 "measure-for": 25000000000
             }
