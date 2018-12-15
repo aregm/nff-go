@@ -7,10 +7,12 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"math"
+	"net"
 	"os"
 	"strconv"
 
@@ -89,6 +91,85 @@ const (
 	IPv4VersionIhl   = 0x45 // IPv4, IHL = 5 (min header len)
 	IPv6VtcFlow      = 0x60 // IPv6 version
 )
+
+type IPv4Address uint32
+
+// BytesToIPv4 converts four element address to IPv4Address representation
+func BytesToIPv4(a byte, b byte, c byte, d byte) IPv4Address {
+	return IPv4Address(d)<<24 | IPv4Address(c)<<16 | IPv4Address(b)<<8 | IPv4Address(a)
+}
+
+// ArrayToIPv4 converts four element array to IPv4Address representation
+func ArrayToIPv4(a [IPv4AddrLen]byte) IPv4Address {
+	return IPv4Address(a[3])<<24 | IPv4Address(a[2])<<16 | IPv4Address(a[1])<<8 | IPv4Address(a[0])
+}
+
+// SliceToIPv4 converts four element slice to IPv4Address representation
+func SliceToIPv4(s []byte) IPv4Address {
+	return IPv4Address(s[3])<<24 | IPv4Address(s[2])<<16 | IPv4Address(s[1])<<8 | IPv4Address(s[0])
+}
+
+// IPv4ToBytes converts four element address to IPv4Address representation
+func IPv4ToBytes(v IPv4Address) [IPv4AddrLen]byte {
+	return [IPv4AddrLen]uint8{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
+}
+
+func (addr IPv4Address) String() string {
+	return fmt.Sprintf("%d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
+}
+
+// UnmarshalJSON parses IPv4 address.
+func (out *IPv4Address) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	if ip := net.ParseIP(s); ip != nil {
+		ipv4 := ip.To4()
+		if ipv4 == nil {
+			return fmt.Errorf("Bad IPv4 address %s", s)
+		}
+		*out = BytesToIPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3])
+		return nil
+	}
+	return fmt.Errorf("Failed to parse address %s", s)
+}
+
+type IPv6Address [IPv6AddrLen]uint8
+
+func (addr IPv6Address) String() string {
+	return fmt.Sprintf("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
+		addr[0], addr[1], addr[2], addr[3],
+		addr[4], addr[5], addr[6], addr[7],
+		addr[8], addr[9], addr[10], addr[11],
+		addr[12], addr[13], addr[14], addr[15])
+}
+
+// UnmarshalJSON parses IPv6 address.
+func (out *IPv6Address) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	if ip := net.ParseIP(s); ip != nil {
+		ipv6 := ip.To16()
+		if ipv6 == nil {
+			return fmt.Errorf("Bad IPv6 address %s", s)
+		}
+		copy((*out)[:], ipv6)
+		return nil
+	}
+	return fmt.Errorf("Failed to parse address %s", s)
+}
+
+type MACAddress [EtherAddrLen]uint8
+
+// MACToString return MAC address like string
+func (mac MACAddress) String() string {
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
+}
 
 // LogType - type of logging, used in flow package
 type LogType uint8

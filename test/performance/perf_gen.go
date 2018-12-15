@@ -54,8 +54,8 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ipv4 := pkt.GetIPv4()
 	tcp := pkt.GetTCPForIPv4()
 
-	ipv4.DstAddr = packet.SwapBytesUint32(uint32(r))
-	ipv4.SrcAddr = packet.SwapBytesUint32(uint32(r + 15))
+	ipv4.DstAddr = packet.SwapBytesIPv4Addr(IPv4Address(r))
+	ipv4.SrcAddr = packet.SwapBytesIPv4Addr(IPv4Address(r + 15))
 
 	tcp.DstPort = packet.SwapBytesUint16(r + 25)
 	tcp.SrcPort = packet.SwapBytesUint16(r + 35)

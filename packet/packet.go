@@ -69,9 +69,9 @@ func init() {
 
 // EtherHdr L2 header from DPDK: lib/librte_ether/rte_ehter.h
 type EtherHdr struct {
-	DAddr     [EtherAddrLen]uint8 // Destination address
-	SAddr     [EtherAddrLen]uint8 // Source address
-	EtherType uint16              // Frame type
+	DAddr     MACAddress // Destination address
+	SAddr     MACAddress // Source address
+	EtherType uint16     // Frame type
 }
 
 func (hdr *EtherHdr) String() string {
@@ -80,8 +80,8 @@ Ethernet Source: %s
 Ethernet Destination: %s
 `,
 		hdr.EtherType, getEtherTypeName(hdr.EtherType),
-		MACToString(hdr.SAddr),
-		MACToString(hdr.DAddr))
+		hdr.SAddr.String(),
+		hdr.DAddr.String())
 }
 
 var (
@@ -102,59 +102,46 @@ func getEtherTypeName(et uint16) string {
 	return ret
 }
 
-// MACToString return MAC address like string
-func MACToString(mac [EtherAddrLen]uint8) string {
-	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
-}
-
 // IPv4Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
 type IPv4Hdr struct {
-	VersionIhl     uint8  // version and header length
-	TypeOfService  uint8  // type of service
-	TotalLength    uint16 // length of packet
-	PacketID       uint16 // packet ID
-	FragmentOffset uint16 // fragmentation offset
-	TimeToLive     uint8  // time to live
-	NextProtoID    uint8  // protocol ID
-	HdrChecksum    uint16 // header checksum
-	SrcAddr        uint32 // source address
-	DstAddr        uint32 // destination address
+	VersionIhl     uint8       // version and header length
+	TypeOfService  uint8       // type of service
+	TotalLength    uint16      // length of packet
+	PacketID       uint16      // packet ID
+	FragmentOffset uint16      // fragmentation offset
+	TimeToLive     uint8       // time to live
+	NextProtoID    uint8       // protocol ID
+	HdrChecksum    uint16      // header checksum
+	SrcAddr        IPv4Address // source address
+	DstAddr        IPv4Address // destination address
 }
 
-func IPv4ToString(addr uint32) string {
-	return fmt.Sprintf("%d.%d.%d.%d", byte(addr), byte(addr>>8), byte(addr>>16), byte(addr>>24))
+func IPv4ArrayToString(addr [IPv4AddrLen]uint8) string {
+	return fmt.Sprintf("%d.%d.%d.%d", addr[0], addr[1], addr[2], addr[3])
 }
 
 func (hdr *IPv4Hdr) String() string {
 	r0 := "    L3 protocol: IPv4\n"
-	r1 := "    IPv4 Source: " + IPv4ToString(hdr.SrcAddr) + "\n"
-	r2 := "    IPv4 Destination: " + IPv4ToString(hdr.DstAddr) + "\n"
+	r1 := "    IPv4 Source: " + hdr.SrcAddr.String() + "\n"
+	r2 := "    IPv4 Destination: " + hdr.DstAddr.String() + "\n"
 	return r0 + r1 + r2
 }
 
 // IPv6Hdr L3 header from DPDK: lib/librte_net/rte_ip.h
 type IPv6Hdr struct {
-	VtcFlow    uint32             // IP version, traffic class & flow label
-	PayloadLen uint16             // IP packet length - includes sizeof(ip_header)
-	Proto      uint8              // Protocol, next header
-	HopLimits  uint8              // Hop limits
-	SrcAddr    [IPv6AddrLen]uint8 // IP address of source host
-	DstAddr    [IPv6AddrLen]uint8 // IP address of destination host(s)
-}
-
-func IPv6ToString(addr [IPv6AddrLen]uint8) string {
-	return fmt.Sprintf("[%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x]",
-		addr[0], addr[1], addr[2], addr[3],
-		addr[4], addr[5], addr[6], addr[7],
-		addr[8], addr[9], addr[10], addr[11],
-		addr[12], addr[13], addr[14], addr[15])
+	VtcFlow    uint32      // IP version, traffic class & flow label
+	PayloadLen uint16      // IP packet length - includes sizeof(ip_header)
+	Proto      uint8       // Protocol, next header
+	HopLimits  uint8       // Hop limits
+	SrcAddr    IPv6Address // IP address of source host
+	DstAddr    IPv6Address // IP address of destination host(s)
 }
 
 func (hdr *IPv6Hdr) String() string {
 	return fmt.Sprintf(`    L3 protocol: IPv6
     IPv6 Source: %s
     IPv6 Destination %s
-`, IPv6ToString(hdr.SrcAddr), IPv6ToString(hdr.DstAddr))
+`, hdr.SrcAddr.String(), hdr.DstAddr.String())
 }
 
 // TCPHdr L4 header from DPDK: lib/librte_net/rte_tcp.h
@@ -717,6 +704,10 @@ func SwapBytesUint32(x uint32) uint32 {
 	return ((x & 0x000000ff) << 24) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) >> 8) | ((x & 0xff000000) >> 24)
 }
 
+func SwapBytesIPv4Addr(x IPv4Address) IPv4Address {
+	return ((x & 0x000000ff) << 24) | ((x & 0x0000ff00) << 8) | ((x & 0x00ff0000) >> 8) | ((x & 0xff000000) >> 24)
+}
+
 // GetRawPacketBytes returns all bytes from this packet. Not zero-copy.
 func (packet *Packet) GetRawPacketBytes() []byte {
 	return low.GetRawPacketBytesMbuf(packet.CMbuf)
@@ -817,21 +808,6 @@ func (packet *Packet) PacketBytesChange(start uint, bytes []byte) bool {
 	return true
 }
 
-// BytesToIPv4 converts four element address to uint32 representation
-func BytesToIPv4(a byte, b byte, c byte, d byte) uint32 {
-	return uint32(d)<<24 | uint32(c)<<16 | uint32(b)<<8 | uint32(a)
-}
-
-// ArrayToIPv4 converts four element array to uint32 representation
-func ArrayToIPv4(a [IPv4AddrLen]byte) uint32 {
-	return uint32(a[3])<<24 | uint32(a[2])<<16 | uint32(a[1])<<8 | uint32(a[0])
-}
-
-// IPv4ToBytes converts four element address to uint32 representation
-func IPv4ToBytes(v uint32) [IPv4AddrLen]byte {
-	return [IPv4AddrLen]uint8{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
-}
-
 // NewPacket shouldn't be used for performance critical allocations.
 // Allocate mbufs one by one is very inefficient.
 // FastGenerate or copy functions give developer a packet from previously bulk allocated set
@@ -862,8 +838,8 @@ func SetNonPerfMempool(m *low.Mempool) {
 }
 
 type LPM struct {
-	tbl24 *([MaxLength]uint32)
-	tbl8  *([MaxLength]uint32)
+	tbl24 *([MaxLength]IPv4Address)
+	tbl8  *([MaxLength]IPv4Address)
 	lpm   unsafe.Pointer //C.struct_rte_lpm
 }
 
@@ -884,7 +860,7 @@ func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32) *L
 // Heavily based on DPDK rte_lpm_lookup with constants from there
 // No error checking (lpm == NULL or nextHop == NULL) due to performance
 // User should check it manually
-func (lpm *LPM) Lookup(ip uint32, nextHop *uint32) bool {
+func (lpm *LPM) Lookup(ip IPv4Address, nextHop *IPv4Address) bool {
 	tbl24_index := ip >> 8
 	tbl_entry := (*lpm.tbl24)[tbl24_index] // Copy tbl24 entry
 
@@ -903,13 +879,13 @@ func (lpm *LPM) Lookup(ip uint32, nextHop *uint32) bool {
 
 // Add adds longest prefix match rule with specified ip, depth and nextHop
 // inside LPM table. Returns 0 if success and negative value otherwise
-func (lpm *LPM) Add(ip uint32, depth uint8, nextHop uint32) int {
+func (lpm *LPM) Add(ip IPv4Address, depth uint8, nextHop IPv4Address) int {
 	return low.AddLPMRule(lpm.lpm, ip, depth, nextHop)
 }
 
 // Delete removes longest prefix match rule with diven ip and depth from
 // LPM table. Returns 0 if success and negative value otherwise
-func (lpm *LPM) Delete(ip uint32, depth uint8) int {
+func (lpm *LPM) Delete(ip IPv4Address, depth uint8) int {
 	return low.DeleteLPMRule(lpm.lpm, ip, depth)
 }
 

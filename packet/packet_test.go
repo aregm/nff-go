@@ -6,7 +6,6 @@ package packet
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"net"
 	"reflect"
@@ -458,8 +457,8 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 	InitEmptyIPv4Packet(pkt, testPlSize)
 	dst := net.ParseIP("128.9.9.5").To4()
 	src := net.ParseIP("127.0.0.1").To4()
-	pkt.GetIPv4().DstAddr = binary.LittleEndian.Uint32([]byte(dst))
-	pkt.GetIPv4().SrcAddr = binary.LittleEndian.Uint32([]byte(src))
+	pkt.GetIPv4().DstAddr = SliceToIPv4(dst)
+	pkt.GetIPv4().SrcAddr = SliceToIPv4(src)
 	ptrData := (*Packetdata)(pkt.Data)
 	ptrData.F1 = 0xddff
 	ptrData.F2 = 0xaabb

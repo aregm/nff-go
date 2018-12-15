@@ -59,6 +59,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/intel-go/nff-go/common"
 )
 
 // Data to generate L2 rules
@@ -70,12 +72,12 @@ var rulesL2Ctxt = rawL2RuleTestCtxt{
 		{"", 0}, // case only for ORIG
 	},
 	srcs: []macAddrTest{ // {rawaddr, ground truth addr info {macaddr, addrNotAny}}
-		{"ANY", gtMacAddr{[6]uint8{0, 0, 0, 0, 0, 0}, false}},
+		{"ANY", gtMacAddr{common.MACAddress{0, 0, 0, 0, 0, 0}, false}},
 		{"00:11:22:33:44:55", gtMacAddr{[6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}, true}},
 	},
 	dsts: []macAddrTest{ // {rawaddr, ground truth addr info {macaddr, addrNotAny}}
-		{"ANY", gtMacAddr{[6]uint8{0, 0, 0, 0, 0, 0}, false}},
-		{"01:11:21:31:41:51", gtMacAddr{[6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}, true}},
+		{"ANY", gtMacAddr{common.MACAddress{0, 0, 0, 0, 0, 0}, false}},
+		{"01:11:21:31:41:51", gtMacAddr{common.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}, true}},
 	},
 	ids: []idTest{ // {rawid, ground truth {id, idmask}}
 		{"ANY", gtID{0, 0x0000}},
@@ -98,40 +100,40 @@ var rulesL3Ctxt = rawL3RuleTestCtxt{
 	srcs6: []Addr6Test{ // {rawaddr, ground truth addr info {macaddr, addrNotAny}}
 		{"ANY",
 			gtAddr6{
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 		{"::/0",
 			gtAddr6{
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 		{"dead::beef/16",
 			gtAddr6{
-				[16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[16]uint8{0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0xff, 0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 	},
 	dsts6: []Addr6Test{ // {rawaddr, ground truth addr info}
 		{"ANY",
 			gtAddr6{
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 		{"::/0",
 			gtAddr6{
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-				[16]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+				common.IPv6Address{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			},
 		},
 		{"dead::beef/128",
 			gtAddr6{
-				[16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xef},
-				[16]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+				common.IPv6Address{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xef},
+				common.IPv6Address{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 			},
 		},
 	},
@@ -1342,13 +1344,13 @@ type Addr6Test struct {
 }
 
 type gtAddr4 struct {
-	addr uint32
-	mask uint32
+	addr common.IPv4Address
+	mask common.IPv4Address
 }
 
 type gtAddr6 struct {
-	addr [16]uint8
-	mask [16]uint8
+	addr common.IPv6Address
+	mask common.IPv6Address
 }
 
 type portTest struct {
@@ -1424,19 +1426,19 @@ type IDMask16 struct {
 }
 
 type Addr4Mask struct {
-	addr uint32
-	msk  uint32
+	addr common.IPv4Address
+	msk  common.IPv4Address
 	ok   bool
 }
 
 type Addr6Mask struct {
-	addr [16]uint8
-	msk  [16]uint8
+	addr common.IPv6Address
+	msk  common.IPv6Address
 	ok   bool
 }
 
 type MacAddr struct {
-	addr       [6]uint8
+	addr       common.MACAddress
 	addrNotAny bool
 	ok         bool
 }

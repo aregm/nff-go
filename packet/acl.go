@@ -396,8 +396,8 @@ func parseRuleResult(rule string) (uint, error) {
 	}
 }
 
-func parseAddr4(addr *net.IPNet) (uint32, uint32) {
-	return binary.LittleEndian.Uint32(addr.IP), binary.LittleEndian.Uint32(addr.Mask)
+func parseAddr4(addr *net.IPNet) (common.IPv4Address, common.IPv4Address) {
+	return common.IPv4Address(binary.LittleEndian.Uint32(addr.IP)), common.IPv4Address(binary.LittleEndian.Uint32(addr.Mask))
 }
 
 func parseAddr6(addr *net.IPNet) ([16]uint8, [16]uint8) {
@@ -413,8 +413,8 @@ type l2Rules struct {
 	OutputNumber uint
 	DAddrNotAny  bool
 	SAddrNotAny  bool
-	DAddr        [6]uint8
-	SAddr        [6]uint8
+	DAddr        common.MACAddress
+	SAddr        common.MACAddress
 	IDMask       uint16
 	ID           uint16
 }
@@ -431,19 +431,19 @@ type l4Rules struct {
 
 type l3Rules4 struct {
 	OutputNumber uint
-	SrcAddr      uint32
-	DstAddr      uint32
-	SrcMask      uint32
-	DstMask      uint32
+	SrcAddr      common.IPv4Address
+	DstAddr      common.IPv4Address
+	SrcMask      common.IPv4Address
+	DstMask      common.IPv4Address
 	L4           l4Rules
 }
 
 type l3Rules6 struct {
 	OutputNumber uint
-	SrcAddr      [16]uint8
-	DstAddr      [16]uint8
-	SrcMask      [16]uint8
-	DstMask      [16]uint8
+	SrcAddr      common.IPv6Address
+	DstAddr      common.IPv6Address
+	SrcMask      common.IPv6Address
+	DstMask      common.IPv6Address
 	L4           l4Rules
 }
 

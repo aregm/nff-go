@@ -5,7 +5,6 @@
 package packet
 
 import (
-	"encoding/binary"
 	"github.com/intel-go/nff-go/common"
 	"net"
 	"testing"
@@ -159,8 +158,8 @@ func TestCalculateIPv6ICMPChecksum(t *testing.T) {
 
 func initIPv4AddrsLocal(pkt *Packet) {
 	ipv4 := pkt.GetIPv4()
-	ipv4.SrcAddr = binary.LittleEndian.Uint32(net.ParseIP("131.151.32.21").To4())
-	ipv4.DstAddr = binary.LittleEndian.Uint32(net.ParseIP("131.151.32.129").To4())
+	ipv4.SrcAddr = common.SliceToIPv4(net.ParseIP("131.151.32.21").To4())
+	ipv4.DstAddr = common.SliceToIPv4(net.ParseIP("131.151.32.129").To4())
 	ipv4.HdrChecksum = 0
 }
 

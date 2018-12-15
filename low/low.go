@@ -718,12 +718,12 @@ func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32, tb
 }
 
 // AddLPMRule adds one rule to LPM table
-func AddLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8, nextHop uint32) int {
+func AddLPMRule(lpm unsafe.Pointer, ip common.IPv4Address, depth uint8, nextHop common.IPv4Address) int {
 	return int(C.lpm_add(lpm, C.uint32_t(ip), C.uint8_t(depth), C.uint32_t(nextHop)))
 }
 
 // DeleteLPMRule removes one rule from LPM table
-func DeleteLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8) int {
+func DeleteLPMRule(lpm unsafe.Pointer, ip common.IPv4Address, depth uint8) int {
 	return int(C.lpm_delete(lpm, C.uint32_t(ip), C.uint8_t(depth)))
 }
 

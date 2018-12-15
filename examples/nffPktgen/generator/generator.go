@@ -130,7 +130,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	var SHA, THA [common.EtherAddrLen]uint8
 	SHA = [common.EtherAddrLen]uint8{byte(l3.SHA.Current >> 40), byte(l3.SHA.Current >> 32), byte(l3.SHA.Current >> 24), byte(l3.SHA.Current >> 16), byte(l3.SHA.Current >> 8), byte(l3.SHA.Current)}
 	getNextValue(&l3.SHA)
-	SPA := packet.SwapBytesUint32(uint32(l3.SPA.Current))
+	SPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.SPA.Current))
 	getNextValue(&l3.SPA)
 	if l3.Operation == packet.ARPRequest {
 		if l3.Gratuitous {
@@ -138,7 +138,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 				panic(fmt.Sprintf("InitGARPAnnouncementRequestPacket returned false"))
 			}
 		} else {
-			TPA := packet.SwapBytesUint32(uint32(l3.TPA.Current))
+			TPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.TPA.Current))
 			getNextValue(&l3.TPA)
 			if !packet.InitARPRequestPacket(pkt, SHA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPRequestPacket returned false"))
@@ -152,7 +152,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		} else {
 			THA = [common.EtherAddrLen]uint8{byte(l3.THA.Current >> 40), byte(l3.THA.Current >> 32), byte(l3.THA.Current >> 24), byte(l3.THA.Current >> 16), byte(l3.THA.Current >> 8), byte(l3.THA.Current)}
 			getNextValue(&l3.THA)
-			TPA := packet.SwapBytesUint32(uint32(l3.TPA.Current))
+			TPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.TPA.Current))
 			getNextValue(&l3.TPA)
 			if !packet.InitARPReplyPacket(pkt, SHA, THA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPReplyPacket returned false"))
@@ -263,8 +263,8 @@ func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 
 func fillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
-	pktIP.SrcAddr = packet.SwapBytesUint32(uint32(l3.SAddr.Current))
-	pktIP.DstAddr = packet.SwapBytesUint32(uint32(l3.DAddr.Current))
+	pktIP.SrcAddr = packet.SwapBytesIPv4Addr(common.IPv4Address(l3.SAddr.Current))
+	pktIP.DstAddr = packet.SwapBytesIPv4Addr(common.IPv4Address(l3.DAddr.Current))
 	getNextValue(&l3.DAddr)
 	getNextValue(&l3.SAddr)
 }

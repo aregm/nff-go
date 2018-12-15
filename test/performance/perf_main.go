@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 
+	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 )
@@ -52,10 +53,10 @@ func heavyFunc(currentPacket *packet.Packet, context flow.UserContext) {
 	ipv4 := currentPacket.GetIPv4()
 	if ipv4 != nil {
 		T := ipv4.DstAddr
-		for j := uint32(0); j < uint32(load); j++ {
+		for j := common.IPv4Address(0); j < common.IPv4Address(load); j++ {
 			T += j
 		}
-		for i := uint32(0); i < uint32(loadRW); i++ {
+		for i := common.IPv4Address(0); i < common.IPv4Address(loadRW); i++ {
 			ipv4.DstAddr = ipv4.SrcAddr + i
 		}
 		ipv4.SrcAddr = 263 + (T)

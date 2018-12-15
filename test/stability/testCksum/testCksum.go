@@ -457,16 +457,16 @@ func initPacketCommon(emptyPacket *packet.Packet, length uint16, rnd *rand.Rand)
 func initPacketIPv4(emptyPacket *packet.Packet) {
 	// Initialize IPv4 addresses
 	emptyPacketIPv4 := emptyPacket.GetIPv4()
-	emptyPacketIPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
-	emptyPacketIPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
+	emptyPacketIPv4.SrcAddr = packet.SwapBytesIPv4Addr((192 << 24) | (168 << 16) | (1 << 8) | 1)
+	emptyPacketIPv4.DstAddr = packet.SwapBytesIPv4Addr((192 << 24) | (168 << 16) | (1 << 8) | 2)
 	emptyPacketIPv4.TimeToLive = 100
 }
 
 func initPacketIPv6(emptyPacket *packet.Packet) {
 	// Initialize IPv6 addresses
 	emptyPacketIPv6 := emptyPacket.GetIPv6()
-	emptyPacketIPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	emptyPacketIPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	emptyPacketIPv6.SrcAddr = common.IPv6Address{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	emptyPacketIPv6.DstAddr = common.IPv6Address{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 }
 
 func initPacketUDP(emptyPacket *packet.Packet) {

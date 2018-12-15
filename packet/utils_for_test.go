@@ -3,7 +3,6 @@
 package packet
 
 import (
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -96,22 +95,22 @@ func getIPv6ICMPTestPacket() *Packet {
 func getARPRequestTestPacket() *Packet {
 	pkt := getPacket()
 
-	sha := [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
-	spa := binary.LittleEndian.Uint32(net.ParseIP("127.0.0.1").To4())
-	tpa := binary.LittleEndian.Uint32(net.ParseIP("128.9.9.5").To4())
+	sha := common.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+	spa := common.SliceToIPv4(net.ParseIP("127.0.0.1").To4())
+	tpa := common.SliceToIPv4(net.ParseIP("128.9.9.5").To4())
 	InitARPRequestPacket(pkt, sha, spa, tpa)
 
 	return pkt
 }
 
 func initEtherAddrs(pkt *Packet) {
-	pkt.Ether.SAddr = [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
-	pkt.Ether.DAddr = [common.EtherAddrLen]byte{0x0, 0x11, 0x22, 0x33, 0x44, 0x55}
+	pkt.Ether.SAddr = common.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+	pkt.Ether.DAddr = common.MACAddress{0x0, 0x11, 0x22, 0x33, 0x44, 0x55}
 }
 
 func initIPv4Addrs(pkt *Packet) {
-	pkt.GetIPv4().SrcAddr = binary.LittleEndian.Uint32(net.ParseIP("127.0.0.1").To4())
-	pkt.GetIPv4().DstAddr = binary.LittleEndian.Uint32(net.ParseIP("128.9.9.5").To4())
+	pkt.GetIPv4().SrcAddr = common.SliceToIPv4(net.ParseIP("127.0.0.1").To4())
+	pkt.GetIPv4().DstAddr = common.SliceToIPv4(net.ParseIP("128.9.9.5").To4())
 }
 
 func initIPv6Addrs(pkt *Packet) {

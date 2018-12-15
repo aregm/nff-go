@@ -82,8 +82,8 @@ func VectorEncapsulation(currentPackets []*packet.Packet, mask *[32]bool, notDro
 			currentPackets[i].EncapsulateHead(etherLen, outerIPLen+espHeadLen)
 			currentPackets[i].ParseL3()
 			ipv4 := currentPackets[i].GetIPv4NoCheck()
-			ipv4.SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
-			ipv4.DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
+			ipv4.SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
+			ipv4.DstAddr = common.BytesToIPv4(3, 22, 111, 0)
 			ipv4.VersionIhl = 0x45
 			ipv4.NextProtoID = esp
 			notDrop[i] = true
@@ -148,8 +148,8 @@ func ScalarEncapsulation(currentPacket *packet.Packet, context flow.UserContext)
 
 	currentPacket.ParseL3()
 	ipv4 := currentPacket.GetIPv4NoCheck()
-	ipv4.SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
-	ipv4.DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
+	ipv4.SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
+	ipv4.DstAddr = common.BytesToIPv4(3, 22, 111, 0)
 	ipv4.VersionIhl = 0x45
 	ipv4.NextProtoID = esp
 

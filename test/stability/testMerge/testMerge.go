@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/test/stability/stabilityCommon"
@@ -63,8 +64,8 @@ var (
 	// Usually when writing multibyte fields to packet, we should make
 	// sure that byte order in packet buffer is correct and swap bytes if needed.
 	// Here for testing purposes we use addresses with bytes swapped by hand.
-	ipv4addr1 uint32 = 0x0100007f // 127.0.0.1
-	ipv4addr2 uint32 = 0x05090980 // 128.9.9.5
+	ipv4addr1 common.IPv4Address = 0x0100007f // 127.0.0.1
+	ipv4addr2 common.IPv4Address = 0x05090980 // 128.9.9.5
 
 	testDoneEvent *sync.Cond
 	progStart     time.Time

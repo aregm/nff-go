@@ -21,7 +21,7 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 			return false
 		}
 
-		port := portPair[packet.ArrayToIPv4(arp.TPA)]
+		port := portPair[common.ArrayToIPv4(arp.TPA)]
 		if port == nil {
 			return false
 		}
@@ -31,7 +31,7 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 		if err != nil {
 			common.LogFatal(common.Debug, err)
 		}
-		packet.InitARPReplyPacket(answerPacket, port.MAC, arp.SHA, packet.ArrayToIPv4(arp.TPA), packet.ArrayToIPv4(arp.SPA))
+		packet.InitARPReplyPacket(answerPacket, port.MAC, arp.SHA, common.ArrayToIPv4(arp.TPA), common.ArrayToIPv4(arp.SPA))
 		answerPacket.SendPacket(port.port)
 
 		return false

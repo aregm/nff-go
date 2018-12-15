@@ -5,7 +5,6 @@
 package packet
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"net"
 	"reflect"
@@ -40,8 +39,8 @@ var (
 		TimeToLive:  uint8(64),
 		NextProtoID: TCPNumber,
 		HdrChecksum: 0,
-		SrcAddr:     binary.LittleEndian.Uint32([]byte(net.ParseIP("131.151.32.21").To4())),
-		DstAddr:     binary.LittleEndian.Uint32([]byte(net.ParseIP("131.151.32.129").To4())),
+		SrcAddr:     SliceToIPv4([]byte(net.ParseIP("131.151.32.21").To4())),
+		DstAddr:     SliceToIPv4([]byte(net.ParseIP("131.151.32.129").To4())),
 		TotalLength: SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen)),
 	}
 

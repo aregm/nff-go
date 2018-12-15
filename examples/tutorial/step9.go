@@ -40,8 +40,8 @@ func mySplitter(cur *packet.Packet, ctx flow.UserContext) uint {
 func myHandler(cur *packet.Packet, ctx flow.UserContext) {
 	cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
 	cur.ParseL3()
-	cur.GetIPv4NoCheck().SrcAddr = packet.BytesToIPv4(111, 22, 3, 0)
-	cur.GetIPv4NoCheck().DstAddr = packet.BytesToIPv4(3, 22, 111, 0)
+	cur.GetIPv4NoCheck().SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
+	cur.GetIPv4NoCheck().DstAddr = common.BytesToIPv4(3, 22, 111, 0)
 	cur.GetIPv4NoCheck().VersionIhl = 0x45
 	cur.GetIPv4NoCheck().NextProtoID = 0x04
 }
