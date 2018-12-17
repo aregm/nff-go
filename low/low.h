@@ -27,6 +27,10 @@
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
 
+// 2 queues are enough for handling 40GBits. Should be checked for other NICs.
+// TODO This macro should be a function that will dynamically return the needed number of cores.
+#define TX_QUEUE_NUMBER 2
+
 #define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
 // #define DEBUG
@@ -167,8 +171,8 @@ int check_port_rss(uint16_t port) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
-	uint16_t rx_rings, tx_rings = sendQueuesNumber;
+int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
+	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
 
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
@@ -393,12 +397,13 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
+	int16_t queue = 0;
 	while (*flag == process) {
 		for (int q = 0; q < inIndexNumber; q++) {
 			// Get packets for TX from ring
@@ -408,6 +413,11 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32
 				continue;
 
 			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
+			// inIndexNumber must be "1" or even. This prevents any reordering.
+			// anyway allows reordering explicitly
+			if (anyway || inIndexNumber > 1) {
+				queue = !queue;
+			}
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG
