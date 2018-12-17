@@ -274,7 +274,7 @@ func (app *RunningApp) testPktgenRoutine(report chan<- TestReport, done <-chan s
 	// We need to wait a little bit, because connection will be active
 	// even if pktgen hasn't launch yet (Docker opens port in advance).
 	// This will lead to "connection reset by peer" error at read stage.
-	time.Sleep(5 * time.Second)
+	time.Sleep(app.dockerConfig.PktgenDelay * time.Second)
 
 	// First try to connect to pktgen
 	ticker := time.NewTicker(1 * time.Second)

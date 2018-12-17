@@ -9,7 +9,8 @@
             "/sys/devices/system/node:/sys/devices/system/node",
             "/dev:/dev"
         ],
-        "pktgen-port": 22022
+        "pktgen-port": 22022,
+        "pktgen-delay": 5
     },
     "variables": {
         "INPORT1": "0",
