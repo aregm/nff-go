@@ -97,6 +97,9 @@ type DockerConfig struct {
 	// Network socket port to be used to communicate with pktgen
 	// program. Usually 22022.
 	PktgenPort int `json:"pktgen-port"`
+	// Delay in seconds after launching pktgen before first connection
+	// attempt.
+	PktgenDelay time.Duration `json:"pktgen-delay"`
 }
 
 // TestsuiteConfig struct has settings which describe

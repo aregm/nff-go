@@ -3,3 +3,4 @@ perf_main
 perf_seq
 ipsec
 latency
+perf_gen

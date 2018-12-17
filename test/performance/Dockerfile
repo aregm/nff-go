@@ -13,3 +13,4 @@ COPY perf_main .
 COPY perf_seq .
 COPY ipsec .
 COPY latency .
+COPY perf_gen .
