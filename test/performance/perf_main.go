@@ -20,8 +20,7 @@ func main() {
 	flag.UintVar(&load, "load", 1000, "Use this for regulating 'load intensity', number of iterations")
 	flag.UintVar(&loadRW, "loadRW", 50, "Use this for regulating 'load read/write intensity', number of iterations")
 
-	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
-	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
+	outport := flag.Uint("outport", 1, "port for sender")
 	inport := flag.Uint("inport", 0, "port for receiver")
 	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
 	dpdkLogLevel := flag.String("dpdk", "--log-level=0", "Passes an arbitrary argument to dpdk EAL")
@@ -43,12 +42,7 @@ func main() {
 	// Handle second flow via some heavy function
 	flow.CheckFatal(flow.SetHandler(firstFlow, heavyFunc, nil))
 
-	// Split for two senders and send
-	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
-	flow.CheckFatal(err)
-
-	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport1)))
-	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport)))
 
 	flow.CheckFatal(flow.SystemStart())
 }

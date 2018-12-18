@@ -20,8 +20,7 @@ var (
 
 func main() {
 	flag.BoolVar(&printOn, "print", false, "enable print of parsed layers")
-	outport1 := flag.Uint("outport1", 1, "port for 1st sender")
-	outport2 := flag.Uint("outport2", 1, "port for 2nd sender")
+	outport := flag.Uint("outport", 1, "port for sender")
 	inport := flag.Uint("inport", 0, "port for receiver")
 	noscheduler := flag.Bool("no-scheduler", false, "disable scheduler")
 	flag.Parse()
@@ -40,12 +39,7 @@ func main() {
 	var ctx gopacketContext
 	flow.CheckFatal(flow.SetHandler(firstFlow, gopacketHandleFunc, ctx))
 
-	// Split for two senders and send
-	secondFlow, err := flow.SetPartitioner(firstFlow, 150, 150)
-	flow.CheckFatal(err)
-
-	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport1)))
-	flow.CheckFatal(flow.SetSender(secondFlow, uint16(*outport2)))
+	flow.CheckFatal(flow.SetSender(firstFlow, uint16(*outport)))
 
 	flow.SystemStart()
 }

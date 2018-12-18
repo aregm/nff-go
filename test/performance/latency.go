@@ -109,11 +109,8 @@ func main() {
 	// Create packet flow
 	outputFlow, err := flow.SetFastGenerator(generatePackets, speed, nil)
 	flow.CheckFatal(err)
-	outputFlow2, err := flow.SetPartitioner(outputFlow, 350, 350)
-	flow.CheckFatal(err)
 
 	flow.CheckFatal(flow.SetSender(outputFlow, uint16(*outport)))
-	flow.CheckFatal(flow.SetSender(outputFlow2, uint16(*outport)))
 
 	// Create receiving flow and set a checking function for it
 	inputFlow, err := flow.SetReceiver(uint16(*inport))
