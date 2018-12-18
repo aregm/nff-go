@@ -1421,6 +1421,12 @@ func merge(from low.Rings, to low.Rings) {
 			if parameters.out != nil && parameters.out[0] == from[0] {
 				parameters.out = to
 			}
+		case *segmentParameters:
+			for i := range *parameters.out {
+				if (*parameters.out)[i][0] == from[0] {
+					(*parameters.out)[i] = to
+				}
+			}
 		}
 	}
 }
