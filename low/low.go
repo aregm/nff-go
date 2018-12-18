@@ -510,11 +510,11 @@ func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN Rings, flag *int32, coreID int) {
+func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
@@ -581,7 +581,7 @@ func CheckPortRSS(port uint16) int32 {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
+func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
 	var mempools **C.struct_rte_mempool
 	if willReceive {
 		m := CreateMempools("receive", inIndex)
@@ -589,7 +589,7 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscu
 	} else {
 		mempools = nil
 	}
-	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
+	if C.port_init(C.uint16_t(port), C.bool(willReceive),
 		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
