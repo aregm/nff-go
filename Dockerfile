@@ -19,7 +19,7 @@ RUN apt-get -q update && apt-get -q -y install \
     libhyperscan-dev \
     liblua5.3-dev
 
-RUN cd /opt && curl -L -s https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar zx
+RUN cd /opt && curl -L -s https://dl.google.com/go/go1.11.4.linux-amd64.tar.gz | tar zx
 
 RUN mkdir -p ${NFF_GO}
 COPY . ${NFF_GO}
