@@ -75,22 +75,6 @@ sources use the following command
 
         git clone --recurse-submodules http://github.com/intel-go/nff-go
 
-### Working with a github fork
-
-If you are working on a fork, then the **go get** command will not put nff-go in
-$GOPATH/src/github.com/intel-go. However, imports will continue to reference
-github.com/intel-go. This is a feature of Go and not a problem in the way nff-go
-is written. See [stackoverflow
-article](https://stackoverflow.com/questions/14323872/using-forked-package-import-in-go)
-for a discussion. A simple way to resolve the problem is to use a symlink. If
-you are rscohn2 on github, and you forked nff-go into your personal account,
-then do this:
-
-        cd $GOPATH/src/github.com
-        mkdir intel-go
-        cd intel-go
-        ln -s ../rscohn2/nff-go .
-
 ## Setting up the build and run environment
 
 ### DPDK
@@ -120,13 +104,21 @@ nff-go/test/dpdk/dpdk/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
 
 ### Go
 
-Use Go version 1.11 or higher. To check the version of Go, do:
+Use Go version 1.11.4 or higher. To check the version of Go, do:
 
         go version
         
 ## Building NFF-GO
 
-        cd $GOPATH/src/github.com/intel-go/nff-go
+When Go compiler runs for the first time it downloads all dependent
+packages listed in `go.mod` file. This operation cannot be done in
+parallel because otherwise Go package cache gets corrupted. Because of
+that it is necessary to run command `go mod download` before first
+`make` is done. Another option is to use single process `make -j1`
+when it is run for the first time, but may be quite slow.
+
+        cd nff-go
+        go mod download        # do it once before first build
         make -j8
 
 ## Building NFF-GO in debug mode
@@ -187,11 +179,6 @@ in these JSON files.
 
 To clean all generated binaries, use the **make clean** command.  To delete all
 deployed images listed in NFF_GO_HOSTS, use the **make cleanall** command.
-
-## Changing the DPDK sources
-
-If you use the **make** command from NFF-GO directories, the DPDK driver is
-downloaded automatically.
 
 ## Contributing
 
