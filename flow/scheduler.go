@@ -745,13 +745,13 @@ func constructZeroIndex(old []int32) []int32 {
 }
 
 func constructDuplicatedIndex(old []int32, newIndex []int32) {
-	oldLen := old[0]/2 + old[0]%2
+	oldLen := old[0] / 2 + old[0]%2
 	newLen := old[0] / 2
+	old[0] = oldLen
 	for q := int32(0); q < newLen; q++ {
 		newIndex[q+1] = old[q+1+oldLen]
 	}
 	newIndex[0] = newLen
-	old[0] = oldLen
 }
 
 func constructNewIndex(inIndexNumber int32) []int32 {

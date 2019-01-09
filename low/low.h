@@ -36,6 +36,9 @@
 // #define DEBUG
 // #define REASSEMBLY
 
+#define recvNotUsed 0
+#define recvDone 2
+
 // This macros clears packet structure which is stored inside mbuf
 // 0 offset is L3 protocol pointer
 // 8 offset is L4 protocol pointer
@@ -335,7 +338,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -343,6 +346,7 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 		for (int q = 0; q < inIndex[0]; q++) {
 			// Get packets from port
 			uint16_t rx_pkts_number = rte_eth_rx_burst(port, inIndex[q+1], bufs, BURST_SIZE);
+			__atomic_store_n(race, recvDone, __ATOMIC_RELAXED);
 			if (unlikely(rx_pkts_number == 0)) {
 				continue;
 			}
@@ -358,6 +362,7 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 		}
 	}
 	free(out_rings);
+	__atomic_store_n(race, recvNotUsed, __ATOMIC_RELAXED);
 	*flag = wasStopped;
 }
 
