@@ -160,11 +160,11 @@ func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 }
 
 type KNIParameters struct {
-	in   low.Rings
-	out  low.Rings
-	port *low.Port
-	recv bool
-	send bool
+	in        low.Rings
+	out       low.Rings
+	port      *low.Port
+	recv      bool
+	send      bool
 	linuxCore bool
 }
 
@@ -394,14 +394,14 @@ var hwtxchecksum bool
 var maxRecv int
 
 type port struct {
-	wasRequested   bool // has user requested any send/receive operations at this port
-	willReceive    bool // will this port receive packets
-	willKNI        bool // will this port has assigned KNI device
-	KNICoreIndex   int
-	port           uint16
-	MAC            [common.EtherAddrLen]uint8
-	InIndex        int32
-	sendRings      low.Rings
+	wasRequested bool // has user requested any send/receive operations at this port
+	willReceive  bool // will this port receive packets
+	willKNI      bool // will this port has assigned KNI device
+	KNICoreIndex int
+	port         uint16
+	MAC          [common.EtherAddrLen]uint8
+	InIndex      int32
+	sendRings    low.Rings
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -536,7 +536,7 @@ func SystemInit(args *Config) error {
 		maxInIndex = 1
 	}
 	if args.MaxInIndex != 0 {
-		if args.MaxInIndex > 1 && args.MaxInIndex % 2 != 0 {
+		if args.MaxInIndex > 1 && args.MaxInIndex%2 != 0 {
 			return common.WrapWithNFError(nil, "MaxInIndex should be 1 or even", common.Fail)
 		}
 		maxInIndex = args.MaxInIndex
@@ -715,12 +715,12 @@ func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 // If linuxCore parameter is true function will use core that was assigned
 // to KNI device in Linux. So all send/receive/device can use one core
 func SetSenderReceiverKNI(IN *Flow, kni *Kni, linuxCore bool) (OUT *Flow, err error) {
-        if err := checkFlow(IN); err != nil {
-                return nil, err
-        }
-        rings := low.CreateRings(burstSize*sizeMultiplier, 1)
-        addKNI(kni.portId, true, rings, true, finishFlow(IN), IN.inIndexNumber, "send-receive KNI", linuxCore)
-        return newFlow(rings, 1), nil
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+	addKNI(kni.portId, true, rings, true, finishFlow(IN), IN.inIndexNumber, "send-receive KNI", linuxCore)
+	return newFlow(rings, 1), nil
 }
 
 // SetFastGenerator adds clonable generate function to flow graph.

@@ -101,7 +101,7 @@ const (
 	sendReceiveKNI // send to port, send to KNI, receive from KNI
 	generate
 	readWrite
-	comboKNI       // KNI send/receive will use core assigned to Linux KNI device
+	comboKNI // KNI send/receive will use core assigned to Linux KNI device
 )
 
 // Flow function representation
@@ -267,7 +267,7 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 	}
 	ffi.clone = append(ffi.clone, &clonePair{index, [2]chan int{nil, nil}, process})
 	ffi.cloneNumber++
-	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI && ff.fType != comboKNI{
+	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI && ff.fType != comboKNI {
 		ffi.clone[ffi.cloneNumber-1].channel[0] = make(chan int)
 		ffi.clone[ffi.cloneNumber-1].channel[1] = make(chan int)
 	}
@@ -745,7 +745,7 @@ func constructZeroIndex(old []int32) []int32 {
 }
 
 func constructDuplicatedIndex(old []int32, newIndex []int32) {
-	oldLen := old[0] / 2 + old[0]%2
+	oldLen := old[0]/2 + old[0]%2
 	newLen := old[0] / 2
 	old[0] = oldLen
 	for q := int32(0); q < newLen; q++ {
