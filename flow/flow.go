@@ -146,14 +146,16 @@ type Kni struct {
 }
 
 type receiveParameters struct {
-	out  low.Rings
-	port *low.Port
+	out    low.Rings
+	port   *low.Port
+	status []int32
 }
 
 func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 	par := new(receiveParameters)
 	par.port = low.GetPort(portId)
 	par.out = out
+	par.status = make([]int32, maxRecv, maxRecv)
 	schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
 }
 
@@ -354,6 +356,12 @@ const (
 	HWTXChecksumCapability HWCapability = iota
 )
 
+const (
+	recvNotUsed int32 = iota
+	recvNotDone
+	recvDone
+)
+
 // CheckHWCapability return true if hardware offloading capability
 // present in all ports. Otherwise it returns false.
 func CheckHWCapability(capa HWCapability, ports []uint16) bool {
@@ -383,6 +391,7 @@ const reportMbits = false
 var sizeMultiplier uint
 var schedTime uint
 var hwtxchecksum bool
+var maxRecv int
 
 type port struct {
 	wasRequested   bool // has user requested any send/receive operations at this port
@@ -517,9 +526,9 @@ func SystemInit(args *Config) error {
 	}
 	common.SetLogType(logType)
 
-	maxRecv := 2
+	maxRecv = 2
 	if args.MaxRecv != 0 {
-		needKNI = args.MaxRecv
+		maxRecv = args.MaxRecv
 	}
 
 	maxInIndex := int32(16)
@@ -1235,7 +1244,20 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 
 func recvRSS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID)
+	var index int
+	for i := 0; i < len(srp.status); i++ {
+		if !atomic.CompareAndSwapInt32(&srp.status[i], recvDone, recvNotDone) {
+			index = i
+		}
+	}
+	for i := 0; i < len(srp.status); i++ {
+		// Need to wait while all receive instances finish current "receive from NIC" operation
+		// Next "receive from NIC" operation will use new borders without simultaneous access
+		if atomic.LoadInt32(&srp.status[i]) == recvNotDone {
+			i--
+		}
+	}
+	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID, &srp.status[index])
 }
 
 func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
