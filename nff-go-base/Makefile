@@ -17,7 +17,7 @@ Fedora: Makefile
 		echo 'ENV https_proxy ${https_proxy}' >> Dockerfile;	\
 		echo 'RUN echo proxy=${http_proxy} >> /etc/dnf/dnf.conf' >> Dockerfile;	\
 	fi
-	echo 'RUN dnf -y install numactl-libs.x86_64; dnf clean all' >> Dockerfile
+	echo 'RUN dnf -y install numactl-libs.x86_64 lua-devel libmnl-devel rdma-core-devel libibverbs; dnf clean all' >> Dockerfile
 	echo 'CMD ["/bin/bash"]' >> Dockerfile
 
 Dockerfile: Makefile
@@ -29,7 +29,7 @@ Dockerfile: Makefile
 		echo 'RUN echo Acquire::http::Proxy \"${http_proxy}\"\; >> /etc/apt/apt.conf' >> Dockerfile;    \
 		echo 'RUN echo Acquire::https::Proxy \"${https_proxy}\"\; >> /etc/apt/apt.conf' >> Dockerfile;    \
 	fi
-	echo 'RUN apt-get update; apt-get install -y pciutils; apt-get install -y libnuma-dev; apt-get install -y libpcap0.8-dev; apt-get install -y liblua5.3-dev; apt-get clean all' >> Dockerfile
+	echo 'RUN apt-get update; apt-get install -y pciutils libnuma-dev libpcap0.8-dev liblua5.3-dev libibverbs-dev libmnl-dev; apt-get clean all' >> Dockerfile
 	echo 'CMD ["/bin/bash"]' >> Dockerfile
 
 .PHONY: dpdk

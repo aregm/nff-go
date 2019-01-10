@@ -84,6 +84,10 @@ Requirements in the DPDK Getting Started Guide for
 Linux](http://dpdk.org/doc/guides/linux_gsg/sys_reqs.html) for more
 information.
 
+Since NFF-Go is build with Mellanox cards support out of the box you
+need to install additional dependencies required for MLX network
+drivers. On Ubuntu they are called `libmnl-dev` and `libibverbs-dev`.
+
 Additional dependencies are required for pktgen, especially if you are
 running RedHat or CentOS Linux distributions. See [this
 file](https://git.dpdk.org/apps/pktgen-dpdk/tree/INSTALL.md?h=pktgen-3.5.9&id=d469543f651506a8c9fb7c667a060950c5d92649)
