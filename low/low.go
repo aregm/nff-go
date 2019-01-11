@@ -494,7 +494,7 @@ func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))),
-		     (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)))
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)))
 }
 
 func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings) {
