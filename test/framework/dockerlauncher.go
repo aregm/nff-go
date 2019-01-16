@@ -37,6 +37,7 @@ var (
 	TestPassedRegexp = regexp.MustCompile(`^TEST PASSED$`)
 	TestFailedRegexp = regexp.MustCompile(`^TEST FAILED$`)
 	TestCoresRegexp  = regexp.MustCompile(`^DEBUG: System is using (\d+) cores now\. (\d+) cores are left available\.$`)
+	TestPerfRegexp   = regexp.MustCompile(`^Output: Packets/sec\: (\d+) Mbits/sec\: (\d+)$`)
 	ABStatsRegexps   = [4]*regexp.Regexp{
 		regexp.MustCompile(`^Requests per second: *(\d+\.\d+) \[#/sec\] \(mean\)$`),
 		regexp.MustCompile(`^Time per request: *(\d+\.\d+) \[ms\] \(mean\)$`),
@@ -185,23 +186,33 @@ func (app *RunningApp) testRoutine(report chan<- TestReport, done <-chan struct{
 					}
 				}
 			}
+			fillstats2 := func(first *int64, second *int64, rexps *regexp.Regexp) bool {
+				t := time.Now()
+				if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
+					matches := rexps.FindStringSubmatch(str)
+					if len(matches) == 3 {
+						n0, err0 := fmt.Sscanf(matches[1], "%d", first)
+						n1, err1 := fmt.Sscanf(matches[2], "%d", second)
+						if err0 == nil && err1 == nil && n0 == 1 && n1 == 1 {
+							return true
+						}
+					}
+				}
+				return false
+			}
 
 			// Scan for strings specific to test application type
 			if app.config.Type == TestAppGo {
 				// Get cores number information for NFF-Go application
-				t := time.Now()
-				if t.After(app.benchStartTime) && t.Before(app.benchEndTime) {
-					matches := TestCoresRegexp.FindStringSubmatch(str)
-					if len(matches) == 3 {
-						var c CoresInfo
-						c.CoresUsed, err = strconv.Atoi(matches[1])
-						if err == nil {
-							c.CoresFree, err = strconv.Atoi(matches[2])
-							if err == nil {
-								app.CoresStats = append(app.CoresStats, c)
-							}
-						}
-					}
+				var first, second int64
+				if fillstats2(&first, &second, TestCoresRegexp) == true {
+					app.CoresStats = append(app.CoresStats, CoresInfo{int(first), int(second)})
+				}
+			} else if app.config.Type == TestAppPerf {
+				// Get cores number information for NFF-Go application
+				var first, second int64
+				if fillstats2(&first, &second, TestPerfRegexp) == true {
+					app.PktgenBenchdata = append(app.PktgenBenchdata, []PktgenMeasurement{{0, 0, first, second}})
 				}
 			} else if app.config.Type == TestAppApacheBenchmark {
 				// Get Apache Benchmark output

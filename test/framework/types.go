@@ -58,6 +58,7 @@ type AppType int
 // Constants for different application types.
 const (
 	TestAppGo AppType = iota
+	TestAppPerf
 	TestAppPktgen
 	TestAppApacheBenchmark
 	TestAppLatency
@@ -75,6 +76,7 @@ func (at *AppType) UnmarshalJSON(data []byte) error {
 	// Use map to get int keys for string values
 	got, ok := map[string]AppType{
 		"TestAppGo":              TestAppGo,
+		"TestAppPerf":            TestAppPerf,
 		"TestAppPktgen":          TestAppPktgen,
 		"TestAppApacheBenchmark": TestAppApacheBenchmark,
 		"TestAppLatency":         TestAppLatency,
@@ -167,6 +169,7 @@ type LatencyStats struct {
 	Stats [5]float64
 }
 
+// Indexes in array of Wireshark Benchmark stats WrkBenchmarkStats
 const (
 	WrkRequestsPerSecond = iota
 	WrkTransferRate

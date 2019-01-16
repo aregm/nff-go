@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	pkts := uint64(speed * 1000 * 1000 / 8 / (size + 20))
-	size = size - EtherLen - IPv4MinLen - TCPMinLen
+	size = size - EtherLen - IPv4MinLen - TCPMinLen - 4 /* Ethernet checksum length*/
 
 	flow.SystemInit(nil)
 

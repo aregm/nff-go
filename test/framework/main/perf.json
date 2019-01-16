@@ -40,10 +40,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -72,10 +72,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -104,10 +104,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -136,10 +136,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -168,10 +168,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -200,10 +200,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -232,10 +232,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -264,10 +264,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -296,10 +296,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -328,10 +328,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -360,10 +360,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -392,10 +392,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -424,10 +424,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -456,10 +456,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -488,10 +488,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -520,10 +520,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -552,10 +552,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -584,10 +584,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -616,10 +616,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -648,10 +648,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -680,10 +680,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -712,10 +712,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -744,10 +744,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -776,10 +776,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -797,7 +797,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -808,10 +808,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -829,7 +829,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -840,10 +840,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -872,10 +872,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -904,10 +904,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -936,10 +936,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -968,10 +968,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1000,10 +1000,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1032,10 +1032,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1053,7 +1053,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1064,10 +1064,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1085,7 +1085,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1096,10 +1096,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1128,10 +1128,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1160,10 +1160,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1192,10 +1192,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1224,10 +1224,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1256,10 +1256,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1288,10 +1288,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1309,7 +1309,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1320,10 +1320,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1341,7 +1341,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1352,10 +1352,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1384,10 +1384,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1416,10 +1416,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1448,10 +1448,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1480,10 +1480,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1512,10 +1512,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1544,10 +1544,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1565,7 +1565,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1576,10 +1576,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1597,7 +1597,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1608,10 +1608,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1640,10 +1640,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1672,10 +1672,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1704,10 +1704,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1736,10 +1736,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1768,10 +1768,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1800,10 +1800,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -1821,7 +1821,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1832,10 +1832,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1853,7 +1853,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -1864,10 +1864,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -1896,10 +1896,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1928,10 +1928,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -1960,10 +1960,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -1992,10 +1992,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2024,10 +2024,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2056,10 +2056,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2077,7 +2077,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2088,10 +2088,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2109,7 +2109,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2120,10 +2120,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2152,10 +2152,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2184,10 +2184,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2216,10 +2216,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2248,10 +2248,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2280,10 +2280,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2312,10 +2312,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2333,7 +2333,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2344,10 +2344,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2365,7 +2365,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2376,10 +2376,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2408,10 +2408,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2440,10 +2440,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2472,10 +2472,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2504,10 +2504,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2536,10 +2536,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2568,10 +2568,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2589,7 +2589,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2600,10 +2600,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2621,7 +2621,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2632,10 +2632,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2664,10 +2664,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2696,10 +2696,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "64"
                     ]
                 }
             ],
@@ -2728,10 +2728,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2760,10 +2760,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "128"
                     ]
                 }
             ],
@@ -2792,10 +2792,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2824,10 +2824,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "256"
                     ]
                 }
             ],
@@ -2845,7 +2845,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2856,10 +2856,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
@@ -2877,7 +2877,7 @@
                     "image-name": "nff-go-performance",
                     "app-type": "TestAppGo",
                     "exec-cmd": [
-                        "./perf_gen", "-s", "1514"
+                        "./perf_gen", "-s", "1518"
                     ]
                 },
                 {
@@ -2888,10 +2888,10 @@
                     ]
                 },
                 {
-                    "image-name": "nff-go-pktgen",
-                    "app-type": "TestAppPktgen",
+                    "image-name": "nff-go-performance",
+                    "app-type": "TestAppPerf",
                     "exec-cmd": [
-                        "./pktgen", "-c", "PKTGENCOREMASK", "-n", "4", "--", "-P", "-m", "PKTGENPORT", "-G"
+                        "./perf_count", "-s", "1518"
                     ]
                 }
             ],
