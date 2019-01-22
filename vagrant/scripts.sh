@@ -64,6 +64,9 @@ setupdocker ()
 
     sudo gpasswd -a vagrant docker
     sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
+    sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H fd://,ExecStart=/usr/bin/dockerd,' /lib/systemd/system/docker.service
+    sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H unix://,ExecStart=/usr/bin/dockerd,' /etc/systemd/system/docker.service
+    sudo sed -i -e 's,ExecStart=/usr/bin/dockerd -H fd://,ExecStart=/usr/bin/dockerd,' /etc/systemd/system/docker.service
 
     if [ ! -z "${http_proxy}" ]
     then
