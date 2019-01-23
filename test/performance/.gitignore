@@ -4,3 +4,4 @@ perf_seq
 ipsec
 latency
 perf_gen
+perf_count
