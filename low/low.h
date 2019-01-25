@@ -172,6 +172,13 @@ int check_port_rss(uint16_t port) {
 	return dev_info.max_rx_queues;
 }
 
+int check_port_tx(uint16_t port) {
+        struct rte_eth_dev_info dev_info;
+        memset(&dev_info, 0, sizeof(dev_info));
+        rte_eth_dev_info_get(port, &dev_info);
+        return dev_info.max_tx_queues;
+}
+
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
 int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
@@ -181,17 +188,15 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
+	if (tx_rings > dev_info.max_tx_queues) {
+		tx_rings = check_port_tx(port);
+	}
+
 	if (willReceive) {
 		rx_rings = inIndex;
-		if (tx_rings == 0) {
-			// All receive ports should have at least one send queue to handle ARP
-			tx_rings = 1;
-		}
 	} else {
 		rx_rings = 0;
 	}
-	int retval;
-	uint16_t q;
 
 	if (port >= rte_eth_dev_count())
 		return -1;
@@ -210,12 +215,12 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	}
 
 	/* Configure the Ethernet device. */
-	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
+	int retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
 	if (retval != 0)
 		return retval;
 
 	/* Allocate and set up RX queues per Ethernet port. */
-	for (q = 0; q < rx_rings; q++) {
+	for (uint16_t q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE,
 				rte_eth_dev_socket_id(port), NULL, mbuf_pools[q]);
 		if (retval < 0)
@@ -223,7 +228,7 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	}
 
 	/* Allocate and set up TX queues per Ethernet port. */
-	for (q = 0; q < tx_rings; q++) {
+	for (uint16_t q = 0; q < tx_rings; q++) {
 		retval = rte_eth_tx_queue_setup(port, q, TX_RING_SIZE,
 				rte_eth_dev_socket_id(port), &dev_info.default_txconf);
 		if (retval < 0)
@@ -409,6 +414,7 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 	uint16_t buf;
 	uint16_t tx_pkts_number;
 	int16_t queue = 0;
+	bool switchQueue = (check_port_tx(port) > 1) && (anyway || inIndexNumber > 1);
 	while (*flag == process) {
 		for (int q = 0; q < inIndexNumber; q++) {
 			// Get packets for TX from ring
@@ -420,7 +426,7 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
 			// inIndexNumber must be "1" or even. This prevents any reordering.
 			// anyway allows reordering explicitly
-			if (anyway || inIndexNumber > 1) {
+			if (switchQueue) {
 				queue = !queue;
 			}
 			// Free any unsent packets
