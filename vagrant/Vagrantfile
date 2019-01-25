@@ -130,7 +130,7 @@ echo Unpacking Go language into /opt
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
-echo . ~/scripts.sh >> .bashrc
+echo -e ". ~/scripts.sh\n$(cat .bashrc)" > .bashrc
 setuptesthost
 
 echo Downloading and building NFF-GO framework
