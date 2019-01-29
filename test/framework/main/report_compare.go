@@ -85,18 +85,17 @@ type comparisonMode struct {
 }
 
 func (cm *comparisonMode) String() string {
-	switch cm.reportProcessor.(type) {
-	case geomeanProcessorPkts:
+	if _, ok := cm.reportProcessor.(geomeanProcessorPkts); ok {
 		return "geomean_recv_pkts"
-	case geomeanProcessorMbits:
+	} else if _, ok := cm.reportProcessor.(geomeanProcessorMbits); ok {
 		return "geomean_recv_mbits"
-	case sbsProcessorPkts:
+	} else if _, ok := cm.reportProcessor.(sbsProcessorPkts); ok {
 		return "sbs_recv_pkts"
-	case sbsProcessorMbits:
+	} else if _, ok := cm.reportProcessor.(sbsProcessorMbits); ok {
 		return "sbs_recv_mbits"
-	default:
-		return "bad value"
 	}
+
+	return "bad value"
 }
 
 func (cm *comparisonMode) Set(value string) error {
