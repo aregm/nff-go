@@ -17,7 +17,9 @@ RUN apt-get -q update && apt-get -q -y install \
     hugepages  \
     libnuma-dev \
     libhyperscan-dev \
-    liblua5.3-dev
+    liblua5.3-dev \
+    libmnl-dev \
+    libibverbs-dev
 
 RUN cd /opt && curl -L -s https://dl.google.com/go/go1.11.4.linux-amd64.tar.gz | tar zx
 

@@ -6,11 +6,13 @@
 
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
+# Main DPDK variables
 DPDK_VERSION=18.11
 DPDK_DIR=dpdk
 PKTGEN_VERSION=3.5.8
 PKTGEN_DIR=pktgen-dpdk
-export RTE_SDK=$(PROJECT_ROOT)/dpdk/$(DPDK_DIR)
+DPDK_INSTALL_DIR=$(RTE_TARGET)-install
+export RTE_SDK=$(PROJECT_ROOT)/dpdk/$(DPDK_DIR)/$(DPDK_INSTALL_DIR)/usr/local/share/dpdk
 export RTE_TARGET=x86_64-native-linuxapp-gcc
 
 # Configure flags for native code. Disable FSGSBASE and F16C to run in

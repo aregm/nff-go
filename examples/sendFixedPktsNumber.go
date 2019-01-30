@@ -38,12 +38,9 @@ func main() {
 
 	// With fast generator sent only multiple of burst-size.
 	// f1 := flow.SetFastGenerator(generatePacket, 100, nil)
-	f2, err := flow.SetPartitioner(f1, 350, 350)
-	flow.CheckFatal(err)
 
 	// Send all generated packets to the output
 	flow.CheckFatal(flow.SetSender(f1, uint16(*outport)))
-	flow.CheckFatal(flow.SetSender(f2, uint16(*outport)))
 
 	flow.CheckFatal(flow.SystemStart())
 }

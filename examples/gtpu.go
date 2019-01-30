@@ -80,7 +80,7 @@ func encap(current *packet.Packet, context flow.UserContext) bool {
 	ipv4.NextProtoID = common.UDPNumber
 	ipv4.SrcAddr = packet.BytesToIPv4(11, 22, 33, 44)
 	ipv4.DstAddr = packet.BytesToIPv4(55, 66, 77, 88)
-	ipv4.HdrChecksum = packet.CalculateIPv4Checksum(ipv4)
+	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 
 	current.ParseL4ForIPv4()
 	udp := current.GetUDPNoCheck()

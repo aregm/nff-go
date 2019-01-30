@@ -4,6 +4,6 @@
 
 PATH_TO_MK = ../../mk
 IMAGENAME = nff-go-performance
-EXECUTABLES = perf_light perf_main perf_seq ipsec latency
+EXECUTABLES = perf_light perf_main perf_seq ipsec latency perf_gen perf_count
 
 include $(PATH_TO_MK)/leaf.mk

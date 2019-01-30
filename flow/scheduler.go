@@ -101,6 +101,7 @@ const (
 	sendReceiveKNI // send to port, send to KNI, receive from KNI
 	generate
 	readWrite
+	comboKNI // KNI send/receive will use core assigned to Linux KNI device
 )
 
 // Flow function representation
@@ -252,20 +253,26 @@ func (ff *flowFunction) startNewInstance(inIndex []int32, scheduler *scheduler) 
 
 func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 	ff := ffi.ff
-	core, index, err := scheduler.getCore()
-	if err != nil {
-		common.LogWarning(common.Debug, "Can't start new clone for", ff.name, "instance", n)
-		return err
+	var core int
+	var index int
+	if ff.fType != comboKNI {
+		core, index, err = scheduler.getCore()
+		if err != nil {
+			common.LogWarning(common.Debug, "Can't start new clone for", ff.name, "instance", n)
+			return err
+		}
+		common.LogDebug(common.Debug, "Start new clone for", ff.name, "instance", n, "at", core, "core")
+	} else {
+		common.LogDebug(common.Debug, "Start new clone for", ff.name, "instance", n, "at KNI Linux core")
 	}
-	common.LogDebug(common.Debug, "Start new clone for", ff.name, "instance", n, "at", core, "core")
 	ffi.clone = append(ffi.clone, &clonePair{index, [2]chan int{nil, nil}, process})
 	ffi.cloneNumber++
-	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
+	if ff.fType != receiveRSS && ff.fType != sendReceiveKNI && ff.fType != comboKNI {
 		ffi.clone[ffi.cloneNumber-1].channel[0] = make(chan int)
 		ffi.clone[ffi.cloneNumber-1].channel[1] = make(chan int)
 	}
 	go func() {
-		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI {
+		if ff.fType != receiveRSS && ff.fType != sendReceiveKNI && ff.fType != comboKNI {
 			if err := low.SetAffinity(core); err != nil {
 				common.LogFatal(common.Debug, "Failed to set affinity to", core, "core: ", err)
 			}
@@ -274,8 +281,10 @@ func (ffi *instance) startNewClone(scheduler *scheduler, n int) (err error) {
 			} else {
 				ff.uncloneFunction(ff.Parameters, ffi.inIndex, ffi.clone[ffi.cloneNumber-1].channel)
 			}
-		} else {
+		} else if ff.fType != comboKNI {
 			ff.cFunction(ff.Parameters, ffi.inIndex, &ffi.clone[ffi.cloneNumber-1].flag, core)
+		} else {
+			ff.cFunction(ff.Parameters, ffi.inIndex, &ffi.clone[ffi.cloneNumber-1].flag, 0)
 		}
 	}()
 	if ff.fType == segmentCopy || ff.fType == fastGenerate || ff.fType == generate {
@@ -297,7 +306,9 @@ func (ff *flowFunction) stopClone(ffi *instance, scheduler *scheduler) {
 			runtime.Gosched()
 		}
 	}
-	scheduler.setCoreByIndex(ffi.clone[ffi.cloneNumber-1].index)
+	if ffi.ff.fType != comboKNI {
+		scheduler.setCoreByIndex(ffi.clone[ffi.cloneNumber-1].index)
+	}
 	ffi.clone = ffi.clone[:len(ffi.clone)-1]
 	ffi.cloneNumber--
 	ffi.removed = true
@@ -736,11 +747,11 @@ func constructZeroIndex(old []int32) []int32 {
 func constructDuplicatedIndex(old []int32, newIndex []int32) {
 	oldLen := old[0]/2 + old[0]%2
 	newLen := old[0] / 2
+	old[0] = oldLen
 	for q := int32(0); q < newLen; q++ {
 		newIndex[q+1] = old[q+1+oldLen]
 	}
 	newIndex[0] = newLen
-	old[0] = oldLen
 }
 
 func constructNewIndex(inIndexNumber int32) []int32 {

@@ -68,6 +68,8 @@ func (config *TestsuiteConfig) executeOneTest(test *TestConfig, logdir string,
 					go apps[iii].testPktgenRoutine(report, cancel, false)
 				}
 				pktgenAppIndex = iii
+			} else if apps[iii].config.Type == TestAppPerf {
+				pktgenAppIndex = iii
 			} else {
 				coresAppIndex = iii
 			}

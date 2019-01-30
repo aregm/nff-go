@@ -27,10 +27,17 @@
 #define RX_RING_SIZE 128
 #define TX_RING_SIZE 512
 
+// 2 queues are enough for handling 40GBits. Should be checked for other NICs.
+// TODO This macro should be a function that will dynamically return the needed number of cores.
+#define TX_QUEUE_NUMBER 2
+
 #define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
 // #define DEBUG
 // #define REASSEMBLY
+
+#define recvNotUsed 0
+#define recvDone 2
 
 // This macros clears packet structure which is stored inside mbuf
 // 0 offset is L3 protocol pointer
@@ -165,26 +172,31 @@ int check_port_rss(uint16_t port) {
 	return dev_info.max_rx_queues;
 }
 
+int check_port_tx(uint16_t port) {
+        struct rte_eth_dev_info dev_info;
+        memset(&dev_info, 0, sizeof(dev_info));
+        rte_eth_dev_info_get(port, &dev_info);
+        return dev_info.max_tx_queues;
+}
+
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
-	uint16_t rx_rings, tx_rings = sendQueuesNumber;
+int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
+	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
 
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
+	if (tx_rings > dev_info.max_tx_queues) {
+		tx_rings = check_port_tx(port);
+	}
+
 	if (willReceive) {
 		rx_rings = inIndex;
-		if (tx_rings == 0) {
-			// All receive ports should have at least one send queue to handle ARP
-			tx_rings = 1;
-		}
 	} else {
 		rx_rings = 0;
 	}
-	int retval;
-	uint16_t q;
 
 	if (port >= rte_eth_dev_count())
 		return -1;
@@ -203,12 +215,12 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	}
 
 	/* Configure the Ethernet device. */
-	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
+	int retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
 	if (retval != 0)
 		return retval;
 
 	/* Allocate and set up RX queues per Ethernet port. */
-	for (q = 0; q < rx_rings; q++) {
+	for (uint16_t q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE,
 				rte_eth_dev_socket_id(port), NULL, mbuf_pools[q]);
 		if (retval < 0)
@@ -216,7 +228,7 @@ int port_init(uint16_t port, bool willReceive, uint16_t sendQueuesNumber, struct
 	}
 
 	/* Allocate and set up TX queues per Ethernet port. */
-	for (q = 0; q < tx_rings; q++) {
+	for (uint16_t q = 0; q < tx_rings; q++) {
 		retval = rte_eth_tx_queue_setup(port, q, TX_RING_SIZE,
 				rte_eth_dev_socket_id(port), &dev_info.default_txconf);
 		if (retval < 0)
@@ -331,7 +343,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -339,6 +351,7 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 		for (int q = 0; q < inIndex[0]; q++) {
 			// Get packets from port
 			uint16_t rx_pkts_number = rte_eth_rx_burst(port, inIndex[q+1], bufs, BURST_SIZE);
+			__atomic_store_n(race, recvDone, __ATOMIC_RELAXED);
 			if (unlikely(rx_pkts_number == 0)) {
 				continue;
 			}
@@ -354,40 +367,54 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 		}
 	}
 	free(out_rings);
+	__atomic_store_n(race, recvNotUsed, __ATOMIC_RELAXED);
 	*flag = wasStopped;
 }
 
-void receiveKNI(uint16_t port, struct rte_ring *out_ring, volatile int *flag, int coreId) {
+void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
+           bool recv, struct rte_ring *out_ring,
+           bool send, struct rte_ring **in_rings, int32_t inIndexNumber) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
+	int q = 0;
 	REASSEMBLY_INIT
-
 	while (*flag == process) {
-		// Get packets from KNI
-     		uint16_t rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
-		rte_kni_handle_request(kni[port]);
-		if (unlikely(rx_pkts_number == 0)) {
-			continue;
+		if (recv == true) {
+			// Get packets from KNI
+			uint16_t rx_pkts_number = rte_kni_rx_burst(kni[port], bufs, BURST_SIZE);
+			rte_kni_handle_request(kni[port]);
+			if (likely(rx_pkts_number != 0)) {
+				rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+				uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+				// Free any packets which can't be pushed to the ring. The ring is probably full.
+				handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
+			}
 		}
-		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
-
-		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
-		// Free any packets which can't be pushed to the ring. The ring is probably full.
-		handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
-#ifdef DEBUG
-		receive_received += rx_pkts_number;
-		receive_pushed += pushed_pkts_number;
-#endif
+		if (send == true) {
+			(q == inIndexNumber - 1) ? q = 0 : q++;
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+			if (likely(pkts_for_tx_number != 0)) {
+				uint16_t tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+				// Free any unsent packets
+				handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
+			}
+		}
+	}
+	if (in_rings != NULL) {
+		free(in_rings);
 	}
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
+	int16_t queue = 0;
+	bool switchQueue = (check_port_tx(port) > 1) && (anyway || inIndexNumber > 1);
 	while (*flag == process) {
 		for (int q = 0; q < inIndexNumber; q++) {
 			// Get packets for TX from ring
@@ -396,11 +423,11 @@ void nff_go_send(uint16_t port, int16_t queue, struct rte_ring **in_rings, int32
 			if (unlikely(pkts_for_tx_number == 0))
 				continue;
 
-			if (queue != -1) {
-				tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
-			} else {
-				// if queue == "-1" this means that this send is to KNI device
-				tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
+			// inIndexNumber must be "1" or even. This prevents any reordering.
+			// anyway allows reordering explicitly
+			if (switchQueue) {
+				queue = !queue;
 			}
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
@@ -472,12 +499,12 @@ void statistics(float N) {
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
 	if (receive_pushed < receive_received) {
-		fprintf(stderr, "DROP: Receive dropped %d packets\n", receive_received - receive_pushed);
+		fprintf(stderr, "DROP: Receive dropped %ld packets\n", receive_received - receive_pushed);
 	}
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	if (send_sent < send_required) {
-		fprintf(stderr, "DROP: Send dropped %d packets\n", send_required - send_sent);
+		fprintf(stderr, "DROP: Send dropped %ld packets\n", send_required - send_sent);
 	}
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more

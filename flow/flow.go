@@ -146,20 +146,40 @@ type Kni struct {
 }
 
 type receiveParameters struct {
-	out  low.Rings
-	port *low.Port
-	kni  bool
+	out    low.Rings
+	port   *low.Port
+	status []int32
 }
 
-func addReceiver(portId uint16, kni bool, out low.Rings, inIndexNumber int32) {
+func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 	par := new(receiveParameters)
 	par.port = low.GetPort(portId)
 	par.out = out
-	par.kni = kni
-	if kni {
-		schedState.addFF("KNI receiver", nil, recvKNI, nil, par, nil, sendReceiveKNI, 0)
+	par.status = make([]int32, maxRecv, maxRecv)
+	schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+}
+
+type KNIParameters struct {
+	in        low.Rings
+	out       low.Rings
+	port      *low.Port
+	recv      bool
+	send      bool
+	linuxCore bool
+}
+
+func addKNI(portId uint16, recv bool, out low.Rings, send bool, in low.Rings, inIndexNumber int32, name string, core bool) {
+	par := new(KNIParameters)
+	par.port = low.GetPort(portId)
+	par.in = in
+	par.out = out
+	par.recv = recv
+	par.send = send
+	par.linuxCore = core
+	if core {
+		schedState.addFF(name, nil, processKNI, nil, par, nil, comboKNI, inIndexNumber)
 	} else {
-		schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
+		schedState.addFF(name, nil, processKNI, nil, par, nil, sendReceiveKNI, inIndexNumber)
 	}
 }
 
@@ -203,21 +223,17 @@ func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
 }
 
 type sendParameters struct {
-	in    low.Rings
-	queue int16
-	port  uint16
+	in     low.Rings
+	port   uint16
+	anyway bool
 }
 
-func addSender(port uint16, queue int16, in low.Rings, inIndexNumber int32) {
+func addSender(port uint16, in low.Rings, inIndexNumber int32) {
 	par := new(sendParameters)
 	par.port = port
-	par.queue = queue
 	par.in = in
-	if queue != -1 {
-		schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
-	} else {
-		schedState.addFF("KNI sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
-	}
+	par.anyway = schedState.anyway
+	schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
 }
 
 type copyParameters struct {
@@ -340,6 +356,12 @@ const (
 	HWTXChecksumCapability HWCapability = iota
 )
 
+const (
+	recvNotUsed int32 = iota
+	recvNotDone
+	recvDone
+)
+
 // CheckHWCapability return true if hardware offloading capability
 // present in all ports. Otherwise it returns false.
 func CheckHWCapability(capa HWCapability, ports []uint16) bool {
@@ -369,16 +391,17 @@ const reportMbits = false
 var sizeMultiplier uint
 var schedTime uint
 var hwtxchecksum bool
+var maxRecv int
 
 type port struct {
-	wasRequested   bool // has user requested any send/receive operations at this port
-	txQueuesNumber int16
-	willReceive    bool // will this port receive packets
-	willKNI        bool // will this port has assigned KNI device
-	KNICoreIndex   int
-	port           uint16
-	MAC            [common.EtherAddrLen]uint8
-	InIndex        int32
+	wasRequested bool // has user requested any send/receive operations at this port
+	willReceive  bool // will this port receive packets
+	willKNI      bool // will this port has assigned KNI device
+	KNICoreIndex int
+	port         uint16
+	MAC          [common.EtherAddrLen]uint8
+	InIndex      int32
+	sendRings    low.Rings
 }
 
 // Config is a struct with all parameters, which user can pass to NFF-GO library
@@ -503,9 +526,9 @@ func SystemInit(args *Config) error {
 	}
 	common.SetLogType(logType)
 
-	maxRecv := 2
+	maxRecv = 2
 	if args.MaxRecv != 0 {
-		needKNI = args.MaxRecv
+		maxRecv = args.MaxRecv
 	}
 
 	maxInIndex := int32(16)
@@ -513,6 +536,9 @@ func SystemInit(args *Config) error {
 		maxInIndex = 1
 	}
 	if args.MaxInIndex != 0 {
+		if args.MaxInIndex > 1 && args.MaxInIndex%2 != 0 {
+			return common.WrapWithNFError(nil, "MaxInIndex should be 1 or even", common.Fail)
+		}
 		maxInIndex = args.MaxInIndex
 	}
 
@@ -561,7 +587,7 @@ func SystemInitPortsAndMemory() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				uint16(createdPorts[i].txQueuesNumber), true, hwtxchecksum, createdPorts[i].InIndex); err != nil {
+				true, hwtxchecksum, createdPorts[i].InIndex); err != nil {
 				return err
 			}
 		}
@@ -609,8 +635,8 @@ func SystemStop() error {
 		if createdPorts[i].wasRequested {
 			low.StopPort(createdPorts[i].port)
 			createdPorts[i].wasRequested = false
-			createdPorts[i].txQueuesNumber = 0
 			createdPorts[i].willReceive = false
+			createdPorts[i].sendRings = nil
 		}
 		if createdPorts[i].willKNI {
 			err := low.FreeKNI(createdPorts[i].port)
@@ -669,7 +695,7 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	createdPorts[portId].wasRequested = true
 	createdPorts[portId].willReceive = true
 	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
-	addReceiver(portId, false, rings, createdPorts[portId].InIndex)
+	addReceiver(portId, rings, createdPorts[portId].InIndex)
 	return newFlow(rings, createdPorts[portId].InIndex), nil
 }
 
@@ -679,8 +705,22 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Returns new opened flow with received packets
 func SetReceiverKNI(kni *Kni) (OUT *Flow) {
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
-	addReceiver(kni.portId, true, rings, 1)
+	addKNI(kni.portId, true, rings, false, nil, 1, "receiver KNI", false)
 	return newFlow(rings, 1)
+}
+
+// SetSenderReceiverKNI adds function send/receive from KNI.
+// Gets KNI device from which packets will be received and flow to send.
+// Returns new opened flow with received packets
+// If linuxCore parameter is true function will use core that was assigned
+// to KNI device in Linux. So all send/receive/device can use one core
+func SetSenderReceiverKNI(IN *Flow, kni *Kni, linuxCore bool) (OUT *Flow, err error) {
+	if err := checkFlow(IN); err != nil {
+		return nil, err
+	}
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+	addKNI(kni.portId, true, rings, true, finishFlow(IN), IN.inIndexNumber, "send-receive KNI", linuxCore)
+	return newFlow(rings, 1), nil
 }
 
 // SetFastGenerator adds clonable generate function to flow graph.
@@ -729,8 +769,26 @@ func SetSender(IN *Flow, portId uint16) error {
 		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
 	}
 	createdPorts[portId].wasRequested = true
-	addSender(portId, createdPorts[portId].txQueuesNumber, finishFlow(IN), IN.inIndexNumber)
-	createdPorts[portId].txQueuesNumber++
+	if createdPorts[portId].sendRings == nil {
+		// To allow consequent sends to one port, we need to create a send ring
+		// for the first, and then all the consequent sends should be merged
+		// with already created send ring.
+		// We need send rings with max possible number of connection groups,
+		// to be able to merge all the consequent sends, so we set max to
+		// the max value from all the ports.
+		var max int32
+		for i := range createdPorts {
+			if createdPorts[i].InIndex > max {
+				max = createdPorts[i].InIndex
+			}
+		}
+		createdPorts[portId].sendRings = low.CreateRings(burstSize*sizeMultiplier, max)
+		addSender(portId, createdPorts[portId].sendRings, IN.inIndexNumber)
+	}
+	// For a typical 40 GB card, like Intel 710 series, one core should be able
+	// to handle all the TX without problems. So we merged all income flows to created
+	// ring which will be send.
+	mergeOneFlow(IN, createdPorts[portId].sendRings)
 	return nil
 }
 
@@ -741,7 +799,7 @@ func SetSenderKNI(IN *Flow, kni *Kni) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	addSender(kni.portId, -1, finishFlow(IN), IN.inIndexNumber)
+	addKNI(kni.portId, false, nil, true, finishFlow(IN), IN.inIndexNumber, "KNI sender", false)
 	return nil
 }
 
@@ -929,21 +987,44 @@ func SetMerger(InArray ...*Flow) (OUT *Flow, err error) {
 		if err := checkFlow(InArray[i]); err != nil {
 			return nil, err
 		}
-		if InArray[i].segment == nil {
-			merge(InArray[i].current, rings)
-			closeFlow(InArray[i])
-		} else {
-			// TODO merge finishes segment even if this is merge inside it. Need to optimize.
-			ms := makeSlice(rings, InArray[i].segment)
-			segmentInsert(InArray[i], ms, true, nil, 0, 0)
-		}
+		mergeOneFlow(InArray[i], rings)
 	}
 	return newFlow(rings, max), nil
+}
+
+func mergeOneFlow(IN *Flow, rings low.Rings) {
+	if IN.segment == nil {
+		merge(IN.current, rings)
+		closeFlow(IN)
+	} else {
+		// TODO merge finishes segment even if this is merge inside it. Need to optimize.
+		ms := makeSlice(rings, IN.segment)
+		segmentInsert(IN, ms, true, nil, 0, 0)
+	}
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
 func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
+}
+
+// GetPortByName gets the port id from device name. The device name should be
+// specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+func GetPortByName(name string) (uint16, error) {
+	return low.GetPortByName(name)
+}
+
+// GetNameByPort gets the device name from port id. The device name is specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:02:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tun0|tap0]
+func GetNameByPort(port uint16) (string, error) {
+	return low.GetNameByPort(port)
 }
 
 // SetIPForPort sets IP for specified port if it was created. Not thread safe.
@@ -1163,12 +1244,28 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 
 func recvRSS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*receiveParameters)
-	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID)
+	var index int
+	for i := 0; i < len(srp.status); i++ {
+		if !atomic.CompareAndSwapInt32(&srp.status[i], recvDone, recvNotDone) {
+			index = i
+		}
+	}
+	for i := 0; i < len(srp.status); i++ {
+		// Need to wait while all receive instances finish current "receive from NIC" operation
+		// Next "receive from NIC" operation will use new borders without simultaneous access
+		if atomic.LoadInt32(&srp.status[i]) == recvNotDone {
+			i--
+		}
+	}
+	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID, &srp.status[index])
 }
 
-func recvKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
-	srp := parameters.(*receiveParameters)
-	low.ReceiveKNI(uint16(srp.port.PortId), srp.out[0], flag, coreID)
+func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srk := parameters.(*KNIParameters)
+	if srk.linuxCore == true {
+		coreID = schedState.cores[createdPorts[srk.port.PortId].KNICoreIndex].id
+	}
+	low.SrKNI(uint16(srk.port.PortId), flag, coreID, srk.recv, srk.out, srk.send, srk.in)
 }
 
 func pGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int, report chan reportPair, context []UserContext) {
@@ -1336,7 +1433,7 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 
 func send(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.queue, srp.in, inIndex[0], flag, coreID)
+	low.Send(srp.port, srp.in, srp.anyway, flag, coreID)
 }
 
 func merge(from low.Rings, to low.Rings) {
@@ -1366,6 +1463,16 @@ func merge(from low.Rings, to low.Rings) {
 			}
 			if parameters.outCopy[0] == from[0] {
 				parameters.outCopy = to
+			}
+		case *KNIParameters:
+			if parameters.out != nil && parameters.out[0] == from[0] {
+				parameters.out = to
+			}
+		case *segmentParameters:
+			for i := range *parameters.out {
+				if (*parameters.out)[i][0] == from[0] {
+					(*parameters.out)[i] = to
+				}
 			}
 		}
 	}

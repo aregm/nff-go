@@ -13,7 +13,7 @@ package low
 // it increases executable size and build time.
 
 /*
-#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_timer -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_timer -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -libverbs -lmnl -lmlx4 -lmlx5 -lrte_pmd_mlx4 -lrte_pmd_mlx5 -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
 #include "low.h"
 */
 import "C"
@@ -85,6 +85,48 @@ func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
 		mac[i] = uint8(cmac.addr_bytes[i])
 	}
 	return mac
+}
+
+// GetPortByName gets the port id from device name. The device name should be
+// specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:2:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tap0]
+func GetPortByName(name string) (uint16, error) {
+	var port C.uint16_t
+	ret := C.rte_eth_dev_get_port_by_name(C.CString(name), &port)
+	switch ret {
+	case 0:
+		return uint16(port), nil
+	case -C.ENODEV, -C.EINVAL:
+		msg := common.LogError(common.Debug,
+			"GetPortByName cannot find device: no such device")
+		return 0, common.WrapWithNFError(nil, msg, common.BadArgument)
+	default:
+		msg := common.LogError(common.Debug, "GetPortByName got an unknown error")
+		return 0, common.WrapWithNFError(nil, msg, common.Fail)
+	}
+}
+
+// GetNameByPort gets the device name from port id. The device name is specified as below:
+//
+// - PCIe address (Domain:Bus:Device.Function), for example- 0000:02:00.0
+// - SoC device name, for example- fsl-gmac0
+// - vdev dpdk name, for example- net_[pcap0|null0|tun0|tap0]
+func GetNameByPort(port uint16) (string, error) {
+	s := make([]C.char, C.RTE_ETH_NAME_MAX_LEN)
+	ret := C.rte_eth_dev_get_name_by_port(C.uint16_t(port), &s[0])
+	switch ret {
+	case 0:
+		return C.GoString(&s[0]), nil
+	case -C.EINVAL:
+		msg := common.LogError(common.Debug, "GetNameByPort cannot find port")
+		return "", common.WrapWithNFError(nil, msg, common.BadArgument)
+	default:
+		msg := common.LogError(common.Debug, "GetNameByPort got an unknown error")
+		return "", common.WrapWithNFError(nil, msg, common.Fail)
+	}
 }
 
 // GetPacketDataStartPointer returns the pointer to the
@@ -447,25 +489,33 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, race *int32) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)))
 }
 
-// ReceiveKNI - get packets from Linux core and enqueue on a Ring.
-func ReceiveKNI(port uint16, OUT *Ring, flag *int32, coreID int) {
-	C.receiveKNI(C.uint16_t(port), OUT.DPDK_ring, (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings) {
+	var nOut *C.struct_rte_ring
+	var nIn **C.struct_rte_ring
+	if OUT != nil {
+		nOut = OUT[0].DPDK_ring
+	}
+	if IN != nil {
+		nIn = C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN)))
+	}
+	C.nff_go_KNI(C.uint16_t(port), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, queue int16, IN Rings, inIndexNumber int32, flag *int32, coreID int) {
-	t := C.rte_eth_dev_socket_id(C.uint16_t(port))
-	if queue != -1 && t != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
+func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int) {
+	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.int16_t(queue), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
 }
 
 // Stop - dequeue and free packets.
@@ -532,7 +582,7 @@ func CheckPortRSS(port uint16) int32 {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
+func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
 	var mempools **C.struct_rte_mempool
 	if willReceive {
 		m := CreateMempools("receive", inIndex)
@@ -540,7 +590,7 @@ func CreatePort(port uint16, willReceive bool, sendQueuesNumber uint16, promiscu
 	} else {
 		mempools = nil
 	}
-	if C.port_init(C.uint16_t(port), C.bool(willReceive), C.uint16_t(sendQueuesNumber),
+	if C.port_init(C.uint16_t(port), C.bool(willReceive),
 		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
