@@ -91,5 +91,5 @@ EOF'
     sudo systemctl restart docker.service
 
     sudo docker pull robbertkl/ipv6nat
-    sudo docker run -d --restart=always -v /var/run/docker.sock:/var/run/docker.sock:ro --privileged --net=host robbertkl/ipv6nat
+    sudo docker run -d --restart=always -v /var/run/docker.sock:/var/run/docker.sock:ro -v /lib/modules:/lib/modules:ro --privileged --net=host robbertkl/ipv6nat
 }
