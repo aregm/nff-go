@@ -202,14 +202,14 @@ func TrimMbuf(m *Mbuf, length uint) bool {
 
 func setMbufLen(mb *Mbuf, l2len, l3len uint32) {
 	// Assign l2_len:7 and l3_len:9 fields in rte_mbuf
-	mb.anon4[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
-	mb.anon4[1] = uint8(l3len >> 1)
-	mb.anon4[2] = 0
-	mb.anon4[3] = 0
-	mb.anon4[4] = 0
-	mb.anon4[5] = 0
-	mb.anon4[6] = 0
-	mb.anon4[7] = 0
+	mb.anon5[0] = uint8((l2len & 0x7f) | ((l3len & 1) << 7))
+	mb.anon5[1] = uint8(l3len >> 1)
+	mb.anon5[2] = 0
+	mb.anon5[3] = 0
+	mb.anon5[4] = 0
+	mb.anon5[5] = 0
+	mb.anon5[6] = 0
+	mb.anon5[7] = 0
 }
 
 // SetTXIPv4OLFlags sets mbuf flags for IPv4 header
