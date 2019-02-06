@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = dpi
+IMAGENAME = dpi-pattern
 
 pattern:
 	go install $(GO_COMPILE_FLAGS)

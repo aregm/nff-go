@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nff-pktgen
+IMAGENAME = nff-pktgen-perf
 EXECUTABLES = perfTest
 
 include $(PATH_TO_MK)/leaf.mk

@@ -3,6 +3,6 @@
 # license that can be found in the LICENSE file.
 
 PATH_TO_MK = ../../../mk
-IMAGENAME = nff-go-examples
+IMAGENAME = nff-go-ipsec-stability
 EXECUTABLES = stability
 include $(PATH_TO_MK)/leaf.mk
