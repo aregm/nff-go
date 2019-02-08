@@ -5,7 +5,7 @@
                         "min": "00:25:96:FF:FE:12",
                         "start": "00:30:00:FF:FE:12",
                         "max": "00:FF:96:FF:FE:12",
-                        "incr": 10
+                        "inc": 10
                     }
                 },
                 "daddr": "00:FF:96:FF:FE:12",

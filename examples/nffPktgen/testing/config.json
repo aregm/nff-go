@@ -5,12 +5,11 @@
                         "min": "00:25:96:FF:FE:12",
                         "start": "00:30:00:FF:FE:12",
                         "max": "00:FF:96:FF:FE:12",
-                        "incr": 3
+                        "inc": 3
                     }
                 },
                 "daddr": "00:FF:96:FF:FE:12",
-                "ip": {
-                    "version": 4,
+                "ipv4": {
                     "saddr": {
                         "range": {
                             "min": "1.1.127.1",

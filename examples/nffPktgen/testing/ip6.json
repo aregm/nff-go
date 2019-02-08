@@ -4,12 +4,11 @@
                     "range": {
                         "min": "00:25:96:FF:FE:12",
                         "max": "00:FF:96:FF:FE:12",
-                        "incr": 10
+                        "inc": 10
                     }
                 },
                 "daddr": "00:00:96:FF:00:00",
-                "ip": {
-                    "version": 6,
+                "ipv6": {
                     "saddr": "2001:db8:a0b:12f0::",
                     "pdist": [
                         {

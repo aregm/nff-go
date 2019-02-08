@@ -121,7 +121,8 @@ func main() {
 
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
-		CPUList: "0-43",
+		CPUList:          "0-43",
+		DisableScheduler: true,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
