@@ -16,14 +16,14 @@
                        "seq": "increasing",
                         "pdist": [
                             {
-                                "probability": 0.3,
+                                "probability": 0.5,
                                 "randbytes":    {
                                     "size": 50,
                                     "deviation": 10
                                 }
                             },
                             {
-                                "probability": 0.3,
+                                "probability": 0.5,
                                 "raw": {
                                     "data": "0000000000000000000000000000000000"
                                 }

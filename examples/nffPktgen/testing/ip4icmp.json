@@ -18,20 +18,20 @@
                        "seq": "increasing",
                         "pdist": [
                             {
-                                "probability": 0.3,
+                                "probability": 0.33,
                                 "randbytes":    {
                                     "size": 50,
                                     "deviation": 10
                                 }
                             },
                             {
-                                "probability": 0.3,
+                                "probability": 0.33,
                                 "raw": {
                                     "data": "sfsfsfs"
                                 }
                             },
                             {
-                                "probability": 0.3,
+                                "probability": 0.34,
                                 "raw": {
                                     "data": "0000000000000000000000000000000000"
                                 }
