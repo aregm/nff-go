@@ -41,9 +41,13 @@ func copyRaw(configuration unsafe.Pointer, size uint, rnd *rand.Rand, copyTo uns
 }
 
 func copyRand(configuration unsafe.Pointer, size uint, rnd *rand.Rand, copyTo unsafe.Pointer) {
-	packetData := (*[1 << 30]byte)(copyTo)[0:size]
+	packetData := (*[1 << 30]uint64)(copyTo)[0 : size/8]
 	for i := range packetData {
-		packetData[i] = byte(rnd.Int())
+		packetData[i] = rnd.Uint64()
+	}
+	tail := (*[1 << 30]byte)(copyTo)[size-size%8 : size]
+	for i := range tail {
+		tail[i] = byte(rnd.Uint64())
 	}
 }
 
@@ -60,23 +64,13 @@ func getDataSizeType(configuration *RawBytes, rnd *rand.Rand) (uint, unsafe.Poin
 	case PDISTDATA:
 		prob := 0.0
 		rndN := rnd.Float64()
-		maxProb := PDistEntry{Probability: 0}
 		for _, item := range configuration.Dist {
+			// Sum of all was checked to be 1
 			prob += item.Probability
 			if rndN <= prob {
 				return getDataSizeType1(item.Data, item.Rand, item.DType, rnd)
 			}
-			if item.Probability > maxProb.Probability {
-				maxProb = item
-			}
 		}
-		if prob <= 0 || prob > 1 {
-			panic(fmt.Sprintf("sum of pdist probabilities is invalid, %f", prob))
-		}
-		// get the variant with max prob
-		// if something went wrong and rand did not match any prob
-		// may happen if sum of prob was not 1
-		return getDataSizeType1(maxProb.Data, maxProb.Rand, maxProb.DType, rnd)
 	}
 	panic(fmt.Sprintf("unknown data type"))
 }

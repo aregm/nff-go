@@ -585,12 +585,17 @@ func parseRandBytes(in map[string]interface{}) (RandBytes, error) {
 
 func parsePdist(in []interface{}) ([]PDistEntry, error) {
 	pdist := []PDistEntry{}
+	var totalProb float64
 	for _, v := range in {
 		pdistElem, err := parsePdistEntry(v.(map[string]interface{}))
 		if err != nil {
 			return []PDistEntry{}, fmt.Errorf("parsing pdistentry returned: %v", err)
 		}
+		totalProb += pdistElem.Probability
 		pdist = append(pdist, pdistElem)
+	}
+	if totalProb != 1 {
+		return []PDistEntry{{}}, fmt.Errorf("Sum of probabilities of pdist elements is not equal to 1")
 	}
 	return pdist, nil
 }
