@@ -19,6 +19,16 @@
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
+#include <sys/socket.h>
+#include <linux/if_ether.h>     // ETH_P_ALL
+#include <stdio.h>              // snprintf
+#include <string.h>             // memset
+#include <stdlib.h>             // malloc
+#include <netinet/ip.h>         // htons
+#include <sys/ioctl.h>          // ioctl
+#include <net/if.h>             // ifreq
+#include <netpacket/packet.h>   // sockaddr_ll
+
 #define process 1
 #define stopRequest 2
 #define wasStopped 9
@@ -673,4 +683,87 @@ bool check_hwtxchecksum_capability(uint16_t port_id) {
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port_id, &dev_info);
 	return (dev_info.tx_offload_capa & flags) == flags;
+}
+
+int initDevice(char *name) {
+	int s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	if (s < 1) {
+		fprintf(stderr, "ERROR: Can't create socket for OS send/receive\n");
+		return -1;
+	}
+
+	struct ifreq ifr;
+	memset (&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", name);
+	if (ioctl(s, SIOCGIFINDEX, &ifr) == -1) {
+		fprintf(stderr, "ERROR: Can't find device %s\n", name);
+		return -1;
+	}
+
+	struct sockaddr_ll myaddr;
+	memset(&myaddr, 0, sizeof(myaddr));
+	myaddr.sll_family = AF_PACKET;
+	myaddr.sll_protocol = htons(ETH_P_ALL);
+	myaddr.sll_ifindex = ifr.ifr_ifindex;
+	if (bind(s, (struct sockaddr*)&myaddr, sizeof(myaddr)) < 0) {
+		fprintf(stderr, "ERROR: Can't bind socket to %s\n", name);
+		return -1;
+	}
+
+	ioctl(s, SIOCGIFFLAGS, &ifr);
+	ifr.ifr_flags |= IFF_PROMISC;
+	if (ioctl(s, SIOCSIFFLAGS, &ifr) != 0) {
+		fprintf(stderr, "ERROR: Can't set up promiscuos mode on %s\n", name);
+		return -1;
+	}
+
+	return s;
+}
+
+void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId) {
+	setAffinity(coreId);
+	const int recvOSBusrst = BURST_SIZE;
+	struct rte_mbuf *bufs[recvOSBusrst];
+	REASSEMBLY_INIT
+	while (*flag == process) {
+		// Get packets from OS
+		allocateMbufs(m, bufs, recvOSBusrst);
+		//int step = 0;
+		for (int i = 0; i < recvOSBusrst; i++) {
+			int bytes_received = recv(socket, (char *)(bufs[i]) + defaultStart, ETH_FRAME_LEN, 0);
+			if (unlikely(bytes_received == 0)) {
+				//step++;
+				i--;
+				continue;
+			}
+			rte_pktmbuf_append(bufs[i], bytes_received);
+		}
+		uint16_t rx_pkts_number = handleReceived(bufs, recvOSBusrst, tbl, pdeath_row);
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+		// Free any packets which can't be pushed to the ring. The ring is probably full.
+                handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+	}
+	*flag = wasStopped;
+}
+
+void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId) {
+	setAffinity(coreId);
+
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t buf;
+	uint16_t tx_pkts_number;
+	while (*flag == process) {
+		for (int q = 0; q < inIndexNumber; q++) {
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+
+			for (int i = 0; i < pkts_for_tx_number; i++) {
+				send(socket, (char *)(bufs[i]) + defaultStart, rte_pktmbuf_pkt_len(bufs[i]), 0);
+			}
+			// Free all packets
+			handleUnpushed(bufs, 0, pkts_for_tx_number);
+		}
+	}
+	free(in_rings);
+	*flag = wasStopped;
 }
