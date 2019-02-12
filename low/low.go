@@ -743,3 +743,16 @@ func IntArrayToBool(value *[32]uint8) *[32]bool {
 func CheckHWTXChecksumCapability(port uint16) bool {
 	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
 }
+
+func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int) {
+	m := CreateMempool("receiveOS")
+	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+}
+
+func SendOS(socket int, IN Rings, flag *int32, coreID int) {
+	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+}
+
+func InitDevice(device string) int {
+	return int(C.initDevice(C.CString(device)))
+}

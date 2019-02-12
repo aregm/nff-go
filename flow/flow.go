@@ -46,6 +46,7 @@ var createdPorts []port
 var portPair map[uint32](*port)
 var schedState *scheduler
 var vEach [10][burstSize]uint8
+var devices map[string]int
 
 type Timer struct {
 	t        *time.Ticker
@@ -159,6 +160,18 @@ func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 	schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber)
 }
 
+type receiveOSParameters struct {
+	out    low.Rings
+	socket int
+}
+
+func addOSReceiver(socket int, out low.Rings) {
+	par := new(receiveOSParameters)
+	par.socket = socket
+	par.out = out
+	schedState.addFF("OS receiver", nil, recvOS, nil, par, nil, sendReceiveKNI, 0)
+}
+
 type KNIParameters struct {
 	in        low.Rings
 	out       low.Rings
@@ -234,6 +247,18 @@ func addSender(port uint16, in low.Rings, inIndexNumber int32) {
 	par.in = in
 	par.anyway = schedState.anyway
 	schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber)
+}
+
+type sendOSParameters struct {
+	in     low.Rings
+	socket int
+}
+
+func addSenderOS(socket int, in low.Rings, inIndexNumber int32) {
+	par := new(sendOSParameters)
+	par.socket = socket
+	par.in = in
+	schedState.addFF("sender OS", nil, sendOS, nil, par, nil, sendReceiveKNI, inIndexNumber)
 }
 
 type copyParameters struct {
@@ -562,6 +587,7 @@ func SystemInit(args *Config) error {
 		}
 	}
 	portPair = make(map[uint32](*port))
+	devices = make(map[string]int)
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRings(burstSize*sizeMultiplier, maxInIndex)
@@ -697,6 +723,42 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
 	addReceiver(portId, rings, createdPorts[portId].InIndex)
 	return newFlow(rings, createdPorts[portId].InIndex), nil
+}
+
+// SetReceiverOS adds function receive from Linux interface to flow graph.
+// Gets name of device, will return error if can't initialize socket.
+// Creates RAW socket, returns new opened flow with received packets.
+func SetReceiverOS(device string) (*Flow, error) {
+	socketID, ok := devices[device]
+	if !ok {
+		socketID = low.InitDevice(device)
+		if socketID == -1 {
+			return nil, common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
+		}
+		devices[device] = socketID
+	}
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+	addOSReceiver(socketID, rings)
+	return newFlow(rings, 1), nil
+}
+
+// SetSenderOS adds function send from flow graph to Linux interface.
+// Gets name of device, will return error if can't initialize socket.
+// Creates RAW socket, sends packets, closes input flow.
+func SetSenderOS(IN *Flow, device string) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	socketID, ok := devices[device]
+	if !ok {
+		socketID = low.InitDevice(device)
+		if socketID == -1 {
+			return common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
+		}
+		devices[device] = socketID
+	}
+	addSenderOS(socketID, finishFlow(IN), IN.inIndexNumber)
+	return nil
 }
 
 // SetReceiverKNI adds function receive from KNI to flow graph.
@@ -1260,6 +1322,11 @@ func recvRSS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	low.ReceiveRSS(uint16(srp.port.PortId), inIndex, srp.out, flag, coreID, &srp.status[index])
 }
 
+func recvOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*receiveOSParameters)
+	low.ReceiveOS(srp.socket, srp.out[0], flag, coreID)
+}
+
 func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srk := parameters.(*KNIParameters)
 	if srk.linuxCore == true {
@@ -1434,6 +1501,11 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 func send(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
 	low.Send(srp.port, srp.in, srp.anyway, flag, coreID)
+}
+
+func sendOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*sendOSParameters)
+	low.SendOS(srp.socket, srp.in, flag, coreID)
 }
 
 func merge(from low.Rings, to low.Rings) {

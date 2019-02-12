@@ -155,6 +155,7 @@ const (
 	FailToInitDPDK
 	FailToCreateKNI
 	FailToReleaseKNI
+	BadSocket
 )
 
 // NFError is error type returned by nff-go functions
