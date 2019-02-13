@@ -86,7 +86,7 @@ func InitARPRequestPacket(packet *Packet, SHA [common.EtherAddrLen]uint8, SPA, T
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
-	arp.THA = [common.EtherAddrLen]uint8{}
+	arp.THA = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp.TPA = IPv4ToBytes(TPA)
 	return true
 }
@@ -129,7 +129,7 @@ func InitGARPAnnouncementRequestPacket(packet *Packet, SHA [common.EtherAddrLen]
 	arp.Operation = SwapBytesUint16(ARPRequest)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
-	arp.THA = [common.EtherAddrLen]uint8{}
+	arp.THA = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp.TPA = IPv4ToBytes(SPA)
 	return true
 }
@@ -151,7 +151,7 @@ func InitGARPAnnouncementReplyPacket(packet *Packet, SHA [common.EtherAddrLen]ui
 	arp.Operation = SwapBytesUint16(ARPReply)
 	arp.SHA = SHA
 	arp.SPA = IPv4ToBytes(SPA)
-	arp.THA = [common.EtherAddrLen]uint8{}
+	arp.THA = [common.EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	arp.TPA = IPv4ToBytes(SPA)
 	return true
 }
