@@ -6,7 +6,7 @@ PATH_TO_MK = ../mk
 IMAGENAME = nff-go-examples
 EXECUTABLES = dump clonablePcapDumper kni copy errorHandling timer \
 			  createPacket sendFixedPktsNumber gtpu pingReplay \
-			  netlink gopacketParserExample devbind generate
+			  netlink gopacketParserExample devbind generate OSforwarding
 SUBDIRS = tutorial antiddos demo fileReadWrite firewall forwarding ipsec
 
 .PHONY: dpi nffPktgen
