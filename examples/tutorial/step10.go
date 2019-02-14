@@ -3,7 +3,7 @@ package main
 import "sync/atomic"
 import "time"
 import "unsafe"
-import "github.com/intel-go/nff-go/common"
+import "github.com/intel-go/nff-go/types"
 import "github.com/intel-go/nff-go/flow"
 import "github.com/intel-go/nff-go/packet"
 
@@ -43,10 +43,10 @@ func myHandler(curV []*packet.Packet, mask *[vecSize]bool, ctx flow.UserContext)
 	for i := uint(0); i < vecSize; i++ {
 		if (*mask)[i] == true {
 			cur := curV[i]
-			cur.EncapsulateHead(common.EtherLen, common.IPv4MinLen)
+			cur.EncapsulateHead(types.EtherLen, types.IPv4MinLen)
 			cur.ParseL3()
-			cur.GetIPv4NoCheck().SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
-			cur.GetIPv4NoCheck().DstAddr = common.BytesToIPv4(3, 22, 111, 0)
+			cur.GetIPv4NoCheck().SrcAddr = types.BytesToIPv4(111, 22, 3, 0)
+			cur.GetIPv4NoCheck().DstAddr = types.BytesToIPv4(3, 22, 111, 0)
 			cur.GetIPv4NoCheck().VersionIhl = 0x45
 			cur.GetIPv4NoCheck().NextProtoID = 0x04
 		}

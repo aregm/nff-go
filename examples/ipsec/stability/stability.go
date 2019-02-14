@@ -4,7 +4,7 @@
 
 package main
 
-import "github.com/intel-go/nff-go/common"
+import "github.com/intel-go/nff-go/types"
 import "github.com/intel-go/nff-go/flow"
 import "github.com/intel-go/nff-go/packet"
 import "github.com/intel-go/nff-go/examples/ipsec"
@@ -53,8 +53,8 @@ func gen(pkt *packet.Packet, context flow.UserContext) {
 	pkt.Ether.DAddr = [6]uint8{1, 2, 3, 4, 5, 6}
 	pkt.Ether.SAddr = [6]uint8{1, 2, 3, 4, 5, 6}
 
-	ipv4.SrcAddr = common.BytesToIPv4(111, 111, 111, 111)
-	ipv4.DstAddr = common.BytesToIPv4(222, 222, 222, 222)
+	ipv4.SrcAddr = types.BytesToIPv4(111, 111, 111, 111)
+	ipv4.DstAddr = types.BytesToIPv4(222, 222, 222, 222)
 
 	tcp.SrcPort = packet.SwapBytesUint16(25)
 	tcp.DstPort = packet.SwapBytesUint16(35)

@@ -6,9 +6,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func decap(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 := current.GetIPv4()
 
-	if ipv4 == nil || ipv4.DstAddr != common.BytesToIPv4(55, 66, 77, 88) {
+	if ipv4 == nil || ipv4.DstAddr != types.BytesToIPv4(55, 66, 77, 88) {
 		// reject with wrong IP
 		println("ERROR")
 		return false
@@ -76,10 +76,10 @@ func encap(current *packet.Packet, context flow.UserContext) bool {
 	ipv4.FragmentOffset = 0
 	ipv4.TimeToLive = 64
 
-	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - common.EtherLen))
-	ipv4.NextProtoID = common.UDPNumber
-	ipv4.SrcAddr = common.BytesToIPv4(11, 22, 33, 44)
-	ipv4.DstAddr = common.BytesToIPv4(55, 66, 77, 88)
+	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - types.EtherLen))
+	ipv4.NextProtoID = types.UDPNumber
+	ipv4.SrcAddr = types.BytesToIPv4(11, 22, 33, 44)
+	ipv4.DstAddr = types.BytesToIPv4(55, 66, 77, 88)
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 
 	current.ParseL4ForIPv4()
@@ -88,7 +88,7 @@ func encap(current *packet.Packet, context flow.UserContext) bool {
 	// construct udphdr
 	udp.SrcPort = packet.SwapUDPPortGTPU
 	udp.DstPort = packet.SwapUDPPortGTPU
-	udp.DgramLen = uint16(length - common.EtherLen - common.IPv4MinLen)
+	udp.DgramLen = uint16(length - types.EtherLen - types.IPv4MinLen)
 	udp.DgramCksum = 0
 
 	return true
@@ -99,8 +99,8 @@ func generate(current *packet.Packet, context flow.UserContext) {
 	packet.InitEmptyIPv4TCPPacket(current, payload)
 	ipv4 := current.GetIPv4NoCheck()
 	tcp := current.GetTCPNoCheck()
-	ipv4.SrcAddr = common.BytesToIPv4(1, 2, 3, 4)
-	ipv4.DstAddr = common.BytesToIPv4(5, 6, 7, 8)
+	ipv4.SrcAddr = types.BytesToIPv4(1, 2, 3, 4)
+	ipv4.DstAddr = types.BytesToIPv4(5, 6, 7, 8)
 	tcp.SrcPort = packet.SwapBytesUint16(111)
 	tcp.DstPort = packet.SwapBytesUint16(222)
 }

@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 var mixPattern = regexp.MustCompile(`^mix[0-9]*$`)
@@ -108,7 +108,7 @@ type TCPConfig struct {
 	SPort AddrRange
 	DPort AddrRange
 	Seq   Sequence
-	Flags common.TCPFlags
+	Flags types.TCPFlags
 	DType DataType
 	Bytes RawBytes
 }
@@ -511,26 +511,26 @@ func parseICMPHdr(in map[string]interface{}) (ICMPConfig, error) {
 	return icmpHdr, nil
 }
 
-func parseTCPFlags(in []interface{}) (ret common.TCPFlags, err error) {
+func parseTCPFlags(in []interface{}) (ret types.TCPFlags, err error) {
 	ret = 0
 	for _, flag := range in {
 		switch strings.ToLower(flag.(string)) {
 		case "fin":
-			ret ^= common.TCPFlagFin
+			ret ^= types.TCPFlagFin
 		case "syn":
-			ret ^= common.TCPFlagSyn
+			ret ^= types.TCPFlagSyn
 		case "rst":
-			ret ^= common.TCPFlagRst
+			ret ^= types.TCPFlagRst
 		case "psh":
-			ret ^= common.TCPFlagPsh
+			ret ^= types.TCPFlagPsh
 		case "ack":
-			ret ^= common.TCPFlagAck
+			ret ^= types.TCPFlagAck
 		case "urg":
-			ret ^= common.TCPFlagUrg
+			ret ^= types.TCPFlagUrg
 		case "ece":
-			ret ^= common.TCPFlagEce
+			ret ^= types.TCPFlagEce
 		case "cwr":
-			ret ^= common.TCPFlagCwr
+			ret ^= types.TCPFlagCwr
 		default:
 			return 0, fmt.Errorf("unknown flag value: %s", flag.(string))
 		}

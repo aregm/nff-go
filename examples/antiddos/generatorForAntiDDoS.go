@@ -17,9 +17,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 const (
@@ -44,7 +44,7 @@ var (
 
 	// addresses imitating users sending non flood
 	// flooding user's addresses will be generated
-	goodAddresses = [goodDataListSize]common.IPv4Address{packet.SwapBytesIPv4Addr(1235),
+	goodAddresses = [goodDataListSize]types.IPv4Address{packet.SwapBytesIPv4Addr(1235),
 		packet.SwapBytesIPv4Addr(980),
 		packet.SwapBytesIPv4Addr(2405),
 		packet.SwapBytesIPv4Addr(3540)}
@@ -116,7 +116,7 @@ func main() {
 
 // Function to use in generator
 func generatePacket(pkt *packet.Packet, context flow.UserContext) {
-	var address *common.IPv4Address
+	var address *types.IPv4Address
 	var port *uint16
 
 	if pkt == nil {
@@ -142,7 +142,7 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 		*port = goodPorts[indx]
 		atomic.AddUint64(&sentNonFlood, 1)
 	} else {
-		*address = packet.SwapBytesIPv4Addr(common.IPv4Address(sentPackets))
+		*address = packet.SwapBytesIPv4Addr(types.IPv4Address(sentPackets))
 		*port = packet.SwapBytesUint16(uint16(sentPackets))
 	}
 
@@ -171,7 +171,7 @@ func checkInputFlow(pkt *packet.Packet, context flow.UserContext) {
 	}
 }
 
-func isSrcGood(srcAddr common.IPv4Address, srcPort uint16) bool {
+func isSrcGood(srcAddr types.IPv4Address, srcPort uint16) bool {
 	for i := 0; i < goodDataListSize; i++ {
 		if srcAddr == goodAddresses[i] && srcPort == goodPorts[i] {
 			return true

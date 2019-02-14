@@ -13,6 +13,7 @@ import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 	"golang.org/x/sys/unix"
 
 	"github.com/vishvananda/netlink"
@@ -24,10 +25,10 @@ var lpm *packet.LPM
 
 // LPM binds ip with number and below
 // is a struct to get ip by binded value
-var portToIP []common.IPv4Address
+var portToIP []types.IPv4Address
 
 // length of portToIp
-var lenP2IP common.IPv4Address
+var lenP2IP types.IPv4Address
 
 func main() {
 	inport := flag.Uint("inport", 0, "port for receiver")
@@ -59,23 +60,23 @@ func main() {
 func handler(current *packet.Packet, ctx flow.UserContext) {
 	ipv4, _, _ := current.ParseAllKnownL3()
 	if ipv4 != nil {
-		var next common.IPv4Address
+		var next types.IPv4Address
 		if lpm.Lookup(ipv4.DstAddr, &next) {
-			common.LogDebug(common.Debug, "gateway for packet: ", common.IPv4ToBytes(portToIP[next]))
+			common.LogDebug(common.Debug, "gateway for packet: ", types.IPv4ToBytes(portToIP[next]))
 		}
 	}
 }
 
-func netToNffIPv4(netIP net.IP) common.IPv4Address {
+func netToNffIPv4(netIP net.IP) types.IPv4Address {
 	if netIP == nil || len(netIP) != 4 {
 		return 0
 	}
-	return common.BytesToIPv4(netIP[0], netIP[1], netIP[2], netIP[3])
+	return types.BytesToIPv4(netIP[0], netIP[1], netIP[2], netIP[3])
 }
 
-func getIPAndDepth(netIP *net.IPNet) (common.IPv4Address, uint8, error) {
+func getIPAndDepth(netIP *net.IPNet) (types.IPv4Address, uint8, error) {
 	var (
-		ip    common.IPv4Address
+		ip    types.IPv4Address
 		depth int
 	)
 	if netIP != nil {

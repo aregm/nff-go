@@ -38,6 +38,7 @@ import (
 	"strings"
 
 	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 type rawL2Rule struct {
@@ -207,13 +208,13 @@ func rawL2Parse(rules *rawL2Rules, jp *L2Rules) error {
 			jp.eth[i].ID = 0
 			jp.eth[i].IDMask = 0
 		case "ipv4", "Ipv4", "IPv4", "IPV4", "0x0800":
-			jp.eth[i].ID = common.IPV4Number
+			jp.eth[i].ID = types.IPV4Number
 			jp.eth[i].IDMask = 0xffff
 		case "ipv6", "Ipv6", "IPv6", "IPV6", "0x86dd":
-			jp.eth[i].ID = common.IPV6Number
+			jp.eth[i].ID = types.IPV6Number
 			jp.eth[i].IDMask = 0xffff
 		case "arp", "Arp", "ARP", "0x0806":
-			jp.eth[i].ID = common.ARPNumber
+			jp.eth[i].ID = types.ARPNumber
 			jp.eth[i].IDMask = 0xffff
 		default:
 			return common.WrapWithNFError(nil, fmt.Sprintf("Incorrect  L3 protocol ID: %v", jup[i].ID), common.IncorrectArgInRules)
@@ -241,13 +242,13 @@ func rawL3Parse(rules *rawL3Rules, jp *L3Rules) error {
 			l4temp.ID = 0
 			l4temp.IDMask = 0
 		case "tcp", "TCP", "Tcp", "0x06", "6":
-			l4temp.ID = common.TCPNumber
+			l4temp.ID = types.TCPNumber
 			l4temp.IDMask = 0xff
 		case "udp", "UDP", "Udp", "0x11", "17":
-			l4temp.ID = common.UDPNumber
+			l4temp.ID = types.UDPNumber
 			l4temp.IDMask = 0xff
 		case "icmp", "ICMP", "Icmp", "0x01", "1":
-			l4temp.ID = common.ICMPNumber
+			l4temp.ID = types.ICMPNumber
 			l4temp.IDMask = 0xff
 			if jup[i].SrcPort != "ANY" || jup[i].DstPort != "ANY" {
 				return common.WrapWithNFError(nil, "Incorrect request: for ICMP rule Source port and Destination port should be ANY", common.IncorrectArgInRules)
@@ -396,8 +397,8 @@ func parseRuleResult(rule string) (uint, error) {
 	}
 }
 
-func parseAddr4(addr *net.IPNet) (common.IPv4Address, common.IPv4Address) {
-	return common.IPv4Address(binary.LittleEndian.Uint32(addr.IP)), common.IPv4Address(binary.LittleEndian.Uint32(addr.Mask))
+func parseAddr4(addr *net.IPNet) (types.IPv4Address, types.IPv4Address) {
+	return types.IPv4Address(binary.LittleEndian.Uint32(addr.IP)), types.IPv4Address(binary.LittleEndian.Uint32(addr.Mask))
 }
 
 func parseAddr6(addr *net.IPNet) ([16]uint8, [16]uint8) {
@@ -413,8 +414,8 @@ type l2Rules struct {
 	OutputNumber uint
 	DAddrNotAny  bool
 	SAddrNotAny  bool
-	DAddr        common.MACAddress
-	SAddr        common.MACAddress
+	DAddr        types.MACAddress
+	SAddr        types.MACAddress
 	IDMask       uint16
 	ID           uint16
 }
@@ -431,19 +432,19 @@ type l4Rules struct {
 
 type l3Rules4 struct {
 	OutputNumber uint
-	SrcAddr      common.IPv4Address
-	DstAddr      common.IPv4Address
-	SrcMask      common.IPv4Address
-	DstMask      common.IPv4Address
+	SrcAddr      types.IPv4Address
+	DstAddr      types.IPv4Address
+	SrcMask      types.IPv4Address
+	DstMask      types.IPv4Address
 	L4           l4Rules
 }
 
 type l3Rules6 struct {
 	OutputNumber uint
-	SrcAddr      common.IPv6Address
-	DstAddr      common.IPv6Address
-	SrcMask      common.IPv6Address
-	DstMask      common.IPv6Address
+	SrcAddr      types.IPv6Address
+	DstAddr      types.IPv6Address
+	SrcMask      types.IPv6Address
+	DstMask      types.IPv6Address
 	L4           l4Rules
 }
 

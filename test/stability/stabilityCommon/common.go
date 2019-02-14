@@ -2,23 +2,24 @@ package stabilityCommon
 
 import (
 	"encoding/json"
-	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/flow"
-	"github.com/intel-go/nff-go/packet"
 	"log"
 	"net"
 	"os"
+
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 var (
 	config  map[string][]string
-	dstMac0 [common.EtherAddrLen]uint8
-	srcMac0 [common.EtherAddrLen]uint8
-	dstMac1 [common.EtherAddrLen]uint8
-	srcMac1 [common.EtherAddrLen]uint8
+	dstMac0 [types.EtherAddrLen]uint8
+	srcMac0 [types.EtherAddrLen]uint8
+	dstMac1 [types.EtherAddrLen]uint8
+	srcMac1 [types.EtherAddrLen]uint8
 	// First byte in MAC address has to be even because otherwise it
 	// means multicast address which cannot be source address.
-	stubMac = [common.EtherAddrLen]uint8{0x10, 0x22, 0x33, 0x44, 0x55, 0x66}
+	stubMac = [types.EtherAddrLen]uint8{0x10, 0x22, 0x33, 0x44, 0x55, 0x66}
 	// ModifyPacket is used to set src and dst MAC addresses for outgoing packets.
 	ModifyPacket = []interface{}{modifyPacket0, modifyPacket1}
 )
@@ -26,7 +27,7 @@ var (
 // ShouldBeSkipped return true for packets which are not expected to receive by test.
 // Return false only for expected IPv4 UDP packets.
 func ShouldBeSkipped(pkt *packet.Packet) bool {
-	if packet.SwapBytesUint16(pkt.Ether.EtherType) != common.IPV4Number {
+	if packet.SwapBytesUint16(pkt.Ether.EtherType) != types.IPV4Number {
 		println("Not IPv4 packet, skip")
 		return true
 	}
@@ -103,7 +104,7 @@ func readConfig(fileName string) error {
 	return nil
 }
 
-func printMAC(prompt string, mac [common.EtherAddrLen]uint8) {
+func printMAC(prompt string, mac [types.EtherAddrLen]uint8) {
 	log.Printf("%s: %02x:%02x:%02x:%02x:%02x:%02x\n", prompt, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 }
 

@@ -7,7 +7,7 @@ package ipsec
 
 import "github.com/intel-go/nff-go/packet"
 import "github.com/intel-go/nff-go/flow"
-import "github.com/intel-go/nff-go/common"
+import "github.com/intel-go/nff-go/types"
 import "bytes"
 import "unsafe"
 import "crypto/aes"
@@ -17,8 +17,8 @@ const mode1234 = 1234
 const espHeadLen = 24
 const authLen = 12
 const espTailLen = authLen + 2
-const etherLen = common.EtherLen
-const outerIPLen = common.IPv4MinLen
+const etherLen = types.EtherLen
+const outerIPLen = types.IPv4MinLen
 
 type espHeader struct {
 	SPI uint32
@@ -40,8 +40,8 @@ func Decapsulation(currentPacket *packet.Packet, context flow.UserContext) bool 
 	// Security Association
 	switch packet.SwapBytesUint32(currentESPHeader.SPI) {
 	case mode1234:
-		encryptionPart := (*[common.MaxLength]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen+espHeadLen : length-authLen]
-		authPart := (*[common.MaxLength]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen : length-authLen]
+		encryptionPart := (*[types.MaxLength]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen+espHeadLen : length-authLen]
+		authPart := (*[types.MaxLength]byte)(unsafe.Pointer(currentPacket.StartAtOffset(0)))[etherLen+outerIPLen : length-authLen]
 		if decapsulationSPI123(authPart, currentESPTail.Auth, currentESPHeader.IV, encryptionPart, context) == false {
 			return false
 		}
@@ -82,8 +82,8 @@ func VectorEncapsulation(currentPackets []*packet.Packet, mask *[32]bool, notDro
 			currentPackets[i].EncapsulateHead(etherLen, outerIPLen+espHeadLen)
 			currentPackets[i].ParseL3()
 			ipv4 := currentPackets[i].GetIPv4NoCheck()
-			ipv4.SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
-			ipv4.DstAddr = common.BytesToIPv4(3, 22, 111, 0)
+			ipv4.SrcAddr = types.BytesToIPv4(111, 22, 3, 0)
+			ipv4.DstAddr = types.BytesToIPv4(3, 22, 111, 0)
 			ipv4.VersionIhl = 0x45
 			ipv4.NextProtoID = esp
 			notDrop[i] = true
@@ -130,11 +130,11 @@ func vectorEncapsulationSPI123(currentPackets []*packet.Packet, n uint, context0
 				}
 			}
 			currentESPTail.paddingLen = paddingLength
-			currentESPTail.nextIP = common.IPNumber
+			currentESPTail.nextIP = types.IPNumber
 
-			context.vectorEncryptionPart[t] = (*[common.MaxLength]byte)(unsafe.Pointer(currentPackets[i+t].StartAtOffset(0)))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
+			context.vectorEncryptionPart[t] = (*[types.MaxLength]byte)(unsafe.Pointer(currentPackets[i+t].StartAtOffset(0)))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
 			context.vectorIV[t] = currentESPHeader.IV[:]
-			context.vectorAuthPart[t] = (*[common.MaxLength]byte)(unsafe.Pointer(currentPackets[i+t].StartAtOffset(0)))[etherLen+outerIPLen : newLength-authLen]
+			context.vectorAuthPart[t] = (*[types.MaxLength]byte)(unsafe.Pointer(currentPackets[i+t].StartAtOffset(0)))[etherLen+outerIPLen : newLength-authLen]
 			context.vectorAuthPlace[t] = currentESPTail.Auth[:]
 		}
 		Encrypt(context.vectorEncryptionPart, context.vectorEncryptionPart, context.vectorIV, Z, context)
@@ -148,8 +148,8 @@ func ScalarEncapsulation(currentPacket *packet.Packet, context flow.UserContext)
 
 	currentPacket.ParseL3()
 	ipv4 := currentPacket.GetIPv4NoCheck()
-	ipv4.SrcAddr = common.BytesToIPv4(111, 22, 3, 0)
-	ipv4.DstAddr = common.BytesToIPv4(3, 22, 111, 0)
+	ipv4.SrcAddr = types.BytesToIPv4(111, 22, 3, 0)
+	ipv4.DstAddr = types.BytesToIPv4(3, 22, 111, 0)
 	ipv4.VersionIhl = 0x45
 	ipv4.NextProtoID = esp
 
@@ -180,16 +180,16 @@ func scalarEncapsulationSPI123(currentPacket *packet.Packet, context0 flow.UserC
 		}
 	}
 	currentESPTail.paddingLen = paddingLength
-	currentESPTail.nextIP = common.IPNumber
+	currentESPTail.nextIP = types.IPNumber
 
 	// Encryption
-	EncryptionPart := (*[common.MaxLength]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
+	EncryptionPart := (*[types.MaxLength]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen+espHeadLen : newLength-authLen]
 	context.modeEnc.(SetIVer).SetIV(currentESPHeader.IV[:])
 	context.modeEnc.CryptBlocks(EncryptionPart, EncryptionPart)
 
 	// Authentication
 	context.mac123.Reset()
-	AuthPart := (*[common.MaxLength]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen : newLength-authLen]
+	AuthPart := (*[types.MaxLength]byte)(currentPacket.StartAtOffset(0))[etherLen+outerIPLen : newLength-authLen]
 	context.mac123.Write(AuthPart)
 	copy(currentESPTail.Auth[:], context.mac123.Sum(nil))
 }

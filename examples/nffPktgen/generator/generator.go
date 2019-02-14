@@ -9,8 +9,8 @@ import (
 	"math/rand"
 	"unsafe"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 func getNextValue(addr *AddrRange) {
@@ -127,10 +127,10 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	}
 	l2 := &config.Ether
 	l3 := &l2.ARP
-	var SHA, THA [common.EtherAddrLen]uint8
-	SHA = [common.EtherAddrLen]uint8{byte(l3.SHA.Current >> 40), byte(l3.SHA.Current >> 32), byte(l3.SHA.Current >> 24), byte(l3.SHA.Current >> 16), byte(l3.SHA.Current >> 8), byte(l3.SHA.Current)}
+	var SHA, THA [types.EtherAddrLen]uint8
+	SHA = [types.EtherAddrLen]uint8{byte(l3.SHA.Current >> 40), byte(l3.SHA.Current >> 32), byte(l3.SHA.Current >> 24), byte(l3.SHA.Current >> 16), byte(l3.SHA.Current >> 8), byte(l3.SHA.Current)}
 	getNextValue(&l3.SHA)
-	SPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.SPA.Current))
+	SPA := packet.SwapBytesIPv4Addr(types.IPv4Address(l3.SPA.Current))
 	getNextValue(&l3.SPA)
 	if l3.Operation == packet.ARPRequest {
 		if l3.Gratuitous {
@@ -138,7 +138,7 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 				panic(fmt.Sprintf("InitGARPAnnouncementRequestPacket returned false"))
 			}
 		} else {
-			TPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.TPA.Current))
+			TPA := packet.SwapBytesIPv4Addr(types.IPv4Address(l3.TPA.Current))
 			getNextValue(&l3.TPA)
 			if !packet.InitARPRequestPacket(pkt, SHA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPRequestPacket returned false"))
@@ -150,9 +150,9 @@ func generateARP(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 				panic(fmt.Sprintf("InitGARPAnnouncementReplyPacket returned false"))
 			}
 		} else {
-			THA = [common.EtherAddrLen]uint8{byte(l3.THA.Current >> 40), byte(l3.THA.Current >> 32), byte(l3.THA.Current >> 24), byte(l3.THA.Current >> 16), byte(l3.THA.Current >> 8), byte(l3.THA.Current)}
+			THA = [types.EtherAddrLen]uint8{byte(l3.THA.Current >> 40), byte(l3.THA.Current >> 32), byte(l3.THA.Current >> 24), byte(l3.THA.Current >> 16), byte(l3.THA.Current >> 8), byte(l3.THA.Current)}
 			getNextValue(&l3.THA)
-			TPA := packet.SwapBytesIPv4Addr(common.IPv4Address(l3.TPA.Current))
+			TPA := packet.SwapBytesIPv4Addr(types.IPv4Address(l3.TPA.Current))
 			getNextValue(&l3.TPA)
 			if !packet.InitARPReplyPacket(pkt, SHA, THA, SPA, TPA) {
 				panic(fmt.Sprintf("InitARPReplyPacket returned false"))
@@ -263,8 +263,8 @@ func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 
 func fillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
-	pktIP.SrcAddr = packet.SwapBytesIPv4Addr(common.IPv4Address(l3.SAddr.Current))
-	pktIP.DstAddr = packet.SwapBytesIPv4Addr(common.IPv4Address(l3.DAddr.Current))
+	pktIP.SrcAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.SAddr.Current))
+	pktIP.DstAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.DAddr.Current))
 	getNextValue(&l3.DAddr)
 	getNextValue(&l3.SAddr)
 }
@@ -294,7 +294,7 @@ func addVLAN(pkt *packet.Packet, tag uint16) {
 	if !pkt.EncapsulateHead(0, 4) {
 		panic("failed to add vlan tag, EncapsulateHead returned false")
 	}
-	pkt.Ether.EtherType = packet.SwapBytesUint16(common.VLANNumber)
+	pkt.Ether.EtherType = packet.SwapBytesUint16(types.VLANNumber)
 	vhdr := pkt.GetVLAN()
 	if vhdr == nil {
 		panic("failed to get vlan, GetVLAN returned nil")
