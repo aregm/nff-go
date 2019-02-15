@@ -46,7 +46,7 @@ var openFlowsNumber = uint32(0)
 var createdPorts []port
 var portPair map[types.IPv4Address](*port)
 var schedState *scheduler
-var vEach [10][burstSize]uint8
+var vEach [10][vBurstSize]uint8
 var devices map[string]int
 
 type Timer struct {
@@ -94,7 +94,7 @@ type Func struct {
 	vHandleFunction   VectorHandleFunction
 	vSeparateFunction VectorSeparateFunction
 	vSplitFunction    VectorSplitFunction
-	vFunc             func([]*packet.Packet, *[burstSize]bool, *[burstSize]uint8, *Func, UserContext)
+	vFunc             func([]*packet.Packet, *[vBurstSize]bool, *[vBurstSize]uint8, *Func, UserContext)
 
 	next            [](*Func)
 	bufIndex        uint
@@ -117,7 +117,7 @@ type VectorGenerateFunction func([]*packet.Packet, UserContext)
 type HandleFunction func(*packet.Packet, UserContext)
 
 // VectorHandleFunction is a function type like HandleFunction for vector handling
-type VectorHandleFunction func([]*packet.Packet, *[burstSize]bool, UserContext)
+type VectorHandleFunction func([]*packet.Packet, *[vBurstSize]bool, UserContext)
 
 // SeparateFunction is a function type for user defined function which separates packets
 // based on some rule for two flows. Functions receives a packet from flow.
@@ -126,7 +126,7 @@ type VectorHandleFunction func([]*packet.Packet, *[burstSize]bool, UserContext)
 type SeparateFunction func(*packet.Packet, UserContext) bool
 
 // VectorSeparateFunction is a function type like SeparateFunction for vector separation
-type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]bool, UserContext)
+type VectorSeparateFunction func([]*packet.Packet, *[vBurstSize]bool, *[vBurstSize]bool, UserContext)
 
 // SplitFunction is a function type for user defined function which splits packets
 // based in some rule for multiple flows. Function receives a packet from
@@ -138,7 +138,7 @@ type VectorSeparateFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize
 type SplitFunction func(*packet.Packet, UserContext) uint
 
 // VectorSplitFunction is a function type like SplitFunction for vector splitting
-type VectorSplitFunction func([]*packet.Packet, *[burstSize]bool, *[burstSize]uint8, UserContext)
+type VectorSplitFunction func([]*packet.Packet, *[vBurstSize]bool, *[vBurstSize]uint8, UserContext)
 
 // Kni is a high level struct of KNI device. The device itself is stored
 // in C memory in low.c and is defined by its port which is equal to port
@@ -411,7 +411,12 @@ func SetUseHWCapability(capa HWCapability, use bool) {
 	}
 }
 
+// Size of operations with internal ring buffers and NIC receive/send
+// Can be changed for debug and test purposes for scalar examples, not recommended
 const burstSize = 32
+// Size of all vectors in system. Can't be changed due to asm stickiness
+// Using vector functions with vBurstSize != burstSize is undefined behaviour
+const vBurstSize = 32
 const reportMbits = false
 
 var sizeMultiplier uint
@@ -1194,11 +1199,11 @@ func segmentProcess(parameters interface{}, inIndex []int32, stopper [2]chan int
 	tempPackets := make([]*packet.Packet, burstSize)
 	type pair struct {
 		f    *Func
-		mask [burstSize]bool
+		mask [vBurstSize]bool
 	}
 	def := make([]pair, 30, 30)
-	var currentMask [burstSize]bool
-	var answers [burstSize]uint8
+	var currentMask [vBurstSize]bool
+	var answers [vBurstSize]uint8
 	tick := time.NewTicker(time.Duration(schedTime) * time.Millisecond)
 	stopper[1] <- 2 // Answer that function is ready
 
@@ -1555,7 +1560,7 @@ func separate(packet *packet.Packet, sc *Func, ctx UserContext) uint {
 	return uint(low.BoolToInt(sc.sSeparateFunction(packet, ctx)))
 }
 
-func vSeparate(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
+func vSeparate(packets []*packet.Packet, mask *[vBurstSize]bool, answers *[vBurstSize]uint8, ve *Func, ctx UserContext) {
 	ve.vSeparateFunction(packets, mask, low.IntArrayToBool(answers), ctx)
 }
 
@@ -1572,7 +1577,7 @@ func partition(packet *packet.Packet, sc *Func, ctx UserContext) uint {
 	return uint(context.currentAnswer)
 }
 
-func vPartition(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
+func vPartition(packets []*packet.Packet, mask *[vBurstSize]bool, answers *[vBurstSize]uint8, ve *Func, ctx UserContext) {
 	context := ctx.(*partitionCtx)
 	for i := 0; i < burstSize; i++ {
 		if (*mask)[i] {
@@ -1591,7 +1596,7 @@ func split(packet *packet.Packet, sc *Func, ctx UserContext) uint {
 	return sc.sSplitFunction(packet, ctx)
 }
 
-func vSplit(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
+func vSplit(packets []*packet.Packet, mask *[vBurstSize]bool, answers *[vBurstSize]uint8, ve *Func, ctx UserContext) {
 	ve.vSplitFunction(packets, mask, answers, ctx)
 }
 
@@ -1600,7 +1605,7 @@ func handle(packet *packet.Packet, sc *Func, ctx UserContext) uint {
 	return 0
 }
 
-func vHandle(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
+func vHandle(packets []*packet.Packet, mask *[vBurstSize]bool, answers *[vBurstSize]uint8, ve *Func, ctx UserContext) {
 	ve.vHandleFunction(packets, mask, ctx)
 }
 
@@ -1608,7 +1613,7 @@ func constructSlice(packet *packet.Packet, sc *Func, ctx UserContext) uint {
 	return sc.bufIndex
 }
 
-func vConstructSlice(packets []*packet.Packet, mask *[burstSize]bool, answers *[burstSize]uint8, ve *Func, ctx UserContext) {
+func vConstructSlice(packets []*packet.Packet, mask *[vBurstSize]bool, answers *[vBurstSize]uint8, ve *Func, ctx UserContext) {
 	answers[0] = uint8(ve.bufIndex)
 }
 
@@ -1772,9 +1777,9 @@ func CreateKniDevice(portId uint16, name string) (*Kni, error) {
 	}
 }
 
-func FillSliceFromMask(input []uintptr, mask *[burstSize]bool, output []uintptr) uint8 {
+func FillSliceFromMask(input []uintptr, mask *[vBurstSize]bool, output []uintptr) uint8 {
 	count := 0
-	for i := 0; i < burstSize; i++ {
+	for i := 0; i < vBurstSize; i++ {
 		if (*mask)[i] != false {
 			output[count] = input[i]
 			count++
