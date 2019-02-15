@@ -5,9 +5,10 @@
 package packet
 
 import (
-	. "github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
 	"unsafe"
+
+	"github.com/intel-go/nff-go/low"
+	. "github.com/intel-go/nff-go/types"
 )
 
 // Setting up flags for hardware offloading for hardware calculation of checksums

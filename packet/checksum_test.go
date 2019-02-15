@@ -5,8 +5,7 @@
 package packet
 
 import (
-	"encoding/binary"
-	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 	"net"
 	"testing"
 )
@@ -159,15 +158,15 @@ func TestCalculateIPv6ICMPChecksum(t *testing.T) {
 
 func initIPv4AddrsLocal(pkt *Packet) {
 	ipv4 := pkt.GetIPv4()
-	ipv4.SrcAddr = binary.LittleEndian.Uint32(net.ParseIP("131.151.32.21").To4())
-	ipv4.DstAddr = binary.LittleEndian.Uint32(net.ParseIP("131.151.32.129").To4())
+	ipv4.SrcAddr = types.SliceToIPv4(net.ParseIP("131.151.32.21").To4())
+	ipv4.DstAddr = types.SliceToIPv4(net.ParseIP("131.151.32.129").To4())
 	ipv4.HdrChecksum = 0
 }
 
 func initIPv6AddrsLocal(pkt *Packet) {
 	ipv6 := pkt.GetIPv6()
-	copy(ipv6.SrcAddr[:], net.ParseIP("2001:db8:0:0:1::1")[:common.IPv6AddrLen])
-	copy(ipv6.DstAddr[:], net.ParseIP("2001:db8:0:0:1::12")[:common.IPv6AddrLen])
+	copy(ipv6.SrcAddr[:], net.ParseIP("2001:db8:0:0:1::1")[:types.IPv6AddrLen])
+	copy(ipv6.DstAddr[:], net.ParseIP("2001:db8:0:0:1::12")[:types.IPv6AddrLen])
 }
 
 func initData(pkt *Packet) {

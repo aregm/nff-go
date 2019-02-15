@@ -9,6 +9,8 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/intel-go/nff-go/types"
 )
 
 func init() {
@@ -16,8 +18,8 @@ func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 }
 
-var zero uint32 = 0
-var next uint32
+var zero types.IPv4Address = 0
+var next types.IPv4Address
 
 var stepM = 1000
 var stepN = 10
@@ -28,13 +30,13 @@ func TestOneRule(t *testing.T) {
 	for i := 0; i < stepM; i++ {
 		ip_number := 1 + rand.Intn(32)
 		mask_len := uint8(1 + rand.Intn(32))
-		next_hop := uint32(rand.Intn(100))
+		next_hop := types.IPv4Address(rand.Intn(100))
 		// Construct ip
 		ip := constructIP(ip_number)
 
 		// Construct mask
 		mask := zero
-		for u := zero; u < uint32(mask_len); u++ {
+		for u := zero; u < types.IPv4Address(mask_len); u++ {
 			mask = mask | (1 << (31 - u))
 		}
 
@@ -132,8 +134,8 @@ func TestMultipleRules(t *testing.T) {
 	lpm.Free()
 }
 
-func constructIP(ip_number int) uint32 {
-	var ip uint32
+func constructIP(ip_number int) types.IPv4Address {
+	var ip types.IPv4Address
 	if ip_number < 16 {
 		ip = zero
 		for j := 0; j < ip_number; j++ {
@@ -156,15 +158,15 @@ func constructIP(ip_number int) uint32 {
 	return ip
 }
 
-func testIP(ip uint32, mask_len uint8) (int, int, []uint32, []uint32) {
+func testIP(ip types.IPv4Address, mask_len uint8) (int, int, []types.IPv4Address, []types.IPv4Address) {
 	right := int(math.Pow(2, float64(32-mask_len)))
 	wrong := int(math.Pow(2, float64(mask_len)) - 1)
 
 	rightN := rand.Intn(right)%stepK + 1
 	wrongN := rand.Intn(wrong)%stepK + 1
 
-	rightIP := make([]uint32, rightN, rightN)
-	wrongIP := make([]uint32, wrongN, wrongN)
+	rightIP := make([]types.IPv4Address, rightN, rightN)
+	wrongIP := make([]types.IPv4Address, wrongN, wrongN)
 
 	rightIP[0] = ip
 	for i := 1; i < rightN; i++ {

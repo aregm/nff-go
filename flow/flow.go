@@ -39,11 +39,12 @@ import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/low"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 var openFlowsNumber = uint32(0)
 var createdPorts []port
-var portPair map[uint32](*port)
+var portPair map[types.IPv4Address](*port)
 var schedState *scheduler
 var vEach [10][burstSize]uint8
 var devices map[string]int
@@ -424,7 +425,7 @@ type port struct {
 	willKNI      bool // will this port has assigned KNI device
 	KNICoreIndex int
 	port         uint16
-	MAC          [common.EtherAddrLen]uint8
+	MAC          types.MACAddress
 	InIndex      int32
 	sendRings    low.Rings
 }
@@ -586,7 +587,7 @@ func SystemInit(args *Config) error {
 			createdPorts[i].InIndex = maxInIndex
 		}
 	}
-	portPair = make(map[uint32](*port))
+	portPair = make(map[types.IPv4Address](*port))
 	devices = make(map[string]int)
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
@@ -618,7 +619,7 @@ func SystemInitPortsAndMemory() error {
 			}
 		}
 		createdPorts[i].MAC = GetPortMACAddress(createdPorts[i].port)
-		common.LogDebug(common.Initialization, "Port", createdPorts[i].port, "MAC address:", packet.MACToString(createdPorts[i].MAC))
+		common.LogDebug(common.Initialization, "Port", createdPorts[i].port, "MAC address:", createdPorts[i].MAC.String())
 	}
 	common.LogTitle(common.Initialization, "------------***------ Starting FlowFunctions -----***------------")
 	// Init low performance mempool
@@ -1066,7 +1067,7 @@ func mergeOneFlow(IN *Flow, rings low.Rings) {
 }
 
 // GetPortMACAddress returns default MAC address of an Ethernet port.
-func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
+func GetPortMACAddress(port uint16) [types.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
@@ -1091,7 +1092,7 @@ func GetNameByPort(port uint16) (string, error) {
 
 // SetIPForPort sets IP for specified port if it was created. Not thread safe.
 // Return error if requested port isn't exist or wasn't previously requested.
-func SetIPForPort(port uint16, ip uint32) error {
+func SetIPForPort(port uint16, ip types.IPv4Address) error {
 	for i := range createdPorts {
 		if createdPorts[i].port == port && createdPorts[i].wasRequested {
 			portPair[ip] = &createdPorts[i]

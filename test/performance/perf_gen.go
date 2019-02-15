@@ -6,9 +6,9 @@ package main
 
 import (
 	"flag"
-	. "github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 var size uint
@@ -33,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	pkts := uint64(speed * 1000 * 1000 / 8 / (size + 20))
-	size = size - EtherLen - IPv4MinLen - TCPMinLen - 4 /* Ethernet checksum length*/
+	size = size - types.EtherLen - types.IPv4MinLen - types.TCPMinLen - 4 /* Ethernet checksum length*/
 
 	flow.SystemInit(nil)
 
@@ -54,8 +54,8 @@ func generatePacket(pkt *packet.Packet, context flow.UserContext) {
 	ipv4 := pkt.GetIPv4()
 	tcp := pkt.GetTCPForIPv4()
 
-	ipv4.DstAddr = packet.SwapBytesUint32(uint32(r))
-	ipv4.SrcAddr = packet.SwapBytesUint32(uint32(r + 15))
+	ipv4.DstAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(r))
+	ipv4.SrcAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(r + 15))
 
 	tcp.DstPort = packet.SwapBytesUint16(r + 25)
 	tcp.SrcPort = packet.SwapBytesUint16(r + 35)

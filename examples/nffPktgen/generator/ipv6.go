@@ -12,8 +12,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 func addAddr(a *[]byte, b []byte) {
@@ -133,8 +133,8 @@ func generateICMPIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) 
 
 func fillIPv6Hdr(pkt *packet.Packet, l3 *IPv6Config) {
 	pktIP := (*packet.IPv6Hdr)(pkt.L3)
-	copyAddr(pktIP.SrcAddr[:], getNextAddr(&(l3.SAddr)), common.IPv6AddrLen)
-	copyAddr(pktIP.DstAddr[:], getNextAddr(&(l3.DAddr)), common.IPv6AddrLen)
+	copyAddr(pktIP.SrcAddr[:], getNextAddr(&(l3.SAddr)), types.IPv6AddrLen)
+	copyAddr(pktIP.DstAddr[:], getNextAddr(&(l3.DAddr)), types.IPv6AddrLen)
 }
 
 // AddrRange describes range of addresses.

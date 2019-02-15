@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/types"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 	inputFlow, err := flow.SetReceiver(uint16(*inport))
 	flow.CheckFatal(err)
 
-	flow.CheckFatal(flow.SetIPForPort(uint16(*inport), uint32(20)<<24|uint32(20)<<16|uint32(20)<<8|uint32(20)))
+	flow.CheckFatal(flow.SetIPForPort(uint16(*inport), types.IPv4Address(20)<<24|types.IPv4Address(20)<<16|types.IPv4Address(20)<<8|types.IPv4Address(20)))
 
 	flow.CheckFatal(flow.DealARPICMP(inputFlow))
 	flow.CheckFatal(flow.SetStopper(inputFlow))

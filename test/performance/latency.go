@@ -14,9 +14,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 // This is 1 part of latency test
@@ -35,7 +35,7 @@ var (
 	passedLimit uint64 = 80
 
 	packetSize   uint64 = 128
-	servDataSize uint64 = common.EtherLen + common.IPv4MinLen + common.UDPLen + crcLen
+	servDataSize uint64 = types.EtherLen + types.IPv4MinLen + types.UDPLen + crcLen
 
 	outport uint16
 	inport  uint16

@@ -18,9 +18,9 @@ package main
 import (
 	"flag"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 var ping bool
@@ -80,11 +80,11 @@ func pingSeparator(current *packet.Packet, ctx flow.UserContext) bool {
 	if arp != nil {
 		return false
 	} else if ipv4 != nil {
-		if ipv4.NextProtoID == common.ICMPNumber {
+		if ipv4.NextProtoID == types.ICMPNumber {
 			return false
 		}
 	} else if ipv6 != nil {
-		if ipv6.Proto == common.ICMPNumber {
+		if ipv6.Proto == types.ICMPNumber {
 			return false
 		}
 	}

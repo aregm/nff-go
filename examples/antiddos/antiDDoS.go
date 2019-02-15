@@ -23,9 +23,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 // Constants are taken from paper:
@@ -104,11 +104,11 @@ func getPacketHash(pkt *packet.Packet) uint32 {
 	if pktIPv4 != nil {
 		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv4()
 		srcAddr = []byte{byte(pktIPv4.SrcAddr), byte(pktIPv4.SrcAddr >> 8), byte(pktIPv4.SrcAddr >> 16), byte(pktIPv4.SrcAddr >> 24)}
-		srcAddrLen = common.IPv4AddrLen
+		srcAddrLen = types.IPv4AddrLen
 	} else if pktIPv6 != nil {
 		pktTCP, pktUDP, pktICMP = pkt.ParseAllKnownL4ForIPv6()
 		srcAddr = pktIPv6.SrcAddr[:]
-		srcAddrLen = common.IPv6AddrLen
+		srcAddrLen = types.IPv6AddrLen
 	}
 
 	if pktTCP != nil {

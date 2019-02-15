@@ -14,9 +14,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 
 	"github.com/intel-go/nff-go/test/stability/stabilityCommon"
 	"github.com/intel-go/nff-go/test/stability/testCksum/testCksumCommon"
@@ -457,16 +457,16 @@ func initPacketCommon(emptyPacket *packet.Packet, length uint16, rnd *rand.Rand)
 func initPacketIPv4(emptyPacket *packet.Packet) {
 	// Initialize IPv4 addresses
 	emptyPacketIPv4 := emptyPacket.GetIPv4()
-	emptyPacketIPv4.SrcAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 1)
-	emptyPacketIPv4.DstAddr = packet.SwapBytesUint32((192 << 24) | (168 << 16) | (1 << 8) | 2)
+	emptyPacketIPv4.SrcAddr = packet.SwapBytesIPv4Addr((192 << 24) | (168 << 16) | (1 << 8) | 1)
+	emptyPacketIPv4.DstAddr = packet.SwapBytesIPv4Addr((192 << 24) | (168 << 16) | (1 << 8) | 2)
 	emptyPacketIPv4.TimeToLive = 100
 }
 
 func initPacketIPv6(emptyPacket *packet.Packet) {
 	// Initialize IPv6 addresses
 	emptyPacketIPv6 := emptyPacket.GetIPv6()
-	emptyPacketIPv6.SrcAddr = [common.IPv6AddrLen]uint8{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-	emptyPacketIPv6.DstAddr = [common.IPv6AddrLen]uint8{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
+	emptyPacketIPv6.SrcAddr = types.IPv6Address{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	emptyPacketIPv6.DstAddr = types.IPv6Address{17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
 }
 
 func initPacketUDP(emptyPacket *packet.Packet) {
@@ -483,7 +483,7 @@ func initPacketTCP(emptyPacket *packet.Packet) {
 
 func initPacketICMP(emptyPacket *packet.Packet) {
 	emptyPacketICMP := (*packet.ICMPHdr)(emptyPacket.L4)
-	emptyPacketICMP.Type = common.ICMPTypeEchoRequest
+	emptyPacketICMP.Type = types.ICMPTypeEchoRequest
 	emptyPacketICMP.Identifier = 0xdead
 	emptyPacketICMP.SeqNum = 0xbeef
 }
@@ -535,12 +535,12 @@ func generateIPv4ICMP(emptyPacket *packet.Packet, rnd *rand.Rand) {
 	pICMP := emptyPacket.GetICMPForIPv4()
 	if hwol {
 		pIPv4.HdrChecksum = 0
-		emptyPacket.SetTXIPv4OLFlags(common.EtherLen, common.IPv4MinLen)
+		emptyPacket.SetTXIPv4OLFlags(types.EtherLen, types.IPv4MinLen)
 	} else {
 		pIPv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pIPv4))
 	}
 	pICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pIPv4, pICMP,
-		unsafe.Pointer(uintptr(unsafe.Pointer(pICMP))+common.ICMPLen)))
+		unsafe.Pointer(uintptr(unsafe.Pointer(pICMP))+types.ICMPLen)))
 }
 
 func generateIPv6UDP(emptyPacket *packet.Packet, rnd *rand.Rand) {

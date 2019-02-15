@@ -7,7 +7,7 @@ package packet
 import (
 	"unsafe"
 
-	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 const (
@@ -38,13 +38,13 @@ var (
 type ICMPv6NDSourceLinkLayerAddressOption struct {
 	Type             uint8
 	Length           uint8
-	LinkLayerAddress [common.EtherAddrLen]uint8
+	LinkLayerAddress types.MACAddress
 }
 
 type ICMPv6NDTargetLinkLayerAddressOption struct {
 	Type             uint8
 	Length           uint8
-	LinkLayerAddress [common.EtherAddrLen]uint8
+	LinkLayerAddress types.MACAddress
 }
 
 type ICMPv6NDPrefixInformationOption struct {
@@ -55,7 +55,7 @@ type ICMPv6NDPrefixInformationOption struct {
 	ValidLifetime     uint32
 	PreferredLifetime uint32
 	Reserved2         uint32
-	Prefix            [common.IPv6AddrLen]uint8
+	Prefix            types.IPv6Address
 }
 
 type ICMPv6NDRedirectedHeaderOption struct {
@@ -71,11 +71,11 @@ type ICMPv6NDMTUOption struct {
 }
 
 type ICMPv6NeighborSolicitationMessage struct {
-	TargetAddr [common.IPv6AddrLen]uint8
+	TargetAddr types.IPv6Address
 }
 
 type ICMPv6NeighborAdvertisementMessage struct {
-	TargetAddr [common.IPv6AddrLen]uint8
+	TargetAddr types.IPv6Address
 }
 
 // GetICMPv6NeighborSolicitationMessage returns pointer to ICMPv6
@@ -126,7 +126,7 @@ func (packet *Packet) GetICMPv6NDTargetLinkLayerAddressOption(msgLength uint) *I
 
 // CalculateIPv6LinkLocalAddrForMAC generates IPv6 link local address
 // based on interface MAC address.
-func CalculateIPv6LinkLocalAddrForMAC(llAddr *[common.IPv6AddrLen]uint8, mac [common.EtherAddrLen]uint8) {
+func CalculateIPv6LinkLocalAddrForMAC(llAddr *types.IPv6Address, mac types.MACAddress) {
 	copy((*llAddr)[:], ipv6LinkLocalPrefix)
 	(*llAddr)[8] = mac[0] ^ 0x02
 	(*llAddr)[9] = mac[1]
@@ -142,14 +142,14 @@ func CalculateIPv6LinkLocalAddrForMAC(llAddr *[common.IPv6AddrLen]uint8, mac [co
 // that other hosts use to solicit its MAC address. This address is
 // used as destination for all Neighbor Solicitation ICMPv6 messages
 // and NAT should answer packets coming to it.
-func CalculateIPv6MulticastAddrForDstIP(muticastAddr *[common.IPv6AddrLen]uint8, dstIP [common.IPv6AddrLen]uint8) {
+func CalculateIPv6MulticastAddrForDstIP(muticastAddr *types.IPv6Address, dstIP types.IPv6Address) {
 	copy((*muticastAddr)[:], ipv6LinkLocalMulticastPrefix)
 	(*muticastAddr)[13] = dstIP[13]
 	(*muticastAddr)[14] = dstIP[14]
 	(*muticastAddr)[15] = dstIP[15]
 }
 
-func CalculateIPv6BroadcastMACForDstMulticastIP(dstMAC *[common.EtherAddrLen]uint8, dstIP [common.IPv6AddrLen]uint8) {
+func CalculateIPv6BroadcastMACForDstMulticastIP(dstMAC *types.MACAddress, dstIP types.IPv6Address) {
 	copy((*dstMAC)[:], ipv6EtherMulticastPrefix)
 	(*dstMAC)[2] = dstIP[12]
 	(*dstMAC)[3] = dstIP[13]
@@ -160,10 +160,10 @@ func CalculateIPv6BroadcastMACForDstMulticastIP(dstMAC *[common.EtherAddrLen]uin
 // InitICMPv6NeighborSolicitationPacket allocates and initializes
 // ICMPv6 Neighbor Solicitation request message packet with source MAC
 // and IPv6 address and target IPv6 address.
-func InitICMPv6NeighborSolicitationPacket(packet *Packet, srcMAC [common.EtherAddrLen]uint8, srcIP, dstIP [common.IPv6AddrLen]uint8) {
+func InitICMPv6NeighborSolicitationPacket(packet *Packet, srcMAC types.MACAddress, srcIP, dstIP types.IPv6Address) {
 	InitEmptyIPv6ICMPPacket(packet, ICMPv6NeighborSolicitationMessageSize+ICMPv6NDSourceLinkLayerAddressOptionSize)
 
-	var targetMulticastAddr [common.IPv6AddrLen]uint8
+	var targetMulticastAddr types.IPv6Address
 	CalculateIPv6MulticastAddrForDstIP(&targetMulticastAddr, dstIP)
 
 	// Fill up L2
@@ -177,12 +177,12 @@ func InitICMPv6NeighborSolicitationPacket(packet *Packet, srcMAC [common.EtherAd
 
 	// Fill up L4
 	icmp := packet.GetICMPNoCheck()
-	icmp.Type = common.ICMPv6NeighborSolicitation
+	icmp.Type = types.ICMPv6NeighborSolicitation
 	icmp.Identifier = 0
 	icmp.SeqNum = 0
 
 	// Fill up L7
-	packet.ParseL7(common.ICMPv6Number)
+	packet.ParseL7(types.ICMPv6Number)
 	msg := packet.GetICMPv6NeighborSolicitationMessage()
 	msg.TargetAddr = dstIP
 	option := packet.GetICMPv6NDSourceLinkLayerAddressOption(ICMPv6NeighborSolicitationMessageSize)
@@ -194,7 +194,7 @@ func InitICMPv6NeighborSolicitationPacket(packet *Packet, srcMAC [common.EtherAd
 // InitICMPv6NeighborAdvertisementPacket allocates and initializes
 // ICMPv6 Neighbor Advertisement answer message packet with source MAC
 // and IPv6 address and target IPv6 address.
-func InitICMPv6NeighborAdvertisementPacket(packet *Packet, srcMAC, dstMAC [common.EtherAddrLen]uint8, srcIP, dstIP [common.IPv6AddrLen]uint8) {
+func InitICMPv6NeighborAdvertisementPacket(packet *Packet, srcMAC, dstMAC types.MACAddress, srcIP, dstIP types.IPv6Address) {
 	InitEmptyIPv6ICMPPacket(packet, ICMPv6NeighborAdvertisementMessageSize+ICMPv6NDTargetLinkLayerAddressOptionSize)
 
 	// Fill up L2
@@ -208,12 +208,12 @@ func InitICMPv6NeighborAdvertisementPacket(packet *Packet, srcMAC, dstMAC [commo
 
 	// Fill up L4
 	icmp := packet.GetICMPNoCheck()
-	icmp.Type = common.ICMPv6NeighborAdvertisement
+	icmp.Type = types.ICMPv6NeighborAdvertisement
 	icmp.Identifier = SwapBytesUint16(ICMPv6NDSolicitedFlag | ICMPv6NDOverrideFlag)
 	icmp.SeqNum = 0
 
 	// Fill up L7
-	packet.ParseL7(common.ICMPv6Number)
+	packet.ParseL7(types.ICMPv6Number)
 	msg := packet.GetICMPv6NeighborAdvertisementMessage()
 	msg.TargetAddr = srcIP
 	option := packet.GetICMPv6NDTargetLinkLayerAddressOption(ICMPv6NeighborAdvertisementMessageSize)
