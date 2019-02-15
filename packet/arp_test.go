@@ -20,10 +20,10 @@ func init() {
 
 // These strings were created with gopacket library.
 var (
-	gtLineARPRequest     = "ffffffffffff00070daff4540806000108000604000100070daff45418a6ac0100000000000018a6ad9f"
+	gtLineARPRequest     = "ffffffffffff00070daff4540806000108000604000100070daff45418a6ac01ffffffffffff18a6ad9f"
 	gtLineARPReply       = "c40132580000c402326b000008060001080006040002c402326b00000a000002c401325800000a000001"
-	gtLineGratARPRequest = "ffffffffffff02020202020208060001080006040001020202020202c0a80101000000000000c0a80101"
-	gtLineGratARPReply   = "ffffffffffff00000c07ac010806000108000604000200000c07ac010a0000060000000000000a000006"
+	gtLineGratARPRequest = "ffffffffffff02020202020208060001080006040001020202020202c0a80101ffffffffffffc0a80101"
+	gtLineGratARPReply   = "ffffffffffff00000c07ac010806000108000604000200000c07ac010a000006ffffffffffff0a000006"
 	gtLineEmptyARP       = "000000000000000000000000080600000000000000000000000000000000000000000000000000000000"
 )
 
@@ -37,7 +37,7 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 	pktARP := pkt.GetARP()
 	pktARP.Operation = SwapBytesUint16(1)
 	pktARP.SHA = [6]uint8{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
-	pktARP.THA = [6]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	pktARP.THA = [6]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	copy(pktARP.SPA[:], net.ParseIP("24.166.172.1").To4()[:])
 	copy(pktARP.TPA[:], net.ParseIP("24.166.173.159").To4()[:])
 

@@ -74,7 +74,7 @@ var (
 		Operation: SwapBytesUint16(ARPRequest),
 		SHA:       MacHeaderVLAN.SAddr,
 		SPA:       IPv4ToBytes(IPv4HeaderVLAN.SrcAddr),
-		THA:       [EtherAddrLen]uint8{},
+		THA:       [EtherAddrLen]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
 		TPA:       IPv4ToBytes(IPv4HeaderVLAN.DstAddr),
 	}
 )
