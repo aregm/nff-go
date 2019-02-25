@@ -413,6 +413,8 @@ func SetUseHWCapability(capa HWCapability, use bool) {
 
 // Size of operations with internal ring buffers and NIC receive/send
 // Can be changed for debug and test purposes for scalar examples, not recommended
+// At i40e drivers burstSize should be >= 4
+// http://mails.dpdk.org/archives/dev/2016-December/052554.html
 const burstSize = 32
 // Size of all vectors in system. Can't be changed due to asm stickiness
 // Using vector functions with vBurstSize != burstSize is undefined behaviour
