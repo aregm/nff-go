@@ -242,7 +242,10 @@ func executeTest(testScenario uint, shouldUseIPv4, shouldUseIPv6, shouldUseUDP, 
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create packet flow
-		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, initGenerator(13))
+		generatedFlow, _, err := flow.SetFastGenerator(generatePacket, speed, initGenerator(13))
+		if err != nil {
+			return err
+		}
 
 		var finalFlow *flow.Flow
 		if testScenario == generatePart {

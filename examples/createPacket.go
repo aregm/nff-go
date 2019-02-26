@@ -30,11 +30,11 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 	// Create packets with speed at least 1000 packets/s
 	if *enablePacketFromByte == false {
-		firstFlow, err = flow.SetFastGenerator(generatePacket, 1000, nil)
+		firstFlow, _, err = flow.SetFastGenerator(generatePacket, 1000, nil)
 		flow.CheckFatal(err)
 	} else {
 		buffer, _ = hex.DecodeString("00112233445501112131415108004500002ebffd00000406747a7f0000018009090504d2162e123456781234569050102000ffe60000")
-		firstFlow, err = flow.SetFastGenerator(generatePacketFromByte, 1000, nil)
+		firstFlow, _, err = flow.SetFastGenerator(generatePacketFromByte, 1000, nil)
 		flow.CheckFatal(err)
 	}
 	// Send all generated packets to the output

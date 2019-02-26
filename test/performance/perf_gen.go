@@ -37,8 +37,8 @@ func main() {
 
 	flow.SystemInit(nil)
 
-	a, _ := flow.SetFastGenerator(generatePacket, pkts/2, *new(ctx))
-	b, _ := flow.SetFastGenerator(generatePacket, pkts/2, *new(ctx))
+	a, _, _ := flow.SetFastGenerator(generatePacket, pkts/2, *new(ctx))
+	b, _, _ := flow.SetFastGenerator(generatePacket, pkts/2, *new(ctx))
 
 	flow.SetSender(a, 0)
 	flow.SetSender(b, 0)

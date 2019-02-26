@@ -415,6 +415,19 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			if ff.fType == segmentCopy || ff.fType == fastGenerate {
 				ff.updateReportedState() // TODO also for debug
 			}
+			if ff.fType == fastGenerate {
+				select {
+				case temp := <-(ff.Parameters.(*generateParameters)).targetChannel:
+					if float64(temp)/(1000 /*milliseconds*/ /float64(schedTime)) < float64(burstSize) {
+						// TargetSpeed per schedTime should be more than burstSize because one burstSize packets in
+						// one schedTime seconds are out minimal scheduling part. We can't make generate speed less than this.
+						common.LogWarning(common.Debug, "Target speed per schedTime should be more than burstSize - not changing")
+					} else {
+						(ff.Parameters.(*generateParameters)).targetSpeed = float64(temp)
+					}
+				default:
+				}
+			}
 			// Firstly we check removing clones. We can remove one clone if:
 			// 1. flow function has clones or it is fastGenerate
 			// 2. scheduler removing is switched on

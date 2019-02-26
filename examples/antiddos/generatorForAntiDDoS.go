@@ -70,7 +70,7 @@ func main() {
 	exampleDoneEvent = sync.NewCond(&sync.Mutex{})
 
 	// Create first packet flow
-	outputFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
+	outputFlow, _, err := flow.SetFastGenerator(generatePacket, speed, nil)
 	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetSender(outputFlow, uint16(*outPort)))
 	inputFlow, err := flow.SetReceiver(uint16(*inPort))
