@@ -55,7 +55,7 @@ is a main generator nunction. Context is obligatory.
     // check error
     flow.CheckFatal(err)
     // set generator
-    outFlow, err := flow.SetFastGenerator(generator.Generate, speed, &context)
+    outFlow, _, err := flow.SetFastGenerator(generator.Generate, speed, &context)
     // check error
     flow.CheckFatal(err)
     // send

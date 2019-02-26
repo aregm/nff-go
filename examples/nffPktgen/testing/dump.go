@@ -28,7 +28,7 @@ func main() {
 	context, err1 := generator.GetContext(configuration)
 	flow.CheckFatal(err1)
 
-	outFlow, _ := flow.SetFastGenerator(generator.Generate, 100, context)
+	outFlow, _, _ := flow.SetFastGenerator(generator.Generate, 100, context)
 	flow.SetHandler(outFlow, handleRecv, nil)
 	flow.SetStopper(outFlow)
 	flow.CheckFatal(flow.SystemStart())

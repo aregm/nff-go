@@ -202,6 +202,7 @@ type generateParameters struct {
 	generateFunction       GenerateFunction
 	vectorGenerateFunction VectorGenerateFunction
 	mempool                *low.Mempool
+	targetChannel          chan uint64
 	targetSpeed            float64
 }
 
@@ -215,14 +216,12 @@ func addGenerator(out low.Rings, generateFunction GenerateFunction, context User
 }
 
 func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
-	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) error {
+	vectorGenerateFunction VectorGenerateFunction, targetSpeed uint64, context UserContext) (chan uint64, error) {
 	fTargetSpeed := float64(targetSpeed)
-	if fTargetSpeed <= 0 {
-		return common.WrapWithNFError(nil, "Target speed value should be > 0", common.BadArgument)
-	} else if fTargetSpeed/(1000 /*milleseconds*/ /float64(schedTime)) < float64(burstSize) {
+	if fTargetSpeed/(1000 /*milleseconds*/ /float64(schedTime)) < float64(burstSize) {
 		// TargetSpeed per schedTime should be more than burstSize because one burstSize packets in
 		// one schedTime seconds are out minimal scheduling part. We can't make generate speed less than this.
-		return common.WrapWithNFError(nil, "Target speed per schedTime should be more than burstSize", common.BadArgument)
+		return nil, common.WrapWithNFError(nil, "Target speed per schedTime should be more than burstSize", common.BadArgument)
 	}
 	par := new(generateParameters)
 	par.out = out
@@ -230,10 +229,11 @@ func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
 	par.mempool = low.CreateMempool("fast generate")
 	par.vectorGenerateFunction = vectorGenerateFunction
 	par.targetSpeed = fTargetSpeed
+	par.targetChannel = make(chan uint64, 1)
 	ctx := make([]UserContext, 1, 1)
 	ctx[0] = context
 	schedState.addFF("fast generator", nil, nil, pFastGenerate, par, &ctx, fastGenerate, 0)
-	return nil
+	return par.targetChannel, nil
 }
 
 type sendParameters struct {
@@ -795,26 +795,26 @@ func SetSenderReceiverKNI(IN *Flow, kni *Kni, linuxCore bool) (OUT *Flow, err er
 
 // SetFastGenerator adds clonable generate function to flow graph.
 // Gets user-defined generate function, target speed of generation user wants to achieve and context.
-// Returns new open flow with generated packets.
+// Returns new open flow with generated packets and channel that can be used for dynamically changing target speed
 // Function tries to achieve target speed by cloning.
-func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetFastGenerator(f GenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, tc chan uint64, err error) {
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
-	if err := addFastGenerator(rings, f, nil, targetSpeed, context); err != nil {
-		return nil, err
+	if tc, err = addFastGenerator(rings, f, nil, targetSpeed, context); err != nil {
+		return nil, nil, err
 	}
-	return newFlow(rings, 1), nil
+	return newFlow(rings, 1), tc, nil
 }
 
 // SetVectorFastGenerator adds clonable vector generate function to flow graph.
 // Gets user-defined vector generate function, target speed of generation user wants to achieve and context.
-// Returns new open flow with generated packets.
+// Returns new open flow with generated packets and channel that can be used for dynamically changing target speed
 // Function tries to achieve target speed by cloning.
-func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, err error) {
+func SetVectorFastGenerator(f VectorGenerateFunction, targetSpeed uint64, context UserContext) (OUT *Flow, tc chan uint64, err error) {
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
-	if err := addFastGenerator(rings, nil, f, targetSpeed, context); err != nil {
-		return nil, err
+	if tc, err = addFastGenerator(rings, nil, f, targetSpeed, context); err != nil {
+		return nil, nil, err
 	}
-	return newFlow(rings, 1), nil
+	return newFlow(rings, 1), tc, nil
 }
 
 // SetGenerator adds non-clonable generate flow function to flow graph.

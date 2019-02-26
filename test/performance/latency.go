@@ -107,7 +107,7 @@ func main() {
 	payloadSize = packetSize - servDataSize
 
 	// Create packet flow
-	outputFlow, err := flow.SetFastGenerator(generatePackets, speed, nil)
+	outputFlow, _, err := flow.SetFastGenerator(generatePackets, speed, nil)
 	flow.CheckFatal(err)
 
 	flow.CheckFatal(flow.SetSender(outputFlow, uint16(*outport)))

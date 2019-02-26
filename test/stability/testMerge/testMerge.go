@@ -136,9 +136,9 @@ func setGetter(scenario getScenario, inputSource uint) (finalFlow *flow.Flow, er
 		finalFlow, err = flow.SetReceiver(uint16(inputSource))
 	case fastGenerate:
 		if inputSource == useGenerator1 {
-			finalFlow, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: true})
+			finalFlow, _, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: true})
 		} else if inputSource == useGenerator2 {
-			finalFlow, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: false})
+			finalFlow, _, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: false})
 		} else {
 			return nil, errors.New(" setGetter: unknown generator type")
 		}

@@ -137,7 +137,7 @@ func main() {
 		}
 		context, err := generator.GetContext(configuration)
 		flow.CheckFatal(err)
-		outFlow, err := flow.SetFastGenerator(generator.Generate, speed, context)
+		outFlow, _, err := flow.SetFastGenerator(generator.Generate, speed, context)
 		flow.CheckFatal(err)
 		switch t := key.(type) {
 		case int:

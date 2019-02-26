@@ -197,7 +197,7 @@ func executeTest(configFile, target string, testScenario uint, testType uint) er
 		testDoneEvent = sync.NewCond(&m)
 
 		// Create packet flow
-		generatedFlow, err := flow.SetFastGenerator(generatePacket, speed, nil)
+		generatedFlow, _, err := flow.SetFastGenerator(generatePacket, speed, nil)
 		if err != nil {
 			return err
 		}

@@ -6,6 +6,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"time"
@@ -21,8 +22,9 @@ func main() {
 
 	switch *mode {
 	case 0:
-		firstFlow, _ := flow.SetFastGenerator(generatePacket, 3500, nil)
+		firstFlow, genChannel, _ := flow.SetFastGenerator(generatePacket, 3500, nil)
 		flow.CheckFatal(flow.SetSender(firstFlow, outputPort))
+		go updateSpeed(genChannel)
 		flow.SystemStart()
 	case 1:
 		firstFlow := flow.SetGenerator(generatePacket1, nil)
@@ -54,5 +56,15 @@ func generatePacket2(port uint16) {
 		pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
 		pkt.SendPacket(port)
 		time.Sleep(175 * time.Microsecond)
+	}
+}
+
+func updateSpeed(genChannel chan uint64) {
+	var load int
+	for {
+		// Can be file or any other source
+		if _, err := fmt.Scanf("%d", &load); err == nil {
+			genChannel <- uint64(load)
+		}
 	}
 }
