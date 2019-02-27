@@ -487,9 +487,13 @@ type Config struct {
 	MaxRecv int
 	// Limits parallel instances. 1 for one instance, 1000 for RSS count determine instances
 	MaxInIndex int32
-	// Scheduler should clone functions even if ti can lead to reordering.
+	// Scheduler should clone functions even if it can lead to reordering.
 	// This option should be switch off for all high level reassembling like TCP or HTTP
 	RestrictedCloning bool
+	// If application uses EncapsulateHead or DecapsulateHead functions L2 pointers
+	// should be reinit every receving or generating a packet. This can be removed if
+	// EncapsulateHead and DecapsulateHead are not in use
+	NoPacketHeadChange bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -575,13 +579,18 @@ func SystemInit(args *Config) error {
 		maxInIndex = args.MaxInIndex
 	}
 
+	NoPacketHeadChange := false
+	if args.NoPacketHeadChange == true {
+		NoPacketHeadChange = true
+	}
+
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI); err != nil {
+	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI, NoPacketHeadChange); err != nil {
 		return err
 	}
 	// Init Ports

@@ -56,8 +56,11 @@
 // 24 offset is L2 offset and is always begining of packet
 // 32 offset is CMbuf offset and is initilized when mempool is created
 // 40 offset is Next field. Should be 0. Will be filled later if required
-#define mbufInit(buf) \
-*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart; \
+#define mbufInitL2(buf) \
+*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart;
+#define mbufInitCMbuf(buf) \
+*(char **)((char *)(buf) + mbufStructSize + 32) = (char *)(buf);
+#define mbufInitNextChain(buf) \
 *(char **)((char *)(buf) + mbufStructSize + 40) = 0;
 
 #ifdef REASSEMBLY
@@ -66,19 +69,19 @@
 	struct rte_ip_frag_death_row death_row; \
 	death_row.cnt = 0; /* DPDK doesn't initialize this field. It is probably a bug. */ \
 	struct rte_ip_frag_death_row* pdeath_row = &death_row;
-#else
-#define REASSEMBLY_INIT \
-	struct rte_ip_frag_tbl* tbl = NULL; \
-	struct rte_ip_frag_death_row* pdeath_row = NULL;
-#endif
 
 // Firstly we set "next" packet pointer (+40) to the packet from next mbuf
 // Secondly we know that followed mbufs don't contain L2 and L3 headers. We assume that they start with a data
 // so we assume that Data packet field (+16) should be equal to Ether packet field (+24)
 // (which we parse at this packet segment receiving
 #define mbufSetNext(buf) \
-*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
-*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
+	*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
+	*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
+#else
+#define REASSEMBLY_INIT \
+	struct rte_ip_frag_tbl* tbl = NULL; \
+	struct rte_ip_frag_death_row* pdeath_row = NULL;
+#endif
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
@@ -87,6 +90,7 @@ long stop_freed = 0;
 int mbufStructSize;
 int headroomSize;
 int defaultStart;
+bool L2CanBeChanged;
 char mempoolName[9] = "mempool1\0";
 
 __m128 zero128 = {0, 0, 0, 0};
@@ -276,15 +280,23 @@ static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t re
 
 __attribute__((always_inline))
 static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_t rx_pkts_number, struct rte_ip_frag_tbl* tbl, struct rte_ip_frag_death_row* death_row) {
-#ifdef REASSEMBLY
+#ifndef REASSEMBLY
+	if (L2CanBeChanged == true) {
+		for (uint16_t i = 0; i < rx_pkts_number; i++) {
+			// TODO prefetch
+			mbufInitL2(bufs[i]);
+		}
+	}
+#else
 	uint16_t temp_number = 0;
 	uint64_t cur_tsc = rte_rdtsc();
-#endif
 	for (uint16_t i = 0; i < rx_pkts_number; i++) {
 	        // Prefetch decreases speed here without reassembly and increases with reassembly.
 	        // Speed of this is highly influenced by size of mempool. It seems that due to caches.
-	        mbufInit(bufs[i]);
-#ifdef REASSEMBLY
+		if (L2CanBeChanged == true) {
+			mbufInitL2(bufs[i]);
+		}
+		mbufInitNextChain(bufs[i]);
 	        // TODO prefetch will give 8-10% performance in reassembly case.
 	        // However we need additional investigations about small (< 3) packet numbers.
 	        //rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3] /*PREFETCH_OFFSET*/, void *));
@@ -299,9 +311,7 @@ static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_
 	        }
 	        bufs[temp_number] = bufs[i];
 	        temp_number++;
-#endif
 	}
-#ifdef REASSEMBLY
 	rx_pkts_number = temp_number;
 	rte_ip_frag_free_death_row(death_row, 0 /* PREFETCH_OFFSET */);
 #endif
@@ -529,7 +539,7 @@ void statistics(float N) {
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
-int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
+int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool noPacketHeadChange)
 {
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -542,13 +552,12 @@ int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
 	mbufStructSize = sizeof(struct rte_mbuf);
 	headroomSize = RTE_PKTMBUF_HEADROOM;
 	defaultStart = mbufStructSize + headroomSize;
+	L2CanBeChanged = !noPacketHeadChange;
 	if (needKNI != 0) {
 		rte_kni_init(MAX_KNI);
 	}
 	return 0;
 }
-
-int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
 
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
@@ -565,11 +574,13 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	// Put mbuf addresses in all packets. It is CMbuf GO field.
 	struct rte_mbuf **temp;
 	temp = malloc(sizeof(struct rte_mbuf *) * num_mbufs);
-	allocateMbufs(mbuf_pool, temp, num_mbufs);
+	rte_pktmbuf_alloc_bulk(mbuf_pool, temp, num_mbufs);
 	// This initializes CMbuf field of packet structure stored in mbuf
 	// All CMbuf pointers is set to point to starting of corresponding mbufs
 	for (int i = 0; i < num_mbufs; i++) {
-		*(char**)((char*)(temp[i]) + mbufStructSize + 32) = (char*)(temp[i]);
+		mbufInitL2(temp[i])
+		mbufInitCMbuf(temp[i])
+		mbufInitNextChain(temp[i])
 	}
 	for (int i = 0; i < num_mbufs; i++) {
 		rte_pktmbuf_free(temp[i]);
@@ -583,7 +594,12 @@ int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned 
 	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
 	if (ret == 0) {
 		for (int i = 0; i < count; i++) {
-			mbufInit(bufs[i]);
+			if (L2CanBeChanged == true) {
+				mbufInitL2(bufs[i]);
+			}
+#ifdef REASSEMBLY
+			mbufInitNextChain(bufs[i]);
+#endif
 		}
 	}
 	return ret;

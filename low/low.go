@@ -538,8 +538,8 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) error {
-	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int, NoPacketHeadChange bool) error {
+	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI), C.bool(NoPacketHeadChange))
 	if ret < 0 {
 		return common.WrapWithNFError(nil, "Error with EAL initialization\n", common.FailToInitDPDK)
 	}
