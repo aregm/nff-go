@@ -735,7 +735,7 @@ func (packet *Packet) GetPacketPayload() ([]byte, bool) {
 // EncapsulateHead adds bytes to packet. start - number of beginning byte, length - number of
 // added bytes. This function should be used to add bytes to the first half
 // of packet. Return false if error.
-// You must not add StableL2 option to SystemInit for using this function safely.
+// You must not add NoPacketHeadChange option to SystemInit for using this function safely.
 // TODO change this for scattered packet case (multiple mbufs)
 func (packet *Packet) EncapsulateHead(start uint, length uint) bool {
 	if low.PrependMbuf(packet.CMbuf, length) == false {
@@ -766,7 +766,7 @@ func (packet *Packet) EncapsulateTail(start uint, length uint) bool {
 // DecapsulateHead removes bytes from packet. start - number of beginning byte, length - number of
 // removed bytes. This function should be used to remove bytes from the first half
 // of packet. Return false if error.
-// You must not add StableL2 option to SystemInit for using this function safely.
+// You must not add NoPacketHeadChange option to SystemInit for using this function safely.
 // TODO change this for scattered packet case (multiple mbufs)
 func (packet *Packet) DecapsulateHead(start uint, length uint) bool {
 	if low.AdjMbuf(packet.CMbuf, length) == false {
