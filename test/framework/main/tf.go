@@ -28,6 +28,7 @@ func main() {
 	flag.StringVar(&configFile, "config", "config.json", "Name of config file to use")
 	flag.StringVar(&directory, "directory", "", "Use `directory` to output log files instead of timestamp")
 	flag.BoolVar(&test.NoDeleteContainersOnExit, "nodelete", false, "Do not remove containers after tests finish")
+	repeatFailed := flag.Int("repeat-failed", 1, "Number of times to repeat a test which failed. This includes tests that timed out.")
 	flag.Parse()
 
 	// Read config
@@ -46,6 +47,6 @@ func main() {
 	}
 
 	// Start test execution
-	status := config.RunAllTests(directory, tl)
+	status := config.RunAllTests(directory, tl, *repeatFailed)
 	os.Exit(status)
 }
