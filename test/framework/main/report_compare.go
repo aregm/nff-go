@@ -18,11 +18,21 @@ import (
 )
 
 var (
-	user     = ""
-	password = ""
+	user            = ""
+	password        = ""
+	substringFilter = ""
 )
 
-type inputReportsArray []*test.TestsuiteReport
+type inputReport struct {
+	report   *test.TestsuiteReport
+	fileName string
+}
+
+func (ir *inputReport) String() string {
+	return ir.report.Timestamp + "(" + ir.fileName + ")"
+}
+
+type inputReportsArray []inputReport
 
 func (ira *inputReportsArray) String() string {
 	return fmt.Sprint(*ira)
@@ -66,18 +76,18 @@ func (ira *inputReportsArray) Set(value string) error {
 	} else if report.Timestamp == "" {
 		return fmt.Errorf("Bad report from %s contains no timestamp string", value)
 	}
-	*ira = append(*ira, &report)
+	*ira = append(*ira, inputReport{&report, value})
 	return nil
 }
 
 type reportProcessorResult interface {
 	// compare returns true if this report is better than another report
-	compare(another reportProcessorResult) (bool, error)
+	compare(another reportProcessorResult, threshold float64) (bool, error)
 	String() string
 }
 
 type reportProcessor interface {
-	process(*test.TestsuiteReport, bool) reportProcessorResult
+	process(*inputReport, bool) reportProcessorResult
 }
 
 type comparisonMode struct {
@@ -148,6 +158,11 @@ error if any of new reports is worse than base report.
        `)
 	flag.StringVar(&user, "u", "", "User name to authenticate with for HTTP(S) connection")
 	flag.StringVar(&password, "p", "", "Password to authenticate with for HTTP(S) connection")
+	flag.StringVar(&substringFilter, "s", "", "Substring filter for test names, e.g. \"-s _off_\".")
+	threshold := flag.Float64("t", 5.0, `Threshold in percents by which
+values in new report may be below values in original report.
+E.g. "-t 5" specifies threshold of 5%. If new report value
+shows -5% or below, it is considered worse than original.`)
 	verbose := flag.Bool("v", false, "Verbose mode")
 	flag.Parse()
 
@@ -158,22 +173,25 @@ error if any of new reports is worse than base report.
 
 	values := make([]reportProcessorResult, len(reports))
 	for iii := range reports {
-		values[iii] = processMode.process(reports[iii], *verbose)
-		fmt.Printf("Test report from %s: %s\n", reports[iii].Timestamp, values[iii].String())
+		values[iii] = processMode.process(&reports[iii], *verbose)
+		fmt.Printf("Test report %s: %s\n", reports[iii].String(), values[iii].String())
 	}
 
 	fmt.Printf("\n")
 	exitCode := 0
 	for iii := 1; iii < len(reports); iii++ {
-		result, err := values[0].compare(values[iii])
+		result, err := values[0].compare(values[iii], *threshold)
 		if err != nil {
 			fmt.Print(err)
 			exitCode = 1
 			break
 		} else if result {
-			fmt.Printf("New report %s is worse than base report %s\n",
-				reports[iii].Timestamp, reports[0].Timestamp)
+			fmt.Printf("With threshold %.2f%% new report %s is WORSE than base report %s.\n",
+				*threshold, reports[iii].String(), reports[0].String())
 			exitCode = 1
+		} else {
+			fmt.Printf("With threshold %.2f%% new report %s is OK compared to base report %s.\n",
+				*threshold, reports[iii].String(), reports[0].String())
 		}
 	}
 	os.Exit(exitCode)
@@ -181,6 +199,7 @@ error if any of new reports is worse than base report.
 
 type geomeanProcessorResult struct {
 	reportProcessorResult
+	report                                  *inputReport
 	geomeanPkts, geomeanMbits, geomeanCores float64
 }
 
@@ -198,32 +217,42 @@ type geomeanProcessorResultMbits struct {
 }
 
 // compare by average packets received to ensure transitivity
-func (gp geomeanProcessorResultPkts) compare(another reportProcessorResult) (bool, error) {
+func (gp geomeanProcessorResultPkts) compare(another reportProcessorResult, threshold float64) (bool, error) {
 	a := another.(geomeanProcessorResultPkts)
 
-	return gp.geomeanPkts > a.geomeanPkts, nil
+	percent := (float64(a.geomeanPkts) - float64(gp.geomeanPkts)) / float64(gp.geomeanPkts) * 100.0
+	fmt.Printf("Report %s is %.2f%% of report %s\n", a.report.String(), percent, gp.report.String())
+	return percent+threshold < 0.0, nil
 }
 
 // compare by average packets received to ensure transitivity
-func (gp geomeanProcessorResultMbits) compare(another reportProcessorResult) (bool, error) {
+func (gp geomeanProcessorResultMbits) compare(another reportProcessorResult, threshold float64) (bool, error) {
 	a := another.(geomeanProcessorResultMbits)
 
-	return gp.geomeanMbits > a.geomeanMbits, nil
+	percent := (float64(a.geomeanMbits) - float64(gp.geomeanMbits)) / float64(gp.geomeanMbits) * 100.0
+	fmt.Printf("Report %s is %.2f%% of report %s\n", a.report.String(), percent, gp.report.String())
+	return percent+threshold < 0.0, nil
 }
 
 type geomeanProcessor struct {
 	reportProcessor
 }
 
-func (gp geomeanProcessor) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
+func (gp geomeanProcessor) process(ir *inputReport, verbose bool) reportProcessorResult {
 	if verbose {
-		fmt.Printf("Parsing report %s\n", tr.Timestamp)
+		fmt.Printf("Parsing report %s\n", ir.report.Timestamp)
 	}
 	sumlogPkts := 0.0
 	sumlogMbits := 0.0
 	sumlogCores := 0.0
-	for iii := range tr.Tests {
-		ttt := tr.Tests[iii]
+	for iii := range ir.report.Tests {
+		ttt := ir.report.Tests[iii]
+		if strings.Index(ttt.TestName, substringFilter) == -1 {
+			if verbose {
+				fmt.Printf("Test %s skipped\n", ttt.TestName)
+			}
+			continue
+		}
 
 		cores := 0
 		if ttt.CoresStats != nil {
@@ -248,9 +277,10 @@ func (gp geomeanProcessor) process(tr *test.TestsuiteReport, verbose bool) repor
 	}
 
 	return geomeanProcessorResult{
-		geomeanPkts:  math.Exp2(sumlogPkts / float64(len(tr.Tests))),
-		geomeanMbits: math.Exp2(sumlogMbits / float64(len(tr.Tests))),
-		geomeanCores: math.Exp2(sumlogCores / float64(len(tr.Tests))),
+		report:       ir,
+		geomeanPkts:  math.Exp2(sumlogPkts / float64(len(ir.report.Tests))),
+		geomeanMbits: math.Exp2(sumlogMbits / float64(len(ir.report.Tests))),
+		geomeanCores: math.Exp2(sumlogCores / float64(len(ir.report.Tests))),
 	}
 }
 
@@ -262,15 +292,15 @@ type geomeanProcessorMbits struct {
 	geomeanProcessor
 }
 
-func (gp geomeanProcessorPkts) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
+func (gp geomeanProcessorPkts) process(ir *inputReport, verbose bool) reportProcessorResult {
 	return geomeanProcessorResultPkts{
-		geomeanProcessorResult: gp.geomeanProcessor.process(tr, verbose).(geomeanProcessorResult),
+		geomeanProcessorResult: gp.geomeanProcessor.process(ir, verbose).(geomeanProcessorResult),
 	}
 }
 
-func (gp geomeanProcessorMbits) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
+func (gp geomeanProcessorMbits) process(ir *inputReport, verbose bool) reportProcessorResult {
 	return geomeanProcessorResultMbits{
-		geomeanProcessorResult: gp.geomeanProcessor.process(tr, verbose).(geomeanProcessorResult),
+		geomeanProcessorResult: gp.geomeanProcessor.process(ir, verbose).(geomeanProcessorResult),
 	}
 }
 
@@ -287,8 +317,8 @@ func (tr *testResult) String() string {
 
 type sbsProcessorResult struct {
 	reportProcessorResult
-	suiteName string
-	results   []testResult
+	report  *inputReport
+	results []testResult
 }
 
 const indentString = "    "
@@ -298,18 +328,18 @@ const mbitsHeader = "   Mbit/s   "
 const coresHeader = " cores"
 const percents = "  pkts/s    Mbit/s    cores"
 
-func (spr sbsProcessorResult) compare(another reportProcessorResult) (bool, error) {
+func (spr sbsProcessorResult) compare(another reportProcessorResult, threshold float64) (bool, error) {
 	a := another.(sbsProcessorResult)
 
 	if len(spr.results) != len(a.results) {
-		return false, fmt.Errorf("Reports %s and %s have different number of tests.", spr.suiteName, a.suiteName)
+		return false, fmt.Errorf("Reports %s and %s have different number of tests.", spr.report.String(), a.report.String())
 	}
 
 	col1Len := 0
 	for iii := range spr.results {
 		if spr.results[iii].name != a.results[iii].name {
 			return false, fmt.Errorf("Reports %s has test named %s while report %s has test named %s. Cannot compare them.",
-				spr.suiteName, spr.results[iii].name, a.suiteName, a.results[iii].name)
+				spr.report.String(), spr.results[iii].name, a.report.String(), a.results[iii].name)
 		}
 		if col1Len < len(spr.results[iii].name) {
 			col1Len = len(spr.results[iii].name)
@@ -318,23 +348,23 @@ func (spr sbsProcessorResult) compare(another reportProcessorResult) (bool, erro
 
 	sep2Len := 1
 	col2Len := len(pktsHeader) + len(mbitsHeader) + len(coresHeader) + sep2Len
-	if len(spr.suiteName) > col2Len {
-		sep2Len += len(spr.suiteName) - col2Len
-		col2Len = len(spr.suiteName)
+	if len(spr.report.report.Timestamp) > col2Len {
+		sep2Len += len(spr.report.report.Timestamp) - col2Len
+		col2Len = len(spr.report.report.Timestamp)
 	}
 
 	sep3Len := 1
 	col3Len := len(pktsHeader) + len(mbitsHeader) + len(coresHeader) + sep3Len
-	if len(a.suiteName) > col2Len {
-		sep3Len += len(a.suiteName) - col3Len
-		col3Len = len(a.suiteName)
+	if len(a.report.report.Timestamp) > col2Len {
+		sep3Len += len(a.report.report.Timestamp) - col3Len
+		col3Len = len(a.report.report.Timestamp)
 	}
 
 	// Print header with report names
 	fmt.Printf("%*s | %*s | %*s\n",
 		col1Len, "",
-		col2Len, spr.suiteName,
-		col3Len, a.suiteName)
+		col2Len, spr.report.report.Timestamp,
+		col3Len, a.report.report.Timestamp)
 	// Print header with units
 	fmt.Printf("%*s | %s%*s%s%s | %s%*s%s%s | %s\n",
 		col1Len, "",
@@ -371,15 +401,16 @@ type sbsProcessorResultMbits struct {
 }
 
 // Return true if at least one test result is better than another result
-func (spr sbsProcessorResultPkts) compare(another reportProcessorResult) (bool, error) {
+func (spr sbsProcessorResultPkts) compare(another reportProcessorResult, threshold float64) (bool, error) {
 	a := another.(sbsProcessorResultPkts)
 
-	_, err := spr.sbsProcessorResult.compare(a.sbsProcessorResult)
+	_, err := spr.sbsProcessorResult.compare(a.sbsProcessorResult, threshold)
 	if err != nil {
 		return false, err
 	}
 	for iii := range spr.results {
-		if spr.results[iii].pkts > a.results[iii].pkts {
+		percent := (float64(a.results[iii].pkts) - float64(spr.results[iii].pkts)) / float64(spr.results[iii].pkts) * 100.0
+		if percent+threshold < 0.0 {
 			return true, nil
 		}
 	}
@@ -387,15 +418,16 @@ func (spr sbsProcessorResultPkts) compare(another reportProcessorResult) (bool, 
 }
 
 // Return true if at least one test result is better than another result
-func (spr sbsProcessorResultMbits) compare(another reportProcessorResult) (bool, error) {
+func (spr sbsProcessorResultMbits) compare(another reportProcessorResult, threshold float64) (bool, error) {
 	a := another.(sbsProcessorResultMbits)
 
-	_, err := spr.sbsProcessorResult.compare(a.sbsProcessorResult)
+	_, err := spr.sbsProcessorResult.compare(a.sbsProcessorResult, threshold)
 	if err != nil {
 		return false, err
 	}
 	for iii := range spr.results {
-		if spr.results[iii].mbits > a.results[iii].mbits {
+		percent := (float64(a.results[iii].mbits) - float64(spr.results[iii].mbits)) / float64(spr.results[iii].mbits) * 100.0
+		if percent+threshold < 0.0 {
 			return true, nil
 		}
 	}
@@ -406,11 +438,18 @@ type sbsProcessor struct {
 	reportProcessor
 }
 
-func (sp *sbsProcessor) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
-	out := make([]testResult, len(tr.Tests))
+func (sp *sbsProcessor) process(ir *inputReport, verbose bool) reportProcessorResult {
+	out := []testResult{}
 
-	for iii := range tr.Tests {
-		ttt := tr.Tests[iii]
+	for iii := range ir.report.Tests {
+		ttt := ir.report.Tests[iii]
+		if strings.Index(ttt.TestName, substringFilter) == -1 {
+			if verbose {
+				fmt.Printf("Test %s skipped\n", ttt.TestName)
+			}
+			continue
+		}
+
 		pgbd := ttt.PktgenBenchdata
 		pkts := int64(0)
 		mbits := int64(0)
@@ -429,17 +468,17 @@ func (sp *sbsProcessor) process(tr *test.TestsuiteReport, verbose bool) reportPr
 				fmt.Printf("Test %s: pkts: %d, mbits: %d, cores: %d\n", ttt.TestName, pkts, mbits, cores)
 			}
 		}
-		out[iii] = testResult{
+		out = append(out, testResult{
 			name:  ttt.TestName,
 			pkts:  pkts,
 			mbits: mbits,
 			cores: cores,
-		}
+		})
 	}
 
 	return sbsProcessorResult{
-		suiteName: tr.Timestamp,
-		results:   out,
+		report:  ir,
+		results: out,
 	}
 }
 
@@ -451,14 +490,14 @@ type sbsProcessorMbits struct {
 	sbsProcessor
 }
 
-func (sp sbsProcessorPkts) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
+func (sp sbsProcessorPkts) process(ir *inputReport, verbose bool) reportProcessorResult {
 	return sbsProcessorResultPkts{
-		sbsProcessorResult: sp.sbsProcessor.process(tr, verbose).(sbsProcessorResult),
+		sbsProcessorResult: sp.sbsProcessor.process(ir, verbose).(sbsProcessorResult),
 	}
 }
 
-func (sp sbsProcessorMbits) process(tr *test.TestsuiteReport, verbose bool) reportProcessorResult {
+func (sp sbsProcessorMbits) process(ir *inputReport, verbose bool) reportProcessorResult {
 	return sbsProcessorResultMbits{
-		sbsProcessorResult: sp.sbsProcessor.process(tr, verbose).(sbsProcessorResult),
+		sbsProcessorResult: sp.sbsProcessor.process(ir, verbose).(sbsProcessorResult),
 	}
 }
