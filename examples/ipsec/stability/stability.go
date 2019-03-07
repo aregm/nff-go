@@ -4,6 +4,7 @@
 
 package main
 
+import "github.com/intel-go/nff-go/types"
 import "github.com/intel-go/nff-go/flow"
 import "github.com/intel-go/nff-go/packet"
 import "github.com/intel-go/nff-go/examples/ipsec"
@@ -45,18 +46,18 @@ func main() {
 }
 
 func gen(pkt *packet.Packet, context flow.UserContext) {
-        packet.InitEmptyIPv4TCPPacket(pkt, 50)
-        ipv4 := pkt.GetIPv4()
-        tcp := pkt.GetTCPForIPv4()
+	packet.InitEmptyIPv4TCPPacket(pkt, 50)
+	ipv4 := pkt.GetIPv4()
+	tcp := pkt.GetTCPForIPv4()
 
-	pkt.Ether.DAddr = [6]uint8{1,2,3,4,5,6}
-	pkt.Ether.SAddr = [6]uint8{1,2,3,4,5,6}
+	pkt.Ether.DAddr = [6]uint8{1, 2, 3, 4, 5, 6}
+	pkt.Ether.SAddr = [6]uint8{1, 2, 3, 4, 5, 6}
 
-        ipv4.SrcAddr = packet.BytesToIPv4(111,111,111,111)
-        ipv4.DstAddr = packet.BytesToIPv4(222,222,222,222)
+	ipv4.SrcAddr = types.BytesToIPv4(111, 111, 111, 111)
+	ipv4.DstAddr = types.BytesToIPv4(222, 222, 222, 222)
 
-        tcp.SrcPort = packet.SwapBytesUint16(25)
-        tcp.DstPort = packet.SwapBytesUint16(35)
+	tcp.SrcPort = packet.SwapBytesUint16(25)
+	tcp.DstPort = packet.SwapBytesUint16(35)
 
 	step++
 	if step == 100 {
@@ -66,9 +67,9 @@ func gen(pkt *packet.Packet, context flow.UserContext) {
 }
 
 func dump_before(currentPacket *packet.Packet, context flow.UserContext) {
-        fmt.Printf("Raw bytes before=%x\n", currentPacket.GetRawPacketBytes())
+	fmt.Printf("Raw bytes before=%x\n", currentPacket.GetRawPacketBytes())
 }
 
 func dump_after(currentPacket *packet.Packet, context flow.UserContext) {
-        fmt.Printf("Raw bytes after =%x\n", currentPacket.GetRawPacketBytes())
+	fmt.Printf("Raw bytes after =%x\n", currentPacket.GetRawPacketBytes())
 }

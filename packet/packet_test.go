@@ -6,14 +6,13 @@ package packet
 
 import (
 	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"net"
 	"reflect"
 	"testing"
 	"unsafe"
 
-	. "github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 func init() {
@@ -22,44 +21,44 @@ func init() {
 
 var MacHeader = [8]EtherHdr{
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x12, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x12, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x52},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x10, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x10, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 	{
-		DAddr:     [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
-		SAddr:     [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
-		EtherType: SwapBytesUint16(IPV4Number),
+		DAddr:     types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55},
+		SAddr:     types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51},
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	},
 }
 
@@ -436,8 +435,8 @@ func TestInitEmptyPacket(t *testing.T) {
 	// Create empty packet, set Ether header fields
 	pkt := getPacket()
 	InitEmptyPacket(pkt, 0)
-	pkt.Ether.DAddr = [6]uint8{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
-	pkt.Ether.SAddr = [6]uint8{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+	pkt.Ether.DAddr = types.MACAddress{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+	pkt.Ether.SAddr = types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
 
 	// Create ground truth packet
 	gtBuf, _ := hex.DecodeString(gtLineEther)
@@ -445,7 +444,7 @@ func TestInitEmptyPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:EtherLen]
+	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:types.EtherLen]
 	// DEEP equal for whole packet buffer
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -458,8 +457,8 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 	InitEmptyIPv4Packet(pkt, testPlSize)
 	dst := net.ParseIP("128.9.9.5").To4()
 	src := net.ParseIP("127.0.0.1").To4()
-	pkt.GetIPv4().DstAddr = binary.LittleEndian.Uint32([]byte(dst))
-	pkt.GetIPv4().SrcAddr = binary.LittleEndian.Uint32([]byte(src))
+	pkt.GetIPv4().DstAddr = types.SliceToIPv4(dst)
+	pkt.GetIPv4().SrcAddr = types.SliceToIPv4(src)
 	ptrData := (*Packetdata)(pkt.Data)
 	ptrData.F1 = 0xddff
 	ptrData.F2 = 0xaabb
@@ -470,7 +469,7 @@ func TestInitEmptyIPv4Packet(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv4MinLen + testPlSize
+	size := types.EtherLen + types.IPv4MinLen + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -481,7 +480,7 @@ func TestInitEmptyIPv6Packet(t *testing.T) {
 	// Create empty packet, set IPv6 header fields
 	pkt := getPacket()
 	InitEmptyIPv6Packet(pkt, testPlSize)
-	pkt.GetIPv6().SrcAddr = [16]uint8{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xef}
+	pkt.GetIPv6().SrcAddr = types.IPv6Address{0xde, 0xad, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xbe, 0xef}
 	ptrData := (*Packetdata)(pkt.Data)
 	ptrData.F1 = 0xddff
 	ptrData.F2 = 0xaabb
@@ -491,7 +490,7 @@ func TestInitEmptyIPv6Packet(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv6Len + testPlSize
+	size := types.EtherLen + types.IPv6Len + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -513,7 +512,7 @@ func TestInitEmptyIPv4TCPPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv4MinLen + TCPMinLen + testPlSize
+	size := types.EtherLen + types.IPv4MinLen + types.TCPMinLen + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -535,7 +534,7 @@ func TestInitEmptyIPv4UDPPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv4MinLen + UDPLen + testPlSize
+	size := types.EtherLen + types.IPv4MinLen + types.UDPLen + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -557,7 +556,7 @@ func TestInitEmptyIPv6TCPPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv6Len + TCPMinLen + testPlSize
+	size := types.EtherLen + types.IPv6Len + types.TCPMinLen + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -579,7 +578,7 @@ func TestInitEmptyIPv6UDPPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + IPv6Len + UDPLen + testPlSize
+	size := types.EtherLen + types.IPv6Len + types.UDPLen + testPlSize
 	buf := (*[1 << 30]byte)(pkt.StartAtOffset(0))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)

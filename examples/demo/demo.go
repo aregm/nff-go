@@ -28,7 +28,8 @@ func main() {
 
 	// Initialize NFF-GO library at 16 cores by default
 	config := flow.Config{
-		CPUList: "0-15",
+		CPUList:            "0-15",
+		NoPacketHeadChange: true,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 

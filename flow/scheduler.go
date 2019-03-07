@@ -128,14 +128,14 @@ type flowFunction struct {
 
 // Adding every flow function to scheduler list
 func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFlowFunction, cfn cloneFlowFunction,
-	par interface{}, context *[]UserContext, fType ffType, inIndexNumber int32) {
+	par interface{}, context *[]UserContext, fType ffType, inIndexNumber int32, rxtxstats *common.RXTXStats) {
 	ff := new(flowFunction)
 	nameC := 1
-	tName := name
+	tName := name + strconv.Itoa(nameC)
 	for i := range scheduler.ff {
 		if scheduler.ff[i].name == tName {
-			tName = name + strconv.Itoa(nameC)
 			nameC++
+			tName = name + strconv.Itoa(nameC)
 		}
 	}
 	ff.name = tName
@@ -150,6 +150,9 @@ func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFl
 		scheduler.maxInIndex = inIndexNumber
 	}
 	scheduler.ff = append(scheduler.ff, ff)
+	if countersEnabledInFramework && rxtxstats != nil {
+		registerRXTXStatitics(rxtxstats, tName)
+	}
 }
 
 type scheduler struct {
@@ -221,8 +224,13 @@ func (scheduler *scheduler) systemStart() (err error) {
 	} else {
 		common.LogDebug(common.Initialization, "Start STOP at scheduler", core, "core")
 	}
+	var stopstats *common.RXTXStats
+	if countersEnabledInFramework {
+		stopstats = new(common.RXTXStats)
+		registerRXTXStatitics(stopstats, "systemstop")
+	}
 	go func() {
-		low.Stop(scheduler.StopRing, &scheduler.stopFlag, core)
+		low.Stop(scheduler.StopRing, &scheduler.stopFlag, core, stopstats)
 	}()
 	for i := range scheduler.ff {
 		if err = scheduler.ff[i].startNewInstance(constructNewIndex(scheduler.ff[i].inIndexNumber), scheduler); err != nil {
@@ -414,6 +422,19 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			ff := scheduler.ff[i]
 			if ff.fType == segmentCopy || ff.fType == fastGenerate {
 				ff.updateReportedState() // TODO also for debug
+			}
+			if ff.fType == fastGenerate {
+				select {
+				case temp := <-(ff.Parameters.(*generateParameters)).targetChannel:
+					if float64(temp)/(1000 /*milliseconds*/ /float64(schedTime)) < float64(burstSize) {
+						// TargetSpeed per schedTime should be more than burstSize because one burstSize packets in
+						// one schedTime seconds are out minimal scheduling part. We can't make generate speed less than this.
+						common.LogWarning(common.Debug, "Target speed per schedTime should be more than burstSize - not changing")
+					} else {
+						(ff.Parameters.(*generateParameters)).targetSpeed = float64(temp)
+					}
+				default:
+				}
 			}
 			// Firstly we check removing clones. We can remove one clone if:
 			// 1. flow function has clones or it is fastGenerate

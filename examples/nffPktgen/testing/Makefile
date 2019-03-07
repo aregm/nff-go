@@ -4,6 +4,6 @@
 
 PATH_TO_MK = ../../../mk
 IMAGENAME = nff-pktgen
-EXECUTABLES = perfTest
+EXECUTABLES = sendGetBack perfTest dump
 
 include $(PATH_TO_MK)/leaf.mk

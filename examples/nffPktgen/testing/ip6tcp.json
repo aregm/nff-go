@@ -5,12 +5,11 @@
                         "min": "00:25:96:FF:FE:12",
                         "start": "00:30:00:FF:FE:12",
                         "max": "00:FF:96:FF:FE:12",
-                        "incr": 3
+                        "inc": 3
                     }
                 },
                 "daddr": "00:FF:96:FF:FE:12",
-                "ip": {
-                    "version": 6,
+                "ipv6": {
                     "saddr": "2001:db8:a0b:12f0::1",
                     "daddr": "2001:db8:a0b:12f0::1",
                     "tcp": {
@@ -18,7 +17,7 @@
                            "range": {
                                "min": 1,
                                "max": 8080,
-                               "incr": 100
+                               "inc": 100
                            }
                        },
                        "dport": 2000,
@@ -33,7 +32,7 @@
                                 }
                             },
                             {
-                                "probability": 0.2,
+                                "probability": 0.3,
                                 "raw": {
                                     "data": "sfsfsfs"
                                 }

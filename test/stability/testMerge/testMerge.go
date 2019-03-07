@@ -15,6 +15,7 @@ import (
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/test/stability/stabilityCommon"
+	"github.com/intel-go/nff-go/types"
 )
 
 // Test with testScenario=1:
@@ -63,8 +64,8 @@ var (
 	// Usually when writing multibyte fields to packet, we should make
 	// sure that byte order in packet buffer is correct and swap bytes if needed.
 	// Here for testing purposes we use addresses with bytes swapped by hand.
-	ipv4addr1 uint32 = 0x0100007f // 127.0.0.1
-	ipv4addr2 uint32 = 0x05090980 // 128.9.9.5
+	ipv4addr1 types.IPv4Address = 0x0100007f // 127.0.0.1
+	ipv4addr2 types.IPv4Address = 0x05090980 // 128.9.9.5
 
 	testDoneEvent *sync.Cond
 	progStart     time.Time
@@ -135,9 +136,9 @@ func setGetter(scenario getScenario, inputSource uint) (finalFlow *flow.Flow, er
 		finalFlow, err = flow.SetReceiver(uint16(inputSource))
 	case fastGenerate:
 		if inputSource == useGenerator1 {
-			finalFlow, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: true})
+			finalFlow, _, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: true})
 		} else if inputSource == useGenerator2 {
-			finalFlow, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: false})
+			finalFlow, _, err = flow.SetFastGenerator(generatePacketGroup, speed, &generatorParameters{isGroup1: false})
 		} else {
 			return nil, errors.New(" setGetter: unknown generator type")
 		}

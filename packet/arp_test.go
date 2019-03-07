@@ -11,7 +11,7 @@ import (
 	"testing"
 	"unsafe"
 
-	. "github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 func init() {
@@ -20,10 +20,10 @@ func init() {
 
 // These strings were created with gopacket library.
 var (
-	gtLineARPRequest     = "ffffffffffff00070daff4540806000108000604000100070daff45418a6ac0100000000000018a6ad9f"
+	gtLineARPRequest     = "ffffffffffff00070daff4540806000108000604000100070daff45418a6ac01ffffffffffff18a6ad9f"
 	gtLineARPReply       = "c40132580000c402326b000008060001080006040002c402326b00000a000002c401325800000a000001"
-	gtLineGratARPRequest = "ffffffffffff02020202020208060001080006040001020202020202c0a80101000000000000c0a80101"
-	gtLineGratARPReply   = "ffffffffffff00000c07ac010806000108000604000200000c07ac010a0000060000000000000a000006"
+	gtLineGratARPRequest = "ffffffffffff02020202020208060001080006040001020202020202c0a80101ffffffffffffc0a80101"
+	gtLineGratARPReply   = "ffffffffffff00000c07ac010806000108000604000200000c07ac010a000006ffffffffffff0a000006"
 	gtLineEmptyARP       = "000000000000000000000000080600000000000000000000000000000000000000000000000000000000"
 )
 
@@ -32,12 +32,12 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 	pkt := getPacket()
 
 	initARPCommonData(pkt)
-	pkt.Ether.DAddr = [6]uint8{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
-	pkt.Ether.SAddr = [6]uint8{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
+	pkt.Ether.DAddr = types.MACAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
+	pkt.Ether.SAddr = types.MACAddress{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
 	pktARP := pkt.GetARP()
 	pktARP.Operation = SwapBytesUint16(1)
-	pktARP.SHA = [6]uint8{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
-	pktARP.THA = [6]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+	pktARP.SHA = types.MACAddress{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
+	pktARP.THA = types.MACAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}
 	copy(pktARP.SPA[:], net.ParseIP("24.166.172.1").To4()[:])
 	copy(pktARP.TPA[:], net.ParseIP("24.166.173.159").To4()[:])
 
@@ -46,7 +46,7 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -56,11 +56,11 @@ func TestInitARPCommonDataPacket(t *testing.T) {
 func TestInitARPRequestPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	pkt := getPacket()
-	sha := [6]uint8{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
+	sha := types.MACAddress{0x00, 0x07, 0x0d, 0xaf, 0xf4, 0x54}
 	srcIP := net.ParseIP("24.166.172.1").To4()
 	dstIP := net.ParseIP("24.166.173.159").To4()
-	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
-	tpa := BytesToIPv4(dstIP[0], dstIP[1], dstIP[2], dstIP[3])
+	spa := types.BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
+	tpa := types.BytesToIPv4(dstIP[0], dstIP[1], dstIP[2], dstIP[3])
 	InitARPRequestPacket(pkt, sha, spa, tpa)
 
 	// Create ground truth packet
@@ -68,7 +68,7 @@ func TestInitARPRequestPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -78,12 +78,12 @@ func TestInitARPRequestPacket(t *testing.T) {
 func TestInitARPReplyPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	pkt := getPacket()
-	tha := [6]uint8{0xc4, 0x01, 0x32, 0x58, 0x00, 0x00}
-	sha := [6]uint8{0xc4, 0x02, 0x32, 0x6b, 0x00, 0x00}
+	tha := types.MACAddress{0xc4, 0x01, 0x32, 0x58, 0x00, 0x00}
+	sha := types.MACAddress{0xc4, 0x02, 0x32, 0x6b, 0x00, 0x00}
 	srcIP := net.ParseIP("10.0.0.2").To4()
 	dstIP := net.ParseIP("10.0.0.1").To4()
-	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
-	tpa := BytesToIPv4(dstIP[0], dstIP[1], dstIP[2], dstIP[3])
+	spa := types.BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
+	tpa := types.BytesToIPv4(dstIP[0], dstIP[1], dstIP[2], dstIP[3])
 	InitARPReplyPacket(pkt, sha, tha, spa, tpa)
 
 	// Create ground truth packet
@@ -91,7 +91,7 @@ func TestInitARPReplyPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -101,9 +101,9 @@ func TestInitARPReplyPacket(t *testing.T) {
 func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	pkt := getPacket()
-	sha := [6]uint8{0x02, 0x02, 0x02, 0x02, 0x02, 0x02}
+	sha := types.MACAddress{0x02, 0x02, 0x02, 0x02, 0x02, 0x02}
 	srcIP := net.ParseIP("192.168.1.1").To4()
-	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
+	spa := types.BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
 
 	InitGARPAnnouncementRequestPacket(pkt, sha, spa)
 
@@ -112,7 +112,7 @@ func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -122,9 +122,9 @@ func TestInitGARPAnnouncementRequestPacket(t *testing.T) {
 func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 	// Create empty packet, set UDP header fields
 	pkt := getPacket()
-	sha := [6]uint8{0x00, 0x00, 0x0c, 0x07, 0xac, 0x01}
+	sha := types.MACAddress{0x00, 0x00, 0x0c, 0x07, 0xac, 0x01}
 	srcIP := net.ParseIP("10.0.0.6").To4()
-	spa := BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
+	spa := types.BytesToIPv4(srcIP[0], srcIP[1], srcIP[2], srcIP[3])
 
 	InitGARPAnnouncementReplyPacket(pkt, sha, spa)
 
@@ -133,7 +133,7 @@ func TestInitGARPAnnouncementReplyPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -149,7 +149,7 @@ func TestInitEmptyARPPacket(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + ARPLen
+	size := types.EtherLen + types.ARPLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)

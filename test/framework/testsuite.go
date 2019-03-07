@@ -223,7 +223,7 @@ func isTestInList(test *TestConfig, tl TestsList) bool {
 }
 
 // RunAllTests launches all tests.
-func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList) int {
+func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList, repeatCount int) int {
 	report := StartReport(logdir)
 	if report == nil {
 		return 255
@@ -233,19 +233,38 @@ func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList) int {
 	sichan := make(chan os.Signal, 1)
 	signal.Notify(sichan, os.Interrupt)
 
-	var totalTests, passedTests, failedTests []string
+	type TestInfo struct {
+		TestName string
+		Repeated int
+	}
+
+	var totalTests, passedTests, failedTests []TestInfo
+
 	for iii := range config.Tests {
 		test := &config.Tests[iii]
 
 		if isTestInList(test, tl) {
-			tr := config.executeOneTest(test, logdir, sichan)
+			var tr *TestcaseReportInfo
+			ti := TestInfo{
+				TestName: test.Name,
+				Repeated: 0,
+			}
+
+			for ti.Repeated < repeatCount {
+				tr = config.executeOneTest(test, logdir, sichan)
+				ti.Repeated++
+				if tr.Status == TestReportedPassed || tr.Status == TestInterrupted {
+					break
+				}
+			}
+
 			report.AddTestResult(tr)
 
-			totalTests = append(totalTests, test.Name)
+			totalTests = append(totalTests, ti)
 			if tr.Status == TestReportedPassed {
-				passedTests = append(passedTests, test.Name)
+				passedTests = append(passedTests, ti)
 			} else {
-				failedTests = append(failedTests, test.Name)
+				failedTests = append(failedTests, ti)
 			}
 
 			if tr.Status == TestInterrupted {
@@ -256,9 +275,9 @@ func (config *TestsuiteConfig) RunAllTests(logdir string, tl TestsList) int {
 
 	report.FinishReport()
 
-	LogInfo("EXECUTED TEST NAMES:", totalTests)
-	LogInfo("PASSED TEST NAMES:", passedTests)
-	LogInfo("FAILED TEST NAMES:", failedTests)
+	LogInfo("EXECUTED TEST NAMES AND REPEAT COUNT:", totalTests)
+	LogInfo("PASSED TEST NAMES AND REPEAT COUNT:", passedTests)
+	LogInfo("FAILED TEST NAMES AND REPEAT COUNT:", failedTests)
 	LogInfo("TESTS EXECUTED:", len(totalTests))
 	LogInfo("PASSED:", len(passedTests))
 	LogInfo("FAILED:", len(failedTests))

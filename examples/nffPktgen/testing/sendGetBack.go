@@ -121,7 +121,8 @@ func main() {
 
 	// Init NFF-GO system at 16 available cores
 	config := flow.Config{
-		CPUList: "0-43",
+		CPUList:          "0-43",
+		DisableScheduler: true,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 
@@ -136,7 +137,7 @@ func main() {
 		}
 		context, err := generator.GetContext(configuration)
 		flow.CheckFatal(err)
-		outFlow, err := flow.SetFastGenerator(generator.Generate, speed, context)
+		outFlow, _, err := flow.SetFastGenerator(generator.Generate, speed, context)
 		flow.CheckFatal(err)
 		switch t := key.(type) {
 		case int:

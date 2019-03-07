@@ -28,6 +28,13 @@ import (
 
 	"github.com/intel-go/nff-go/asm"
 	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
+)
+
+var (
+	CountersEnabledInFramework bool = bool(C.counters_enabled_in_framework)
+	UseInterlockedCounters     bool = bool(C.use_interlocked_counters)
+	AnalyzePacketSizes         bool = bool(C.analyze_packet_sizes)
 )
 
 var ringName = 1
@@ -76,8 +83,8 @@ func CheckRSSPacketCount(p *Port, queue int16) int64 {
 }
 
 // GetPortMACAddress gets MAC address of given port.
-func GetPortMACAddress(port uint16) [common.EtherAddrLen]uint8 {
-	var mac [common.EtherAddrLen]uint8
+func GetPortMACAddress(port uint16) [types.EtherAddrLen]uint8 {
+	var mac [types.EtherAddrLen]uint8
 	var cmac C.struct_ether_addr
 
 	C.rte_eth_macaddr_get(C.uint16_t(port), &cmac)
@@ -489,15 +496,15 @@ func (ring *Ring) GetRingCount() uint32 {
 }
 
 // ReceiveRSS - get packets from port and enqueue on a Ring.
-func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, race *int32) {
+func ReceiveRSS(port uint16, inIndex []int32, OUT Rings, flag *int32, coreID int, race *int32, stats *common.RXTXStats) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Receive port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
 	C.receiveRSS(C.uint16_t(port), (*C.int32_t)(unsafe.Pointer(&(inIndex[0]))), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(OUT[0]))), C.int32_t(len(OUT))),
-		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)))
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.int)(unsafe.Pointer(race)), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
-func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings) {
+func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool, IN Rings, stats *common.RXTXStats) {
 	var nOut *C.struct_rte_ring
 	var nIn **C.struct_rte_ring
 	if OUT != nil {
@@ -507,20 +514,21 @@ func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool
 		nIn = C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN)))
 	}
 	C.nff_go_KNI(C.uint16_t(port), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
-		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)))
+		C.bool(recv), nOut, C.bool(send), nIn, C.int32_t(len(IN)), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int) {
+func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int, stats *common.RXTXStats) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)), C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)),
+		C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // Stop - dequeue and free packets.
-func Stop(IN Rings, flag *int32, coreID int) {
-	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID))
+func Stop(IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.nff_go_stop(C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
 // InitDPDKArguments allocates and initializes arguments for dpdk.
@@ -537,8 +545,8 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int) error {
-	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI))
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int, NoPacketHeadChange bool) error {
+	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI), C.bool(NoPacketHeadChange))
 	if ret < 0 {
 		return common.WrapWithNFError(nil, "Error with EAL initialization\n", common.FailToInitDPDK)
 	}
@@ -657,7 +665,7 @@ func AllocateMbuf(mb *uintptr, mempool *Mempool) error {
 // WriteDataToMbuf copies data to mbuf.
 func WriteDataToMbuf(mb *Mbuf, data []byte) {
 	d := unsafe.Pointer(GetPacketDataStartPointer(mb))
-	slice := (*[common.MaxLength]byte)(d)[:len(data)] // copy requires slice
+	slice := (*[types.MaxLength]byte)(d)[:len(data)] // copy requires slice
 	//TODO need to investigate maybe we need to use C function C.rte_memcpy here
 	copy(slice, data)
 }
@@ -718,12 +726,12 @@ func CreateLPM(name string, socket uint8, maxRules uint32, numberTbl8 uint32, tb
 }
 
 // AddLPMRule adds one rule to LPM table
-func AddLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8, nextHop uint32) int {
+func AddLPMRule(lpm unsafe.Pointer, ip types.IPv4Address, depth uint8, nextHop types.IPv4Address) int {
 	return int(C.lpm_add(lpm, C.uint32_t(ip), C.uint8_t(depth), C.uint32_t(nextHop)))
 }
 
 // DeleteLPMRule removes one rule from LPM table
-func DeleteLPMRule(lpm unsafe.Pointer, ip uint32, depth uint8) int {
+func DeleteLPMRule(lpm unsafe.Pointer, ip types.IPv4Address, depth uint8) int {
 	return int(C.lpm_delete(lpm, C.uint32_t(ip), C.uint8_t(depth)))
 }
 
@@ -742,4 +750,24 @@ func IntArrayToBool(value *[32]uint8) *[32]bool {
 
 func CheckHWTXChecksumCapability(port uint16) bool {
 	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
+}
+
+func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
+	m := CreateMempool("receiveOS")
+	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
+func SendOS(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
+		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
+func InitDevice(device string) int {
+	return int(C.initDevice(C.CString(device)))
+}
+
+func SetCountersEnabledInApplication(enabled bool) {
+	C.counters_enabled_in_application = C.bool(true)
 }

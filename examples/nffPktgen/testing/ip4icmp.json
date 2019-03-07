@@ -5,12 +5,11 @@
                         "min": "00:25:96:FF:FE:12",
                         "start": "00:30:00:FF:FE:12",
                         "max": "00:FF:96:FF:FE:12",
-                        "incr": 3
+                        "inc": 3
                     }
                 },
                 "daddr": "00:FF:96:FF:FE:12",
-                "ip": {
-                    "version": 4,
+                "ipv4": {
                     "saddr": "1.1.127.1",
                     "daddr": "1.1.127.0",
                     "icmp": {
@@ -19,20 +18,20 @@
                        "seq": "increasing",
                         "pdist": [
                             {
-                                "probability": 0.3,
+                                "probability": 0.33,
                                 "randbytes":    {
                                     "size": 50,
                                     "deviation": 10
                                 }
                             },
                             {
-                                "probability": 0.3,
+                                "probability": 0.33,
                                 "raw": {
                                     "data": "sfsfsfs"
                                 }
                             },
                             {
-                                "probability": 0.3,
+                                "probability": 0.34,
                                 "raw": {
                                     "data": "0000000000000000000000000000000000"
                                 }

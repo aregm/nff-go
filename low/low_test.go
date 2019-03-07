@@ -15,7 +15,7 @@ import (
 func init() {
 	argc, argv := InitDPDKArguments([]string{})
 	// Default: burstSize=32, mbufNumber=8191, mbufCacheSize=250
-	if err := InitDPDK(argc, argv, 32, 8191, 250, 0); err != nil {
+	if err := InitDPDK(argc, argv, 32, 8191, 250, 0, false); err != nil {
 		log.Fatalf("fail to initialize with error: %+v\n", err)
 	}
 	rand.Seed(time.Now().UTC().UnixNano())

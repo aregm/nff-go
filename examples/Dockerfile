@@ -19,3 +19,5 @@ COPY gtpu .
 COPY pingReplay .
 COPY timer .
 COPY netlink .
+COPY generate .
+COPY OSforwarding .

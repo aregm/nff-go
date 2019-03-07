@@ -9,6 +9,7 @@ package flow
 import (
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
@@ -17,11 +18,11 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 	// ARP can be only in IPv4. IPv6 replace it with modified ICMP
 	if arp != nil {
 		if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest ||
-			arp.THA != [common.EtherAddrLen]byte{} {
+			arp.THA != [types.EtherAddrLen]byte{} {
 			return false
 		}
 
-		port := portPair[packet.ArrayToIPv4(arp.TPA)]
+		port := portPair[types.ArrayToIPv4(arp.TPA)]
 		if port == nil {
 			return false
 		}
@@ -31,7 +32,7 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 		if err != nil {
 			common.LogFatal(common.Debug, err)
 		}
-		packet.InitARPReplyPacket(answerPacket, port.MAC, arp.SHA, packet.ArrayToIPv4(arp.TPA), packet.ArrayToIPv4(arp.SPA))
+		packet.InitARPReplyPacket(answerPacket, port.MAC, arp.SHA, types.ArrayToIPv4(arp.TPA), types.ArrayToIPv4(arp.SPA))
 		answerPacket.SendPacket(port.port)
 
 		return false
@@ -42,7 +43,7 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 		icmp := current.GetICMPForIPv4()
 		if icmp != nil {
 			// Check that received ICMP packet is echo request packet.
-			if icmp.Type != common.ICMPTypeEchoRequest || icmp.Code != 0 {
+			if icmp.Type != types.ICMPTypeEchoRequest || icmp.Code != 0 {
 				return true
 			}
 
@@ -65,9 +66,9 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 			(answerPacket.GetIPv4NoCheck()).DstAddr = ipv4.SrcAddr
 			(answerPacket.GetIPv4NoCheck()).SrcAddr = ipv4.DstAddr
 			answerPacket.ParseL4ForIPv4()
-			(answerPacket.GetICMPNoCheck()).Type = common.ICMPTypeEchoResponse
+			(answerPacket.GetICMPNoCheck()).Type = types.ICMPTypeEchoResponse
 			ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
-			answerPacket.ParseL7(common.ICMPNumber)
+			answerPacket.ParseL7(types.ICMPNumber)
 			icmp.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(ipv4, icmp, answerPacket.Data))
 
 			answerPacket.SendPacket(port.port)

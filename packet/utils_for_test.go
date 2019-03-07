@@ -3,14 +3,13 @@
 package packet
 
 import (
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
 	"os"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/types"
 )
 
 // isInit is common for all tests
@@ -23,7 +22,7 @@ func tInitDPDK() {
 	if isInit != true {
 		argc, argv := low.InitDPDKArguments([]string{})
 		// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-		if err := low.InitDPDK(argc, argv, 32, 8191, 250, 0); err != nil {
+		if err := low.InitDPDK(argc, argv, 32, 8191, 250, 0, false); err != nil {
 			log.Fatal(err)
 		}
 		nonPerfMempool = low.CreateMempool("Test")
@@ -96,27 +95,27 @@ func getIPv6ICMPTestPacket() *Packet {
 func getARPRequestTestPacket() *Packet {
 	pkt := getPacket()
 
-	sha := [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
-	spa := binary.LittleEndian.Uint32(net.ParseIP("127.0.0.1").To4())
-	tpa := binary.LittleEndian.Uint32(net.ParseIP("128.9.9.5").To4())
+	sha := types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+	spa := types.SliceToIPv4(net.ParseIP("127.0.0.1").To4())
+	tpa := types.SliceToIPv4(net.ParseIP("128.9.9.5").To4())
 	InitARPRequestPacket(pkt, sha, spa, tpa)
 
 	return pkt
 }
 
 func initEtherAddrs(pkt *Packet) {
-	pkt.Ether.SAddr = [common.EtherAddrLen]byte{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
-	pkt.Ether.DAddr = [common.EtherAddrLen]byte{0x0, 0x11, 0x22, 0x33, 0x44, 0x55}
+	pkt.Ether.SAddr = types.MACAddress{0x01, 0x11, 0x21, 0x31, 0x41, 0x51}
+	pkt.Ether.DAddr = types.MACAddress{0x0, 0x11, 0x22, 0x33, 0x44, 0x55}
 }
 
 func initIPv4Addrs(pkt *Packet) {
-	pkt.GetIPv4().SrcAddr = binary.LittleEndian.Uint32(net.ParseIP("127.0.0.1").To4())
-	pkt.GetIPv4().DstAddr = binary.LittleEndian.Uint32(net.ParseIP("128.9.9.5").To4())
+	pkt.GetIPv4().SrcAddr = types.SliceToIPv4(net.ParseIP("127.0.0.1").To4())
+	pkt.GetIPv4().DstAddr = types.SliceToIPv4(net.ParseIP("128.9.9.5").To4())
 }
 
 func initIPv6Addrs(pkt *Packet) {
-	copy(pkt.GetIPv6().SrcAddr[:], net.ParseIP("dead::beaf")[:common.IPv6AddrLen])
-	copy(pkt.GetIPv6().DstAddr[:], net.ParseIP("dead::beaf")[:common.IPv6AddrLen])
+	copy(pkt.GetIPv6().SrcAddr[:], net.ParseIP("dead::beaf")[:types.IPv6AddrLen])
+	copy(pkt.GetIPv6().DstAddr[:], net.ParseIP("dead::beaf")[:types.IPv6AddrLen])
 }
 
 func initPorts(pkt *Packet) {

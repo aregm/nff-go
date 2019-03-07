@@ -17,9 +17,9 @@ func main() {
 		genConfig, cores string
 		port             uint
 	)
-	flag.Uint64Var(&speed, "speed", 6000000, "speed of fast generator, Pkts/s")
-	flag.StringVar(&genConfig, "config", "../testing/ip4.json", "specifies config for generator")
-	flag.StringVar(&cores, "cores", "0-3", "specifies cores")
+	flag.Uint64Var(&speed, "speed", 120000000, "speed of fast generator, Pkts/s")
+	flag.StringVar(&genConfig, "config", "ip4.json", "specifies config for generator")
+	flag.StringVar(&cores, "cores", "0-2", "specifies cores")
 	flag.UintVar(&port, "port", 1, "specifies output port")
 	flag.Parse()
 
@@ -35,8 +35,7 @@ func main() {
 	}
 	context, err := generator.GetContext(configuration)
 	flow.CheckFatal(err)
-	outFlow, err := flow.SetFastGenerator(generator.Generate, speed, context)
-	flow.CheckFatal(err)
+	outFlow, _, _ := flow.SetFastGenerator(generator.Generate, speed, context)
 	flow.CheckFatal(flow.SetSender(outFlow, uint16(port)))
 	flow.CheckFatal(flow.SystemStart())
 }

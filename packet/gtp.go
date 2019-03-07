@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/intel-go/nff-go/common"
+	. "github.com/intel-go/nff-go/types"
 )
 
 // GTPv1-U and GTPv1-C

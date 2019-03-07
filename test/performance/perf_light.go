@@ -23,9 +23,10 @@ func main() {
 
 	// Initialize NFF-GO library
 	config := flow.Config{
-		DisableScheduler: *noscheduler,
-		DPDKArgs:         []string{*dpdkLogLevel},
-		CPUList:          *cores,
+		DisableScheduler:   *noscheduler,
+		DPDKArgs:           []string{*dpdkLogLevel},
+		CPUList:            *cores,
+		NoPacketHeadChange: true,
 	}
 	flow.CheckFatal(flow.SystemInit(&config))
 

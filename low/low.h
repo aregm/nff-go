@@ -19,6 +19,16 @@
 #include <rte_kni.h>
 #include <rte_lpm.h>
 
+#include <sys/socket.h>
+#include <linux/if_ether.h>     // ETH_P_ALL
+#include <stdio.h>              // snprintf
+#include <string.h>             // memset
+#include <stdlib.h>             // malloc
+#include <netinet/ip.h>         // htons
+#include <sys/ioctl.h>          // ioctl
+#include <net/if.h>             // ifreq
+#include <netpacket/packet.h>   // sockaddr_ll
+
 #define process 1
 #define stopRequest 2
 #define wasStopped 9
@@ -35,6 +45,9 @@
 
 // #define DEBUG
 // #define REASSEMBLY
+#define COUNTERS_ENABLED
+#define USE_INTERLOCKED_COUNTERS
+#define ANALYZE_PACKETS_SIZES
 
 #define recvNotUsed 0
 #define recvDone 2
@@ -46,8 +59,11 @@
 // 24 offset is L2 offset and is always begining of packet
 // 32 offset is CMbuf offset and is initilized when mempool is created
 // 40 offset is Next field. Should be 0. Will be filled later if required
-#define mbufInit(buf) \
-*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart; \
+#define mbufInitL2(buf) \
+*(char **)((char *)(buf) + mbufStructSize + 24) = (char *)(buf) + defaultStart;
+#define mbufInitCMbuf(buf) \
+*(char **)((char *)(buf) + mbufStructSize + 32) = (char *)(buf);
+#define mbufInitNextChain(buf) \
 *(char **)((char *)(buf) + mbufStructSize + 40) = 0;
 
 #ifdef REASSEMBLY
@@ -56,27 +72,85 @@
 	struct rte_ip_frag_death_row death_row; \
 	death_row.cnt = 0; /* DPDK doesn't initialize this field. It is probably a bug. */ \
 	struct rte_ip_frag_death_row* pdeath_row = &death_row;
-#else
-#define REASSEMBLY_INIT \
-	struct rte_ip_frag_tbl* tbl = NULL; \
-	struct rte_ip_frag_death_row* pdeath_row = NULL;
-#endif
 
 // Firstly we set "next" packet pointer (+40) to the packet from next mbuf
 // Secondly we know that followed mbufs don't contain L2 and L3 headers. We assume that they start with a data
 // so we assume that Data packet field (+16) should be equal to Ether packet field (+24)
 // (which we parse at this packet segment receiving
 #define mbufSetNext(buf) \
-*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
-*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
+	*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
+	*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
+#else
+#define REASSEMBLY_INIT \
+	struct rte_ip_frag_tbl* tbl = NULL; \
+	struct rte_ip_frag_death_row* pdeath_row = NULL;
+#endif
+
+#ifdef COUNTERS_ENABLED
+#ifdef USE_INTERLOCKED_COUNTERS
+#define UPDATE_PACKETS(packets, dropped)                        \
+    __sync_fetch_and_add(&stats->PacketsProcessed, (packets));  \
+    __sync_fetch_and_add(&stats->PacketsDropped, (dropped));
+#ifdef ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                                 \
+    __sync_fetch_and_add(&stats->BytesProcessed, (bytes));
+#else // ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    do {} while (0)
+#endif // ANALYZE_PACKETS_SIZES
+#else // USE_INTERLOCKED_COUNTERS
+#define UPDATE_PACKETS(packets, dropped)        \
+    stats->PacketsProcessed += (packets);       \
+    stats->PacketsDropped += (dropped);
+#ifdef ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    stats->BytesProcessed += (bytes);
+#else // ANALYZE_PACKETS_SIZES
+#define UPDATE_BYTES(bytes)                     \
+    do {} while (0)
+#endif // ANALYZE_PACKETS_SIZES
+#endif // USE_INTERLOCKED_COUNTERS
+#define UPDATE_COUNTERS(packets, bytes, dropped)    \
+    if (counters_enabled_in_application) {          \
+        UPDATE_PACKETS(packets, dropped)            \
+        UPDATE_BYTES(bytes)                         \
+    }
+#else // COUNTERS_ENABLED
+#define UPDATE_COUNTERS(packets, bytes, dropped)    \
+    do {} while (0)
+#endif // COUNTERS_ENABLED
+
+#ifdef COUNTERS_ENABLED
+bool counters_enabled_in_framework = true;
+bool counters_enabled_in_application = false;
+#else
+bool counters_enabled_in_framework = false;
+#endif
+
+#ifdef USE_INTERLOCKED_COUNTERS
+bool use_interlocked_counters = true;
+#else
+bool use_interlocked_counters = false;
+#endif
+
+#ifdef ANALYZE_PACKETS_SIZES
+bool analyze_packet_sizes = true;
+#else
+bool analyze_packet_sizes = false;
+#endif
 
 long receive_received = 0, receive_pushed = 0;
 long send_required = 0, send_sent = 0;
 long stop_freed = 0;
 
+typedef struct {
+	uint64_t PacketsProcessed, PacketsDropped, BytesProcessed;
+} RXTXStats;
+
 int mbufStructSize;
 int headroomSize;
 int defaultStart;
+bool L2CanBeChanged;
 char mempoolName[9] = "mempool1\0";
 
 __m128 zero128 = {0, 0, 0, 0};
@@ -255,6 +329,17 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	return 0;
 }
 
+#if defined(COUNTERS_ENABLED) && defined(ANALYZE_PACKETS_SIZES)
+__attribute__((always_inline))
+static inline uint64_t calculateSize(struct rte_mbuf *bufs[BURST_SIZE], uint16_t number) {
+	uint64_t size = 0;
+	for (uint32_t i = 0; i < number; i++) {
+		size += bufs[i]->pkt_len;
+	}
+	return size;
+}
+#endif
+
 __attribute__((always_inline))
 static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t real_number, uint16_t required_number) {
 	if (unlikely(real_number < required_number)) {
@@ -266,15 +351,23 @@ static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t re
 
 __attribute__((always_inline))
 static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_t rx_pkts_number, struct rte_ip_frag_tbl* tbl, struct rte_ip_frag_death_row* death_row) {
-#ifdef REASSEMBLY
+#ifndef REASSEMBLY
+	if (L2CanBeChanged == true) {
+		for (uint16_t i = 0; i < rx_pkts_number; i++) {
+			// TODO prefetch
+			mbufInitL2(bufs[i]);
+		}
+	}
+#else
 	uint16_t temp_number = 0;
 	uint64_t cur_tsc = rte_rdtsc();
-#endif
 	for (uint16_t i = 0; i < rx_pkts_number; i++) {
 	        // Prefetch decreases speed here without reassembly and increases with reassembly.
 	        // Speed of this is highly influenced by size of mempool. It seems that due to caches.
-	        mbufInit(bufs[i]);
-#ifdef REASSEMBLY
+		if (L2CanBeChanged == true) {
+			mbufInitL2(bufs[i]);
+		}
+		mbufInitNextChain(bufs[i]);
 	        // TODO prefetch will give 8-10% performance in reassembly case.
 	        // However we need additional investigations about small (< 3) packet numbers.
 	        //rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3] /*PREFETCH_OFFSET*/, void *));
@@ -289,9 +382,7 @@ static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_
 	        }
 	        bufs[temp_number] = bufs[i];
 	        temp_number++;
-#endif
 	}
-#ifdef REASSEMBLY
 	rx_pkts_number = temp_number;
 	rte_ip_frag_free_death_row(death_row, 0 /* PREFETCH_OFFSET */);
 #endif
@@ -343,7 +434,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 	return buf;
 }
 
-void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race) {
+void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_rings, volatile int *flag, int coreId, volatile int *race, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	REASSEMBLY_INIT
@@ -358,12 +449,15 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 			rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 
 			uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_rings[inIndex[q+1]], (void*)bufs, rx_pkts_number, NULL);
+
+			UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
 			// Free any packets which can't be pushed to the ring. The ring is probably full.
 			handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
 			receive_received += rx_pkts_number;
 			receive_pushed += pushed_pkts_number;
-#endif
+#endif // DEBUG
 		}
 	}
 	free(out_rings);
@@ -372,8 +466,8 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 }
 
 void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
-           bool recv, struct rte_ring *out_ring,
-           bool send, struct rte_ring **in_rings, int32_t inIndexNumber) {
+    bool recv, struct rte_ring *out_ring,
+    bool send, struct rte_ring **in_rings, int32_t inIndexNumber, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	int q = 0;
@@ -386,6 +480,9 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 			if (likely(rx_pkts_number != 0)) {
 				rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
 				uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+
+                UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
 				// Free any packets which can't be pushed to the ring. The ring is probably full.
 				handleUnpushed(bufs, pushed_pkts_number, rx_pkts_number);
 			}
@@ -396,6 +493,9 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 			if (likely(pkts_for_tx_number != 0)) {
 				uint16_t tx_pkts_number = rte_kni_tx_burst(kni[port], bufs, pkts_for_tx_number);
+
+                UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
+
 				// Free any unsent packets
 				handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 			}
@@ -407,7 +507,7 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
@@ -429,6 +529,9 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 			if (switchQueue) {
 				queue = !queue;
 			}
+
+            UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
+
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
 #ifdef DEBUG
@@ -441,7 +544,7 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 	*flag = wasStopped;
 }
 
-void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int coreId) {
+void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int coreId, RXTXStats *stats) {
 	setAffinity(coreId);
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
@@ -454,6 +557,8 @@ void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int co
 
 			if (unlikely(pkts_for_free_number == 0))
 				continue;
+
+            UPDATE_COUNTERS(pkts_for_free_number, calculateSize(bufs, pkts_for_free_number), 0);
 
 			// Free all these packets
 			for (buf = 0; buf < pkts_for_free_number; buf++) {
@@ -519,7 +624,7 @@ void statistics(float N) {
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
-int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
+int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool noPacketHeadChange)
 {
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
@@ -532,13 +637,27 @@ int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI)
 	mbufStructSize = sizeof(struct rte_mbuf);
 	headroomSize = RTE_PKTMBUF_HEADROOM;
 	defaultStart = mbufStructSize + headroomSize;
+	L2CanBeChanged = !noPacketHeadChange;
 	if (needKNI != 0) {
 		rte_kni_init(MAX_KNI);
 	}
 	return 0;
 }
 
-int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count);
+int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
+	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
+	if (ret == 0) {
+		for (int i = 0; i < count; i++) {
+			if (L2CanBeChanged == true) {
+				mbufInitL2(bufs[i]);
+			}
+#ifdef REASSEMBLY
+			mbufInitNextChain(bufs[i]);
+#endif
+		}
+	}
+	return ret;
+}
 
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
@@ -555,11 +674,13 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	// Put mbuf addresses in all packets. It is CMbuf GO field.
 	struct rte_mbuf **temp;
 	temp = malloc(sizeof(struct rte_mbuf *) * num_mbufs);
-	allocateMbufs(mbuf_pool, temp, num_mbufs);
+	rte_pktmbuf_alloc_bulk(mbuf_pool, temp, num_mbufs);
 	// This initializes CMbuf field of packet structure stored in mbuf
 	// All CMbuf pointers is set to point to starting of corresponding mbufs
 	for (int i = 0; i < num_mbufs; i++) {
-		*(char**)((char*)(temp[i]) + mbufStructSize + 32) = (char*)(temp[i]);
+		mbufInitL2(temp[i])
+		mbufInitCMbuf(temp[i])
+		mbufInitNextChain(temp[i])
 	}
 	for (int i = 0; i < num_mbufs; i++) {
 		rte_pktmbuf_free(temp[i]);
@@ -567,16 +688,6 @@ struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size)
 	free(temp);
 
 	return mbuf_pool;
-}
-
-int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned count) {
-	int ret = rte_pktmbuf_alloc_bulk(mempool, bufs, count);
-	if (ret == 0) {
-		for (int i = 0; i < count; i++) {
-			mbufInit(bufs[i]);
-		}
-	}
-	return ret;
 }
 
 int getMempoolSpace(struct rte_mempool * m) {
@@ -673,4 +784,93 @@ bool check_hwtxchecksum_capability(uint16_t port_id) {
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port_id, &dev_info);
 	return (dev_info.tx_offload_capa & flags) == flags;
+}
+
+int initDevice(char *name) {
+	int s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	if (s < 1) {
+		fprintf(stderr, "ERROR: Can't create socket for OS send/receive\n");
+		return -1;
+	}
+
+	struct ifreq ifr;
+	memset (&ifr, 0, sizeof(ifr));
+	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", name);
+	if (ioctl(s, SIOCGIFINDEX, &ifr) == -1) {
+		fprintf(stderr, "ERROR: Can't find device %s\n", name);
+		return -1;
+	}
+
+	struct sockaddr_ll myaddr;
+	memset(&myaddr, 0, sizeof(myaddr));
+	myaddr.sll_family = AF_PACKET;
+	myaddr.sll_protocol = htons(ETH_P_ALL);
+	myaddr.sll_ifindex = ifr.ifr_ifindex;
+	if (bind(s, (struct sockaddr*)&myaddr, sizeof(myaddr)) < 0) {
+		fprintf(stderr, "ERROR: Can't bind socket to %s\n", name);
+		return -1;
+	}
+
+	ioctl(s, SIOCGIFFLAGS, &ifr);
+	ifr.ifr_flags |= IFF_PROMISC;
+	if (ioctl(s, SIOCSIFFLAGS, &ifr) != 0) {
+		fprintf(stderr, "ERROR: Can't set up promiscuos mode on %s\n", name);
+		return -1;
+	}
+
+	return s;
+}
+
+void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+	const int recvOSBusrst = BURST_SIZE;
+	struct rte_mbuf *bufs[recvOSBusrst];
+	REASSEMBLY_INIT
+	while (*flag == process) {
+		// Get packets from OS
+		allocateMbufs(m, bufs, recvOSBusrst);
+		//int step = 0;
+		for (int i = 0; i < recvOSBusrst; i++) {
+			int bytes_received = recv(socket, (char *)(bufs[i]) + defaultStart, ETH_FRAME_LEN, 0);
+			if (unlikely(bytes_received == 0)) {
+				//step++;
+				i--;
+				continue;
+			}
+			rte_pktmbuf_append(bufs[i], bytes_received);
+		}
+		uint16_t rx_pkts_number = handleReceived(bufs, recvOSBusrst, tbl, pdeath_row);
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+
+        UPDATE_COUNTERS(pushed_pkts_number, calculateSize(bufs, pushed_pkts_number), rx_pkts_number - pushed_pkts_number);
+
+        // Free any packets which can't be pushed to the ring. The ring is probably full.
+        handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+	}
+	*flag = wasStopped;
+}
+
+void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t buf;
+	uint16_t tx_pkts_number;
+	while (*flag == process) {
+		for (int q = 0; q < inIndexNumber; q++) {
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+
+			for (int i = 0; i < pkts_for_tx_number; i++) {
+				send(socket, (char *)(bufs[i]) + defaultStart, rte_pktmbuf_pkt_len(bufs[i]), 0);
+			}
+
+            UPDATE_COUNTERS(pkts_for_tx_number, calculateSize(bufs, pkts_for_tx_number), 0);
+
+			// Free all packets
+			handleUnpushed(bufs, 0, pkts_for_tx_number);
+		}
+	}
+	free(in_rings);
+	*flag = wasStopped;
 }

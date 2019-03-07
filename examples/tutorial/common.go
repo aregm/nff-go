@@ -7,16 +7,16 @@ import (
 	"net"
 	"os"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 var config map[string][]string
-var dstMac0 [common.EtherAddrLen]uint8
-var srcMac0 [common.EtherAddrLen]uint8
-var dstMac1 [common.EtherAddrLen]uint8
-var srcMac1 [common.EtherAddrLen]uint8
+var dstMac0 [types.EtherAddrLen]uint8
+var srcMac0 [types.EtherAddrLen]uint8
+var dstMac1 [types.EtherAddrLen]uint8
+var srcMac1 [types.EtherAddrLen]uint8
 var modifyPacket = []func(pkt *packet.Packet, ctx flow.UserContext){modifyPacket0, modifyPacket1}
 var direct = "direct"
 
@@ -38,7 +38,7 @@ func readConfig(fileName string) error {
 	return nil
 }
 
-func printMAC(prompt string, mac [common.EtherAddrLen]uint8) {
+func printMAC(prompt string, mac [types.EtherAddrLen]uint8) {
 	log.Printf("%s: %02x:%02x:%02x:%02x:%02x:%02x\n", prompt, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 }
 

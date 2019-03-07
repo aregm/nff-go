@@ -5,14 +5,13 @@
 package packet
 
 import (
-	"encoding/binary"
 	"encoding/hex"
 	"net"
 	"reflect"
 	"testing"
 	"unsafe"
 
-	. "github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/types"
 )
 
 func init() {
@@ -24,34 +23,34 @@ var (
 	gtLineIPv4TCPVLAN = "00400540ef240060089fb1f3810000200800450000288a1b00004006000083972015839720811770048a0000000100000d9550107c7000000000"
 
 	MacHeaderVLAN = EtherHdr{
-		DAddr:     [6]uint8{0x00, 0x40, 0x05, 0x40, 0xef, 0x24},
-		SAddr:     [6]uint8{0x00, 0x60, 0x08, 0x9f, 0xb1, 0xf3},
-		EtherType: SwapBytesUint16(VLANNumber),
+		DAddr:     types.MACAddress{0x00, 0x40, 0x05, 0x40, 0xef, 0x24},
+		SAddr:     types.MACAddress{0x00, 0x60, 0x08, 0x9f, 0xb1, 0xf3},
+		EtherType: SwapBytesUint16(types.VLANNumber),
 	}
 
 	VlanTag = VLANHdr{
 		TCI:       SwapBytesUint16(32),
-		EtherType: SwapBytesUint16(IPV4Number),
+		EtherType: SwapBytesUint16(types.IPV4Number),
 	}
 
 	IPv4HeaderVLAN = IPv4Hdr{
 		VersionIhl:  0x45,
 		PacketID:    SwapBytesUint16(35355),
 		TimeToLive:  uint8(64),
-		NextProtoID: TCPNumber,
+		NextProtoID: types.TCPNumber,
 		HdrChecksum: 0,
-		SrcAddr:     binary.LittleEndian.Uint32([]byte(net.ParseIP("131.151.32.21").To4())),
-		DstAddr:     binary.LittleEndian.Uint32([]byte(net.ParseIP("131.151.32.129").To4())),
-		TotalLength: SwapBytesUint16(uint16(IPv4MinLen + TCPMinLen)),
+		SrcAddr:     types.SliceToIPv4([]byte(net.ParseIP("131.151.32.21").To4())),
+		DstAddr:     types.SliceToIPv4([]byte(net.ParseIP("131.151.32.129").To4())),
+		TotalLength: SwapBytesUint16(uint16(types.IPv4MinLen + types.TCPMinLen)),
 	}
 
 	IPv6HeaderVLAN = IPv6Hdr{
 		VtcFlow:   SwapBytesUint32(0x60 << 24),
 		HopLimits: 255,
-		Proto:     NoNextHeader,
-		SrcAddr: [16]byte{0x26, 0x07, 0xf2, 0xc0, 0xf0, 0x0f,
+		Proto:     types.NoNextHeader,
+		SrcAddr: types.IPv6Address{0x26, 0x07, 0xf2, 0xc0, 0xf0, 0x0f,
 			0xb0, 0x01, 0x00, 0x00, 0x00, 0x00, 0xfa, 0xce, 0xb0, 0x0c},
-		DstAddr: [16]byte{0x26, 0x07, 0xf2, 0xc0, 0xf0, 0x0f,
+		DstAddr: types.IPv6Address{0x26, 0x07, 0xf2, 0xc0, 0xf0, 0x0f,
 			0xb0, 0x01, 0x00, 0x00, 0x00, 0x00, 0xfa, 0xce, 0xb0, 0x0c},
 	}
 
@@ -60,7 +59,7 @@ var (
 		DstPort:  SwapBytesUint16(1162),
 		SentSeq:  SwapBytesUint32(1),
 		RecvAck:  SwapBytesUint32(3477),
-		TCPFlags: TCPFlagAck,
+		TCPFlags: types.TCPFlagAck,
 		RxWin:    SwapBytesUint16(31856),
 		Cksum:    0,
 		DataOff:  0x50,
@@ -68,14 +67,14 @@ var (
 
 	ARPHeaderVLAN = ARPHdr{
 		HType:     SwapBytesUint16(1),
-		PType:     SwapBytesUint16(IPV4Number),
-		HLen:      EtherAddrLen,
-		PLen:      IPv4AddrLen,
+		PType:     SwapBytesUint16(types.IPV4Number),
+		HLen:      types.EtherAddrLen,
+		PLen:      types.IPv4AddrLen,
 		Operation: SwapBytesUint16(ARPRequest),
 		SHA:       MacHeaderVLAN.SAddr,
-		SPA:       IPv4ToBytes(IPv4HeaderVLAN.SrcAddr),
-		THA:       [EtherAddrLen]uint8{},
-		TPA:       IPv4ToBytes(IPv4HeaderVLAN.DstAddr),
+		SPA:       types.IPv4ToBytes(IPv4HeaderVLAN.SrcAddr),
+		THA:       types.MACAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+		TPA:       types.IPv4ToBytes(IPv4HeaderVLAN.DstAddr),
 	}
 )
 
@@ -119,7 +118,7 @@ func TestAddVLANTag(t *testing.T) {
 	gtPkt := getPacket()
 	GeneratePacketFromByte(gtPkt, gtBuf)
 
-	size := EtherLen + VLANLen + IPv4MinLen + TCPMinLen
+	size := types.EtherLen + types.VLANLen + types.IPv4MinLen + types.TCPMinLen
 	buf := (*[1 << 30]byte)(unsafe.Pointer(pkt.StartAtOffset(0)))[:size]
 	if !reflect.DeepEqual(buf, gtBuf) {
 		t.Errorf("Incorrect result:\ngot:  %x, \nwant: %x\n\n", buf, gtBuf)
@@ -165,24 +164,24 @@ func TestGetEtherType(t *testing.T) {
 	InitEmptyIPv4Packet(pkt, 0)
 
 	etherType := pkt.GetEtherType()
-	if etherType != IPV4Number {
+	if etherType != types.IPV4Number {
 		t.Errorf("Incorrect GetEtherType result:\ngot:  %x, \nwant: %x\n\n",
-			etherType, IPV4Number)
+			etherType, types.IPV4Number)
 		t.FailNow()
 	}
 
 	pkt.AddVLANTag(12)
 
 	etherType = pkt.GetEtherType()
-	if etherType != IPV4Number {
+	if etherType != types.IPV4Number {
 		t.Errorf("Incorrect GetEtherType result after vlan add:\ngot:  %x, \nwant: %x\n\n",
-			etherType, IPV4Number)
+			etherType, types.IPV4Number)
 		t.FailNow()
 	}
 	etherType = SwapBytesUint16(pkt.Ether.EtherType)
-	if etherType != VLANNumber {
+	if etherType != types.VLANNumber {
 		t.Errorf("Incorrect pkt.Ether.EtherType after vlan add:\ngot:  %x, \nwant: %x\n\n",
-			etherType, VLANNumber)
+			etherType, types.VLANNumber)
 		t.FailNow()
 	}
 }

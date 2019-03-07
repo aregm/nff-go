@@ -7,10 +7,10 @@ import (
 	"hash/fnv"
 	"sync/atomic"
 
-	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/examples/dpi/pattern"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 type localCounters struct {
@@ -83,7 +83,7 @@ func splitBy5Tuple(pkt *packet.Packet, context flow.UserContext) uint {
 		return pattern.TotalNumFlows - 1
 	}
 	if ip4 != nil {
-		if ip4.NextProtoID != common.TCPNumber && ip4.NextProtoID != common.UDPNumber {
+		if ip4.NextProtoID != types.TCPNumber && ip4.NextProtoID != types.UDPNumber {
 			return pattern.TotalNumFlows - 1
 		}
 		hash.Write([]byte{ip4.NextProtoID})
@@ -93,7 +93,7 @@ func splitBy5Tuple(pkt *packet.Packet, context flow.UserContext) uint {
 		flow.CheckFatal(binary.Write(buf, binary.LittleEndian, ip4.DstAddr))
 		hash.Write(buf.Bytes())
 	} else if ip6 != nil {
-		if ip6.Proto != common.TCPNumber && ip6.Proto != common.UDPNumber {
+		if ip6.Proto != types.TCPNumber && ip6.Proto != types.UDPNumber {
 			return pattern.TotalNumFlows - 1
 		}
 		flow.CheckFatal(binary.Write(hash, binary.BigEndian, ip6.Proto))
