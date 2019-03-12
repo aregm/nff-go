@@ -77,8 +77,8 @@ type Config struct {
 	EnableFlowDebug bool
 	S1uPortIdx      uint16
 	SgiPortIdx      uint16
-	S1uIP           uint32
-	SgiIP           uint32
+	S1uIP           types.IPv4Address
+	SgiIP           types.IPv4Address
 	S1uDeviceName   string
 	SgiDeviceName   string
 	Memory          string
@@ -149,8 +149,8 @@ func initConfig() {
 
 	dpConfig.S1uPortIdx = uint16(*s1uPort)
 	dpConfig.SgiPortIdx = uint16(*sgiPort)
-	dpConfig.S1uIP = uint32(types.StringToIPv4(*s1uIP))
-	dpConfig.SgiIP = uint32(types.StringToIPv4(*sgiIP))
+	dpConfig.S1uIP = types.StringToIPv4(*s1uIP)
+	dpConfig.SgiIP = types.StringToIPv4(*sgiIP)
 	fmt.Printf("[INFO] S1uPortIdx = %v , SgiPortIdx = %v  \n", dpConfig.S1uPortIdx, dpConfig.SgiPortIdx)
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP, dpConfig.SgiIP)
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
@@ -574,7 +574,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 := current.GetIPv4()
-	if ipv4 == nil || uint32(ipv4.DstAddr) != dpConfig.S1uIP {
+	if ipv4 == nil || ipv4.DstAddr != dpConfig.S1uIP {
 		// reject with wrong dest ip
 		common.LogError(common.Info, " [UL] Not a ipv4 pkt or reject dest ip doesn't match", ipv4)
 		if ipv4 != nil {
