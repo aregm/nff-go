@@ -51,6 +51,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
+	"sync/atomic"
+	"time"
+
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/examples/ngic/darp"
 	"github.com/intel-go/nff-go/examples/ngic/nbserver"
@@ -59,10 +64,7 @@ import (
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/rules"
-	"log"
-	"os"
-	"sync/atomic"
-	"time"
+	"github.com/intel-go/nff-go/types"
 )
 
 //
@@ -94,9 +96,9 @@ var (
 	dpConfig = Config{}
 
 	//sgiMac ...
-	sgiMac [common.EtherAddrLen]uint8
+	sgiMac types.MACAddress
 	//s1uMac ...
-	s1uMac [common.EtherAddrLen]uint8
+	s1uMac types.MACAddress
 
 	//sdfUlL3Rules ...
 	sdfUlL3Rules *packet.L3Rules
@@ -147,8 +149,8 @@ func initConfig() {
 
 	dpConfig.S1uPortIdx = uint16(*s1uPort)
 	dpConfig.SgiPortIdx = uint16(*sgiPort)
-	dpConfig.S1uIP = packet.StringToIPv4(*s1uIP)
-	dpConfig.SgiIP = packet.StringToIPv4(*sgiIP)
+	dpConfig.S1uIP = uint32(types.StringToIPv4(*s1uIP))
+	dpConfig.SgiIP = uint32(types.StringToIPv4(*sgiIP))
 	fmt.Printf("[INFO] S1uPortIdx = %v , SgiPortIdx = %v  \n", dpConfig.S1uPortIdx, dpConfig.SgiPortIdx)
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP, dpConfig.SgiIP)
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
@@ -233,8 +235,8 @@ func main() {
 	s1uMac = flow.GetPortMACAddress(dpConfig.S1uPortIdx)
 	sgiMac = flow.GetPortMACAddress(dpConfig.SgiPortIdx)
 
-	fmt.Println("[INFO]  S1U port MAC : ",packet.MACToString(s1uMac))
-	fmt.Println("[INFO] SGI port MAC : ", packet.MACToString(sgiMac))
+	fmt.Println("[INFO]  S1U port MAC : ", s1uMac.String())
+	fmt.Println("[INFO] SGI port MAC : ", sgiMac.String())
 
 	var err1 error
 	sdfUlL3Rules, err1 = packet.GetL3ACLFromORIG(rules.SdfUlACLFilePath)
@@ -329,13 +331,13 @@ func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 		return true
 	} else if ipv4 != nil {
 
-		if ipv4.NextProtoID == common.ICMPNumber {
+		if ipv4.NextProtoID == types.ICMPNumber {
 			common.LogInfo(common.Info, "PING pkt found ")
 			atomic.AddUint64(&KniDlTxCounter, 1)
 			return true
 		}
 	} else if ipv6 != nil {
-		if ipv6.Proto == common.ICMPNumber {
+		if ipv6.Proto == types.ICMPNumber {
 			atomic.AddUint64(&KniDlTxCounter, 1)
 			return true
 		}
@@ -377,7 +379,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	// ARP lookup for S1U_GW_IP
 	pkt.Ether.SAddr = s1uMac
 	if EnableStaticARP == "true" {
-		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
+		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
 			atomic.AddUint64(&darp.DlTxCounter, 1)
@@ -386,7 +388,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		}
 	} else {
 		common.LogInfo(common.Info, "[DL] Lookup ARP entry ", ipv4.DstAddr)
-		dmac, sendArp, err := darp.LookupDlArpTable(ipv4.DstAddr, pkt) //s1uGwMac
+		dmac, sendArp, err := darp.LookupDlArpTable(uint32(ipv4.DstAddr), pkt) //s1uGwMac
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
 			atomic.AddUint64(&darp.DlTxCounter, 1)
@@ -395,7 +397,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 				common.LogInfo(common.Info, "[DL] Sending ARP request ", ipv4.DstAddr)
 				clonePkt, err := packet.NewPacket()
 				if err == nil {
-					packet.InitARPRequestPacket(clonePkt, s1uMac, dpConfig.S1uIP, ipv4.DstAddr)
+					packet.InitARPRequestPacket(clonePkt, s1uMac, types.IPv4Address(dpConfig.S1uIP), ipv4.DstAddr)
 					clonePkt.SendPacket(dpConfig.S1uPortIdx)
 					return false
 				}
@@ -420,7 +422,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	}
 	atomic.AddUint64(&dlRxCounter, 1)
 
-	session, ok := nbserver.DlMap.Load(pktIpv4.DstAddr)
+	session, ok := nbserver.DlMap.Load(uint32(pktIpv4.DstAddr))
 	if ok == false {
 		//		common.LogError(common.Info, "[DL] INVALID PKT REJECT : TEID not found for UE_IP ", pktIpv4.DstAddr)
 		common.LogError(common.Info, "[DL] INVALID PKT REJECT : TEID not found for UE_IP ", pktIpv4.DstAddr)
@@ -447,11 +449,11 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	ipv4.FragmentOffset = 0
 	ipv4.TimeToLive = 64
 
-	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - common.EtherLen))
-	ipv4.NextProtoID = common.UDPNumber
+	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - types.EtherLen))
+	ipv4.NextProtoID = types.UDPNumber
 
-	ipv4.SrcAddr = dpConfig.S1uIP
-	ipv4.DstAddr = session.DlS1Info.EnbIP
+	ipv4.SrcAddr = types.IPv4Address(dpConfig.S1uIP)
+	ipv4.DstAddr = types.IPv4Address(session.DlS1Info.EnbIP)
 	ipv4.HdrChecksum = packet.CalculateIPv4Checksum(ipv4)
 
 	current.ParseL4ForIPv4()
@@ -460,7 +462,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	// construct udphdr
 	udp.SrcPort = packet.SwapUDPPortGTPU
 	udp.DstPort = packet.SwapUDPPortGTPU
-	udp.DgramLen = uint16(length - common.EtherLen - common.IPv4MinLen)
+	udp.DgramLen = uint16(length - types.EtherLen - types.IPv4MinLen)
 	udp.DgramCksum = 0
 
 	if updateDlNextHopInfo(current, context, ipv4) == false {
@@ -485,13 +487,13 @@ func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 		return true
 	} else if ipv4 != nil {
 
-		if ipv4.NextProtoID == common.ICMPNumber {
+		if ipv4.NextProtoID == types.ICMPNumber {
 			common.LogInfo(common.Info, "PING pkt found ")
 			atomic.AddUint64(&kniUlTxCounter, 1)
 			return true
 		}
 	} else if ipv6 != nil {
-		if ipv6.Proto == common.ICMPNumber {
+		if ipv6.Proto == types.ICMPNumber {
 			atomic.AddUint64(&kniUlTxCounter, 1)
 			return true
 		}
@@ -533,7 +535,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 
 	if EnableStaticARP == "true" {
 		//Lookup arp table
-		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
+		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
 			atomic.AddUint64(&darp.UlTxCounter, 1)
@@ -543,7 +545,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	} else {
 		common.LogInfo(common.Info, "[UL] Lookup ARP entry ", ipv4.DstAddr)
 		//Lookup arp table
-		dmac, sendArp, err := darp.LookupUlArpTable(ipv4.DstAddr, pkt) //sgiGwMac
+		dmac, sendArp, err := darp.LookupUlArpTable(uint32(ipv4.DstAddr), pkt) //sgiGwMac
 
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
@@ -554,7 +556,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 				common.LogInfo(common.Info, "[UL] Sending ARP request ", ipv4.DstAddr)
 				clonePkt, err := packet.NewPacket()
 				if err == nil {
-					packet.InitARPRequestPacket(clonePkt, sgiMac, dpConfig.SgiIP, ipv4.DstAddr)
+					packet.InitARPRequestPacket(clonePkt, sgiMac, types.IPv4Address(dpConfig.SgiIP), ipv4.DstAddr)
 					clonePkt.SendPacket(dpConfig.SgiPortIdx)
 					return false
 				}
@@ -572,7 +574,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 := current.GetIPv4()
-	if ipv4 == nil || ipv4.DstAddr != dpConfig.S1uIP {
+	if ipv4 == nil || uint32(ipv4.DstAddr) != dpConfig.S1uIP {
 		// reject with wrong dest ip
 		common.LogError(common.Info, " [UL] Not a ipv4 pkt or reject dest ip doesn't match", ipv4)
 		if ipv4 != nil {

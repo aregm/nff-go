@@ -12,9 +12,10 @@ package nbserver
 import "C"
 import (
 	"fmt"
-	"github.com/intel-go/nff-go/packet"
 	"os"
 	"unsafe"
+
+	"github.com/intel-go/nff-go/types"
 )
 
 //Messages type S11 constants
@@ -90,7 +91,7 @@ func GetUeIP(sessInfo *CSessionInfo) uint32 {
 	ueIP := sessInfo.UeAddr.UIp[:]
 	var tmp [4]byte
 	copy(tmp[:], ueIP[:4])
-	return packet.ArrayToIPv4(tmp)
+	return uint32(types.ArrayToIPv4(tmp))
 }
 
 //GetSessionObj parse and extract session object
@@ -120,10 +121,10 @@ func GetUlInfo(sessInfo *CSessionInfo) *UlS1Info {
 	ueIP := sessInfo.UlS1Info.EnbAddr.UIp[:]
 	var tmp [4]byte
 	copy(tmp[:], ueIP[:4])
-	ulS1Info.EnbIP = packet.ArrayToIPv4(tmp)
+	ulS1Info.EnbIP = uint32(types.ArrayToIPv4(tmp))
 	ueIP = sessInfo.UlS1Info.SgwAddr.UIp[:]
 	copy(tmp[:], ueIP[:4])
-	ulS1Info.SgwIP = packet.ArrayToIPv4(tmp)
+	ulS1Info.SgwIP = uint32(types.ArrayToIPv4(tmp))
 
 	return &ulS1Info
 }
@@ -137,10 +138,10 @@ func GetDlInfo(sessInfo *CSessionInfo) *DlS1Info {
 	uIP := sessInfo.DlS1Info.EnbAddr.UIp[:]
 	var ueIP [4]byte
 	copy(ueIP[:], uIP[:4])
-	dlS1Info.EnbIP = SwapBytesUint32(packet.ArrayToIPv4(ueIP))
+	dlS1Info.EnbIP = SwapBytesUint32(uint32(types.ArrayToIPv4(ueIP)))
 	uIP = sessInfo.DlS1Info.SgwAddr.UIp[:]
 	copy(ueIP[:], uIP[:4])
-	dlS1Info.SgwIP = packet.ArrayToIPv4(ueIP)
+	dlS1Info.SgwIP = uint32(types.ArrayToIPv4(ueIP))
 
 	return &dlS1Info
 }

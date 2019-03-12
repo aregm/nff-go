@@ -5,15 +5,19 @@
 package sarp
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/flow"
-	"github.com/intel-go/nff-go/packet"
-	"gopkg.in/ini.v1"
 	"net"
 	"os"
 	"strings"
+
+	"gopkg.in/ini.v1"
+
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 //lables
@@ -61,8 +65,8 @@ func AddArpData(ipRange string, value string) {
 	firstIP := net.ParseIP(strings.Split(ipRange, " ")[0])
 	lastIP := net.ParseIP(strings.Split(ipRange, " ")[1])
 
-	lowIP := common.Ip2int(firstIP)
-	highIP := common.Ip2int(lastIP)
+	lowIP := Ip2int(firstIP)
+	highIP := Ip2int(lastIP)
 
 	if lowIP <= highIP {
 
@@ -73,12 +77,12 @@ func AddArpData(ipRange string, value string) {
 		} //
 		for i := lowIP; i <= highIP; i++ {
 			data := ARPEntry{
-				IP:     common.Int2ip(i),
+				IP:     Int2ip(i),
 				STATUS: "COMPLETED",
 				MAC:    hw,
 			} //
-			common.LogInfo(common.Info, "Entry : ", common.Int2ip(i), packet.StringToIPv4(data.IP.String()), packet.StringToIPv4(strings.Split(ipRange, " ")[0]))
-			addStaticArpEntry(packet.StringToIPv4(common.Int2ip(i).String()), data)
+			common.LogInfo(common.Info, "Entry : ", Int2ip(i), types.StringToIPv4(data.IP.String()), types.StringToIPv4(strings.Split(ipRange, " ")[0]))
+			addStaticArpEntry(uint32(types.StringToIPv4(Int2ip(i).String())), data)
 		} //
 	}
 }
@@ -92,7 +96,7 @@ func addStaticArpEntry(ip uint32, data ARPEntry) {
 //AddArpEntry ... Add arp entry to ARP table and queue the pkt
 func AddArpEntry(ip uint32, pkt *packet.Packet) {
 	arpEntry := ARPEntry{
-		IP:     common.Int2ip(ip),
+		IP:     Int2ip(ip),
 		STATUS: "INCOMPLETE",
 	}
 	mapStaticArp[ip] = arpEntry
@@ -114,4 +118,19 @@ func LookArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, error) {
 	AddArpEntry(ip, pkt)
 	common.LogInfo(common.Info, "ARP is not resolved for IP ", ip)
 	return entry.MAC, errors.New("ARP is not resolved for IP ")
+}
+
+// Ip2int convert IPv4 address to int
+func Ip2int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return binary.BigEndian.Uint32(ip[12:16])
+	}
+	return binary.BigEndian.Uint32(ip)
+}
+
+// Int2ip converts int ip to net.IP.
+func Int2ip(nn uint32) net.IP {
+	ip := make(net.IP, 4)
+	binary.BigEndian.PutUint32(ip, nn)
+	return ip
 }

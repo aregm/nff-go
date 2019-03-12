@@ -6,6 +6,7 @@ package common
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
@@ -18,13 +19,15 @@ const (
 	No LogType = 1 << iota
 	// Initialization - output during system initialization
 	Initialization = 2
+	// Info - output during normal execution
+	Info = 4
 	// Debug - output during execution one time per time period (scheduler ticks)
-	Debug = 4
+	Debug = 8
 	// Verbose - output during execution as soon as something happens. Can influence performance
-	Verbose = 8
+	Verbose = 16
 )
 
-var currentLogType = No | Initialization | Debug
+var currentLogType = No | Initialization | Info | Debug
 
 // LogFatal internal, used in all packages
 func LogFatal(logType LogType, v ...interface{}) {
@@ -93,6 +96,12 @@ func LogTitle(logType LogType, v ...interface{}) {
 func SetLogType(logType LogType) {
 	log.SetFlags(0)
 	currentLogType = logType
+}
+
+func SetLogger(out io.Writer, prefix string, flags int) {
+	log.SetFlags(flags)
+	log.SetPrefix(prefix)
+	log.SetOutput(out)
 }
 
 // GetDPDKLogLevel internal, used in flow package

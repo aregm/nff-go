@@ -9,15 +9,18 @@
 package simucp
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
+	"strconv"
+	"time"
+
+	"gopkg.in/ini.v1"
+
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/examples/ngic/nbserver"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
-	"gopkg.in/ini.v1"
-	"net"
-	"strconv"
-	"time"
 )
 
 var simuCPConfigFilePath = "config/simu_cp.cfg"
@@ -158,7 +161,7 @@ func processCreateModifySession(config SimuConfig) {
 
 			session := new(nbserver.Session)
 
-			session.UeIP = common.Ip2int(startUeIP) + uint32(count)
+			session.UeIP = Ip2int(startUeIP) + uint32(count)
 
 			/*generate teid for each create session */
 			generateTeid(config.startS1uTEID, &s1uTeid)
@@ -167,16 +170,16 @@ func processCreateModifySession(config SimuConfig) {
 
 			uls1Info := new(nbserver.UlS1Info)
 			uls1Info.SgwTeid = s1uTeid
-			uls1Info.SgwIP = common.Ip2int(net.ParseIP(config.s1uSgwIP))
+			uls1Info.SgwIP = Ip2int(net.ParseIP(config.s1uSgwIP))
 
 			session.UlS1Info = uls1Info
 
 			nbserver.CreateSession(session)
 
 			dls1Info := new(nbserver.DlS1Info)
-			dls1Info.SgwIP = common.Ip2int(net.ParseIP(config.s1uSgwIP))
+			dls1Info.SgwIP = Ip2int(net.ParseIP(config.s1uSgwIP))
 			dls1Info.EnbTeid = enbTeid
-			dls1Info.EnbIP = packet.SwapBytesUint32(common.Ip2int(net.ParseIP(config.eNBIPStart)) + enbIPIdx)
+			dls1Info.EnbIP = packet.SwapBytesUint32(Ip2int(net.ParseIP(config.eNBIPStart)) + enbIPIdx)
 
 			session.DlS1Info = dls1Info
 
@@ -192,4 +195,12 @@ func processCreateModifySession(config SimuConfig) {
 			break
 		}
 	}
+}
+
+// Ip2int convert IPv4 address to int
+func Ip2int(ip net.IP) uint32 {
+	if len(ip) == 16 {
+		return binary.BigEndian.Uint32(ip[12:16])
+	}
+	return binary.BigEndian.Uint32(ip)
 }
