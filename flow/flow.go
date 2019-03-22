@@ -522,6 +522,13 @@ type Config struct {
 	//
 	// If no string is specified, no HTTP server is spawned.
 	StatsHTTPAddress *net.TCPAddr
+	// Enables possibility of IP reassembly via chaining packets
+	ChainedReassembly bool
+	// Enables possibility of handling jumbo frames via chaining packets
+	ChainedJumbo bool
+	// Enables possibility of handling jumbo frames via making huge packets
+	// Will require big amount of memory
+	MemoryJumbo bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -612,13 +619,29 @@ func SystemInit(args *Config) error {
 		NoPacketHeadChange = true
 	}
 
+	needChainedReassembly := false
+	if args.ChainedReassembly == true {
+		needChainedReassembly = true
+	}
+
+	needChainedJumbo := false
+	if args.ChainedJumbo == true {
+		needChainedJumbo = true
+	}
+
+	needMemoryJumbo := false
+	if args.MemoryJumbo == true {
+		needMemoryJumbo = true
+	}
+
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI, NoPacketHeadChange); err != nil {
+	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI,
+		NoPacketHeadChange, needChainedReassembly, needChainedJumbo, needMemoryJumbo); err != nil {
 		return err
 	}
 	// Init Ports

@@ -488,6 +488,24 @@ func InitEmptyPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+// InitNextPacket creates new packet with plSize bytes,
+// packet is treated as one of segments:
+// Data pointer is set to the beginning of packet
+// new packet is attached to Next pointer of prev packet
+// Return new packet or nil if error
+// Function is not performance efficient due to use of single packet allocation
+func InitNextPacket(plSize uint, prev *Packet) *Packet {
+	packet, err := NewPacket()
+	if err != nil || low.AppendMbuf(packet.CMbuf, plSize) == false {
+		LogWarning(Debug, "InitNextPacket: Cannot allocate new packet")
+		return nil
+	}
+	packet.Data = unsafe.Pointer(packet.Ether)
+	prev.Next = packet
+	low.SetNextMbuf(packet.CMbuf, prev.CMbuf)
+	return packet
+}
+
 func fillIPv4Default(packet *Packet, plLen uint16, nextProto uint8) {
 	packet.GetIPv4NoCheck().VersionIhl = types.IPv4VersionIhl
 	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(plLen)
