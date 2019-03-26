@@ -545,8 +545,13 @@ func InitDPDKArguments(args []string) (C.int, **C.char) {
 }
 
 // InitDPDK initializes the Environment Abstraction Layer (EAL) in DPDK.
-func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int, NoPacketHeadChange bool) error {
-	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI), C.bool(NoPacketHeadChange))
+func InitDPDK(argc C.int, argv **C.char, burstSize uint, mbufNumber uint, mbufCacheSize uint, needKNI int,
+	NoPacketHeadChange bool, needChainedReassembly bool, needChainedJumbo bool, needMemoryJumbo bool) error {
+	if needChainedReassembly && needChainedJumbo || needChainedReassembly && needMemoryJumbo || needChainedJumbo && needMemoryJumbo {
+		return common.WrapWithNFError(nil, "Memory jumbo, chained jumbo or IP reassembly is unsupported together\n", common.FailToInitDPDK)
+	}
+	ret := C.eal_init(argc, argv, C.uint32_t(burstSize), C.int32_t(needKNI),
+		C.bool(NoPacketHeadChange), C.bool(needChainedReassembly), C.bool(needChainedJumbo), C.bool(needMemoryJumbo))
 	if ret < 0 {
 		return common.WrapWithNFError(nil, "Error with EAL initialization\n", common.FailToInitDPDK)
 	}
@@ -770,4 +775,8 @@ func InitDevice(device string) int {
 
 func SetCountersEnabledInApplication(enabled bool) {
 	C.counters_enabled_in_application = C.bool(true)
+}
+
+func SetNextMbuf(next *Mbuf, prev *Mbuf) {
+	prev.next = (*C.struct_rte_mbuf)(next)
 }

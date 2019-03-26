@@ -7,7 +7,7 @@ IMAGENAME = nff-go-examples
 EXECUTABLES = dump clonablePcapDumper kni copy errorHandling timer \
 		createPacket sendFixedPktsNumber gtpu pingReplay \
 		netlink gopacketParserExample devbind generate \
-		OSforwarding
+		OSforwarding jumbo
 SUBDIRS = tutorial antiddos demo fileReadWrite firewall forwarding ipsec lb
 
 .PHONY: dpi nffPktgen

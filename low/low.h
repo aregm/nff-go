@@ -43,8 +43,9 @@
 
 #define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
+#define MAX_JUMBO_PKT_LEN  9600 // from most DPDK examples. Only for MEMORY_JUMBO.
+
 // #define DEBUG
-// #define REASSEMBLY
 #define COUNTERS_ENABLED
 #define USE_INTERLOCKED_COUNTERS
 #define ANALYZE_PACKETS_SIZES
@@ -66,13 +67,6 @@
 #define mbufInitNextChain(buf) \
 *(char **)((char *)(buf) + mbufStructSize + 40) = 0;
 
-#ifdef REASSEMBLY
-#define REASSEMBLY_INIT \
-	struct rte_ip_frag_tbl* tbl = create_reassemble_table(); \
-	struct rte_ip_frag_death_row death_row; \
-	death_row.cnt = 0; /* DPDK doesn't initialize this field. It is probably a bug. */ \
-	struct rte_ip_frag_death_row* pdeath_row = &death_row;
-
 // Firstly we set "next" packet pointer (+40) to the packet from next mbuf
 // Secondly we know that followed mbufs don't contain L2 and L3 headers. We assume that they start with a data
 // so we assume that Data packet field (+16) should be equal to Ether packet field (+24)
@@ -80,11 +74,16 @@
 #define mbufSetNext(buf) \
 	*(char **)((char *)(buf) + mbufStructSize + 40) = (char *)(buf->next) + mbufStructSize; \
 	*(char **)((char *)(buf->next) + mbufStructSize + 16) = *(char **)((char *)(buf->next) + mbufStructSize + 24)
-#else
+
 #define REASSEMBLY_INIT \
 	struct rte_ip_frag_tbl* tbl = NULL; \
-	struct rte_ip_frag_death_row* pdeath_row = NULL;
-#endif
+	struct rte_ip_frag_death_row* pdeath_row = NULL; \
+	if (CHAINED_REASSEMBLY) { \
+		tbl = create_reassemble_table(); \
+		struct rte_ip_frag_death_row death_row; \
+		death_row.cnt = 0; \
+		pdeath_row = &death_row; \
+	}
 
 #ifdef COUNTERS_ENABLED
 #ifdef USE_INTERLOCKED_COUNTERS
@@ -169,6 +168,11 @@ static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]);
 static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on);
 
 uint32_t BURST_SIZE;
+bool CHAINED_REASSEMBLY;
+bool CHAINED_JUMBO;
+bool MEMORY_JUMBO;
+bool JUMBO;
+bool CHAINED;
 
 struct cPort {
 	uint16_t PortId;
@@ -283,6 +287,14 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		.rx_adv_conf.rss_conf.rss_hf = dev_info.flow_type_rss_offloads
 	};
 
+	if (JUMBO) {
+		port_conf_default.rxmode.max_rx_pkt_len = dev_info.max_rx_pktlen;
+		port_conf_default.rxmode.offloads = DEV_RX_OFFLOAD_JUMBO_FRAME;
+	}
+	if (CHAINED) {
+		port_conf_default.txmode.offloads = DEV_TX_OFFLOAD_MULTI_SEGS;
+	}
+
 	if (hwtxchecksum) {
         /* Enable everything that is supported by hardware */
         port_conf_default.txmode.offloads = dev_info.tx_offload_capa;
@@ -349,43 +361,46 @@ static inline void handleUnpushed(struct rte_mbuf *bufs[BURST_SIZE], uint16_t re
 	}
 }
 
+static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl*, struct rte_mbuf*, struct rte_ip_frag_death_row*, uint64_t);
+
 __attribute__((always_inline))
 static inline uint16_t handleReceived(struct rte_mbuf *bufs[BURST_SIZE], uint16_t rx_pkts_number, struct rte_ip_frag_tbl* tbl, struct rte_ip_frag_death_row* death_row) {
-#ifndef REASSEMBLY
 	if (L2CanBeChanged == true) {
 		for (uint16_t i = 0; i < rx_pkts_number; i++) {
 			// TODO prefetch
 			mbufInitL2(bufs[i]);
 		}
 	}
-#else
-	uint16_t temp_number = 0;
-	uint64_t cur_tsc = rte_rdtsc();
-	for (uint16_t i = 0; i < rx_pkts_number; i++) {
-	        // Prefetch decreases speed here without reassembly and increases with reassembly.
-	        // Speed of this is highly influenced by size of mempool. It seems that due to caches.
-		if (L2CanBeChanged == true) {
-			mbufInitL2(bufs[i]);
+	if (CHAINED) {
+		uint16_t temp_number = 0;
+		uint64_t cur_tsc;
+		if (CHAINED_REASSEMBLY) {
+			cur_tsc = rte_rdtsc();
 		}
-		mbufInitNextChain(bufs[i]);
-	        // TODO prefetch will give 8-10% performance in reassembly case.
-	        // However we need additional investigations about small (< 3) packet numbers.
-	        //rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3] /*PREFETCH_OFFSET*/, void *));
-	        bufs[i] = reassemble(tbl, bufs[i], death_row, cur_tsc);
-	        if (bufs[i] == NULL) {
-	                continue;
-	        }
-	        struct rte_mbuf *temp = bufs[i];
-	        while (temp->next != NULL) {
-	                mbufSetNext(temp);
-	                temp = temp->next;
-	        }
-	        bufs[temp_number] = bufs[i];
-	        temp_number++;
+		for (uint16_t i = 0; i < rx_pkts_number; i++) {
+			mbufInitNextChain(bufs[i]);
+			if (CHAINED_REASSEMBLY) {
+				// TODO prefetch will give 8-10% performance in reassembly case.
+				// However we need additional investigations about small (< 3) packet numbers.
+				//rte_prefetch0(rte_pktmbuf_mtod(bufs[i + 3] /*PREFETCH_OFFSET*/, void *));
+				bufs[i] = reassemble(tbl, bufs[i], death_row, cur_tsc);
+				if (bufs[i] == NULL) {
+					continue;
+				}
+			}
+			struct rte_mbuf *temp = bufs[i];
+			while (temp->next != NULL) {
+				mbufSetNext(temp);
+				temp = temp->next;
+			}
+			bufs[temp_number] = bufs[i];
+			temp_number++;
+		}
+		rx_pkts_number = temp_number;
+		if (CHAINED_REASSEMBLY) {
+			rte_ip_frag_free_death_row(death_row, 0 /* PREFETCH_OFFSET */);
+		}
 	}
-	rx_pkts_number = temp_number;
-	rte_ip_frag_free_death_row(death_row, 0 /* PREFETCH_OFFSET */);
-#endif
 	return rx_pkts_number;
 }
 
@@ -624,8 +639,8 @@ void statistics(float N) {
 }
 
 // Initialize the Environment Abstraction Layer (EAL) in DPDK.
-int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool noPacketHeadChange)
-{
+int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool noPacketHeadChange,
+	bool needChainedReassembly, bool needChainedJumbo, bool needMemoryJumbo) {
 	int ret = rte_eal_init(argc, argv);
 	if (ret < 0)
 		return -1;
@@ -641,6 +656,11 @@ int eal_init(int argc, char *argv[], uint32_t burstSize, int32_t needKNI, bool n
 	if (needKNI != 0) {
 		rte_kni_init(MAX_KNI);
 	}
+	CHAINED_REASSEMBLY = needChainedReassembly;
+	CHAINED_JUMBO = needChainedJumbo;
+	MEMORY_JUMBO = needMemoryJumbo;
+	JUMBO = MEMORY_JUMBO || CHAINED_JUMBO;
+	CHAINED = CHAINED_REASSEMBLY || CHAINED_JUMBO;
 	return 0;
 }
 
@@ -651,9 +671,9 @@ int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned 
 			if (L2CanBeChanged == true) {
 				mbufInitL2(bufs[i]);
 			}
-#ifdef REASSEMBLY
-			mbufInitNextChain(bufs[i]);
-#endif
+			if (CHAINED) {
+				mbufInitNextChain(bufs[i]);
+			}
 		}
 	}
 	return ret;
@@ -662,9 +682,14 @@ int allocateMbufs(struct rte_mempool *mempool, struct rte_mbuf **bufs, unsigned 
 struct rte_mempool * createMempool(uint32_t num_mbufs, uint32_t mbuf_cache_size) {
 	struct rte_mempool *mbuf_pool;
 
+	int mbufSize = RTE_MBUF_DEFAULT_BUF_SIZE;
+	if (MEMORY_JUMBO) {
+		mbufSize = MAX_JUMBO_PKT_LEN;
+	}
+
 	/* Creates a new mempool in memory to hold the mbufs. */
 	mbuf_pool = rte_pktmbuf_pool_create(mempoolName, num_mbufs,
-		mbuf_cache_size, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+		mbuf_cache_size, 0, mbufSize, rte_socket_id());
 
 	mempoolName[7]++;
 
