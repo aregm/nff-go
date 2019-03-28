@@ -4,7 +4,7 @@
 
 PATH_TO_MK = ../../mk
 IMAGENAME = steps
-EXECUTABLES = genscripts step1 step2 step3 step4 step5 step6 step7 step8 step9 step10 step11
+EXECUTABLES = genscripts step01 step02 step03 step04 step05 step06 step07 step08 step09 step10 step11
 COMMON_FILES = common.go
 
 include $(PATH_TO_MK)/leaf.mk
