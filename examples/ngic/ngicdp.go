@@ -52,6 +52,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"sync/atomic"
 	"time"
@@ -82,6 +83,7 @@ type Config struct {
 	S1uDeviceName   string
 	SgiDeviceName   string
 	Memory          string
+	NoStats         bool
 }
 
 // constants for rule file paths
@@ -131,7 +133,6 @@ var (
 
 //initConfig
 func initConfig() {
-
 	flag.BoolVar(&dpConfig.NeedKNI, "kni", false, "need kni support")
 	flag.BoolVar(&dpConfig.EnableDebugLog, "debug", false, "enable debug log")
 	flag.BoolVar(&dpConfig.EnableFlowDebug, "flow_debug", false, "enable flow  debug log")
@@ -144,6 +145,7 @@ func initConfig() {
 	flag.StringVar(&dpConfig.SgiDeviceName, "sgi_dev", "SGIDev", "kni device name for sgi")
 	flag.StringVar(&dpConfig.CPUList, "cpu_list", "", "cpu list")
 	flag.StringVar(&dpConfig.Memory, "memory", "512,4096", "memory")
+	flag.BoolVar(&dpConfig.NoStats, "nostats", false, "Disable statics HTTP server.")
 
 	flag.Parse()
 
@@ -155,7 +157,6 @@ func initConfig() {
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP, dpConfig.SgiIP)
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
 	fmt.Printf("[INFO] S1uDeviceName = %s , SgiDeviceName = %s \n", dpConfig.S1uDeviceName, dpConfig.SgiDeviceName)
-
 }
 
 // intialize dp logger
@@ -220,9 +221,17 @@ func main() {
 	dpdkArgs := []string{"-l", dpConfig.CPUList, "--socket-mem", dpConfig.Memory, "--file-prefix", "dp"}
 
 	fmt.Println("******* DP configured successfully *******")
+
+	var statsServerAddres *net.TCPAddr = nil
+	if !dpConfig.NoStats {
+		statsServerAddres = &net.TCPAddr{
+			Port: 8080,
+		}
+	}
+
 	//set the flow configuration
 	flowConfig := flow.Config{
-
+		StatsHTTPAddress: statsServerAddres,
 		NeedKNI:          dpConfig.NeedKNI,
 		CPUList:          dpConfig.CPUList,
 		LogType:          FlowLogType,
