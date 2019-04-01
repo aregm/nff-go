@@ -1,18 +1,18 @@
-//Package rules ...
-// Copyright 2018 Intel Corporation.
+// Copyright 2018-2019 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 package rules
 
 import (
 	"fmt"
-	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/flow"
 	"gopkg.in/ini.v1"
 	"net"
 	"os"
 	"sort"
 	"strconv"
+
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/flow"
 )
 
 //constants for adc filter
