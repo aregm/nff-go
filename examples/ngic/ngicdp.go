@@ -244,7 +244,7 @@ func main() {
 	s1uMac = flow.GetPortMACAddress(dpConfig.S1uPortIdx)
 	sgiMac = flow.GetPortMACAddress(dpConfig.SgiPortIdx)
 
-	fmt.Println("[INFO]  S1U port MAC : ", s1uMac.String())
+	fmt.Println("[INFO] S1U port MAC : ", s1uMac.String())
 	fmt.Println("[INFO] SGI port MAC : ", sgiMac.String())
 
 	var err1 error
@@ -640,7 +640,7 @@ func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 
 //PrintStats print ul/dl stats every second
 func PrintStats() {
-	fmt.Printf("\n\t\tUPLINK\t\t\t\t\t\t||\t\tDOWNLINK")
+	fmt.Printf("\n\t\tUPLINK\t\t\t\t\t   ||\t\tDOWNLINK")
 	count := 0
 	for {
 		if count%20 == 0 {
