@@ -115,7 +115,6 @@ func initRouteTable() {
 
 	routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 	if err == nil {
-
 		tmp := make(map[uint32]RouteEntry)
 		fmt.Println("--------------------------------------")
 		fmt.Println("Route Table")
@@ -142,7 +141,13 @@ func initRouteTable() {
 			} else {
 				tmp[DstIP] = RouteEntry{Dst: route.Dst, Gw: route.Gw}
 			}
-			fmt.Println(route.Dst, " ", route.Gw)
+			if route.Dst == nil {
+				fmt.Printf("Route dst: NULL, route gateway: %+v\n", route.Gw)
+			} else if route.Gw == nil {
+				fmt.Printf("Route dst: %+v, route gateway: NULL\n", route.Dst)
+			} else {
+				fmt.Printf("Route dst: %+v, route gateway: %+v\n", route.Dst, route.Gw)
+			}
 		} //for
 		fmt.Println("--------------------------------------")
 		mapRouteTable = tmp
