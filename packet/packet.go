@@ -887,8 +887,8 @@ func (lpm *LPM) Lookup(ip types.IPv4Address, nextHop *types.IPv4Address) bool {
 		tbl_entry = (*lpm.tbl8)[tbl8_index]
 	}
 
-	*nextHop = tbl_entry & 0x00FFFFFF
 	if tbl_entry&low.RteLpmLookupSuccess != 0 {
+		*nextHop = tbl_entry & 0x00FFFFFF
 		return true
 	}
 	return false
