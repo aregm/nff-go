@@ -259,7 +259,7 @@ int check_port_tx(uint16_t port) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, int32_t inIndex) {
+int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex) {
 	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
 
 	struct rte_eth_dev_info dev_info;
@@ -299,6 +299,11 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
         /* Enable everything that is supported by hardware */
         port_conf_default.txmode.offloads = dev_info.tx_offload_capa;
 	}
+
+    if (hwrxpacketstimestamp) {
+        /* Enable hardware timestamping */
+        port_conf_default.rxmode.offloads |= dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TIMESTAMP;
+    }
 
 	/* Configure the Ethernet device. */
 	int retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf_default);
@@ -809,6 +814,18 @@ bool check_hwtxchecksum_capability(uint16_t port_id) {
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port_id, &dev_info);
 	return (dev_info.tx_offload_capa & flags) == flags;
+}
+
+bool check_hwrxpackets_timestamp_capability(uint16_t port_id) {
+	uint64_t flags = DEV_RX_OFFLOAD_TIMESTAMP;
+	struct rte_eth_dev_info dev_info;
+
+	if (port_id >= rte_eth_dev_count())
+		return false;
+
+	memset(&dev_info, 0, sizeof(dev_info));
+	rte_eth_dev_info_get(port_id, &dev_info);
+	return (dev_info.rx_offload_capa & flags) == flags;
 }
 
 int initDevice(char *name) {

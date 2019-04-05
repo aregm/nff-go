@@ -910,3 +910,15 @@ func (lpm *LPM) Delete(ip types.IPv4Address, depth uint8) int {
 func (lpm *LPM) Free() {
 	low.FreeLPM(lpm.lpm)
 }
+
+// GetPacketOffloadFlags returns ol_flags field of packet mbuf
+func (pkt *Packet) GetPacketOffloadFlags() uint64 {
+	return low.GetPacketOffloadFlags(pkt.CMbuf)
+}
+
+// GetPacketTimestamp returns timestamp field of packet mbuf. Check
+// that flag PKT_RX_TIMESTAMP (1ULL << 17) is set in value returned by
+// GetPacketOffloadFlags.
+func (pkt *Packet) GetPacketTimestamp() uint64 {
+	return low.GetPacketTimestamp(pkt.CMbuf)
+}
