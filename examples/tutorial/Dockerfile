@@ -9,15 +9,15 @@ LABEL RUN docker run -it --privileged -v /sys/bus/pci/drivers:/sys/bus/pci/drive
 
 WORKDIR /workdir
 
-COPY step1 .
-COPY step2 .
-COPY step3 .
-COPY step4 .
-COPY step5 .
-COPY step6 .
-COPY step7 .
-COPY step8 .
-COPY step9 .
+COPY step01 .
+COPY step02 .
+COPY step03 .
+COPY step04 .
+COPY step05 .
+COPY step06 .
+COPY step07 .
+COPY step08 .
+COPY step09 .
 COPY step10 .
 COPY step11 .
 COPY rules1.conf .
