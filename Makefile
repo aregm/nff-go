@@ -5,7 +5,7 @@
 PATH_TO_MK = mk
 SUBDIRS = nff-go-base dpdk test examples
 DOC_TARGETS = flow packet
-CI_TESTING_TARGETS = packet low common
+CI_TESTING_TARGETS = packet internal/low common
 TESTING_TARGETS = $(CI_TESTING_TARGETS) test/stability
 
 all: $(SUBDIRS)
