@@ -595,7 +595,7 @@ func CheckPortRSS(port uint16) int32 {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum bool, inIndex int32) error {
+func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum, hwrxpacketstimestamp bool, inIndex int32) error {
 	var mempools **C.struct_rte_mempool
 	if willReceive {
 		m := CreateMempools("receive", inIndex)
@@ -603,8 +603,8 @@ func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum bo
 	} else {
 		mempools = nil
 	}
-	if C.port_init(C.uint16_t(port), C.bool(willReceive),
-		mempools, C._Bool(promiscuous), C._Bool(hwtxchecksum), C.int32_t(inIndex)) != 0 {
+	if C.port_init(C.uint16_t(port), C.bool(willReceive), mempools,
+		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
@@ -757,6 +757,10 @@ func CheckHWTXChecksumCapability(port uint16) bool {
 	return bool(C.check_hwtxchecksum_capability(C.uint16_t(port)))
 }
 
+func CheckHWRXPacketsTimestamp(port uint16) bool {
+	return bool(C.check_hwrxpackets_timestamp_capability(C.uint16_t(port)))
+}
+
 func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
 	m := CreateMempool("receiveOS")
 	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
@@ -779,4 +783,12 @@ func SetCountersEnabledInApplication(enabled bool) {
 
 func SetNextMbuf(next *Mbuf, prev *Mbuf) {
 	prev.next = (*C.struct_rte_mbuf)(next)
+}
+
+func GetPacketOffloadFlags(mb *Mbuf) uint64 {
+	return uint64(mb.ol_flags)
+}
+
+func GetPacketTimestamp(mb *Mbuf) uint64 {
+	return uint64(mb.timestamp)
 }

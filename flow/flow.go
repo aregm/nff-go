@@ -389,6 +389,7 @@ type HWCapability int
 
 const (
 	HWTXChecksumCapability HWCapability = iota
+	HWRXPacketsTimestamp
 )
 
 const (
@@ -397,18 +398,23 @@ const (
 	recvDone
 )
 
-// CheckHWCapability return true if hardware offloading capability
-// present in all ports. Otherwise it returns false.
-func CheckHWCapability(capa HWCapability, ports []uint16) bool {
+// CheckHWCapability returns array of booleans for every requested
+// port. An element of this array is set to true if hardware
+// offloading capability is supported on corresponding port, otherwise
+// it is set to false.
+func CheckHWCapability(capa HWCapability, ports []uint16) []bool {
+	ret := make([]bool, len(ports))
 	for p := range ports {
 		switch capa {
 		case HWTXChecksumCapability:
-			if !low.CheckHWTXChecksumCapability(ports[p]) {
-				return false
-			}
+			ret[p] = low.CheckHWTXChecksumCapability(ports[p])
+		case HWRXPacketsTimestamp:
+			ret[p] = low.CheckHWRXPacketsTimestamp(ports[p])
+		default:
+			ret[p] = false
 		}
 	}
-	return true
+	return ret
 }
 
 // SetUseHWCapability enables or disables using a hardware offloading
@@ -433,7 +439,7 @@ const reportMbits = false
 
 var sizeMultiplier uint
 var schedTime uint
-var hwtxchecksum bool
+var hwtxchecksum, hwrxpacketstimestamp bool
 var maxRecv int
 
 type port struct {
@@ -529,6 +535,9 @@ type Config struct {
 	// Enables possibility of handling jumbo frames via making huge packets
 	// Will require big amount of memory
 	MemoryJumbo bool
+	// Enables hardware assisted timestamps in packet mbufs. These
+	// timestamps can be accessed with GetPacketTimestamp function.
+	HWRXPacketsTimestamp bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -551,6 +560,7 @@ func SystemInit(args *Config) error {
 	schedulerOffRemove := args.PersistentClones
 	stopDedicatedCore := args.StopOnDedicatedCore
 	hwtxchecksum = args.HWTXChecksum
+	hwrxpacketstimestamp = args.HWRXPacketsTimestamp
 	anyway := !args.RestrictedCloning
 
 	mbufNumber := uint(8191)
@@ -693,7 +703,7 @@ func SystemInitPortsAndMemory() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				true, hwtxchecksum, createdPorts[i].InIndex); err != nil {
+				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex); err != nil {
 				return err
 			}
 		}
