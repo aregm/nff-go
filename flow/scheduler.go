@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 )
 
 const generatePauseStep = 0.1

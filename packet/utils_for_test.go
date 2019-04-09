@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 	"github.com/intel-go/nff-go/types"
 )
 

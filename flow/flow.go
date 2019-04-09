@@ -38,7 +38,7 @@ import (
 
 	"github.com/intel-go/nff-go/asm"
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/types"
 )
