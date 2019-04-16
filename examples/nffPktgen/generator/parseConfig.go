@@ -164,14 +164,32 @@ type RawBytes struct {
 	DType DataType
 }
 
-// ParseConfig parses json config and returns []*MixConfig.
-func ParseConfig(f *os.File) (config []MixConfig, err error) {
+type GeneratorConfig []MixConfig
+
+// ParseConfigFile parses json config file and returns GeneratorConfig.
+func ParseConfigFile(f *os.File) (config GeneratorConfig, err error) {
 	r := bufio.NewReader(f)
-	var in map[string]interface{}
+	var in GeneratorConfig
 	err = json.NewDecoder(r).Decode(&in)
 	if err != nil {
-		return nil, fmt.Errorf("decoding input from file returned: %v", err)
+		return nil, err
 	}
+	return in, nil
+}
+
+// UnmarshalJSON implements Unmarshaller interface for GeneratorConfig.
+func (mca *GeneratorConfig) UnmarshalJSON(data []byte) error {
+	var in map[string]interface{}
+	err := json.Unmarshal(data, &in)
+	if err != nil {
+		return err
+	}
+	*mca, err = ParseConfig(in)
+	return err
+}
+
+// ParseConfig parses json config and returns GeneratorConfig.
+func ParseConfig(in map[string]interface{}) (config GeneratorConfig, err error) {
 	for k, v := range in {
 		key := strings.ToLower(k)
 		switch {
@@ -184,7 +202,7 @@ func ParseConfig(f *os.File) (config []MixConfig, err error) {
 			pktConfig := PacketConfig{Ether: ethHdr, DType: ETHERHDR}
 			return append(config, MixConfig{Config: pktConfig, Quantity: 1}), nil
 		case mixPattern.MatchString(key):
-			return ParseMixConfig(in)
+			return ParseGeneratorConfig(in)
 		default:
 			return nil, fmt.Errorf("unexpected key: %s, expected mix[0-9]* or ether", k)
 		}
@@ -193,8 +211,7 @@ func ParseConfig(f *os.File) (config []MixConfig, err error) {
 	return nil, fmt.Errorf("expected 'ether' key , but did not get")
 }
 
-// ParseMixConfig parses json config and returns []*MixConfig.
-func ParseMixConfig(in map[string]interface{}) (config []MixConfig, err error) {
+func ParseGeneratorConfig(in map[string]interface{}) (config GeneratorConfig, err error) {
 	for k, v := range in {
 		key := strings.ToLower(k)
 		switch {
@@ -317,6 +334,16 @@ func parseData(in map[string]interface{}) (ret RawBytes, err error) {
 		}
 	}
 	return ret, fmt.Errorf("failed to parse data")
+}
+
+func (ipv4 *IPv4Config) UnmarshalJSON(data []byte) error {
+	var in map[string]interface{}
+	err := json.Unmarshal(data, &in)
+	if err != nil {
+		return err
+	}
+	*ipv4, err = parseIPv4Hdr(in)
+	return err
 }
 
 func parseIPv4Hdr(in map[string]interface{}) (IPv4Config, error) {

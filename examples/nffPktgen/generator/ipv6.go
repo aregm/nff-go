@@ -6,6 +6,7 @@ package generator
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -67,8 +68,8 @@ func generateIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv6Packet returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv6Hdr(pkt, l3)
+	FillEtherHdr(pkt, l2)
+	FillIPv6Hdr(pkt, l3)
 }
 
 func generateTCPIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
@@ -83,9 +84,9 @@ func generateTCPIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv6TCPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv6Hdr(pkt, l3)
-	fillTCPHdr(pkt, l4, rnd)
+	FillEtherHdr(pkt, l2)
+	FillIPv6Hdr(pkt, l3)
+	FillTCPHdr(pkt, l4, rnd)
 	pktTCP := (*packet.TCPHdr)(pkt.L4)
 	pktIP := (*packet.IPv6Hdr)(pkt.L3)
 	pktTCP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6TCPChecksum(pktIP, pktTCP, pkt.Data))
@@ -103,9 +104,9 @@ func generateUDPIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv6UDPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv6Hdr(pkt, l3)
-	fillUDPHdr(pkt, l4)
+	FillEtherHdr(pkt, l2)
+	FillIPv6Hdr(pkt, l3)
+	FillUDPHdr(pkt, l4)
 	pktUDP := (*packet.UDPHdr)(pkt.L4)
 	pktIP := (*packet.IPv6Hdr)(pkt.L3)
 	pktUDP.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv6UDPChecksum(pktIP, pktUDP, pkt.Data))
@@ -123,15 +124,15 @@ func generateICMPIPv6(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) 
 		panic(fmt.Sprintf("InitEmptyIPv6ICMPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv6Hdr(pkt, l3)
-	fillICMPHdr(pkt, l4, rnd)
+	FillEtherHdr(pkt, l2)
+	FillIPv6Hdr(pkt, l3)
+	FillICMPHdr(pkt, l4, rnd)
 	pktICMP := (*packet.ICMPHdr)(pkt.L4)
 	pktIP := (*packet.IPv6Hdr)(pkt.L3)
 	pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv6ICMPChecksum(pktIP, pktICMP, pkt.Data))
 }
 
-func fillIPv6Hdr(pkt *packet.Packet, l3 *IPv6Config) {
+func FillIPv6Hdr(pkt *packet.Packet, l3 *IPv6Config) {
 	pktIP := (*packet.IPv6Hdr)(pkt.L3)
 	copyAddr(pktIP.SrcAddr[:], getNextAddr(&(l3.SAddr)), types.IPv6AddrLen)
 	copyAddr(pktIP.DstAddr[:], getNextAddr(&(l3.DAddr)), types.IPv6AddrLen)
@@ -154,6 +155,16 @@ type IPv6Config struct {
 	UDP   UDPConfig
 	ICMP  ICMPConfig
 	Bytes RawBytes
+}
+
+func (ipv6 *IPv6Config) UnmarshalJSON(data []byte) error {
+	var in map[string]interface{}
+	err := json.Unmarshal(data, &in)
+	if err != nil {
+		return err
+	}
+	*ipv6, err = parseIPv6Hdr(in)
+	return err
 }
 
 func parseIPv6Hdr(in map[string]interface{}) (IPv6Config, error) {

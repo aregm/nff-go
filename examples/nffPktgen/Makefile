@@ -4,6 +4,6 @@
 
 PATH_TO_MK = ../../mk
 IMAGENAME = nff-pktgen
-SUBDIRS = testing
+SUBDIRS = testing gtp-u
 
 include $(PATH_TO_MK)/intermediate.mk
