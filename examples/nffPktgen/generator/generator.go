@@ -116,7 +116,7 @@ func generateIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
 	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
+	FillIPv4Hdr(pkt, l3)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
 }
@@ -179,7 +179,7 @@ func generateTCPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
 	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
+	FillIPv4Hdr(pkt, l3)
 	fillTCPHdr(pkt, l4, rnd)
 	pktTCP := (*packet.TCPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
@@ -200,7 +200,7 @@ func generateUDPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
 	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
+	FillIPv4Hdr(pkt, l3)
 	fillUDPHdr(pkt, l4)
 	pktUDP := (*packet.UDPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
@@ -221,7 +221,7 @@ func generateICMPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) 
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
 	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
+	FillIPv4Hdr(pkt, l3)
 	fillICMPHdr(pkt, l4, rnd)
 	pktICMP := (*packet.ICMPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
@@ -261,7 +261,7 @@ func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 	getNextSeqNumber(&l4.Seq, rnd)
 }
 
-func fillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
+func FillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.SrcAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.SAddr.Current))
 	pktIP.DstAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.DAddr.Current))

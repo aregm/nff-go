@@ -19,14 +19,21 @@ type NeighboursLookupTable struct {
 	interfaceMAC      types.MACAddress
 	ipv4InterfaceAddr types.IPv4Address
 	ipv6InterfaceAddr types.IPv6Address
+	checkv4           func(ipv4 types.IPv4Address) bool
+	checkv6           func(ipv6 types.IPv6Address) bool
 }
 
-func NewNeighbourTable(index uint16, mac types.MACAddress, ipv4 types.IPv4Address, ipv6 types.IPv6Address) *NeighboursLookupTable {
+func NewNeighbourTable(index uint16, mac types.MACAddress,
+	ipv4 types.IPv4Address, ipv6 types.IPv6Address,
+	checkv4 func(ipv4 types.IPv4Address) bool,
+	checkv6 func(ipv6 types.IPv6Address) bool) *NeighboursLookupTable {
 	return &NeighboursLookupTable{
 		portIndex:         index,
 		interfaceMAC:      mac,
 		ipv4InterfaceAddr: ipv4,
 		ipv6InterfaceAddr: ipv6,
+		checkv4:           checkv4,
+		checkv6:           checkv6,
 	}
 }
 
@@ -48,7 +55,8 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 
 	// Check that someone is asking about MAC of my IP address and HW
 	// address is blank in request
-	if types.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3]) != table.ipv4InterfaceAddr {
+	targetIP := types.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3])
+	if (table.checkv4 == nil && targetIP != table.ipv4InterfaceAddr) || (table.checkv4 != nil && table.checkv4(targetIP)) {
 		return fmt.Errorf("Warning! Got an ARP packet with target IPv4 address %s different from IPv4 address on interface. Should be %s. ARP request ignored.", types.IPv4ArrayToString(arp.TPA), table.ipv4InterfaceAddr.String())
 	}
 	if arp.THA != (types.MACAddress{}) {
