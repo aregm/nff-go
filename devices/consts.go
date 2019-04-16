@@ -107,6 +107,7 @@ func init() {
 
 	rVmbusDriver = regexp.MustCompile("/sys/bus/vmbus/drivers/(\\S+)/")
 
-	IsPciID = regexp.MustCompile("^\\d{4}:\\d{2}:\\d{2}.\\d$")
+	// domains are numbered from 0 to ffff), bus (0 to ff), slot (0 to 1f) and function (0 to 7)
+	IsPciID = regexp.MustCompile("^[[:xdigit:]]{4}:[[:xdigit:]]{2}:[0-1][[:xdigit:]].[0-7]$")
 	IsUUID = regexp.MustCompile("^[[:xdigit:]]{8}-[[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$")
 }
