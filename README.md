@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff) 
-[![GoDoc](https://godoc.org/github.com/intel-go/yanff?status.svg)](https://godoc.org/github.com/intel-go/yanff)
+[![GoDoc](https://godoc.org/github.com/intel-go/nff-go?status.svg)](https://godoc.org/github.com/intel-go/nff-go)
 [![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
@@ -133,18 +133,9 @@ when it is run for the first time, but may be quite slow.
 
 ## Documentation 
 
-Use:
-
-        make doc
-
-to generate full documentation. Alternatively, you can do:
-
-        godoc -http=:6060
-
-and browse the following URLs:
-
-* http://localhost:6060/pkg/nff-go/flow/
-* http://localhost:6060/pkg/nff-go/packet/
+Online API documentation is available on [godoc.org
+site](https://godoc.org/github.com/intel-go/nff-go). API usage is
+explained on our [Wiki pages](https://github.com/intel-go/nff-go/wiki).
 
 ## Tests
 
@@ -187,7 +178,7 @@ deployed images listed in NFF_GO_HOSTS, use the **make cleanall** command.
 ## Contributing
 
 If you want to contribute to NFF-Go, check our [Contributing
-guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
+guide](https://github.com/intel-go/nff-go/blob/master/CONTRIBUTING.md). We also
 recommend checking the bugs with 'help-wanted' or 'easyfix' in our list of open issues; these bugs
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.

@@ -4,7 +4,6 @@
 
 PATH_TO_MK = mk
 SUBDIRS = nff-go-base dpdk test examples
-DOC_TARGETS = flow packet
 CI_TESTING_TARGETS = packet internal/low common
 TESTING_TARGETS = $(CI_TESTING_TARGETS) test/stability
 
@@ -32,10 +31,5 @@ citesting: $(CI_TESTING_TARGETS)
 
 $(TESTING_TARGETS):
 	$(MAKE) -C $@ testing
-
-.PHONY: doc
-doc: $(DOC_TARGETS)
-	mkdir doc
-	$(foreach package,$(DOC_TARGETS),godoc -analysis=type -analysis=pointer -html github.com/intel-go/nff-go/$(package) > doc/$(package).html;)
 
 include $(PATH_TO_MK)/intermediate.mk
