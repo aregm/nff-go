@@ -179,6 +179,8 @@ func initPortFlows(port *IpPort, myIPs generator.AddrRange, addEncapsulation boo
 	}
 	if addEncapsulation {
 		flow.CheckFatal(flow.SetHandlerDrop(outFlow, encapsulateGTP, hc))
+	} else {
+		flow.CheckFatal(flow.SetHandlerDrop(outFlow, setCorrectL2, hc))
 	}
 	flow.CheckFatal(flow.SetSender(outFlow, uint16(port.Index)))
 	// Input flow
@@ -241,13 +243,37 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Fill up L4
 	pkt.ParseL4ForIPv4()
 	udp := pkt.GetUDPForIPv4()
-	udp.SrcPort = packet.UDPPortGTPU
-	udp.DstPort = packet.UDPPortGTPU
+	udp.SrcPort = packet.SwapBytesUint16(packet.UDPPortGTPU)
+	udp.DstPort = packet.SwapBytesUint16(packet.UDPPortGTPU)
 	udp.DgramLen = packet.SwapBytesUint16(uint16(length - types.EtherLen - types.IPv4MinLen))
+	pkt.ParseL7(types.UDPNumber)
 	// Calculate checksums
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, pkt.Data))
 
+	return true
+}
+
+func setCorrectL2(pkt *packet.Packet, ctx flow.UserContext) bool {
+	hc := ctx.(HandlerContext)
+
+	pkt.ParseL3()
+
+	// Fill L2
+	pkt.Ether.SAddr = hc.port.macAddress
+	if hc.port.staticARP {
+		pkt.Ether.DAddr = hc.port.DstMacAddress
+	} else {
+		// Find l2 addresses for new destionation IP in ARP cache
+		targetIP := pkt.GetIPv4NoCheck().DstAddr
+		targetMAC, found := hc.port.neighCache.LookupMACForIPv4(targetIP)
+		if !found {
+			fmt.Println("Not found MAC address for IP", targetIP.String())
+			hc.port.neighCache.SendARPRequestForIPv4(targetIP, 0)
+			return false
+		}
+		pkt.Ether.DAddr = targetMAC
+	}
 	return true
 }
 
