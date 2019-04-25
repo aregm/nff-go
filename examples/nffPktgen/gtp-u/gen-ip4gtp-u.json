@@ -16,7 +16,7 @@
                     "udp": {
                         "sport": 1234,
                         "dport": 5678,
-                        "randbytes":    {
+                        "randbytes": {
                             "size": 128,
                             "deviation": 0
                         }

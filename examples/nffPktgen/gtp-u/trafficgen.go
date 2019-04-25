@@ -160,7 +160,7 @@ func validateConfig(gc *GenConfig) error {
 
 func initPortFlows(port *IpPort, myIPs generator.AddrRange, addEncapsulation bool) {
 	port.macAddress = flow.GetPortMACAddress(port.Index)
-	port.staticARP = port.DstMacAddress == types.MACAddress{0, 0, 0, 0, 0, 0}
+	port.staticARP = port.DstMacAddress != types.MACAddress{0, 0, 0, 0, 0, 0}
 	port.teidCount = 0
 	// myIPs is caputred inside this lambda
 	myV4Checker := func(ip types.IPv4Address) bool {
@@ -219,7 +219,7 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 		targetIP := ipv4.DstAddr
 		targetMAC, found := hc.port.neighCache.LookupMACForIPv4(targetIP)
 		if !found {
-			// fmt.Println("Not found MAC address for IP", targetIP.String())
+			fmt.Println("Not found MAC address for IP", targetIP.String())
 			hc.port.neighCache.SendARPRequestForIPv4(targetIP, 0)
 			return false
 		}
@@ -235,7 +235,7 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	length := pkt.GetPacketLen()
 	ipv4.TotalLength = packet.SwapBytesUint16(uint16(length - types.EtherLen))
-	ipv4.NextProtoID = types.GRENumber
+	ipv4.NextProtoID = types.UDPNumber
 	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 
 	// Fill up L4
