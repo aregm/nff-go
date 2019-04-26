@@ -21,7 +21,8 @@ import (
 )
 
 type GTPUConfig struct {
-	IPv4 generator.IPv4Config `json:"ipv4"`
+	IPv4      generator.IPv4Config `json:"ipv4"`
+	StartTEID uint32               `json:"start-teid"`
 }
 
 type IpPort struct {
@@ -201,7 +202,7 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 	}
 
 	// Add new IPv4, UDP and GTP headers to the packet
-	if !pkt.EncapsulateIPv4GTP(hc.port.teidCount) {
+	if !pkt.EncapsulateIPv4GTP(hc.port.teidCount + hc.port.GTPUConfig.StartTEID) {
 		fmt.Println("EncapsulateHead returned error")
 		return false
 	}
