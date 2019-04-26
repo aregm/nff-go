@@ -195,7 +195,9 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Get destination IP address and compare it with minimal value
 	pkt.ParseL3()
-	if pkt.GetIPv4NoCheck().DstAddr == packet.SwapBytesIPv4Addr(types.IPv4Address(hc.port.TrafficConfig[0].Config.Ether.IPv4.DAddr.Min)) {
+	ipv4 := pkt.GetIPv4NoCheck()
+	tg := hc.port.TrafficConfig[0]
+	if ipv4.SrcAddr == packet.SwapBytesIPv4Addr(types.IPv4Address(tg.Config.Ether.IPv4.SAddr.Min)) {
 		hc.port.teidCount = 0
 	} else {
 		hc.port.teidCount++
@@ -210,7 +212,7 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 
 	// Fill new IPv4 header with addresses according to configuration
 	generator.FillIPv4Hdr(pkt, &hc.port.GTPUConfig.IPv4)
-	ipv4 := pkt.GetIPv4NoCheck()
+	ipv4 = pkt.GetIPv4NoCheck()
 
 	// Fill L2
 	pkt.Ether.EtherType = types.SwapIPV4Number
@@ -312,7 +314,7 @@ func printStats(gc *GenConfig, started time.Time) {
 
 func printTotals(gc *GenConfig, started time.Time) {
 	runtime := time.Since(started)
-	runtimeint := uint64(runtime)
+	runtimeint := uint64(runtime) / uint64(time.Second)
 	fmt.Printf("\nTest executed for %v\n", runtime)
 	if gc.S1uPort != nil {
 		fmt.Printf("S1u pkts/s: %v\n", gc.S1uPort.packetCount/runtimeint)
