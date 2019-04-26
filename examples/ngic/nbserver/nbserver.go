@@ -135,21 +135,21 @@ func handleMessage(msg []byte) {
 //CreateSession API
 func CreateSession(in *Session) error {
 	if ok := UlMap.StoreIfAbsent(packet.SwapBytesUint32(in.UlS1Info.SgwTeid), *in); !ok {
-		common.LogError(common.Debug, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+		common.LogError(common.No, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
 		return errors.New("Session exit for UE Ip ")
 	}
-	common.LogDebug(common.Info, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+	common.LogDebug(common.Debug, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
 	return nil
 }
 
 //UpdateSession API
 func UpdateSession(in *Session) error {
 	if ok := UlMap.Has(packet.SwapBytesUint32(in.UlS1Info.SgwTeid)); ok {
-		common.LogDebug(common.Info, "Modify session: SgwTeid ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+		common.LogDebug(common.Debug, "Modify session: SgwTeid ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
 		DlMap.Store(packet.SwapBytesUint32(in.UeIP), *in)
 		return nil
 	}
-	common.LogError(common.Info, " modify session not found : ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+	common.LogError(common.No, " modify session not found : ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
 	return errors.New("Session doesn't exit for UE Ip ")
 }
 

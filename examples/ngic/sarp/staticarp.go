@@ -46,7 +46,7 @@ type ARPEntry struct {
 
 //Configure ...
 func Configure() {
-	common.LogInfo(common.Info, " Populating Static ARP entries ...", StaticARPFilePath)
+	common.LogDebug(common.Debug, " Populating Static ARP entries ...", StaticARPFilePath)
 	cfg, err := ini.Load(StaticARPFilePath)
 	flow.CheckFatal(err)
 
@@ -81,7 +81,7 @@ func AddArpData(ipRange string, value string) {
 				STATUS: "COMPLETED",
 				MAC:    hw,
 			} //
-			common.LogInfo(common.Info, "Entry : ", Int2ip(i), types.StringToIPv4(data.IP.String()), types.StringToIPv4(strings.Split(ipRange, " ")[0]))
+			common.LogDebug(common.Debug, "Entry : ", Int2ip(i), types.StringToIPv4(data.IP.String()), types.StringToIPv4(strings.Split(ipRange, " ")[0]))
 			addStaticArpEntry(uint32(types.StringToIPv4(Int2ip(i).String())), data)
 		} //
 	}
@@ -90,7 +90,7 @@ func AddArpData(ipRange string, value string) {
 //Add static arp entry to ARP Table/Map
 func addStaticArpEntry(ip uint32, data ARPEntry) {
 	mapStaticArp[ip] = data
-	common.LogInfo(common.Info, "Added Entry : ", ip, data)
+	common.LogDebug(common.Debug, "Added Entry : ", ip, data)
 }
 
 //AddArpEntry ... Add arp entry to ARP table and queue the pkt
@@ -100,23 +100,23 @@ func AddArpEntry(ip uint32, pkt *packet.Packet) {
 		STATUS: "INCOMPLETE",
 	}
 	mapStaticArp[ip] = arpEntry
-	common.LogInfo(common.Info, "Added Entry : ", ip, arpEntry)
+	common.LogDebug(common.Debug, "Added Entry : ", ip, arpEntry)
 }
 
 //LookArpTable Lookup arp table entry
 func LookArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, error) {
 
-	common.LogInfo(common.Info, "LookupARP ", ip)
+	common.LogDebug(common.Debug, "LookupARP ", ip)
 	entry, ok := mapStaticArp[ip]
 	if ok {
 		if entry.STATUS == "COMPLETED" {
 			return entry.MAC, nil
 		}
-		common.LogInfo(common.Info, "ARP is incomplete ", ip)
+		common.LogDebug(common.Debug, "ARP is incomplete ", ip)
 		return entry.MAC, errors.New("ARP is not resolved for IP ")
 	}
 	AddArpEntry(ip, pkt)
-	common.LogInfo(common.Info, "ARP is not resolved for IP ", ip)
+	common.LogDebug(common.Debug, "ARP is not resolved for IP ", ip)
 	return entry.MAC, errors.New("ARP is not resolved for IP ")
 }
 

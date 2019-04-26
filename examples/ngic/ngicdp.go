@@ -192,18 +192,17 @@ func main() {
 
 	//intialize config
 	initConfig()
-
 	//setup log level DP logging set to INFO
-	FlowLogType := common.No
+	FlowLogType := common.No | common.Initialization | common.Info
 	if dpConfig.EnableDebugLog == true {
-		FlowLogType = common.Info
+		FlowLogType = common.No | common.Initialization | common.Info | common.Debug
 	}
 	if dpConfig.EnableFlowDebug == true {
-		FlowLogType = common.Debug
+		FlowLogType = common.No | common.Initialization | common.Info
 	}
 	common.SetLogType(FlowLogType)
 	//intialize logger
-	initLogger()
+	//	initLogger()
 	//initialize rules
 	initRules()
 	// train DP
@@ -323,7 +322,7 @@ func main() {
 	fmt.Println("******* DP started successfully *********")
 	go PrintStats()
 
-	flow.SystemStart()
+	flow.CheckFatal(flow.SystemStart())
 } //
 
 //DownlinkFilterKni ...
