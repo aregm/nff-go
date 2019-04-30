@@ -32,6 +32,7 @@ package flow
 import (
 	"net"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -176,6 +177,13 @@ func addOSReceiver(socket int, out low.Rings) {
 	schedState.addFF("OS receiver", nil, recvOS, nil, par, nil, sendReceiveKNI, 0, &par.stats)
 }
 
+func addXDPReceiver(socket int, out low.Rings) {
+	par := new(receiveOSParameters)
+	par.socket = socket
+	par.out = out
+	schedState.addFF("AF_XDP receiver", nil, recvXDP, nil, par, nil, sendReceiveKNI, 0, &par.stats)
+}
+
 type KNIParameters struct {
 	in        low.Rings
 	out       low.Rings
@@ -267,6 +275,13 @@ func addSenderOS(socket int, in low.Rings, inIndexNumber int32) {
 	par.socket = socket
 	par.in = in
 	schedState.addFF("sender OS", nil, sendOS, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
+}
+
+func addSenderXDP(socket int, in low.Rings, inIndexNumber int32) {
+	par := new(sendOSParameters)
+	par.socket = socket
+	par.in = in
+	schedState.addFF("AF_XDP sender", nil, sendXDP, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
 }
 
 type copyParameters struct {
@@ -723,7 +738,15 @@ func SystemStartScheduler() error {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
 	common.LogTitle(common.Initialization, "------------***---------- NFF-GO Started ---------***------------")
-	schedState.schedule(schedTime)
+
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	go func() {
+		schedState.schedule(schedTime)
+	}()
+	<-signalChan
+	common.LogTitle(common.Debug, "Received an interrupt, stopping everything")
+	SystemStop()
 	return nil
 }
 
@@ -848,6 +871,44 @@ func SetSenderOS(IN *Flow, device string) error {
 		devices[device] = socketID
 	}
 	addSenderOS(socketID, finishFlow(IN), IN.inIndexNumber)
+	return nil
+}
+
+// SetReceiverXDP adds function receive from Linux AF_XDP to flow graph.
+// Gets name of device and queue number, will return error if can't initialize socket.
+// Creates AF_XDP socket, returns new opened flow with received packets.
+func SetReceiverXDP(device string, queue int) (*Flow, error) {
+	_, ok := devices[device]
+	if ok {
+		return nil, common.WrapWithNFError(nil, "Device shouldn't have any sockets before AF_XDP. AF_XDP Send and Receive for one device in forbidden now", common.BadSocket)
+	}
+	socketID := low.InitXDP(device, queue)
+	if socketID == -1 {
+		return nil, common.WrapWithNFError(nil, "Can't initialize AF_XDP socket", common.BadSocket)
+	}
+	devices[device] = socketID
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+	addXDPReceiver(socketID, rings)
+	return newFlow(rings, 1), nil
+}
+
+// SetSenderXDP adds function send from flow graph to Linux AF_XDP interface.
+// Gets name of device, will return error if can't initialize socket.
+// Creates RAW socket, sends packets, closes input flow.
+func SetSenderXDP(IN *Flow, device string) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	_, ok := devices[device]
+	if ok {
+		return common.WrapWithNFError(nil, "Device shouldn't have any sockets before AF_XDP. AF_XDP Send and Receive for one device in forbidden now", common.BadSocket)
+	}
+	socketID := low.InitXDP(device, 0)
+	if socketID == -1 {
+		return common.WrapWithNFError(nil, "Can't initialize AF_XDP socket", common.BadSocket)
+	}
+	devices[device] = socketID
+	addSenderXDP(socketID, finishFlow(IN), IN.inIndexNumber)
 	return nil
 }
 
@@ -1418,6 +1479,11 @@ func recvOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	low.ReceiveOS(srp.socket, srp.out[0], flag, coreID, &srp.stats)
 }
 
+func recvXDP(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*receiveOSParameters)
+	low.ReceiveXDP(srp.socket, srp.out[0], flag, coreID, &srp.stats)
+}
+
 func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srk := parameters.(*KNIParameters)
 	if srk.linuxCore == true {
@@ -1607,6 +1673,11 @@ func sendOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	low.SendOS(srp.socket, srp.in, flag, coreID, &srp.stats)
 }
 
+func sendXDP(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*sendOSParameters)
+	low.SendXDP(srp.socket, srp.in, flag, coreID, &srp.stats)
+}
+
 func merge(from low.Rings, to low.Rings) {
 	// We should change out rings in all flow functions which we added before
 	// and change them to one "after merge" ring.
@@ -1617,6 +1688,10 @@ func merge(from low.Rings, to low.Rings) {
 	for i := range schedState.ff {
 		switch parameters := schedState.ff[i].Parameters.(type) {
 		case *receiveParameters:
+			if parameters.out[0] == from[0] {
+				parameters.out = to
+			}
+		case *receiveOSParameters:
 			if parameters.out[0] == from[0] {
 				parameters.out = to
 			}

@@ -828,6 +828,8 @@ bool check_hwrxpackets_timestamp_capability(uint16_t port_id) {
 	return (dev_info.rx_offload_capa & flags) == flags;
 }
 
+// OS raw socket
+
 int initDevice(char *name) {
 	int s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (s < 1) {
@@ -914,5 +916,212 @@ void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volat
 		}
 	}
 	free(in_rings);
+	*flag = wasStopped;
+}
+
+// OS AF_XDP
+
+#include <linux/bpf.h>
+#include <linux/if_link.h>
+#include <linux/if_xdp.h>
+#include "libbpf.h"
+#include "xsk.h"
+
+struct xsk_umem_info {
+	struct xsk_ring_prod fq;
+	struct xsk_ring_cons cq;
+	struct xsk_umem *umem;
+	const struct rte_memzone *mz;
+};
+
+struct xsk_socket_info {
+	struct xsk_ring_cons rx;
+	struct xsk_ring_prod tx;
+	struct xsk_umem_info *umem;
+	struct xsk_socket *xsk;
+	__u32 outstanding_tx;
+	__u32 prog_id;
+	int nameindex;
+};
+
+struct xsk_socket_info* XDP_socket_pointers[20];
+
+static struct xsk_umem_info *xsk_configure_umem(char *name, __u64 size) {
+	struct xsk_umem_info *umem = calloc(1, sizeof(*umem));
+	if (!umem) {
+		return NULL;
+	}
+	const struct rte_memzone *mz = rte_memzone_reserve_aligned(name, size, rte_socket_id(), RTE_MEMZONE_IOVA_CONTIG, getpagesize());
+	if (xsk_umem__create(&umem->umem, mz->addr, size, &umem->fq, &umem->cq, NULL) != 0) {
+		return NULL;
+	}
+	umem->mz = mz;
+	return umem;
+}
+
+int xsk_configure_socket(char *name, int queue) {
+	static int number = 0;
+	struct xsk_socket_config cfg;
+	__u32 idx;
+	__u32 opt_xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST; // TODO get from user
+	__u32 opt_xdp_bind_flags = 0; // TODO get from user
+	__u32 NUM_FRAMES = 4 * 1024; // TODO from num_mbufs
+
+	struct xsk_socket_info *xsk = calloc(1, sizeof(*xsk));
+	if (!xsk) {
+		fprintf(stderr, "ERROR: Can't allocate memory for socket structure for AF_XDP: %s\n", name);
+		return -1;
+	}
+	xsk->umem = xsk_configure_umem(name, NUM_FRAMES * XSK_UMEM__DEFAULT_FRAME_SIZE);
+	cfg.rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS;
+	cfg.tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS;
+	cfg.libbpf_flags = 0;
+	cfg.xdp_flags = opt_xdp_flags;
+	cfg.bind_flags = opt_xdp_bind_flags;
+
+	if (xsk_socket__create(&xsk->xsk, name, queue, xsk->umem->umem, &xsk->rx, &xsk->tx, &cfg) != 0) {
+		fprintf(stderr, "ERROR: Can't create AF_XDP socket: %s\n", name);
+		return -1;
+	}
+	xsk->nameindex = if_nametoindex(name);
+	if (!xsk->nameindex) {
+		fprintf(stderr, "ERROR: interface %s for AF_XDP does not exist\n", name);
+		return 1;
+	}
+
+	if (bpf_get_link_xdp_id(xsk->nameindex, &(xsk->prog_id), opt_xdp_flags) != 0) {
+		fprintf(stderr, "ERROR: Can't link BPF for AF_XDP: %s\n", name);
+		return -1;
+	}
+	if (xsk_ring_prod__reserve(&xsk->umem->fq, XSK_RING_PROD__DEFAULT_NUM_DESCS, &idx) != XSK_RING_PROD__DEFAULT_NUM_DESCS) {
+		fprintf(stderr, "ERROR: reserve prod buffer for AF_XDP: %s\n", name);
+		return -1;
+	}
+	for (int i = 0; i < XSK_RING_PROD__DEFAULT_NUM_DESCS * XSK_UMEM__DEFAULT_FRAME_SIZE; i += XSK_UMEM__DEFAULT_FRAME_SIZE) {
+		*xsk_ring_prod__fill_addr(&xsk->umem->fq, idx++) = i;
+	}
+	xsk_ring_prod__submit(&xsk->umem->fq, XSK_RING_PROD__DEFAULT_NUM_DESCS);
+	XDP_socket_pointers[number] = xsk;
+	number++;
+	return number - 1;
+}
+
+void removeXDP(int socket) {
+	struct xsk_socket_info* xsk = XDP_socket_pointers[socket];
+	xsk_socket__delete(xsk->xsk);
+	xsk_umem__delete(xsk->umem->umem);
+	__u32 curr_prog_id = 0;
+
+	if (bpf_get_link_xdp_id(xsk->nameindex, &curr_prog_id, XDP_FLAGS_UPDATE_IF_NOEXIST)) {
+		return;
+	}
+	if (xsk->prog_id == curr_prog_id) {
+		bpf_set_link_xdp_fd(xsk->nameindex, -1, XDP_FLAGS_UPDATE_IF_NOEXIST);
+	}
+}
+// TODO checkfatal should remove AF_XDP socket
+// rings are single consumer, producer
+// additional implementation for rx tx at one device
+
+void receiveXDP(int socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+	struct xsk_socket_info* xsk = XDP_socket_pointers[socket];
+	struct rte_mbuf *bufs[BURST_SIZE];
+	REASSEMBLY_INIT
+	while (*flag == process) {
+		__u32 idx_rx = 0, idx_fq = 0;
+		// Get packets from AF_XDP
+		uint16_t rx_pkts_number = xsk_ring_cons__peek(&xsk->rx, BURST_SIZE, &idx_rx);
+		if (unlikely(rx_pkts_number == 0)) {
+			continue;
+		}
+		if (allocateMbufs(m, bufs, rx_pkts_number) != 0) {
+			printf("Can't allocate\n");
+		}
+		int ret = xsk_ring_prod__reserve(&xsk->umem->fq, rx_pkts_number, &idx_fq);
+		while (ret != rx_pkts_number) {
+			if (ret < 0) {
+				printf("ERROR reserve\n");
+				//exit_with_error(-ret);
+			}
+			ret = xsk_ring_prod__reserve(&xsk->umem->fq, rx_pkts_number, &idx_fq);
+		}
+		for (int i = 0; i < rx_pkts_number; i++) {
+			const struct xdp_desc *desc = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++);
+			uint64_t addr = desc->addr;
+			uint32_t len = desc->len;
+			void *pkt = xsk_umem__get_data(xsk->umem->mz->addr, addr);
+			rte_memcpy(rte_pktmbuf_mtod(bufs[i], void *), pkt, len);
+			rte_pktmbuf_pkt_len(bufs[i]) = len;
+			rte_pktmbuf_data_len(bufs[i]) = len;
+			*xsk_ring_prod__fill_addr(&xsk->umem->fq, idx_fq++) = addr;
+		}
+		xsk_ring_prod__submit(&xsk->umem->fq, rx_pkts_number);
+		xsk_ring_cons__release(&xsk->rx, rx_pkts_number);
+		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+
+		// Free any packets which can't be pushed to the ring. The ring is probably full.
+		handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+#ifdef DEBUG
+		receive_received += rx_pkts_number;
+		receive_pushed += pushed_pkts_number;
+#endif // DEBUG
+	}
+	removeXDP(socket);
+	*flag = wasStopped;
+}
+
+void sendXDP(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+	struct xsk_socket_info* xsk = XDP_socket_pointers[socket];
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t buf;
+	uint16_t tx_pkts_number;
+	struct xdp_desc *desc;
+	__u32 idx, frame_nb = 0;
+	int required = 0;
+	while (*flag == process) {
+		for (int q = 0; q < inIndexNumber; q++) {
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+			if (pkts_for_tx_number == 0) {
+				continue;
+			}
+			if (xsk_ring_prod__reserve(&xsk->tx, pkts_for_tx_number, &idx) == pkts_for_tx_number) {
+				for (int i = 0; i < pkts_for_tx_number; i++) {
+					desc = xsk_ring_prod__tx_desc(&xsk->tx, idx + i);
+					desc->addr = (frame_nb + i) << XSK_UMEM__DEFAULT_FRAME_SHIFT;
+					desc->len = bufs[i]->pkt_len;
+					void *pkt = xsk_umem__get_data(xsk->umem->mz->addr, desc->addr);
+					rte_memcpy(pkt, rte_pktmbuf_mtod(bufs[i], void *), desc->len);
+				}
+				xsk_ring_prod__submit(&xsk->tx, pkts_for_tx_number);
+				required += pkts_for_tx_number;
+				frame_nb += pkts_for_tx_number;
+				frame_nb %= 4 * 1024; //NUM_FRAMES;
+			}
+			// Free all packets
+			handleUnpushed(bufs, 0, pkts_for_tx_number);
+			if (required > 0) {
+				int ret = sendto(xsk_socket__fd(xsk->xsk), NULL, 0, MSG_DONTWAIT, NULL, 0);
+				if (ret < 0 && errno != ENOBUFS && errno != EAGAIN && errno != EBUSY) {
+					printf("ERROR!!!\n");
+				}
+				int tx_pkts_number = xsk_ring_cons__peek(&xsk->umem->cq, pkts_for_tx_number, &idx);
+				if (tx_pkts_number > 0) {
+					xsk_ring_cons__release(&xsk->umem->cq, tx_pkts_number);
+					required -= tx_pkts_number;
+				}
+#ifdef DEBUG
+				send_required += pkts_for_tx_number;
+				send_sent += tx_pkts_number;
+#endif // DEBUG
+
+			}
+		}
+	}
+	free(in_rings);
+	removeXDP(socket);
 	*flag = wasStopped;
 }

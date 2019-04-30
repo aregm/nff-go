@@ -13,7 +13,7 @@ package low
 // it increases executable size and build time.
 
 /*
-#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_timer -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -libverbs -lmnl -lmlx4 -lmlx5 -lrte_pmd_mlx4 -lrte_pmd_mlx5 -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma
+#cgo LDFLAGS: -lrte_distributor -lrte_reorder -lrte_kni -lrte_pipeline -lrte_table -lrte_port -lrte_timer -lrte_jobstats -lrte_lpm -lrte_power -lrte_acl -lrte_meter -lrte_sched -lrte_vhost -lrte_ip_frag -lrte_cfgfile -Wl,--whole-archive -Wl,--start-group -lrte_kvargs -lrte_mbuf -lrte_hash -lrte_ethdev -lrte_mempool -lrte_ring -lrte_mempool_ring -lrte_eal -lrte_cmdline -lrte_net -lrte_bus_pci -lrte_pci -lrte_bus_vdev -lrte_timer -lrte_pmd_bond -lrte_pmd_vmxnet3_uio -lrte_pmd_virtio -lrte_pmd_cxgbe -lrte_pmd_enic -lrte_pmd_i40e -lrte_pmd_fm10k -lrte_pmd_ixgbe -lrte_pmd_e1000 -lrte_pmd_ena -lrte_pmd_ring -lrte_pmd_af_packet -lrte_pmd_null -libverbs -lmnl -lmlx4 -lmlx5 -lrte_pmd_mlx4 -lrte_pmd_mlx5 -Wl,--end-group -Wl,--no-whole-archive -lrt -lm -ldl -lnuma -lbpf -lelf
 #include "low.h"
 */
 import "C"
@@ -773,8 +773,24 @@ func SendOS(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXSta
 		(*C.RXTXStats)(unsafe.Pointer(stats)))
 }
 
+func ReceiveXDP(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
+	m := CreateMempool("receiveXDP")
+	C.receiveXDP(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
+func SendXDP(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.sendXDP(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
+		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
 func InitDevice(device string) int {
 	return int(C.initDevice(C.CString(device)))
+}
+
+func InitXDP(device string, queue int) int {
+	return int(C.xsk_configure_socket(C.CString(device), C.int(queue)))
 }
 
 func SetCountersEnabledInApplication(enabled bool) {
