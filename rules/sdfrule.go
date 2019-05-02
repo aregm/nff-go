@@ -209,7 +209,7 @@ func PrepareSdfDlACL(sdfFilters []SDFFilter) {
 } //
 
 //BuildPCCSDFMap ... prepare a map with key as sdf index and value as pcc rule
-func BuildPCCSDFMap(pccFilters []PCCFilter) map[int][]PCCFilter {
+func BuildPCCSDFMap(pccFilters []PCCFilter) {
 	common.LogInfo(common.Info, " Populating PCC SDF Map ...")
 
 	pccSdfMap := make(map[int][]PCCFilter)
@@ -238,5 +238,5 @@ func BuildPCCSDFMap(pccFilters []PCCFilter) map[int][]PCCFilter {
 	for key, value := range pccSdfMap {
 		common.LogInfo(common.Info, "Key = ", key, ", Value = ", value)
 	} //
-	return pccSdfMap
+	pccSDFMap = pccSdfMap
 }

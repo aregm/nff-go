@@ -126,7 +126,7 @@ func PrepareAdcACL(adcFilters []ADCFilter) {
 } //
 
 //BuildPCCADCMap ... build pcc map where key = adc index for easy lookup
-func BuildPCCADCMap(pccFilters []PCCFilter) map[int][]PCCFilter {
+func BuildPCCADCMap(pccFilters []PCCFilter) {
 	common.LogInfo(common.Info, "Populating PCC ADC Map ...")
 
 	pccAdcMap := make(map[int][]PCCFilter)
@@ -155,5 +155,5 @@ func BuildPCCADCMap(pccFilters []PCCFilter) map[int][]PCCFilter {
 	for key, value := range pccAdcMap {
 		common.LogInfo(common.Info, "Key = ", key, ", Value = ", value)
 	} //
-	return pccAdcMap
+	pccADCMap = pccAdcMap
 }
