@@ -7,16 +7,8 @@
 // CreateSession --create ue session
 // UpdateSession --modify bearer
 // DeleteSession --delere ue session
-// Integrated with C based NGIC CP implementation
 //
 package nbserver
-
-/*
-#cgo
-#include <stdlib.h>
-*/
-
-import "C"
 
 import (
 	"errors"
@@ -24,6 +16,7 @@ import (
 	"github.com/golang-collections/go-datastructures/queue"
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 	"net"
 	"os"
 	"sync"
@@ -136,21 +129,21 @@ func handleMessage(msg []byte) {
 func CreateSession(in *Session) error {
 	if ok := UlMap.StoreIfAbsent(packet.SwapBytesUint32(in.UlS1Info.SgwTeid), *in); !ok {
 		common.LogError(common.No, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
-		return errors.New("Session exit for UE Ip ")
+		return errors.New("Session exists for UE Ip: " + types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 	}
-	common.LogDebug(common.Debug, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+	common.LogDebug(common.Debug, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 	return nil
 }
 
 //UpdateSession API
 func UpdateSession(in *Session) error {
 	if ok := UlMap.Has(packet.SwapBytesUint32(in.UlS1Info.SgwTeid)); ok {
-		common.LogDebug(common.Debug, "Modify session: SgwTeid ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+		common.LogDebug(common.No, "Modify session: SgwTeid ", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 		DlMap.Store(packet.SwapBytesUint32(in.UeIP), *in)
 		return nil
 	}
-	common.LogError(common.No, " modify session not found : ", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
-	return errors.New("Session doesn't exit for UE Ip ")
+	common.LogError(common.No, " modify session not found : ", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
+	return errors.New("Session doesn't exist for UE Ip: " + types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 }
 
 var isPrinted = true
@@ -160,8 +153,7 @@ func DeleteSession(in *Session) error {
 	if isPrinted {
 		fmt.Println("UL Entry count ", UlMap.Count())
 		fmt.Println("DL Entry count ", DlMap.Count())
-		isPrinted = false
-
+		//		isPrinted = false
 	}
 	UlKey := in.UlS1Info.SgwTeid
 	if ok := UlMap.Has(UlKey); ok {
@@ -169,6 +161,6 @@ func DeleteSession(in *Session) error {
 		DlMap.Delete(packet.SwapBytesUint32(in.UeIP))
 		return nil
 	}
-	common.LogError(common.Debug, "delete  session not found for ", in.UeIP)
-	return errors.New("Session doesn't exit for UE Ip ")
+	common.LogError(common.Debug, "delete session not found for ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
+	return errors.New("Session doesn't exist for UE Ip: " + types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 }
