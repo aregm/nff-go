@@ -30,7 +30,7 @@ var (
 func LookUpPCCRuleBySDF(sdfIdx int) PCCFilter {
 	pccFilters := pccSDFMap[sdfIdx]
 
-	common.LogInfo(common.Info, "LookUpPCCRuleBySDF No of rules found : ", len(pccFilters))
+	common.LogInfo(common.Debug, "LookUpPCCRuleBySDF No of rules for index", sdfIdx, " found : ", len(pccFilters))
 	if len(pccFilters) == 0 {
 		return DefaultPccFilter
 	}
@@ -43,7 +43,7 @@ func LookUpPCCRuleByADC(adcIdx int) (PCCFilter, error) {
 	var pccFilter PCCFilter
 	pccFilters := pccADCMap[adcIdx]
 
-	common.LogInfo(common.Info, "LookUpPCCRuleByADC No of rules found : ", len(pccFilters))
+	common.LogInfo(common.Debug, "LookUpPCCRuleByADC No of rules for index", adcIdx, " found : ", len(pccFilters))
 	if len(pccFilters) == 0 {
 		return pccFilter, errors.New("No PCC rule matched ")
 	}
