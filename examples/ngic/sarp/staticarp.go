@@ -30,11 +30,7 @@ const (
 	StaticARPFilePath = "config/static_arp.cfg"
 )
 
-var mapStaticArp map[uint32]ARPEntry
-
-func init() {
-	mapStaticArp = make(map[uint32]ARPEntry)
-}
+var mapStaticArp = map[uint32]ARPEntry{}
 
 //ARPEntry ...
 type ARPEntry struct {
