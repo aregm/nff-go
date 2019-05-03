@@ -384,9 +384,9 @@ func applyDlRulesFilter(current *packet.Packet) bool {
 
 // Updated packet's next hop info
 func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.IPv4Hdr) bool {
-
 	// ARP lookup for S1U_GW_IP
 	pkt.Ether.SAddr = s1uMac
+
 	if EnableStaticARP == "true" {
 		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
 		if err == nil {
@@ -445,7 +445,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	}
 
 	if current.EncapsulateIPv4GTP(session.DlS1Info.EnbTeid) == false {
-		common.LogError(common.Info, "[DL]Encapsulating GTP pkt ")
+		common.LogError(common.Info, "[DL] Failed to encapsulate GTP pkt")
 		return false
 	}
 
@@ -465,7 +465,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 
 	ipv4.SrcAddr = types.IPv4Address(dpConfig.S1uIP)
 	ipv4.DstAddr = types.IPv4Address(session.DlS1Info.EnbIP)
-	ipv4.HdrChecksum = packet.CalculateIPv4Checksum(ipv4)
+	ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 
 	current.ParseL4ForIPv4()
 	udp := current.GetUDPNoCheck()
@@ -474,7 +474,8 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	udp.SrcPort = packet.SwapUDPPortGTPU
 	udp.DstPort = packet.SwapUDPPortGTPU
 	udp.DgramLen = uint16(length - types.EtherLen - types.IPv4MinLen)
-	udp.DgramCksum = 0
+	current.ParseL7(types.UDPNumber)
+	udp.DgramCksum = packet.SwapBytesUint16(packet.CalculateIPv4UDPChecksum(ipv4, udp, current.Data))
 
 	if updateDlNextHopInfo(current, context, ipv4) == false {
 		return false
@@ -541,7 +542,7 @@ func applyUlRulesFilter(current *packet.Packet) bool {
 
 // Updated packet's next hop info
 func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.IPv4Hdr) bool {
-	// AiRP lookup for S1U_GW_IP
+	// ARP lookup for S1U_GW_IP
 	pkt.Ether.SAddr = sgiMac
 
 	if EnableStaticARP == "true" {
