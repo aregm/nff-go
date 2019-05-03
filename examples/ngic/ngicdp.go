@@ -111,11 +111,11 @@ var (
 	adcL3Rules *packet.L3Rules
 
 	//EnableStaticARP  compile time flag to enable static arp
-	EnableStaticARP string
+	EnableStaticARP bool
 	//RunCPSimu  compile time flag to run CP Simu
-	RunCPSimu string
+	RunCPSimu bool
 	//EnablePcap compile time flag to enable pcap
-	EnablePcap string
+	EnablePcap bool
 )
 
 // stats counters
@@ -147,6 +147,10 @@ func initConfig() {
 	flag.StringVar(&dpConfig.CPUList, "cpu_list", "", "cpu list")
 	flag.StringVar(&dpConfig.Memory, "memory", "512,4096", "memory")
 	flag.BoolVar(&dpConfig.NoStats, "nostats", false, "Disable statics HTTP server.")
+
+	flag.BoolVar(&EnableStaticARP, "sarp", false, "Enable static ARP table instead of dynamic")
+	flag.BoolVar(&RunCPSimu, "simucp", false, "Simulate control plane before running data plane")
+	flag.BoolVar(&EnablePcap, "pcap", false, "Dump output packets to pcap files")
 
 	flag.Parse()
 
@@ -208,11 +212,11 @@ func main() {
 	initRules()
 	// train DP
 	go nbserver.Start()
-	if RunCPSimu == "true" {
+	if RunCPSimu {
 		go simucp.TrainDP()
 	}
 
-	if EnableStaticARP == "true" {
+	if EnableStaticARP {
 		sarp.Configure()
 	} else {
 		darp.Configure()
@@ -288,7 +292,7 @@ func main() {
 		sgiOutFlow, err := flow.SetMerger(s1uEthInFlow, sgiKniInFlow)
 		flow.CheckFatal(err)
 
-		if EnablePcap == "true" {
+		if EnablePcap {
 			s1updp := pcapdumperParameters{fileName: "s1u"}
 			sgipdp := pcapdumperParameters{fileName: "sgi"}
 			flow.CheckFatal(flow.SetHandler(s1uOutFlow, pcapdumper, &s1updp))
@@ -332,7 +336,7 @@ func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
 	//	common.LogInfo(common.Info, "In SGI FilterFunction ", ipv4, arpPkt)
 	if arpPkt != nil {
-		if EnableStaticARP != "true" && arpPkt.Operation == 512 {
+		if !EnableStaticARP && packet.SwapBytesUint16(arpPkt.Operation) == packet.ARPReply {
 			common.LogInfo(common.Info, "ARP Response recv = ", arpPkt)
 			darp.UpdateUlArpTable(arpPkt, dpConfig.SgiPortIdx, dpConfig.SgiDeviceName)
 		}
@@ -387,7 +391,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	// ARP lookup for S1U_GW_IP
 	pkt.Ether.SAddr = s1uMac
 
-	if EnableStaticARP == "true" {
+	if EnableStaticARP {
 		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
 		if err == nil {
 			copy(pkt.Ether.DAddr[:], dmac)
@@ -491,7 +495,7 @@ func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
 	//	common.LogInfo(common.Info, "In S1U FilterFunction ", ipv4, arpPkt)
 	if arpPkt != nil {
-		if EnableStaticARP != "true" && arpPkt.Operation == 512 {
+		if !EnableStaticARP && packet.SwapBytesUint16(arpPkt.Operation) == packet.ARPReply {
 			common.LogInfo(common.Info, "ARP response recv = ", arpPkt)
 			darp.UpdateDlArpTable(arpPkt, dpConfig.S1uPortIdx, dpConfig.S1uDeviceName)
 		}
@@ -545,7 +549,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	// ARP lookup for S1U_GW_IP
 	pkt.Ether.SAddr = sgiMac
 
-	if EnableStaticARP == "true" {
+	if EnableStaticARP {
 		//Lookup arp table
 		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
 		if err == nil {

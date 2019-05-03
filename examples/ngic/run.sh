@@ -1,10 +1,6 @@
-#!/bin/bash
+#!/bin/bash -x
 
 source config/dp_config.cfg
-
-#DEBUG=true
-DEBUG=false
-FLOW_DEBUG=false
 
 echo "" > log/dp.log
 
@@ -18,6 +14,7 @@ echo "" > log/dp.log
 	   -s1u_ip $S1U_IP \
 	   -sgi_ip $SGI_IP \
 	   -s1u_dev $S1UDeviceName \
-	   -sgi_dev $SGIDeviceName
-
-
+	   -sgi_dev $SGIDeviceName \
+       -sarp=$STATIC_ARP \
+       -simucp=$SIMULATE_CP \
+       -pcap=$ENABLE_PCAP
