@@ -44,16 +44,16 @@
         "traffic-config": {
             "ether": {
                 "ipv4": {
-                    "saddr": {
+                    "saddr": "13.7.1.110",
+                    "daddr": {
                         "range": {
                             "min": "16.0.0.1",
                             "max": "16.7.161.32"
                         }
                     },
-                    "daddr": "13.7.1.110",
                     "udp": {
-                        "sport": 1234,
-                        "dport": 5678,
+                        "sport": 5678,
+                        "dport": 1234,
                         "randbytes": {
                             "size": 128,
                             "deviation": 0
