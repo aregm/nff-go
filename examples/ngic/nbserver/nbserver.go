@@ -19,6 +19,7 @@ import (
 	"github.com/intel-go/nff-go/types"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"unsafe"
 )
@@ -128,21 +129,25 @@ func handleMessage(msg []byte) {
 //CreateSession API
 func CreateSession(in *Session) error {
 	if ok := UlMap.StoreIfAbsent(packet.SwapBytesUint32(in.UlS1Info.SgwTeid), *in); !ok {
-		common.LogError(common.No, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", in.UeIP)
+		common.LogError(common.No, "Create session: SgwTeid", strconv.FormatInt(int64(in.UlS1Info.SgwTeid), 16),
+			", Int ip = ", in.UeIP)
 		return errors.New("Session exists for UE Ip: " + types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 	}
-	common.LogDebug(common.Debug, "Create session: SgwTeid", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
+	common.LogDebug(common.Debug, "Create session: SgwTeid", strconv.FormatInt(int64(in.UlS1Info.SgwTeid), 16),
+		", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 	return nil
 }
 
 //UpdateSession API
 func UpdateSession(in *Session) error {
 	if ok := UlMap.Has(packet.SwapBytesUint32(in.UlS1Info.SgwTeid)); ok {
-		common.LogDebug(common.No, "Modify session: SgwTeid ", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
+		common.LogDebug(common.Debug, "Modify session: SgwTeid ", strconv.FormatInt(int64(in.UlS1Info.SgwTeid), 16),
+			", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 		DlMap.Store(packet.SwapBytesUint32(in.UeIP), *in)
 		return nil
 	}
-	common.LogError(common.No, " modify session not found : ", in.UlS1Info.SgwTeid, ", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
+	common.LogError(common.No, " modify session not found : ", strconv.FormatInt(int64(in.UlS1Info.SgwTeid), 16),
+		", Int ip = ", types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 	return errors.New("Session doesn't exist for UE Ip: " + types.IPv4Address(packet.SwapBytesUint32(in.UeIP)).String())
 }
 
