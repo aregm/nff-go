@@ -8,15 +8,16 @@ EXECUTABLES = ngicdp
 LDFLAGS = -ldflags "
 
 # To enable static arp uncomment the following line
-#LDFLAGS += -X main.EnableStaticARP=true
+# LDFLAGS += -X main.EnableStaticARP=true
 
 # To enable CP simulator uncomment the following line
-#LDFLAGS += -X main.RunCPSimu=true
+# LDFLAGS += -X main.RunCPSimu=true
 
 # To enable PCAP capture uncomment the following line
-#LDFLAGS += -X main.EnablePcap=true
+# LDFLAGS += -X main.EnablePcap=true
 
 LDFLAGS += "
 
+GO_COMPILE_FLAGS += $(LDFLAGS)
 
 include $(PATH_TO_MK)/leaf.mk
