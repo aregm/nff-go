@@ -203,7 +203,7 @@ func main() {
 	}
 	common.SetLogType(FlowLogType)
 	//intialize logger
-	//	initLogger()
+	initLogger()
 	//initialize rules
 	initRules()
 	// train DP
