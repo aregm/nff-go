@@ -54,6 +54,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -392,6 +393,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 			copy(pkt.Ether.DAddr[:], dmac)
 			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
+			common.LogError(common.Info, "[DL] Failed to find MAC for ", ipv4.DstAddr)
 			return false
 		}
 	} else {
@@ -408,6 +410,8 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 					packet.InitARPRequestPacket(clonePkt, s1uMac, types.IPv4Address(dpConfig.S1uIP), ipv4.DstAddr)
 					clonePkt.SendPacket(dpConfig.S1uPortIdx)
 					return false
+				} else {
+					common.LogError(common.No, "[DL] FAILED TO CREATE APR PACKET")
 				}
 			}
 			common.LogError(common.Info, "[DL] ARP not found queued/rejected ", ipv4.DstAddr)
@@ -425,15 +429,14 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	pktIpv4 := current.GetIPv4()
 
 	if pktIpv4 == nil {
-		common.LogError(common.Info, "[DL]Not a valid Ipv4 PKT : INVALID PKT REJECT")
+		common.LogError(common.Info, "[DL] Not a valid Ipv4 PKT: INVALID PKT REJECT")
 		return false
 	}
 	atomic.AddUint64(&dlRxCounter, 1)
 
 	session, ok := nbserver.DlMap.Load(uint32(pktIpv4.DstAddr))
 	if ok == false {
-		//		common.LogError(common.Info, "[DL] INVALID PKT REJECT : TEID not found for UE_IP ", pktIpv4.DstAddr)
-		common.LogError(common.Info, "[DL] INVALID PKT REJECT : TEID not found for UE_IP ", pktIpv4.DstAddr)
+		common.LogError(common.Info, "[DL] INVALID PKT REJECT: TEID not found for UE_IP ", pktIpv4.DstAddr)
 		return false
 	}
 
@@ -548,6 +551,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 			copy(pkt.Ether.DAddr[:], dmac)
 			atomic.AddUint64(&darp.UlTxCounter, 1)
 		} else {
+			common.LogError(common.Info, "[UL] Failed to find MAC for ", ipv4.DstAddr)
 			return false
 		}
 	} else {
@@ -567,6 +571,8 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 					packet.InitARPRequestPacket(clonePkt, sgiMac, types.IPv4Address(dpConfig.SgiIP), ipv4.DstAddr)
 					clonePkt.SendPacket(dpConfig.SgiPortIdx)
 					return false
+				} else {
+					common.LogError(common.No, "[UL] FAILED TO CREATE APR PACKET")
 				}
 			}
 			return false
@@ -613,7 +619,8 @@ func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 	_, ok := nbserver.UlMap.Load(pktTEID)
 
 	if ok == false {
-		common.LogError(common.Info, "[UL] INVALID PKT REJECT :  UE_CONEXT not found for TEID,DestIP", pktTEID, ipv4.DstAddr)
+		common.LogError(common.Info, "[UL] INVALID PKT REJECT: UE_CONEXT not found for TEID:",
+			strconv.FormatInt(int64(packet.SwapBytesUint32(pktTEID)), 16), ", DestIP:", ipv4.DstAddr)
 		return false
 
 	}
