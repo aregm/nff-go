@@ -17,17 +17,23 @@ func (mac MACAddress) String() string {
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 }
 
+func StringToMACAddress(str string) (MACAddress, error) {
+	hw, err := net.ParseMAC(str)
+	if err != nil {
+		return MACAddress{}, err
+	}
+	var out MACAddress
+	copy(out[:], hw)
+	return out, nil
+}
+
 func (out *MACAddress) UnmarshalJSON(b []byte) error {
 	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
-	}
-
-	hw, err := net.ParseMAC(s)
+	err := json.Unmarshal(b, &s)
 	if err != nil {
 		return err
 	}
 
-	copy(out[:], hw)
-	return nil
+	*out, err = StringToMACAddress(s)
+	return err
 }
