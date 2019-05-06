@@ -6,6 +6,7 @@ package generator
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -154,6 +155,16 @@ type IPv6Config struct {
 	UDP   UDPConfig
 	ICMP  ICMPConfig
 	Bytes RawBytes
+}
+
+func (ipv6 *IPv6Config) UnmarshalJSON(data []byte) error {
+	var in map[string]interface{}
+	err := json.Unmarshal(data, &in)
+	if err != nil {
+		return err
+	}
+	*ipv6, err = parseIPv6Hdr(in)
+	return err
 }
 
 func parseIPv6Hdr(in map[string]interface{}) (IPv6Config, error) {
