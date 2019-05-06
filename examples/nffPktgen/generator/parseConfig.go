@@ -202,7 +202,7 @@ func ParseConfig(in map[string]interface{}) (config GeneratorConfig, err error) 
 			pktConfig := PacketConfig{Ether: ethHdr, DType: ETHERHDR}
 			return append(config, MixConfig{Config: pktConfig, Quantity: 1}), nil
 		case mixPattern.MatchString(key):
-			return ParseMixConfig(in)
+			return ParseGeneratorConfig(in)
 		default:
 			return nil, fmt.Errorf("unexpected key: %s, expected mix[0-9]* or ether", k)
 		}
@@ -211,7 +211,7 @@ func ParseConfig(in map[string]interface{}) (config GeneratorConfig, err error) 
 	return nil, fmt.Errorf("expected 'ether' key , but did not get")
 }
 
-func ParseMixConfig(in map[string]interface{}) (config GeneratorConfig, err error) {
+func ParseGeneratorConfig(in map[string]interface{}) (config GeneratorConfig, err error) {
 	for k, v := range in {
 		key := strings.ToLower(k)
 		switch {
