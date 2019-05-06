@@ -23,6 +23,7 @@ import (
 type GTPUConfig struct {
 	IPv4      generator.IPv4Config `json:"ipv4"`
 	StartTEID uint32               `json:"start-teid"`
+	MaxTEIDs  uint32               `json:"max-teids"`
 }
 
 type IpPort struct {
@@ -132,6 +133,9 @@ func validateConfig(gc *GenConfig) error {
 		if gc.S1uPort.GTPUConfig == nil {
 			return fmt.Errorf("GTP config should be specified for S1u")
 		}
+		if gc.S1uPort.GTPUConfig.MaxTEIDs == 0 {
+			return fmt.Errorf("GTP configuration should specify non-zero maximum number of possible TEIDs")
+		}
 		if gc.S1uPort.TrafficConfig[0].Config.DType != generator.ETHERHDR {
 			return fmt.Errorf("Only \"ether\" type of traffic is supported for l2")
 		}
@@ -196,8 +200,7 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 	// Get destination IP address and compare it with minimal value
 	pkt.ParseL3()
 	ipv4 := pkt.GetIPv4NoCheck()
-	tg := hc.port.TrafficConfig[0]
-	if ipv4.SrcAddr == packet.SwapBytesIPv4Addr(types.IPv4Address(tg.Config.Ether.IPv4.SAddr.Min)) {
+	if hc.port.teidCount == hc.port.GTPUConfig.MaxTEIDs {
 		hc.port.teidCount = 0
 	} else {
 		hc.port.teidCount++

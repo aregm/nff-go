@@ -34,7 +34,8 @@
                 },
                 "daddr": "11.7.1.93"
             },
-            "start-teid": 4026531840
+            "start-teid": 4026531840,
+            "max-teids": 500000
         }
     },
     "sgi-port": {
