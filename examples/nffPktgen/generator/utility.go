@@ -32,12 +32,12 @@ func (g *generator) GetGeneratedNumber() uint64 {
 }
 
 // ReadConfig function reads and parses config file.
-func ReadConfig(fileName string) ([]MixConfig, error) {
+func ReadConfig(fileName string) (GeneratorConfig, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("opening file failed with: %v ", err)
 	}
-	cfg, err := ParseConfig(f)
+	cfg, err := ParseConfigFile(f)
 	if err != nil {
 		return nil, fmt.Errorf("parsing config failed with: %v", err)
 	}
@@ -120,7 +120,7 @@ func (gp genParameters) Delete() {
 }
 
 // GetContext gets generator context according to config
-func GetContext(mixConfig []MixConfig) (*genParameters, error) {
+func GetContext(mixConfig GeneratorConfig) (*genParameters, error) {
 	var t []generatorTableUnit
 	for _, packetConfig := range mixConfig {
 		genFunc, err := getGenerator(packetConfig.Config)
