@@ -23,7 +23,12 @@ all: pktgen
 
 $(DPDK_DIR)/$(DPDK_INSTALL_DIR):
 	$(MAKE) -C $(DPDK_DIR) config T=$(RTE_TARGET)
-	sed -ri 's,(MLX._PMD=)n,\1y,' $(DPDK_DIR)/build/.config
+	@if [ -z '${NFF_GO_NO_MLX_DRIVERS}' ]; then				\
+		echo BUILDING DPDK WITH MLX DRIVERS;				\
+		sed -ri 's,(MLX._PMD=)n,\1y,' $(DPDK_DIR)/build/.config;	\
+	else									\
+		echo BUILDING DPDK WITHOUT MLX DRIVERS;				\
+	fi
 	$(MAKE) -C $(DPDK_DIR)
 	$(MAKE) -C $(DPDK_DIR) install DESTDIR=$(DPDK_INSTALL_DIR)
 

@@ -84,9 +84,15 @@ Requirements in the DPDK Getting Started Guide for
 Linux](http://dpdk.org/doc/guides/linux_gsg/sys_reqs.html) for more
 information.
 
-Since NFF-Go is build with Mellanox cards support out of the box you
+By default NFF-Go is build with Mellanox cards support out of the box you
 need to install additional dependencies required for MLX network
-drivers. On Ubuntu they are called `libmnl-dev` and `libibverbs-dev`.
+drivers. On Ubuntu they are called `libmnl-dev` and
+`libibverbs-dev`. For more details see MLX drivers respective pages
+for [MLX4](https://doc.dpdk.org/guides/nics/mlx4.html) and
+[MLX5](https://doc.dpdk.org/guides/nics/mlx5.html). If these
+dependencies cannot be satisfied, and Mellanox drivers are not needed,
+you can set variable `NFF_GO_NO_MLX_DRIVERS` to some unempty value to
+disable MLX drivers compilation.
 
 Additional dependencies are required for pktgen, especially if you are
 running RedHat or CentOS Linux distributions. See [this
