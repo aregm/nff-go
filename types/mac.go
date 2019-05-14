@@ -17,26 +17,38 @@ func (mac MACAddress) String() string {
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 }
 
-// StringToMACAddress parses a string which contains a MAC address.
+// UnmarshalJSON parses JSON element which contains string which
+// contains MAC address.
+func (out *MACAddress) UnmarshalJSON(b []byte) error {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
+		return err
+	}
+
+	*out, err = StringToMACAddress(str)
+	return err
+}
+
+// StringToMACAddress parses string and returns MACAddress.
 func StringToMACAddress(str string) (MACAddress, error) {
 	hw, err := net.ParseMAC(str)
 	if err != nil {
 		return MACAddress{}, err
 	}
-	var out MACAddress
-	copy(out[:], hw)
-	return out, nil
+	return NetHWAddressToMAC(hw), nil
 }
 
-// UnmarshalJSON parses JSON element which contains string which
-// contains MAC address.
-func (out *MACAddress) UnmarshalJSON(b []byte) error {
-	var s string
-	err := json.Unmarshal(b, &s)
-	if err != nil {
-		return err
-	}
+// NetHWAddressToMAC converts net.HardwareAddr to MACAddress address.
+func NetHWAddressToMAC(hw net.HardwareAddr) MACAddress {
+	var out MACAddress
+	copy(out[:], hw)
+	return out
+}
 
-	*out, err = StringToMACAddress(s)
-	return err
+// MACAddressToNetHW converts MACAddress to net.HardwareAddr address.
+func MACAddressToNetHW(mac MACAddress) net.HardwareAddr {
+	var out net.HardwareAddr
+	copy(out, mac[:])
+	return out
 }

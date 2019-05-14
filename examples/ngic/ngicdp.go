@@ -156,8 +156,11 @@ func initConfig() {
 
 	dpConfig.S1uPortIdx = uint16(*s1uPort)
 	dpConfig.SgiPortIdx = uint16(*sgiPort)
-	dpConfig.S1uIP = types.StringToIPv4(*s1uIP)
-	dpConfig.SgiIP = types.StringToIPv4(*sgiIP)
+	var err error
+	dpConfig.S1uIP, err = types.StringToIPv4(*s1uIP)
+	flow.CheckFatal(err)
+	dpConfig.SgiIP, err = types.StringToIPv4(*sgiIP)
+	flow.CheckFatal(err)
 	fmt.Printf("[INFO] S1uPortIdx = %v , SgiPortIdx = %v  \n", dpConfig.S1uPortIdx, dpConfig.SgiPortIdx)
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP, dpConfig.SgiIP)
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
@@ -392,9 +395,9 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	pkt.Ether.SAddr = s1uMac
 
 	if EnableStaticARP {
-		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
+		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
 		if err == nil {
-			copy(pkt.Ether.DAddr[:], dmac)
+			pkt.Ether.DAddr = dmac
 			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
 			common.LogError(common.Info, "[DL] Failed to find MAC for ", ipv4.DstAddr)
@@ -402,9 +405,9 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 		}
 	} else {
 		common.LogInfo(common.Info, "[DL] Lookup ARP entry ", ipv4.DstAddr)
-		dmac, sendArp, err := darp.LookupDlArpTable(uint32(ipv4.DstAddr), pkt) //s1uGwMac
+		dmac, sendArp, err := darp.LookupDlArpTable(ipv4.DstAddr, pkt) //s1uGwMac
 		if err == nil {
-			copy(pkt.Ether.DAddr[:], dmac)
+			pkt.Ether.DAddr = dmac
 			atomic.AddUint64(&darp.DlTxCounter, 1)
 		} else {
 			if sendArp {
@@ -551,9 +554,9 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 
 	if EnableStaticARP {
 		//Lookup arp table
-		dmac, err := sarp.LookArpTable(uint32(ipv4.DstAddr), pkt)
+		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
 		if err == nil {
-			copy(pkt.Ether.DAddr[:], dmac)
+			pkt.Ether.DAddr = dmac
 			atomic.AddUint64(&darp.UlTxCounter, 1)
 		} else {
 			common.LogError(common.Info, "[UL] Failed to find MAC for ", ipv4.DstAddr)
@@ -562,10 +565,10 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	} else {
 		common.LogInfo(common.Info, "[UL] Lookup ARP entry ", ipv4.DstAddr)
 		//Lookup arp table
-		dmac, sendArp, err := darp.LookupUlArpTable(uint32(ipv4.DstAddr), pkt) //sgiGwMac
+		dmac, sendArp, err := darp.LookupUlArpTable(ipv4.DstAddr, pkt) //sgiGwMac
 
 		if err == nil {
-			copy(pkt.Ether.DAddr[:], dmac)
+			pkt.Ether.DAddr = dmac
 			atomic.AddUint64(&darp.UlTxCounter, 1)
 		} else {
 			if sendArp {

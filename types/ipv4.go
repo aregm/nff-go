@@ -8,9 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-
-	"strconv"
-	"strings"
 )
 
 type IPv4Address uint32
@@ -45,35 +42,35 @@ func IPv4ArrayToString(addr [IPv4AddrLen]uint8) string {
 
 // UnmarshalJSON parses IPv4 address.
 func (out *IPv4Address) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
 		return err
 	}
 
-	if ip := net.ParseIP(s); ip != nil {
-		ipv4 := ip.To4()
-		if ipv4 == nil {
-			return fmt.Errorf("Bad IPv4 address %s", s)
-		}
-		*out = BytesToIPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3])
-		return nil
-	}
-	return fmt.Errorf("Failed to parse address %s", s)
+	*out, err = StringToIPv4(str)
+	return err
 }
 
-// parse ip address string to int ip
-func StringToIPv4(ipaddr string) IPv4Address {
-	str_ary := strings.Split(ipaddr, ".")
-	bIp := [4]byte{}
-
-	i := 0
-	for _, element := range str_ary {
-		val, err := strconv.Atoi(element)
-		if err != nil {
-			panic(err)
-		}
-		bIp[i] = byte(val)
-		i++
+// StringToIPv4 parses IPv4 address.
+func StringToIPv4(str string) (IPv4Address, error) {
+	ip := net.ParseIP(str)
+	if ip == nil {
+		return IPv4Address(0), fmt.Errorf("Bad IPv4 address %s", str)
 	}
-	return ArrayToIPv4(bIp)
+	return NetIPToIPv4(ip)
+}
+
+// NetIPToIPv4 converts net.IP to IPv4 address.
+func NetIPToIPv4(ip net.IP) (IPv4Address, error) {
+	ipv4 := ip.To4()
+	if ipv4 == nil {
+		return IPv4Address(0), fmt.Errorf("Bad IPv4 address %v", ip)
+	}
+	return BytesToIPv4(ipv4[0], ipv4[1], ipv4[2], ipv4[3]), nil
+}
+
+// IPv4ToNetIP converts IPv4 to net.IP address.
+func IPv4ToNetIP(ip IPv4Address) net.IP {
+	return net.IPv4(byte(ip>>24), byte(ip>>16), byte(ip>>8), byte(ip))
 }

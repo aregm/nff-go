@@ -22,18 +22,32 @@ func (addr IPv6Address) String() string {
 
 // UnmarshalJSON parses IPv6 address.
 func (out *IPv6Address) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
 		return err
 	}
 
-	if ip := net.ParseIP(s); ip != nil {
-		ipv6 := ip.To16()
-		if ipv6 == nil {
-			return fmt.Errorf("Bad IPv6 address %s", s)
-		}
-		copy((*out)[:], ipv6)
-		return nil
+	*out, err = StringToIPv6(str)
+	return err
+}
+
+// StringToIPv6 parses IPv6 address.
+func StringToIPv6(str string) (IPv6Address, error) {
+	ip := net.ParseIP(str)
+	if ip == nil {
+		return IPv6Address{}, fmt.Errorf("Bad IPv6 address %s", str)
 	}
-	return fmt.Errorf("Failed to parse address %s", s)
+	return NetIPToIPv6(ip)
+}
+
+// NetIPToIPv6 converts net.IP to IPv6 address.
+func NetIPToIPv6(ip net.IP) (IPv6Address, error) {
+	ipv6 := ip.To16()
+	if ipv6 == nil {
+		return IPv6Address{}, fmt.Errorf("Bad IPv6 address %v", ip)
+	}
+	var out IPv6Address
+	copy(out[:], ipv6)
+	return out, nil
 }

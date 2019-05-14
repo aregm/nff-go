@@ -31,38 +31,58 @@ func (sn *IPv4Subnet) String() string {
 
 // UnmarshalJSON parses ipv 4 subnet details.
 func (out *IPv4Subnet) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
 		return err
 	}
 
-	convertIPv4 := func(in []byte, str string) (IPv4Address, error) {
-		if in == nil || len(in) > 4 {
-			return 0, fmt.Errorf("Bad IPv4 address: ", str)
-		}
+	out, err = StringToIPv4Subnet(str)
+	return err
+}
 
-		return BytesToIPv4(in[0], in[1], in[2], in[3]), nil
+// StringToIPv4Subnet parses IPv4 subnet.
+func StringToIPv4Subnet(str string) (*IPv4Subnet, error) {
+	if ip, ipnet, err := net.ParseCIDR(str); err == nil {
+		return NetIPNetIPNetToIPv4Subnet(ip, ipnet)
 	}
 
-	if ip, ipnet, err := net.ParseCIDR(s); err == nil {
-		if out.Addr, err = convertIPv4(ip.To4(), s); err != nil {
-			return err
-		}
-		if out.Mask, err = convertIPv4(ipnet.Mask, s); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if ip := net.ParseIP(s); ip != nil {
+	if ip := net.ParseIP(str); ip != nil {
+		var out IPv4Subnet
 		var err error
-		if out.Addr, err = convertIPv4(ip.To4(), s); err != nil {
-			return err
+		if out.Addr, err = NetIPToIPv4(ip); err != nil {
+			return nil, err
 		}
 		out.Mask = 0xffffffff
-		return nil
+		return &out, nil
 	}
-	return fmt.Errorf("Failed to parse address ", s)
+	return nil, fmt.Errorf("Failed to parse address ", str)
+}
+
+func NetIPNetIPNetToIPv4Subnet(ip net.IP, ipnet *net.IPNet) (*IPv4Subnet, error) {
+	var out IPv4Subnet
+	var err error
+	if out.Addr, err = NetIPToIPv4(ip); err != nil {
+		return nil, err
+	}
+	if len(ipnet.Mask) > 4 {
+		return nil, fmt.Errorf("Bad IP mask: %v", ipnet)
+	}
+	out.Mask = BytesToIPv4(ipnet.Mask[0], ipnet.Mask[1], ipnet.Mask[2], ipnet.Mask[3])
+	return &out, nil
+}
+
+func NetIPNetToIPv4Subnet(ipnet *net.IPNet) (*IPv4Subnet, error) {
+	var out IPv4Subnet
+	var err error
+	if out.Addr, err = NetIPToIPv4(ipnet.IP); err != nil {
+		return nil, err
+	}
+	if len(ipnet.Mask) > 4 {
+		return nil, fmt.Errorf("Bad IP mask: %v", ipnet)
+	}
+	out.Mask = BytesToIPv4(ipnet.Mask[0], ipnet.Mask[1], ipnet.Mask[2], ipnet.Mask[3])
+	return &out, nil
 }
 
 // CheckIPv4AddressWithinSubnet returns true if IPv4 addr is inside of specified subnet.

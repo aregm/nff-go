@@ -5,11 +5,8 @@
 package sarp
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"net"
-	"os"
 	"strings"
 
 	"gopkg.in/ini.v1"
@@ -30,14 +27,13 @@ const (
 	StaticARPFilePath = "config/static_arp.cfg"
 )
 
-var mapStaticArp = map[uint32]ARPEntry{}
+var mapStaticArp = map[types.IPv4Address]ARPEntry{}
 
 //ARPEntry ...
 type ARPEntry struct {
-	IP     net.IP
-	MAC    net.HardwareAddr
-	PORT   int
-	STATUS string //int
+	IP       types.IPv4Address
+	MAC      types.MACAddress
+	COMPLETE bool
 }
 
 //Configure ...
@@ -58,75 +54,62 @@ func Configure() {
 
 //AddArpData ...
 func AddArpData(ipRange string, value string) {
-	firstIP := net.ParseIP(strings.Split(ipRange, " ")[0])
-	lastIP := net.ParseIP(strings.Split(ipRange, " ")[1])
-
-	lowIP := Ip2int(firstIP)
-	highIP := Ip2int(lastIP)
+	addrs := strings.Split(ipRange, " ")
+	lowIP, err := types.StringToIPv4(addrs[0])
+	if err != nil {
+		common.LogFatal(common.No, "Static ARP Config : Invalid IP address ", addrs[0])
+	}
+	highIP, err := types.StringToIPv4(addrs[1])
+	if err != nil {
+		common.LogFatal(common.No, "Static ARP Config : Invalid IP address ", addrs[1])
+	}
 
 	if lowIP <= highIP {
-
-		hw, err := net.ParseMAC(value)
+		hw, err := types.StringToMACAddress(value)
 		if err != nil {
-			fmt.Errorf("Static ARP Config : Invalid MAC address %v ", value)
-			os.Exit(1)
-		} //
-		common.LogDebug(common.Debug, "Filling up ARP entries from ", Int2ip(packet.SwapBytesUint32(lowIP)), "to", Int2ip(packet.SwapBytesUint32(highIP)))
+			common.LogFatal(common.No, "Static ARP Config : Invalid MAC address ", value)
+		}
+		common.LogDebug(common.No, "Filling up ARP entries from ", lowIP.String(), "to", highIP.String())
 		for i := lowIP; i <= highIP; i++ {
 			data := ARPEntry{
-				IP:     Int2ip(i),
-				STATUS: "COMPLETED",
-				MAC:    hw,
-			} //
-			common.LogDebug(common.Debug, "Entry : ", Int2ip(packet.SwapBytesUint32(i)), types.StringToIPv4(data.IP.String()), types.StringToIPv4(strings.Split(ipRange, " ")[0]))
-			addStaticArpEntry(packet.SwapBytesUint32(i), data)
-		} //
+				IP:       i,
+				MAC:      hw,
+				COMPLETE: true,
+			}
+			common.LogDebug(common.Debug, "Entry from range : ", ipRange, ":", data)
+			addStaticArpEntry(i, data)
+		}
 	}
 }
 
 //Add static arp entry to ARP Table/Map
-func addStaticArpEntry(ip uint32, data ARPEntry) {
+func addStaticArpEntry(ip types.IPv4Address, data ARPEntry) {
 	mapStaticArp[ip] = data
-	common.LogDebug(common.Debug, "Added static Entry : ", Int2ip(packet.SwapBytesUint32(ip)), data)
+	common.LogDebug(common.Debug, "Added static Entry : ", ip.String(), data)
 }
 
 //AddArpEntry ... Add arp entry to ARP table and queue the pkt
-func AddArpEntry(ip uint32, pkt *packet.Packet) {
+func AddArpEntry(ip types.IPv4Address, pkt *packet.Packet) {
 	arpEntry := ARPEntry{
-		IP:     Int2ip(ip),
-		STATUS: "INCOMPLETE",
+		IP:       ip,
+		COMPLETE: false,
 	}
 	mapStaticArp[ip] = arpEntry
-	common.LogDebug(common.Debug, "Added ARP Entry : ", Int2ip(packet.SwapBytesUint32(ip)), arpEntry)
+	common.LogDebug(common.Debug, "Added ARP Entry : ", ip.String(), arpEntry)
 }
 
 //LookArpTable Lookup arp table entry
-func LookArpTable(ip uint32, pkt *packet.Packet) (net.HardwareAddr, error) {
-	common.LogDebug(common.Debug, "LookupARP ", Int2ip(packet.SwapBytesUint32(ip)))
+func LookArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddress, error) {
+	common.LogDebug(common.Debug, "LookupARP ", ip.String())
 	entry, ok := mapStaticArp[ip]
 	if ok {
-		if entry.STATUS == "COMPLETED" {
+		if entry.COMPLETE {
 			return entry.MAC, nil
 		}
-		common.LogDebug(common.Debug, "ARP is incomplete ", Int2ip(packet.SwapBytesUint32(ip)))
-		return entry.MAC, errors.New("ARP is not resolved for IP " + Int2ip(packet.SwapBytesUint32(ip)).String())
+		common.LogDebug(common.Debug, "ARP is incomplete ", ip.String())
+		return entry.MAC, errors.New("ARP is not resolved for IP " + ip.String())
 	}
 	AddArpEntry(ip, pkt)
-	common.LogDebug(common.Debug, "ARP is not resolved for IP ", Int2ip(packet.SwapBytesUint32(ip)))
-	return entry.MAC, errors.New("ARP is not resolved for IP " + Int2ip(packet.SwapBytesUint32(ip)).String())
-}
-
-// Ip2int convert IPv4 address to int
-func Ip2int(ip net.IP) uint32 {
-	if len(ip) == 16 {
-		return binary.BigEndian.Uint32(ip[12:16])
-	}
-	return binary.BigEndian.Uint32(ip)
-}
-
-// Int2ip converts int ip to net.IP.
-func Int2ip(nn uint32) net.IP {
-	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, nn)
-	return ip
+	common.LogDebug(common.Debug, "ARP is not resolved for IP ", ip.String())
+	return entry.MAC, errors.New("ARP is not resolved for IP " + ip.String())
 }
