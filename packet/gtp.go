@@ -36,7 +36,7 @@ const (
 )
 
 type UDPPort struct {
-	Lenght              uint8 // in 4 octets, here always 0x01
+	Length              uint8 // in 4 octets, here always 0x01
 	UDPPortNumber       uint16
 	NextExtensionHeader uint8
 }

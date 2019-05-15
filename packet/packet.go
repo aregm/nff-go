@@ -838,7 +838,7 @@ func NewPacket() (*Packet, error) {
 	return pkt, nil
 }
 
-// SendPacket immidiately sends packet to specified port via calling C function.
+// SendPacket immediately sends packet to specified port via calling C function.
 // Packet is freed. Function return true if packet was actually sent.
 // Port should be initialized. Packet is sent to zero queue (is always present).
 // Sending simultaneously to one port is permitted in DPDK.
