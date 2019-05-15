@@ -11,7 +11,6 @@ RUN apt-get -q update && apt-get -q -y install \
     git \
     curl \
     wget \
-    golang-${GO_VERSION} \
     libpcap-dev \
     libelf-dev \
     hugepages  \
