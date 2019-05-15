@@ -1,4 +1,4 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff) 
+[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/nff-go)](https://goreportcard.com/report/github.com/intel-go/nff-go) 
 [![GoDoc](https://godoc.org/github.com/intel-go/nff-go?status.svg)](https://godoc.org/github.com/intel-go/nff-go)
 [![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
