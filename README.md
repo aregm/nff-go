@@ -1,5 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/yanff)](https://goreportcard.com/report/github.com/intel-go/yanff) 
-[![GoDoc](https://godoc.org/github.com/intel-go/yanff?status.svg)](https://godoc.org/github.com/intel-go/yanff)
+[![Go Report Card](https://goreportcard.com/badge/github.com/intel-go/nff-go)](https://goreportcard.com/report/github.com/intel-go/nff-go) 
+[![GoDoc](https://godoc.org/github.com/intel-go/nff-go?status.svg)](https://godoc.org/github.com/intel-go/nff-go)
 [![Dev chat at https://gitter.im/intel-yanff/Lobby](https://img.shields.io/badge/gitter-developer_chat-46bc99.svg)](https://gitter.im/intel-yanff/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
@@ -84,9 +84,15 @@ Requirements in the DPDK Getting Started Guide for
 Linux](http://dpdk.org/doc/guides/linux_gsg/sys_reqs.html) for more
 information.
 
-Since NFF-Go is build with Mellanox cards support out of the box you
+By default NFF-Go is build with Mellanox cards support out of the box you
 need to install additional dependencies required for MLX network
-drivers. On Ubuntu they are called `libmnl-dev` and `libibverbs-dev`.
+drivers. On Ubuntu they are called `libmnl-dev` and
+`libibverbs-dev`. For more details see MLX drivers respective pages
+for [MLX4](https://doc.dpdk.org/guides/nics/mlx4.html) and
+[MLX5](https://doc.dpdk.org/guides/nics/mlx5.html). If these
+dependencies cannot be satisfied, and Mellanox drivers are not needed,
+you can set variable `NFF_GO_NO_MLX_DRIVERS` to some unempty value to
+disable MLX drivers compilation.
 
 Additional dependencies are required for pktgen, especially if you are
 running RedHat or CentOS Linux distributions. See [this
@@ -133,18 +139,9 @@ when it is run for the first time, but may be quite slow.
 
 ## Documentation 
 
-Use:
-
-        make doc
-
-to generate full documentation. Alternatively, you can do:
-
-        godoc -http=:6060
-
-and browse the following URLs:
-
-* http://localhost:6060/pkg/nff-go/flow/
-* http://localhost:6060/pkg/nff-go/packet/
+Online API documentation is available on [godoc.org
+site](https://godoc.org/github.com/intel-go/nff-go). API usage is
+explained on our [Wiki pages](https://github.com/intel-go/nff-go/wiki).
 
 ## Tests
 
@@ -187,7 +184,7 @@ deployed images listed in NFF_GO_HOSTS, use the **make cleanall** command.
 ## Contributing
 
 If you want to contribute to NFF-Go, check our [Contributing
-guide](https://github.com/intel-go/yanff/blob/master/CONTRIBUTING.md). We also
+guide](https://github.com/intel-go/nff-go/blob/master/CONTRIBUTING.md). We also
 recommend checking the bugs with 'help-wanted' or 'easyfix' in our list of open issues; these bugs
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
