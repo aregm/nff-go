@@ -10,6 +10,9 @@ import (
 	"net"
 )
 
+// IPv4Address is type representing IP v4 address with big endian byte
+// order that can be assigned directly to IPv4 header fields without
+// byte order conversion.
 type IPv4Address uint32
 
 // BytesToIPv4 converts four element address to IPv4Address representation

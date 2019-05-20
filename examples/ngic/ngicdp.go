@@ -162,7 +162,7 @@ func initConfig() {
 	dpConfig.SgiIP, err = types.StringToIPv4(*sgiIP)
 	flow.CheckFatal(err)
 	fmt.Printf("[INFO] S1uPortIdx = %v , SgiPortIdx = %v  \n", dpConfig.S1uPortIdx, dpConfig.SgiPortIdx)
-	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP, dpConfig.SgiIP)
+	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP.String(), dpConfig.SgiIP.String())
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
 	fmt.Printf("[INFO] S1uDeviceName = %s , SgiDeviceName = %s \n", dpConfig.S1uDeviceName, dpConfig.SgiDeviceName)
 }

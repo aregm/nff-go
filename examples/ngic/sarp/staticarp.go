@@ -31,7 +31,6 @@ var mapStaticArp = map[types.IPv4Address]ARPEntry{}
 
 //ARPEntry ...
 type ARPEntry struct {
-	IP       types.IPv4Address
 	MAC      types.MACAddress
 	COMPLETE bool
 }
@@ -59,46 +58,48 @@ func AddArpData(ipRange string, value string) {
 	if err != nil {
 		common.LogFatal(common.No, "Static ARP Config : Invalid IP address ", addrs[0])
 	}
+	lowIP = packet.SwapBytesIPv4Addr(lowIP)
 	highIP, err := types.StringToIPv4(addrs[1])
 	if err != nil {
 		common.LogFatal(common.No, "Static ARP Config : Invalid IP address ", addrs[1])
 	}
+	highIP = packet.SwapBytesIPv4Addr(highIP)
 
 	if lowIP <= highIP {
 		hw, err := types.StringToMACAddress(value)
 		if err != nil {
 			common.LogFatal(common.No, "Static ARP Config : Invalid MAC address ", value)
 		}
-		common.LogDebug(common.No, "Filling up ARP entries from ", lowIP.String(), "to", highIP.String())
+		common.LogDebug(common.No, "Filling up ARP entries from ", packet.SwapBytesIPv4Addr(lowIP).String(), "to", packet.SwapBytesIPv4Addr(highIP).String())
+		// Iterate over IPs in little endian (native) format. Convert
+		// them to big endian (network) order for use in IP headers.
 		for i := lowIP; i <= highIP; i++ {
 			data := ARPEntry{
-				IP:       i,
 				MAC:      hw,
 				COMPLETE: true,
 			}
 			common.LogDebug(common.Debug, "Entry from range : ", ipRange, ":", data)
-			addStaticArpEntry(i, data)
+			addStaticArpEntry(packet.SwapBytesIPv4Addr(i), data)
 		}
 	}
 }
 
-//Add static arp entry to ARP Table/Map
+// Add static arp entry to ARP Table/Map. IP should be big endian.
 func addStaticArpEntry(ip types.IPv4Address, data ARPEntry) {
 	mapStaticArp[ip] = data
 	common.LogDebug(common.Debug, "Added static Entry : ", ip.String(), data)
 }
 
-//AddArpEntry ... Add arp entry to ARP table and queue the pkt
+// AddArpEntry. Add arp entry to ARP table and queue the pkt
 func AddArpEntry(ip types.IPv4Address, pkt *packet.Packet) {
 	arpEntry := ARPEntry{
-		IP:       ip,
 		COMPLETE: false,
 	}
 	mapStaticArp[ip] = arpEntry
 	common.LogDebug(common.Debug, "Added ARP Entry : ", ip.String(), arpEntry)
 }
 
-//LookArpTable Lookup arp table entry
+//LookArpTable Lookup arp table entry. IP should be big endian.
 func LookArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddress, error) {
 	common.LogDebug(common.Debug, "LookupARP ", ip.String())
 	entry, ok := mapStaticArp[ip]
