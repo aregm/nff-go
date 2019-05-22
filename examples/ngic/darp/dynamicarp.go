@@ -573,20 +573,3 @@ func ClonePacket(srcPkt *packet.Packet) (*packet.Packet, error) {
 	}
 	return clonePkt, errors.New("Unable to clone pkt ")
 }
-
-// IncrementIP increments all bytes in IPv4 address.
-func IncrementIP(ip net.IP) {
-	for j := len(ip) - 1; j >= 0; j-- {
-		ip[j]++
-		if ip[j] > 0 {
-			break
-		}
-	}
-}
-
-// Int2ip converts int ip to net.IP.
-func Int2ip(nn uint32) net.IP {
-	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, nn)
-	return ip
-}

@@ -6,22 +6,24 @@
 // NB API interface over UDP(Port 20) providing following
 // CreateSession --create ue session
 // UpdateSession --modify bearer
-// DeleteSession --delere ue session
+// DeleteSession --delete ue session
 //
 package nbserver
 
 import (
 	"errors"
 	"fmt"
-	"github.com/golang-collections/go-datastructures/queue"
-	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/packet"
-	"github.com/intel-go/nff-go/types"
 	"net"
 	"os"
 	"strconv"
 	"sync"
 	"unsafe"
+
+	"github.com/golang-collections/go-datastructures/queue"
+
+	"github.com/intel-go/nff-go/common"
+	"github.com/intel-go/nff-go/packet"
+	"github.com/intel-go/nff-go/types"
 )
 
 //UlMap and DlMap stores the UE context
