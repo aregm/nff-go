@@ -17,10 +17,8 @@
 package darp
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -190,6 +188,10 @@ func initArpTable() {
 		fmt.Println("ARP Table")
 		fmt.Println("--------------------------------------")
 		for _, neigh := range dump {
+			if neigh.IP.To4() == nil {
+				// Skip IPv6 routes for now
+				continue
+			}
 			ipv4, err := types.NetIPToIPv4(neigh.IP)
 			flow.CheckFatal(err)
 			if ipv4 != 0 && !neigh.IP.IsLoopback() {
@@ -525,11 +527,11 @@ func sendULQueuedPkts(entry ARPEntry, dstPort uint16) {
 			for _, item := range items {
 				pkt := item.(*packet.Packet)
 				pkt.Ether.DAddr = entry.MAC
-				//common.LogDebug(common.Debug, "[UL] Sending queued pkts ", pkt)
+				common.LogDebug(common.Debug, "[UL] Sending queued pkts ", pkt)
 				result := pkt.SendPacket(dstPort)
 				if result == true {
 					atomic.AddUint64(&UlTxCounter, 1)
-					//common.LogDebug(common.Debug, "Sending success")
+					common.LogDebug(common.Debug, "Sending success")
 				} else {
 					common.LogDebug(common.Debug, "Sending failed ")
 				}
@@ -547,11 +549,11 @@ func sendDLQueuedPkts(entry ARPEntry, dstPort uint16) {
 			for _, item := range items {
 				pkt := item.(*packet.Packet)
 				pkt.Ether.DAddr = entry.MAC
-				//common.LogDebug(common.Debug, "[DL] Sending queued pkts ", pkt)
+				common.LogDebug(common.Debug, "[DL] Sending queued pkts ", pkt)
 				result := pkt.SendPacket(dstPort)
 				if result == true {
 					atomic.AddUint64(&DlTxCounter, 1)
-					//common.LogDebug(common.Debug, "Sending success")
+					common.LogDebug(common.Debug, "Sending success")
 				} else {
 					common.LogDebug(common.Debug, "Sending failed ")
 				}

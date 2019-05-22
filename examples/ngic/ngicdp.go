@@ -59,14 +59,15 @@ import (
 	"time"
 
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/examples/ngic/darp"
-	"github.com/intel-go/nff-go/examples/ngic/nbserver"
-	"github.com/intel-go/nff-go/examples/ngic/sarp"
-	"github.com/intel-go/nff-go/examples/ngic/simucp"
 	"github.com/intel-go/nff-go/flow"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/rules"
 	"github.com/intel-go/nff-go/types"
+
+	"github.com/intel-go/nff-go/examples/ngic/darp"
+	"github.com/intel-go/nff-go/examples/ngic/nbserver"
+	"github.com/intel-go/nff-go/examples/ngic/sarp"
+	"github.com/intel-go/nff-go/examples/ngic/simucp"
 )
 
 //
@@ -165,6 +166,10 @@ func initConfig() {
 	fmt.Printf("[INFO] S1uIP = %v , SgiIP = %v  \n", dpConfig.S1uIP.String(), dpConfig.SgiIP.String())
 	fmt.Printf("[INFO] KNI = %v , CPU_LIST %s , kniCpuIdx = %v  \n", dpConfig.NeedKNI, dpConfig.CPUList, dpConfig.KNICpuIdx)
 	fmt.Printf("[INFO] S1uDeviceName = %s , SgiDeviceName = %s \n", dpConfig.S1uDeviceName, dpConfig.SgiDeviceName)
+
+	if !dpConfig.NeedKNI && !EnableStaticARP {
+		common.LogFatal(common.No, "Dynamic ARP mode works only when KNI is enabled")
+	}
 }
 
 // intialize dp logger
@@ -197,7 +202,6 @@ func initRules() {
 
 // Start dp
 func main() {
-
 	//intialize config
 	initConfig()
 	//setup log level DP logging set to INFO
@@ -280,7 +284,9 @@ func main() {
 
 		// Filter traffic
 		toS1uKniFlow, err := flow.SetSeparator(s1uEthInFlow, S1uFilter, nil)
+		flow.CheckFatal(err)
 		toSgiKniFlow, err := flow.SetSeparator(sgiEthInFlow, SgiFilter, nil)
+		flow.CheckFatal(err)
 
 		flow.SetHandlerDrop(toS1uKniFlow, UplinkFilterKni, nil)
 		flow.SetHandlerDrop(toSgiKniFlow, DownlinkFilterKni, nil)
@@ -306,9 +312,7 @@ func main() {
 		flow.SetSender(s1uOutFlow, dpConfig.S1uPortIdx)
 		//set sender on SGi
 		flow.SetSender(sgiOutFlow, dpConfig.SgiPortIdx)
-
 	} else {
-
 		//set receiver on S1U port
 		s1uEthInFlow, err := flow.SetReceiver(dpConfig.S1uPortIdx)
 		flow.CheckFatal(err)
@@ -324,7 +328,6 @@ func main() {
 		flow.SetSender(sgiEthInFlow, dpConfig.S1uPortIdx)
 		//set sender on SGi
 		flow.SetSender(s1uEthInFlow, dpConfig.SgiPortIdx)
-
 	}
 
 	fmt.Println("******* DP started successfully *********")
@@ -337,18 +340,16 @@ func main() {
 func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 	atomic.AddUint64(&kniDlRxCounter, 1)
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
-	//	common.LogInfo(common.Info, "In SGI FilterFunction ", ipv4, arpPkt)
 	if arpPkt != nil {
 		if !EnableStaticARP && packet.SwapBytesUint16(arpPkt.Operation) == packet.ARPReply {
-			common.LogInfo(common.Info, "ARP Response recv = ", arpPkt)
+			common.LogDebug(common.Debug, "[DL] ARP Response recv = ", arpPkt.String())
 			darp.UpdateUlArpTable(arpPkt, dpConfig.SgiPortIdx, dpConfig.SgiDeviceName)
 		}
 		atomic.AddUint64(&KniDlTxCounter, 1)
 		return true
 	} else if ipv4 != nil {
-
 		if ipv4.NextProtoID == types.ICMPNumber {
-			common.LogInfo(common.Info, "PING pkt found ")
+			common.LogDebug(common.Debug, "[DL] ICMP pkt found ")
 			atomic.AddUint64(&KniDlTxCounter, 1)
 			return true
 		}
@@ -363,7 +364,6 @@ func DownlinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 
 // Apply ADC/SDF rules
 func applyDlRulesFilter(current *packet.Packet) bool {
-
 	sdfIdx := current.L3ACLPort(sdfDlL3Rules)
 	adcIdx := current.L3ACLPort(adcL3Rules)
 
@@ -436,7 +436,7 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 	pktIpv4 := current.GetIPv4()
 
 	if pktIpv4 == nil {
-		common.LogError(common.Info, "[DL] Not a valid Ipv4 PKT: INVALID PKT REJECT")
+		// common.LogError(common.Info, "[DL] Not a valid Ipv4 PKT: INVALID PKT REJECT")
 		return false
 	}
 	atomic.AddUint64(&dlRxCounter, 1)
@@ -492,22 +492,19 @@ func SgiFilter(current *packet.Packet, context flow.UserContext) bool {
 
 //UplinkFilterKni ...
 func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
-
 	atomic.AddUint64(&kniUlRxCounter, 1)
 
 	ipv4, ipv6, arpPkt := current.ParseAllKnownL3()
-	//	common.LogInfo(common.Info, "In S1U FilterFunction ", ipv4, arpPkt)
 	if arpPkt != nil {
 		if !EnableStaticARP && packet.SwapBytesUint16(arpPkt.Operation) == packet.ARPReply {
-			common.LogInfo(common.Info, "ARP response recv = ", arpPkt)
+			common.LogDebug(common.Debug, "[UL] ARP response recv = ", arpPkt)
 			darp.UpdateDlArpTable(arpPkt, dpConfig.S1uPortIdx, dpConfig.S1uDeviceName)
 		}
 		atomic.AddUint64(&kniUlTxCounter, 1)
 		return true
 	} else if ipv4 != nil {
-
 		if ipv4.NextProtoID == types.ICMPNumber {
-			common.LogInfo(common.Info, "PING pkt found ")
+			common.LogDebug(common.Debug, "[UL] ICMP pkt found ")
 			atomic.AddUint64(&kniUlTxCounter, 1)
 			return true
 		}
@@ -522,7 +519,6 @@ func UplinkFilterKni(current *packet.Packet, context flow.UserContext) bool {
 
 // Apply ADC/SDF rules
 func applyUlRulesFilter(current *packet.Packet) bool {
-
 	sdfIdx := current.L3ACLPort(sdfUlL3Rules)
 	adcIdx := current.L3ACLPort(adcL3Rules)
 	//	common.LogInfo(common.Info, "SDX Rule Idx  #", int(sdf_idx))
@@ -596,11 +592,13 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 func S1uFilter(current *packet.Packet, context flow.UserContext) bool {
 	current.ParseL3()
 	ipv4 := current.GetIPv4()
-	if ipv4 == nil || ipv4.DstAddr != dpConfig.S1uIP {
+	if ipv4 == nil {
+		return false
+	}
+	if ipv4.DstAddr != dpConfig.S1uIP {
 		// reject with wrong dest ip
-		common.LogError(common.Info, " [UL] Not a ipv4 pkt or reject dest ip doesn't match", ipv4)
 		if ipv4 != nil {
-			common.LogError(common.Info, "[UL] reject dest ip doesn't match ", ipv4)
+			common.LogError(common.Info, "[UL] reject dest ip doesn't match ", ipv4.DstAddr.String())
 		}
 		return false
 	}
