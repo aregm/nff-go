@@ -29,6 +29,9 @@
 #include <sys/ioctl.h>          // ioctl
 #include <net/if.h>             // ifreq
 #include <netpacket/packet.h>   // sockaddr_ll
+#include <sys/types.h>          // open
+#include <sys/stat.h>           // open
+#include <fcntl.h>              // open
 
 #define process 1
 #define stopRequest 2
@@ -170,6 +173,10 @@ static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu);
 static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up);
 static int KNI_config_mac_address(uint16_t port_id, uint8_t mac_addr[]);
 static int KNI_config_promiscusity(uint16_t port_id, uint8_t to_on);
+
+#define KNI_CARRIER_FORMAT "/sys/devices/virtual/net/%s/carrier"
+#define KNI_CARRIER_BUFFER_LENGTH 256
+#define KNI_CARRIER_ACTIVATION_STRING "1"
 
 uint32_t BURST_SIZE;
 bool CHAINED_REASSEMBLY;
@@ -909,6 +916,43 @@ static int KNI_change_mtu(uint16_t port_id, unsigned int new_mtu) {
 
 static int KNI_config_network_interface(uint16_t port_id, uint8_t if_up) {
 	fprintf(stderr, "DEBUG: KNI: Configure network interface of port %d %s\n", port_id, if_up ? "up" : "down");
+
+    if (if_up) {
+        const char *if_name = rte_kni_get_name(kni[port_id]);
+        char carrier_file_name[KNI_CARRIER_BUFFER_LENGTH];
+        int carrier_file;
+        char *out_str = "1";
+        size_t size_t_result;
+        int int_result;
+        bool success = true;
+
+        snprintf(carrier_file_name, KNI_CARRIER_BUFFER_LENGTH - 1,
+            KNI_CARRIER_FORMAT, if_name);
+        fprintf(stderr, "DEBUG: KNI: Activating carrier using file \"%s\"\n",
+            carrier_file_name);
+        carrier_file = open(carrier_file_name, O_WRONLY);
+        if (carrier_file == -1) {
+            fprintf(stderr, "Failed to open file for writing \"%s\": error %d.\n",
+                carrier_file_name, errno);
+            return 1;
+        }
+        size_t_result = write(carrier_file, KNI_CARRIER_ACTIVATION_STRING, strlen(KNI_CARRIER_ACTIVATION_STRING));
+        if (size_t_result != strlen(KNI_CARRIER_ACTIVATION_STRING)) {
+            fprintf(stderr, "Failed to write file \"%s\": error %d.\n",
+                carrier_file_name, errno);
+            success = false;
+        }
+        int_result = close(carrier_file);
+        if (int_result != 0) {
+            fprintf(stderr, "Failed to close file \"%s\": error %d.\n",
+                carrier_file_name, errno);
+            success = false;
+        }
+        if (success) {
+            fprintf(stderr, "DEBUG: KNI: Successfully activated carrier on interface %s\n", if_name);
+        }
+    }
+
 	return 0;
 }
 
