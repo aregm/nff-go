@@ -33,6 +33,8 @@ type IpPort struct {
 	TrafficConfig generator.GeneratorConfig `json:"traffic-config"`
 	// GTPUConfig is ignored for SGi port
 	GTPUConfig *GTPUConfig `json:"gtp-u-config"`
+	// DUTSGiIPv4 is ignored for S1u port
+	DUTSGiIPv4 types.IPv4Address `json:"dut-sgi-ipv4"`
 
 	staticARP   bool
 	neighCache  *packet.NeighboursLookupTable
@@ -169,10 +171,10 @@ func initPortFlows(port *IpPort, myIPs generator.AddrRange, addEncapsulation boo
 	port.teidCount = 0
 	// myIPs is caputred inside this lambda
 	myV4Checker := func(ip types.IPv4Address) bool {
-		return myIPs.Min <= uint64(ip) && myIPs.Max >= uint64(ip)
+		return (myIPs.Inc != 0 && myIPs.Min <= uint64(packet.SwapBytesIPv4Addr(ip)) && myIPs.Max >= uint64(packet.SwapBytesIPv4Addr(ip))) ||
+			(myIPs.Inc == 0 && myIPs.Current == uint64(packet.SwapBytesIPv4Addr(ip)))
 	}
-	port.neighCache = packet.NewNeighbourTable(port.Index, port.macAddress, types.IPv4Address(0),
-		types.IPv6Address{}, myV4Checker, nil)
+	port.neighCache = packet.NewNeighbourTable(port.Index, port.macAddress, myV4Checker, nil)
 
 	// Output flow
 	context, err := generator.GetContext(port.TrafficConfig)
@@ -227,8 +229,8 @@ func encapsulateGTP(pkt *packet.Packet, ctx flow.UserContext) bool {
 		targetIP := ipv4.DstAddr
 		targetMAC, found := hc.port.neighCache.LookupMACForIPv4(targetIP)
 		if !found {
-			fmt.Println("Not found MAC address for IP", targetIP.String())
-			hc.port.neighCache.SendARPRequestForIPv4(targetIP, 0)
+			// fmt.Println("Not found MAC address for IP", targetIP.String())
+			hc.port.neighCache.SendARPRequestForIPv4(targetIP, ipv4.SrcAddr, 0)
 			return false
 		}
 		pkt.Ether.DAddr = targetMAC
@@ -270,12 +272,12 @@ func setCorrectL2(pkt *packet.Packet, ctx flow.UserContext) bool {
 	if hc.port.staticARP {
 		pkt.Ether.DAddr = hc.port.DstMacAddress
 	} else {
-		// Find l2 addresses for new destionation IP in ARP cache
-		targetIP := pkt.GetIPv4NoCheck().DstAddr
-		targetMAC, found := hc.port.neighCache.LookupMACForIPv4(targetIP)
+		// Set destination MAC address to DUT's SGi port, so it
+		// effectively routes a packet to GW IP SGi address
+		targetMAC, found := hc.port.neighCache.LookupMACForIPv4(hc.port.DUTSGiIPv4)
 		if !found {
-			fmt.Println("Not found MAC address for IP", targetIP.String())
-			hc.port.neighCache.SendARPRequestForIPv4(targetIP, 0)
+			// fmt.Println("Not found MAC address for IP", targetIP.String())
+			hc.port.neighCache.SendARPRequestForIPv4(hc.port.DUTSGiIPv4, pkt.GetIPv4NoCheck().SrcAddr, 0)
 			return false
 		}
 		pkt.Ether.DAddr = targetMAC
