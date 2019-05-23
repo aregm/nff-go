@@ -7,33 +7,37 @@ package packet
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/types"
 )
 
+const (
+	arpRequestsRepeatInterval = 1 * time.Second
+)
+
 type NeighboursLookupTable struct {
-	portIndex         uint16
-	ipv4Table         sync.Map
-	ipv6Table         sync.Map
-	interfaceMAC      types.MACAddress
-	ipv4InterfaceAddr types.IPv4Address
-	ipv6InterfaceAddr types.IPv6Address
-	checkv4           func(ipv4 types.IPv4Address) bool
-	checkv6           func(ipv6 types.IPv6Address) bool
+	portIndex            uint16
+	ipv4Table            sync.Map
+	ipv6Table            sync.Map
+	ipv4SentRequestTable sync.Map
+	ipv6SentRequestTable sync.Map
+	interfaceMAC         types.MACAddress
+	// Should return true if IPv4 address belongs to interface
+	checkv4 func(ipv4 types.IPv4Address) bool
+	// Should return true if IPv6 address belongs to interface
+	checkv6 func(ipv6 types.IPv6Address) bool
 }
 
 func NewNeighbourTable(index uint16, mac types.MACAddress,
-	ipv4 types.IPv4Address, ipv6 types.IPv6Address,
 	checkv4 func(ipv4 types.IPv4Address) bool,
 	checkv6 func(ipv6 types.IPv6Address) bool) *NeighboursLookupTable {
 	return &NeighboursLookupTable{
-		portIndex:         index,
-		interfaceMAC:      mac,
-		ipv4InterfaceAddr: ipv4,
-		ipv6InterfaceAddr: ipv6,
-		checkv4:           checkv4,
-		checkv6:           checkv6,
+		portIndex:    index,
+		interfaceMAC: mac,
+		checkv4:      checkv4,
+		checkv6:      checkv6,
 	}
 }
 
@@ -56,8 +60,8 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 	// Check that someone is asking about MAC of my IP address and HW
 	// address is blank in request
 	targetIP := types.BytesToIPv4(arp.TPA[0], arp.TPA[1], arp.TPA[2], arp.TPA[3])
-	if (table.checkv4 == nil && targetIP != table.ipv4InterfaceAddr) || (table.checkv4 != nil && table.checkv4(targetIP)) {
-		return fmt.Errorf("Warning! Got an ARP packet with target IPv4 address %s different from IPv4 address on interface. Should be %s. ARP request ignored.", types.IPv4ArrayToString(arp.TPA), table.ipv4InterfaceAddr.String())
+	if !table.checkv4(targetIP) {
+		return fmt.Errorf("Warning! Got an ARP packet with target IPv4 address %s different from IPv4 address on interface. ARP request ignored.", types.IPv4ArrayToString(arp.TPA))
 	}
 	if arp.THA != (types.MACAddress{}) {
 		return fmt.Errorf("Warning! Got an ARP packet with non-zero MAC address %s. ARP request ignored.", arp.THA.String())
@@ -92,17 +96,28 @@ func (table *NeighboursLookupTable) LookupMACForIPv4(ipv4 types.IPv4Address) (ty
 // SendARPRequestForIPv4 sends an ARP request for specified IPv4
 // address. If specified vlan tag is not zero, ARP request packet gets
 // VLAN tag assigned to it.
-func (table *NeighboursLookupTable) SendARPRequestForIPv4(ipv4 types.IPv4Address, vlan uint16) {
+func (table *NeighboursLookupTable) SendARPRequestForIPv4(ipv4, myIPv4Address types.IPv4Address, vlan uint16) {
+	v, found := table.ipv4SentRequestTable.Load(ipv4)
+	if found {
+		lastsent := v.(time.Time)
+		if time.Since(lastsent) < arpRequestsRepeatInterval {
+			// Another ARP request has beep sent recently, we're still
+			// waiting for reply
+			return
+		}
+	}
+
 	requestPacket, err := NewPacket()
 	if err != nil {
 		common.LogFatal(common.Debug, err)
 	}
 
-	InitARPRequestPacket(requestPacket, table.interfaceMAC, table.ipv4InterfaceAddr, ipv4)
+	InitARPRequestPacket(requestPacket, table.interfaceMAC, myIPv4Address, ipv4)
 
 	if vlan != 0 {
 		requestPacket.AddVLANTag(vlan)
 	}
 
 	requestPacket.SendPacket(table.portIndex)
+	table.ipv4SentRequestTable.Store(ipv4, time.Now())
 }
