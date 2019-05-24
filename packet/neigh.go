@@ -63,9 +63,6 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 	if !table.checkv4(targetIP) {
 		return fmt.Errorf("Warning! Got an ARP packet with target IPv4 address %s different from IPv4 address on interface. ARP request ignored.", types.IPv4ArrayToString(arp.TPA))
 	}
-	if arp.THA != (types.MACAddress{}) {
-		return fmt.Errorf("Warning! Got an ARP packet with non-zero MAC address %s. ARP request ignored.", arp.THA.String())
-	}
 
 	// Prepare an answer to this request
 	answerPacket, err := NewPacket()

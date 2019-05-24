@@ -171,7 +171,8 @@ func initPortFlows(port *IpPort, myIPs generator.AddrRange, addEncapsulation boo
 	port.teidCount = 0
 	// myIPs is caputred inside this lambda
 	myV4Checker := func(ip types.IPv4Address) bool {
-		return myIPs.Min <= uint64(packet.SwapBytesIPv4Addr(ip)) && myIPs.Max >= uint64(packet.SwapBytesIPv4Addr(ip))
+		return (myIPs.Inc != 0 && myIPs.Min <= uint64(packet.SwapBytesIPv4Addr(ip)) && myIPs.Max >= uint64(packet.SwapBytesIPv4Addr(ip))) ||
+			(myIPs.Inc == 0 && myIPs.Current == uint64(packet.SwapBytesIPv4Addr(ip)))
 	}
 	port.neighCache = packet.NewNeighbourTable(port.Index, port.macAddress, myV4Checker, nil)
 
