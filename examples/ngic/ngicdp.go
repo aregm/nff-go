@@ -404,7 +404,7 @@ func updateDlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 			return false
 		}
 	} else {
-		common.LogInfo(common.Info, "[DL] Lookup ARP entry ", ipv4.DstAddr)
+		common.LogDebug(common.Debug, "[DL] Lookup ARP entry ", ipv4.DstAddr)
 		dmac, sendArp, err := darp.LookupDlArpTable(ipv4.DstAddr, pkt) //s1uGwMac
 		if err == nil {
 			pkt.Ether.DAddr = dmac
@@ -549,7 +549,6 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 	pkt.Ether.SAddr = sgiMac
 
 	if EnableStaticARP {
-		//Lookup arp table
 		dmac, err := sarp.LookArpTable(ipv4.DstAddr, pkt)
 		if err == nil {
 			pkt.Ether.DAddr = dmac
@@ -559,8 +558,7 @@ func updateUlNextHopInfo(pkt *packet.Packet, ctx flow.UserContext, ipv4 *packet.
 			return false
 		}
 	} else {
-		common.LogInfo(common.Info, "[UL] Lookup ARP entry ", ipv4.DstAddr)
-		//Lookup arp table
+		common.LogDebug(common.Debug, "[UL] Lookup ARP entry ", ipv4.DstAddr)
 		dmac, sendArp, err := darp.LookupUlArpTable(ipv4.DstAddr, pkt) //sgiGwMac
 
 		if err == nil {

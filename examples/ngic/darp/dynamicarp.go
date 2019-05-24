@@ -251,7 +251,7 @@ var mutex sync.Mutex
 
 //Updating linux arp entries
 func updateLinuxArp(DeviceName string, ip types.IPv4Address, mac types.MACAddress) {
-	common.LogDebug(common.Debug, "Updating linux arp entries", ip, mac)
+	common.LogInfo(common.Info, "Updating linux arp entries", ip, mac)
 	link, err := netlink.LinkByName(DeviceName) //get SGI/S1U device name
 	flow.CheckFatal(err)
 
@@ -265,14 +265,13 @@ func updateLinuxArp(DeviceName string, ip types.IPv4Address, mac types.MACAddres
 		}
 		err := netlink.NeighAdd(&entry)
 		if err != nil {
-			common.LogDebug(common.Debug, "Error creating linux arp entries", ip, mac)
+			common.LogError(common.No, "Error creating linux arp entries", ip, mac)
 			flow.CheckFatal(err)
 		}
 		mutex.Unlock()
 	} else {
-		common.LogDebug(common.Debug, "Error getting network link ")
+		common.LogError(common.No, "Error getting network link ")
 	}
-
 }
 
 //Add arp incomplete entry to ARP table
