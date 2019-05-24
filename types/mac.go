@@ -48,7 +48,7 @@ func NetHWAddressToMAC(hw net.HardwareAddr) MACAddress {
 
 // MACAddressToNetHW converts MACAddress to net.HardwareAddr address.
 func MACAddressToNetHW(mac MACAddress) net.HardwareAddr {
-	var out net.HardwareAddr
+	var out net.HardwareAddr = make(net.HardwareAddr, EtherAddrLen)
 	copy(out, mac[:])
 	return out
 }
