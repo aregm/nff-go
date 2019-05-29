@@ -22,7 +22,7 @@ Fedora: Makefile
 
 Dockerfile: Makefile
 	echo 'ARG USER_NAME' > Dockerfile
-	echo 'FROM ubuntu:cosmic' >> Dockerfile
+	echo 'FROM ubuntu:disco' >> Dockerfile
 	if [ -n '${http_proxy}' ]; then                                 \
 		echo 'ENV http_proxy ${http_proxy}' >> Dockerfile;      \
 		echo 'ENV https_proxy ${https_proxy}' >> Dockerfile;     \
