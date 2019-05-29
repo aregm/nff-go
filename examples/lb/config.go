@@ -64,5 +64,11 @@ func InitFlows() {
 
 func (port *IpPort) initPort() {
 	port.macAddress = flow.GetPortMACAddress(port.Index)
-	port.neighCache = packet.NewNeighbourTable(port.Index, port.macAddress, port.Subnet.IPv4.Addr, port.Subnet.IPv6.Addr, nil, nil)
+	port.neighCache = packet.NewNeighbourTable(port.Index, port.macAddress,
+		func(ipv4 types.IPv4Address) bool {
+			return ipv4 == port.Subnet.IPv4.Addr
+		},
+		func(ipv6 types.IPv6Address) bool {
+			return ipv6 == port.Subnet.IPv6.Addr
+		})
 }
