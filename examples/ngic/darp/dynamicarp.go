@@ -32,6 +32,10 @@ import (
 	"github.com/intel-go/nff-go/types"
 )
 
+const (
+	arpRequestsRepeatInterval = 1 * time.Second
+)
+
 // stats counters
 var (
 	UlTxCounter uint64
@@ -59,10 +63,10 @@ var (
 
 //ARPEntry ...
 type ARPEntry struct {
-	IP       types.IPv4Address
-	MAC      types.MACAddress
-	PORT     int
-	COMPLETE bool
+	IP          types.IPv4Address
+	MAC         types.MACAddress
+	COMPLETE    bool
+	lastsentreq time.Time
 }
 
 //RouteEntry route entry with mac for the GW for lookup optimization
@@ -266,7 +270,6 @@ func updateLinuxArp(DeviceName string, ip types.IPv4Address, mac types.MACAddres
 		err := netlink.NeighAdd(&entry)
 		if err != nil {
 			common.LogError(common.No, "Error creating linux arp entries", ip, mac)
-			flow.CheckFatal(err)
 		}
 		mutex.Unlock()
 	} else {
@@ -275,25 +278,27 @@ func updateLinuxArp(DeviceName string, ip types.IPv4Address, mac types.MACAddres
 }
 
 //Add arp incomplete entry to ARP table
-func addDlArpEntry(ip types.IPv4Address) ARPEntry {
+func addDlArpEntry(ip types.IPv4Address) (ARPEntry, bool) {
 	common.LogDebug(common.Debug, "[DL] AddULArp Entry  : ", ip.String())
 	arpEntry := ARPEntry{
-		IP:       ip,
-		COMPLETE: false,
+		IP:          ip,
+		COMPLETE:    false,
+		lastsentreq: time.Now(),
 	}
-	dlMapArpTable.Store(ip, arpEntry)
-	return arpEntry
+	existing, loaded := dlMapArpTable.LoadOrStore(ip, arpEntry)
+	return existing.(ARPEntry), !loaded
 }
 
 //Add arp incomplete entry to ARP table
-func addUlArpEntry(ip types.IPv4Address) ARPEntry {
+func addUlArpEntry(ip types.IPv4Address) (ARPEntry, bool) {
 	common.LogDebug(common.Debug, "[UL] AddULArp Entry  : ", ip.String())
 	arpEntry := ARPEntry{
-		IP:       ip,
-		COMPLETE: false,
+		IP:          ip,
+		COMPLETE:    false,
+		lastsentreq: time.Now(),
 	}
-	ulMapArpTable.Store(ip, arpEntry)
-	return arpEntry
+	existing, loaded := ulMapArpTable.LoadOrStore(ip, arpEntry)
+	return existing.(ARPEntry), !loaded
 }
 
 var onceULRebuildArpCache sync.Once
@@ -346,15 +351,20 @@ func LookupDlArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddres
 		}
 		putToDlQueue(entry, pkt)
 		common.LogDebug(common.Debug, "[DL] ARP Incomplete  Queued Pkt ")
-		return entry.MAC, false, fmt.Errorf("[DL] ARP is not resolved for IP %v", ip)
+		sendnewreq := time.Since(entry.lastsentreq) > arpRequestsRepeatInterval
+		if sendnewreq {
+			entry.lastsentreq = time.Now()
+		}
+		return entry.MAC, sendnewreq, fmt.Errorf("[DL] ARP is not resolved for IP %v, new req = %v", ip, sendnewreq)
 	}
 	var entry = ARPEntry{}
 	gw, err := lookupRoute(ip)
+	added := false
 	if err == nil {
-		common.LogDebug(common.Debug, "[DL]Found GW ", gw.String())
+		common.LogInfo(common.Info, "[DL] Found GW ", gw.String())
 		if gw != 0 {
 			val, ok = dlMapArpTable.Load(gw)
-			common.LogDebug(common.Debug, "[DL] GW ARPEntry ", val, ok)
+			common.LogInfo(common.Info, "[DL] GW ARPEntry ", val, ok)
 			if ok {
 				entry = val.(ARPEntry)
 				if entry.COMPLETE {
@@ -367,12 +377,13 @@ func LookupDlArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddres
 			}
 			ip = gw
 		}
-		entry := addDlArpEntry(ip)
+		entry, added = addDlArpEntry(ip)
 		putToDlQueue(entry, pkt)
-		common.LogDebug(common.Debug, "[DL] Adding ARP entry : Queued Pkt ", ip)
+		if added {
+			common.LogDebug(common.Debug, "[DL] Adding ARP entry : Queued Pkt ", ip)
+		}
 	}
-	return entry.MAC, !ok, fmt.Errorf("[DL]ARP is not resolved for IP %v", ip)
-
+	return entry.MAC, added, fmt.Errorf("[DL] ARP is not resolved for IP but request sent %v", ip)
 }
 
 //LookupUlArpTable lookup UL arp table
@@ -386,15 +397,17 @@ func LookupUlArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddres
 		}
 		putToUlQueue(entry, pkt)
 		common.LogDebug(common.Debug, "[UL] ARP is incomplete  Pkt added to Queue")
-		return entry.MAC, false, fmt.Errorf("[UL] ARP is not resolved for IP %v", ip)
+		sendnewreq := time.Since(entry.lastsentreq) > arpRequestsRepeatInterval
+		return entry.MAC, sendnewreq, fmt.Errorf("[UL] ARP is not resolved for IP %v, new req = %v", ip, sendnewreq)
 	}
 	var entry = ARPEntry{}
 	gw, err := lookupRoute(ip)
+	added := false
 	if err == nil {
-		common.LogDebug(common.Debug, "[UL] Found GW ", gw.String())
+		common.LogInfo(common.Info, "[UL] Found GW ", gw.String())
 		if gw != 0 {
 			val, ok = ulMapArpTable.Load(gw)
-			common.LogDebug(common.Debug, "[UL] GW ARPEntry ", val, ok)
+			common.LogInfo(common.Info, "[UL] GW ARPEntry ", val, ok)
 			if ok {
 				entry := val.(ARPEntry)
 				if entry.COMPLETE {
@@ -407,11 +420,14 @@ func LookupUlArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddres
 			}
 			ip = gw
 		}
-		entry := addUlArpEntry(ip)
+		entry, added = addUlArpEntry(ip)
 		putToUlQueue(entry, pkt)
-		common.LogDebug(common.Debug, "[UL] Adding ARP entry :  Pkt added to Queue")
+		if added {
+			common.LogDebug(common.Debug, "[UL] Adding ARP entry :  Pkt added to Queue")
+		}
 	}
-	return entry.MAC, !ok, fmt.Errorf("[UL] ARP is not resolved for IP %v", ip)
+	entry.lastsentreq = time.Now()
+	return entry.MAC, added, fmt.Errorf("[UL] ARP is not resolved for IP but request sent %v", ip)
 }
 
 // Clone the pkt and put into queue
@@ -446,7 +462,6 @@ func putToDlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
 	}
 	common.LogDebug(common.Debug, "[DL] ERROR while cloning pkt ", clPkt)
 	return false
-
 }
 
 //UpdateDlArpTable ...
@@ -468,7 +483,6 @@ func UpdateDlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, s1uDeviceName strin
 			updateLinuxArp(s1uDeviceName, entry.IP, entry.MAC)
 			return true
 		}
-
 	} else {
 		common.LogDebug(common.Debug, "[DL]Unknown ARP Entry for IP ", spa.String())
 		//Adding ARP
@@ -501,7 +515,6 @@ func UpdateUlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, sgiDeviceName strin
 			updateLinuxArp(sgiDeviceName, entry.IP, entry.MAC)
 			return true
 		}
-
 	} else {
 		common.LogDebug(common.Debug, "Unknown ARP Entry for IP ", spa.String())
 		//Adding ARP
@@ -512,8 +525,8 @@ func UpdateUlArpTable(arpPkt *packet.ARPHdr, dstPort uint16, sgiDeviceName strin
 		}
 		ulMapArpTable.Store(spa, arpEntry)
 	}
-	return false
 
+	return false
 } //
 
 //Send Queued pkt after ARP is resolved
