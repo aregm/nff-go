@@ -443,7 +443,7 @@ func putToUlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
 		pktQueue.Put(clPkt)
 		return true
 	}
-	common.LogDebug(common.Debug, "[UL] ERROR while cloning pkt ", clPkt)
+	common.LogError(common.No, "[UL] ERROR while cloning pkt ", clPkt)
 	return false
 }
 
@@ -460,7 +460,7 @@ func putToDlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
 		pktQueue.Put(clPkt)
 		return true
 	}
-	common.LogDebug(common.Debug, "[DL] ERROR while cloning pkt ", clPkt)
+	common.LogError(common.No, "[DL] ERROR while cloning pkt ", clPkt)
 	return false
 }
 
@@ -576,7 +576,6 @@ func sendDLQueuedPkts(entry ARPEntry, dstPort uint16) {
 
 //ClonePacket clone existing packet
 func ClonePacket(srcPkt *packet.Packet) (*packet.Packet, error) {
-
 	clonePkt, err := packet.NewPacket()
 	if err != nil {
 		return clonePkt, err
