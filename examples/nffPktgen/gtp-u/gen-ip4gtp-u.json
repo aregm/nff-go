@@ -2,7 +2,7 @@
     "s1u-port": {
         "index": 0,
         "dst-mac": "52:54:00:90:D4:39",
-        "speed": 120000000,
+        "speed": 100000,
         "traffic-config": {
             "ether": {
                 "ipv4": {
