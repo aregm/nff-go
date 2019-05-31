@@ -432,35 +432,39 @@ func LookupUlArpTable(ip types.IPv4Address, pkt *packet.Packet) (types.MACAddres
 
 // Clone the pkt and put into queue
 func putToUlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
-	clPkt, err := ClonePacket(srcPkt)
-	if err == nil {
-		val, ok := UlPktsQMap.Load(entry.IP)
-		if !ok {
-			val = queue.New(initSizePktsQueue)
-			UlPktsQMap.Store(entry.IP, val)
+	/*
+		clPkt, err := ClonePacket(srcPkt)
+		if err == nil {
+			val, ok := UlPktsQMap.Load(entry.IP)
+			if !ok {
+				val = queue.New(initSizePktsQueue)
+				UlPktsQMap.Store(entry.IP, val)
+			}
+			pktQueue := val.(*queue.Queue)
+			pktQueue.Put(clPkt)
+			return true
 		}
-		pktQueue := val.(*queue.Queue)
-		pktQueue.Put(clPkt)
-		return true
-	}
-	common.LogError(common.No, "[UL] ERROR while cloning pkt ", clPkt)
+		common.LogError(common.No, "[UL] ERROR while cloning pkt ", clPkt)
+	*/
 	return false
 }
 
 // Clone the pkt and put into queue
 func putToDlQueue(entry ARPEntry, srcPkt *packet.Packet) bool {
-	clPkt, err := ClonePacket(srcPkt)
-	if err == nil {
-		val, ok := DlPktsQMap.Load(entry.IP)
-		if !ok {
-			val = queue.New(initSizePktsQueue)
-			DlPktsQMap.Store(entry.IP, val)
+	/*
+		clPkt, err := ClonePacket(srcPkt)
+		if err == nil {
+			val, ok := DlPktsQMap.Load(entry.IP)
+			if !ok {
+				val = queue.New(initSizePktsQueue)
+				DlPktsQMap.Store(entry.IP, val)
+			}
+			pktQueue := val.(*queue.Queue)
+			pktQueue.Put(clPkt)
+			return true
 		}
-		pktQueue := val.(*queue.Queue)
-		pktQueue.Put(clPkt)
-		return true
-	}
-	common.LogError(common.No, "[DL] ERROR while cloning pkt ", clPkt)
+		common.LogError(common.No, "[DL] ERROR while cloning pkt ", clPkt)
+	*/
 	return false
 }
 
