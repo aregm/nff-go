@@ -1,7 +1,7 @@
 {
     "s1u-port": {
         "index": 0,
-        "speed": 120000000,
+        "speed": 100000,
         "traffic-config": {
             "ether": {
                 "ipv4": {
@@ -28,7 +28,7 @@
                 "saddr": {
                     "range": {
                         "min": "11.7.1.101",
-                        "max": "11.7.1.254"
+                        "max": "11.7.1.180"
                     }
                 },
                 "daddr": "11.7.1.93"
@@ -39,7 +39,7 @@
     },
     "sgi-port": {
         "index": 1,
-        "speed": 120000000,
+        "speed": 100000,
         "traffic-config": {
             "ether": {
                 "ipv4": {

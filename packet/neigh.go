@@ -67,7 +67,7 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 	// Prepare an answer to this request
 	answerPacket, err := NewPacket()
 	if err != nil {
-		common.LogFatal(common.Debug, err)
+		return err
 	}
 
 	InitARPReplyPacket(answerPacket, table.interfaceMAC, arp.SHA, types.ArrayToIPv4(arp.TPA), types.ArrayToIPv4(arp.SPA))
