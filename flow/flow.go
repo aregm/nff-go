@@ -1495,20 +1495,20 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 			err := low.AllocateMbufs(bufs, mempool, burstSize)
 			if err != nil {
 				low.ReportMempoolsState()
-				common.LogFatal(common.Debug, err)
-			}
-			if vector == false {
-				for i := range bufs {
-					// TODO Maybe we need to prefetch here?
-					tempPacket = packet.ExtractPacket(bufs[i])
-					generateFunction(tempPacket, context[0])
-					if reportMbits {
-						currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
-					}
-				}
 			} else {
-				packet.ExtractPackets(tempPackets, bufs, burstSize)
-				vectorGenerateFunction(tempPackets, context[0])
+				if vector == false {
+					for i := range bufs {
+						// TODO Maybe we need to prefetch here?
+						tempPacket = packet.ExtractPacket(bufs[i])
+						generateFunction(tempPacket, context[0])
+						if reportMbits {
+							currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
+						}
+					}
+				} else {
+					packet.ExtractPackets(tempPackets, bufs, burstSize)
+					vectorGenerateFunction(tempPackets, context[0])
+				}
 			}
 			safeEnqueue(OUT[0], bufs, burstSize)
 			currentState.V.Packets += uint64(burstSize)
