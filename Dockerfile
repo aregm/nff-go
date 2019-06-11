@@ -1,4 +1,4 @@
-FROM ubuntu:cosmic
+FROM ubuntu:disco
 
 ARG MAKEFLAGS=-j2
 
@@ -11,7 +11,6 @@ RUN apt-get -q update && apt-get -q -y install \
     git \
     curl \
     wget \
-    golang-${GO_VERSION} \
     libpcap-dev \
     libelf-dev \
     hugepages  \
@@ -21,7 +20,7 @@ RUN apt-get -q update && apt-get -q -y install \
     libmnl-dev \
     libibverbs-dev
 
-RUN cd /opt && curl -L -s https://dl.google.com/go/go1.11.5.linux-amd64.tar.gz | tar zx
+RUN cd /opt && curl -L -s https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz | tar zx
 
 RUN mkdir -p ${NFF_GO}
 COPY . ${NFF_GO}
