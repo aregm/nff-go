@@ -75,7 +75,7 @@ var (
 
 var (
 	pathSysClassNetDeviceDriver stringBuilder = PathSysClassNet + "/%s/device/driver"
-	pathSysClassNetDevice       stringBuilder = PathSysClassNet + "/%s/device"
+	pathSysClassNetDevice       stringBuilder = PathSysClassNet + "/%s"
 )
 
 var (

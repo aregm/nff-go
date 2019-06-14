@@ -34,8 +34,18 @@ func FindDefaultDpdkDriver(nicName string) string {
 
 // GetDeviceID returns the device ID of given NIC name.
 func GetDeviceID(nicName string) (string, error) {
-	// DEV_ID=$(basename $(readlink /sys/class/net/<nicName>/device))
-	return readlinkBaseCmd(pathSysClassNetDevice.With(nicName))
+	// DEV_ID=$(basename $(readlink /sys/class/net/<nicName>))
+	raw, err := readlinkCmd(pathSysClassNetDevice.With(nicName))
+	if err != nil {
+		return "", err
+	}
+	// raw should be like /sys/devices/pci0002:00/0000:00:08.0/virtio2/net/ens8
+	raws := strings.Split(raw, "/")
+	if len(raws) < 5 {
+		return "", fmt.Errorf("path not correct")
+	}
+	return raws[4], nil
+
 }
 
 // IsModuleLoaded checks if the kernel has already loaded the driver or not.
@@ -69,12 +79,20 @@ func writeToTargetWithData(sysfs string, flag int, mode os.FileMode, data string
 	return nil
 }
 
-func readlinkBaseCmd(path string) (string, error) {
-	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "readlink", path)
+func readlinkCmd(path string) (string, error) {
+	output, err := cmdOutputWithTimeout(defaultTimeoutLimitation, "readlink", "-f", path)
 	if err != nil {
 		return "", fmt.Errorf("Cmd Execute readlink failed: %s", err.Error())
 	}
 	outputStr := strings.Trim(string(output), "\n")
+	return outputStr, nil
+}
+
+func readlinkBaseCmd(path string) (string, error) {
+	outputStr, err := readlinkCmd(path)
+	if err != nil {
+		return "", fmt.Errorf("Cmd Execute readlink failed: %s", err.Error())
+	}
 	result := filepath.Base(outputStr)
 	return result, nil
 }
