@@ -138,9 +138,9 @@ func main() {
 	_, needWO := workaroundTargets[*target]
 
 	if *target != "" {
-		genScript(*pktgenDir, []string{"step2.pg", "step3.pg"}, script1, config[*target][0], config[*target][1], needWO)
-		genScript(*pktgenDir, []string{"step4.pg"}, script2, config[*target][0], config[*target][1], needWO)
-		genScript(*pktgenDir, []string{"step5.pg", "step6.pg", "step7.pg", "step8.pg", "step9.pg", "step10.pg", "step11.pg"},
+		genScript(*pktgenDir, []string{"step02.pg", "step03.pg"}, script1, config[*target][0], config[*target][1], needWO)
+		genScript(*pktgenDir, []string{"step04.pg"}, script2, config[*target][0], config[*target][1], needWO)
+		genScript(*pktgenDir, []string{"step05.pg", "step06.pg", "step07.pg", "step08.pg", "step09.pg", "step10.pg", "step11.pg"},
 			script3, config[*target][0], config[*target][1], needWO)
 		genScript(*pktgenDir, []string{"nat.pg"}, scriptNat, config[*target][0], config[*target][1], needWO)
 	}

@@ -15,9 +15,7 @@ func init() {
 	}
 }
 
-// TODO unfortunately this test can't be executed as go test right now due to https://github.com/intel-go/nff-go/issues/301
-// If you want to test it via go test you should firstly comment FreeMempools function at flow/flow.go
-// You will have multiple mempools however test will pass.
+// If it will fail due to strange mempool behaviour feel free to reopen https://github.com/intel-go/nff-go/issues/301
 func TestMerge(t *testing.T) {
 	scenarios := []pipelineScenario{getGet, segmGet, multipleSegm, singleSegm, getCopy, copyCopy, segmCopy}
 	addSegmVariants := []bool{true, false}

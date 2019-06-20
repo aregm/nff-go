@@ -1,0 +1,28 @@
+{
+    "sgi-port": {
+        "index": 1,
+        "dst-mac": "52:54:00:B9:32:8B",
+        "speed": 100000,
+        "traffic-config": {
+            "ether": {
+                "ipv4": {
+                    "saddr": "13.7.1.110",
+                    "daddr": {
+                        "range": {
+                            "min": "16.0.0.1",
+                            "max": "16.7.161.32"
+                        }
+                    },
+                    "udp": {
+                        "sport": 5678,
+                        "dport": 1234,
+                        "randbytes": {
+                            "size": 128,
+                            "deviation": 0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

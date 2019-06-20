@@ -8,7 +8,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 	"github.com/intel-go/nff-go/types"
 )
 
@@ -22,7 +22,7 @@ func tInitDPDK() {
 	if isInit != true {
 		argc, argv := low.InitDPDKArguments([]string{})
 		// burstSize=32, mbufNumber=8191, mbufCacheSize=250
-		if err := low.InitDPDK(argc, argv, 32, 8191, 250, 0, false); err != nil {
+		if err := low.InitDPDK(argc, argv, 32, 8191, 250, 0, false, false, false, false); err != nil {
 			log.Fatal(err)
 		}
 		nonPerfMempool = low.CreateMempool("Test")

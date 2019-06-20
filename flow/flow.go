@@ -38,7 +38,7 @@ import (
 
 	"github.com/intel-go/nff-go/asm"
 	"github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 	"github.com/intel-go/nff-go/packet"
 	"github.com/intel-go/nff-go/types"
 )
@@ -389,6 +389,7 @@ type HWCapability int
 
 const (
 	HWTXChecksumCapability HWCapability = iota
+	HWRXPacketsTimestamp
 )
 
 const (
@@ -397,18 +398,23 @@ const (
 	recvDone
 )
 
-// CheckHWCapability return true if hardware offloading capability
-// present in all ports. Otherwise it returns false.
-func CheckHWCapability(capa HWCapability, ports []uint16) bool {
+// CheckHWCapability returns array of booleans for every requested
+// port. An element of this array is set to true if hardware
+// offloading capability is supported on corresponding port, otherwise
+// it is set to false.
+func CheckHWCapability(capa HWCapability, ports []uint16) []bool {
+	ret := make([]bool, len(ports))
 	for p := range ports {
 		switch capa {
 		case HWTXChecksumCapability:
-			if !low.CheckHWTXChecksumCapability(ports[p]) {
-				return false
-			}
+			ret[p] = low.CheckHWTXChecksumCapability(ports[p])
+		case HWRXPacketsTimestamp:
+			ret[p] = low.CheckHWRXPacketsTimestamp(ports[p])
+		default:
+			ret[p] = false
 		}
 	}
-	return true
+	return ret
 }
 
 // SetUseHWCapability enables or disables using a hardware offloading
@@ -433,7 +439,7 @@ const reportMbits = false
 
 var sizeMultiplier uint
 var schedTime uint
-var hwtxchecksum bool
+var hwtxchecksum, hwrxpacketstimestamp bool
 var maxRecv int
 
 type port struct {
@@ -522,6 +528,16 @@ type Config struct {
 	//
 	// If no string is specified, no HTTP server is spawned.
 	StatsHTTPAddress *net.TCPAddr
+	// Enables possibility of IP reassembly via chaining packets
+	ChainedReassembly bool
+	// Enables possibility of handling jumbo frames via chaining packets
+	ChainedJumbo bool
+	// Enables possibility of handling jumbo frames via making huge packets
+	// Will require big amount of memory
+	MemoryJumbo bool
+	// Enables hardware assisted timestamps in packet mbufs. These
+	// timestamps can be accessed with GetPacketTimestamp function.
+	HWRXPacketsTimestamp bool
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -544,6 +560,7 @@ func SystemInit(args *Config) error {
 	schedulerOffRemove := args.PersistentClones
 	stopDedicatedCore := args.StopOnDedicatedCore
 	hwtxchecksum = args.HWTXChecksum
+	hwrxpacketstimestamp = args.HWRXPacketsTimestamp
 	anyway := !args.RestrictedCloning
 
 	mbufNumber := uint(8191)
@@ -612,13 +629,29 @@ func SystemInit(args *Config) error {
 		NoPacketHeadChange = true
 	}
 
+	needChainedReassembly := false
+	if args.ChainedReassembly == true {
+		needChainedReassembly = true
+	}
+
+	needChainedJumbo := false
+	if args.ChainedJumbo == true {
+		needChainedJumbo = true
+	}
+
+	needMemoryJumbo := false
+	if args.MemoryJumbo == true {
+		needMemoryJumbo = true
+	}
+
 	argc, argv := low.InitDPDKArguments(args.DPDKArgs)
 	// We want to add new clone if input ring is approximately 80% full
 	maxPacketsToClone := uint32(sizeMultiplier * burstSize / 5 * 4)
 	// TODO all low level initialization here! Now everything is default.
 	// Init eal
 	common.LogTitle(common.Initialization, "------------***-------- Initializing DPDK --------***------------")
-	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI, NoPacketHeadChange); err != nil {
+	if err := low.InitDPDK(argc, argv, burstSize, mbufNumber, mbufCacheSize, needKNI,
+		NoPacketHeadChange, needChainedReassembly, needChainedJumbo, needMemoryJumbo); err != nil {
 		return err
 	}
 	// Init Ports
@@ -670,7 +703,7 @@ func SystemInitPortsAndMemory() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				true, hwtxchecksum, createdPorts[i].InIndex); err != nil {
+				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex); err != nil {
 				return err
 			}
 		}
@@ -1462,20 +1495,20 @@ func pFastGenerate(parameters interface{}, inIndex []int32, stopper [2]chan int,
 			err := low.AllocateMbufs(bufs, mempool, burstSize)
 			if err != nil {
 				low.ReportMempoolsState()
-				common.LogFatal(common.Debug, err)
-			}
-			if vector == false {
-				for i := range bufs {
-					// TODO Maybe we need to prefetch here?
-					tempPacket = packet.ExtractPacket(bufs[i])
-					generateFunction(tempPacket, context[0])
-					if reportMbits {
-						currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
-					}
-				}
 			} else {
-				packet.ExtractPackets(tempPackets, bufs, burstSize)
-				vectorGenerateFunction(tempPackets, context[0])
+				if vector == false {
+					for i := range bufs {
+						// TODO Maybe we need to prefetch here?
+						tempPacket = packet.ExtractPacket(bufs[i])
+						generateFunction(tempPacket, context[0])
+						if reportMbits {
+							currentState.V.Bytes += uint64(tempPacket.GetPacketLen())
+						}
+					}
+				} else {
+					packet.ExtractPackets(tempPackets, bufs, burstSize)
+					vectorGenerateFunction(tempPackets, context[0])
+				}
 			}
 			safeEnqueue(OUT[0], bufs, burstSize)
 			currentState.V.Packets += uint64(burstSize)

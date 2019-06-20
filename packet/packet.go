@@ -46,7 +46,7 @@ import (
 	"unsafe"
 
 	. "github.com/intel-go/nff-go/common"
-	"github.com/intel-go/nff-go/low"
+	"github.com/intel-go/nff-go/internal/low"
 	"github.com/intel-go/nff-go/types"
 )
 
@@ -488,6 +488,24 @@ func InitEmptyPacket(packet *Packet, plSize uint) bool {
 	return true
 }
 
+// InitNextPacket creates new packet with plSize bytes,
+// packet is treated as one of segments:
+// Data pointer is set to the beginning of packet
+// new packet is attached to Next pointer of prev packet
+// Return new packet or nil if error
+// Function is not performance efficient due to use of single packet allocation
+func InitNextPacket(plSize uint, prev *Packet) *Packet {
+	packet, err := NewPacket()
+	if err != nil || low.AppendMbuf(packet.CMbuf, plSize) == false {
+		LogWarning(Debug, "InitNextPacket: Cannot allocate new packet")
+		return nil
+	}
+	packet.Data = unsafe.Pointer(packet.Ether)
+	prev.Next = packet
+	low.SetNextMbuf(packet.CMbuf, prev.CMbuf)
+	return packet
+}
+
 func fillIPv4Default(packet *Packet, plLen uint16, nextProto uint8) {
 	packet.GetIPv4NoCheck().VersionIhl = types.IPv4VersionIhl
 	packet.GetIPv4NoCheck().TotalLength = SwapBytesUint16(plLen)
@@ -820,7 +838,7 @@ func NewPacket() (*Packet, error) {
 	return pkt, nil
 }
 
-// SendPacket immidiately sends packet to specified port via calling C function.
+// SendPacket immediately sends packet to specified port via calling C function.
 // Packet is freed. Function return true if packet was actually sent.
 // Port should be initialized. Packet is sent to zero queue (is always present).
 // Sending simultaneously to one port is permitted in DPDK.
@@ -869,8 +887,8 @@ func (lpm *LPM) Lookup(ip types.IPv4Address, nextHop *types.IPv4Address) bool {
 		tbl_entry = (*lpm.tbl8)[tbl8_index]
 	}
 
-	*nextHop = tbl_entry & 0x00FFFFFF
 	if tbl_entry&low.RteLpmLookupSuccess != 0 {
+		*nextHop = tbl_entry & 0x00FFFFFF
 		return true
 	}
 	return false
@@ -891,4 +909,16 @@ func (lpm *LPM) Delete(ip types.IPv4Address, depth uint8) int {
 // Free frees LPM C management memory
 func (lpm *LPM) Free() {
 	low.FreeLPM(lpm.lpm)
+}
+
+// GetPacketOffloadFlags returns ol_flags field of packet mbuf
+func (pkt *Packet) GetPacketOffloadFlags() uint64 {
+	return low.GetPacketOffloadFlags(pkt.CMbuf)
+}
+
+// GetPacketTimestamp returns timestamp field of packet mbuf. Check
+// that flag PKT_RX_TIMESTAMP (1ULL << 17) is set in value returned by
+// GetPacketOffloadFlags.
+func (pkt *Packet) GetPacketTimestamp() uint64 {
+	return low.GetPacketTimestamp(pkt.CMbuf)
 }

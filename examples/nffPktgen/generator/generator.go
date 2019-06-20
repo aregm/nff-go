@@ -99,7 +99,7 @@ func generateEther(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyPacket failed"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
+	FillEtherHdr(pkt, l2)
 }
 
 func generateIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
@@ -115,8 +115,8 @@ func generateIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv4Packet returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
+	FillEtherHdr(pkt, l2)
+	FillIPv4Hdr(pkt, l3)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
 }
@@ -178,9 +178,9 @@ func generateTCPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv4TCPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
-	fillTCPHdr(pkt, l4, rnd)
+	FillEtherHdr(pkt, l2)
+	FillIPv4Hdr(pkt, l3)
+	FillTCPHdr(pkt, l4, rnd)
 	pktTCP := (*packet.TCPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
@@ -199,9 +199,9 @@ func generateUDPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) {
 		panic(fmt.Sprintf("InitEmptyIPv4UDPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
-	fillUDPHdr(pkt, l4)
+	FillEtherHdr(pkt, l2)
+	FillIPv4Hdr(pkt, l3)
+	FillUDPHdr(pkt, l4)
 	pktUDP := (*packet.UDPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
@@ -220,16 +220,16 @@ func generateICMPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) 
 		panic(fmt.Sprintf("InitEmptyIPv4ICMPPacket returned false"))
 	}
 	copyDataFunc(dataConfig, size, rnd, pkt.Data)
-	fillEtherHdr(pkt, l2)
-	fillIPv4Hdr(pkt, l3)
-	fillICMPHdr(pkt, l4, rnd)
+	FillEtherHdr(pkt, l2)
+	FillIPv4Hdr(pkt, l3)
+	FillICMPHdr(pkt, l4, rnd)
 	pktICMP := (*packet.ICMPHdr)(pkt.L4)
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
 	pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pktIP, pktICMP, pkt.Data))
 }
 
-func fillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) {
+func FillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) {
 	emptyPacketTCP := (*packet.TCPHdr)(pkt.L4)
 	emptyPacketTCP.SrcPort = packet.SwapBytesUint16(uint16(l4.SPort.Current))
 	emptyPacketTCP.DstPort = packet.SwapBytesUint16(uint16(l4.DPort.Current))
@@ -244,7 +244,7 @@ func fillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) {
 	getNextSeqNumber(&l4.Seq, rnd)
 }
 
-func fillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) {
+func FillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) {
 	emptyPacketUDP := (*packet.UDPHdr)(pkt.L4)
 	emptyPacketUDP.SrcPort = packet.SwapBytesUint16(uint16(l4.SPort.Current))
 	emptyPacketUDP.DstPort = packet.SwapBytesUint16(uint16(l4.DPort.Current))
@@ -252,7 +252,7 @@ func fillUDPHdr(pkt *packet.Packet, l4 *UDPConfig) {
 	getNextValue(&l4.SPort)
 }
 
-func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
+func FillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 	emptyPacketICMP := (*packet.ICMPHdr)(pkt.L4)
 	emptyPacketICMP.Type = l4.Type
 	emptyPacketICMP.Code = l4.Code
@@ -261,7 +261,7 @@ func fillICMPHdr(pkt *packet.Packet, l4 *ICMPConfig, rnd *rand.Rand) {
 	getNextSeqNumber(&l4.Seq, rnd)
 }
 
-func fillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
+func FillIPv4Hdr(pkt *packet.Packet, l3 *IPv4Config) {
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.SrcAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.SAddr.Current))
 	pktIP.DstAddr = packet.SwapBytesIPv4Addr(types.IPv4Address(l3.DAddr.Current))
@@ -275,7 +275,7 @@ func SwapBytesUint64(x uint64) uint64 {
 		((x & 0x00000000ff000000) >> 8) | ((x & 0x0000ff0000000000) >> 40) | ((x & 0x000000ff00000000) >> 24)
 }
 
-func fillEtherHdr(pkt *packet.Packet, l2 *EtherConfig) {
+func FillEtherHdr(pkt *packet.Packet, l2 *EtherConfig) {
 	if l2.VLAN != nil {
 		addVLAN(pkt, l2.VLAN.TCI)
 	}

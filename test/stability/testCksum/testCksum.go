@@ -124,7 +124,11 @@ func configTest(shouldUseIPv4, shouldUseIPv6, shouldUseUDP, shouldUseTCP, should
 
 	ports := []uint16{uint16(inport), uint16(outport)}
 	offloadingAvailable := flow.CheckHWCapability(flow.HWTXChecksumCapability, ports)
-	if hwol && !offloadingAvailable {
+	offloadingAvailableOnAllPorts := offloadingAvailable[0]
+	for i := 1; offloadingAvailableOnAllPorts && i < len(offloadingAvailable); i++ {
+		offloadingAvailableOnAllPorts = offloadingAvailableOnAllPorts && offloadingAvailable[i]
+	}
+	if hwol && !offloadingAvailableOnAllPorts {
 		println("Warning! Requested hardware offloading is not available on all ports. Falling back to software checksum calculation.")
 		hwol = false
 		flow.SetUseHWCapability(flow.HWTXChecksumCapability, false)

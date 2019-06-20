@@ -1,0 +1,67 @@
+{
+    "s1u-port": {
+        "index": 0,
+        "dst-mac": "52:54:00:90:D4:39",
+        "speed": 100000,
+        "traffic-config": {
+            "ether": {
+                "ipv4": {
+                    "saddr": {
+                        "range": {
+                            "min": "16.0.0.1",
+                            "max": "16.7.161.32"
+                        }
+                    },
+                    "daddr": "13.7.1.110",
+                    "udp": {
+                        "sport": 1234,
+                        "dport": 5678,
+                        "randbytes": {
+                            "size": 128,
+                            "deviation": 0
+                        }
+                    }
+                }
+            }
+        },
+        "gtp-u-config": {
+            "ipv4": {
+                "saddr": {
+                    "range": {
+                        "min": "11.7.1.101",
+                        "max": "11.7.1.180"
+                    }
+                },
+                "daddr": "11.7.1.93"
+            },
+            "start-teid": 4026531840,
+            "max-teids": 500000
+        }
+    },
+    "sgi-port": {
+        "index": 1,
+        "dst-mac": "52:54:00:B9:32:8B",
+        "speed": 100000,
+        "traffic-config": {
+            "ether": {
+                "ipv4": {
+                    "saddr": "13.7.1.110",
+                    "daddr": {
+                        "range": {
+                            "min": "16.0.0.1",
+                            "max": "16.7.161.32"
+                        }
+                    },
+                    "udp": {
+                        "sport": 5678,
+                        "dport": 1234,
+                        "randbytes": {
+                            "size": 128,
+                            "deviation": 0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

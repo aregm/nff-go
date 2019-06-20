@@ -51,7 +51,7 @@ func balancer(pkt *packet.Packet, ctx flow.UserContext) bool {
 	workerMAC, found := LBConfig.TunnelPort.neighCache.LookupMACForIPv4(workerIP)
 	if !found {
 		fmt.Println("Not found MAC address for IP", workerIP.String())
-		LBConfig.TunnelPort.neighCache.SendARPRequestForIPv4(workerIP, 0)
+		LBConfig.TunnelPort.neighCache.SendARPRequestForIPv4(workerIP, LBConfig.TunnelPort.Subnet.IPv4.Addr, 0)
 		return false
 	}
 
