@@ -8,15 +8,11 @@ EXECUTABLES = dump clonablePcapDumper kni copy errorHandling timer \
 		createPacket sendFixedPktsNumber gtpu pingReplay \
 		netlink gopacketParserExample devbind generate \
 		OSforwarding jumbo decrementTTL
+SUBDIRS = tutorial antiddos demo fileReadWrite firewall forwarding ipsec lb nffPktgen
 
-SUBDIRS = tutorial antiddos demo fileReadWrite firewall forwarding ipsec lb
-
-.PHONY: dpi nffPktgen
+.PHONY: dpi
 dpi:
 	$(MAKE) -C dpi
-
-nffPktgen:
-	$(MAKE) -C nffPktgen
 
 include $(PATH_TO_MK)/intermediate.mk
 include $(PATH_TO_MK)/leaf.mk

@@ -7,5 +7,10 @@ TARGETS = all clean images clean-images deploy cleanall
 
 $(TARGETS): $(SUBDIRS)
 
+included_from_dir := $(shell basename $(dir $(abspath $(word 1, $(MAKEFILE_LIST)))))
+@eval $(included_from_dir): all
+
+targets_to_execute := $(filter-out $(included_from_dir), $(MAKECMDGOALS))
+
 $(SUBDIRS):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+	$(MAKE) -C $@ $(targets_to_execute)

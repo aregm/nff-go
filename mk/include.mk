@@ -7,9 +7,7 @@
 PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 
 # Main DPDK variables
-DPDK_VERSION=18.11
 DPDK_DIR=dpdk
-PKTGEN_VERSION=3.5.8
 PKTGEN_DIR=pktgen-dpdk
 DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export RTE_SDK=$(PROJECT_ROOT)/dpdk/$(DPDK_DIR)/$(DPDK_INSTALL_DIR)/usr/local/share/dpdk
