@@ -4,7 +4,7 @@
 [![Build Status](https://travis-ci.org/intel-go/nff-go.svg?branch=develop)](https://travis-ci.org/intel-go/nff-go)
 # Network Function Framework for Go (former YANFF)
 
-**To our users: if you are using NFF-Go, can you please send a message to [us](mailto:areg.melik-adamyan@intel.com) with a function name/type that you are using. This will help us to determine better roadmap. Thank you!**
+__Wonderful news__ : we are now supporting AF_XDP and supporting(almost) getting packets directly from Linux. So you do not need to write 3(three) different applications to process packets coming from different type of drivers of PMDs. You just write everything in NFF-Go, and it can dynamically use whatever you would like underneath. Contact [us](mailto:areg.melik-adamyan@intel.com) if you need help.
 
 ## What it is
 NFF-Go is a set of libraries for creating and deploying cloud-native Network
