@@ -1,5 +1,4 @@
-//Package nbserver ...
-// Copyright 2018 Intel Corporation.
+// Copyright 2018-2019 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
@@ -13,13 +12,7 @@ package nbserver
 import (
 	"errors"
 	"fmt"
-	"net"
-	"os"
 	"strconv"
-	"sync"
-	"unsafe"
-
-	"github.com/golang-collections/go-datastructures/queue"
 
 	"github.com/intel-go/nff-go/common"
 	"github.com/intel-go/nff-go/packet"
@@ -32,100 +25,8 @@ var (
 	DlMap = New(128)
 )
 
-const (
-	maxQueueSize = 1000 //1000 TPS
-)
-
-type message struct {
-	msg    []byte
-	length int
-}
-
-// NB worker currently 1 client only
-var nbWorkers = 1
-
-//pool buffer
-var bufferPool sync.Pool
-
-//msg procesing queue
-var mq = queue.New(maxQueueSize)
-
-//process message from the queue
-func processMsgFromQueue() {
-	for {
-		items, err := mq.Get(100)
-		if err == nil {
-			for _, item := range items {
-				m := item.(message)
-				handleMessage(m.msg[0:m.length])
-				bufferPool.Put(m.msg)
-			}
-		}
-	}
-}
-
-//CheckError A Simple function to verify error
-func CheckError(err error) {
-	if err != nil {
-		fmt.Println("Error: ", err)
-		os.Exit(0)
-	}
-}
-
 //Start NB API server
 func Start() {
-	structSize := int(unsafe.Sizeof(CpMsg{}))
-	bufferPool = sync.Pool{
-		New: func() interface{} { return make([]byte, structSize) },
-	}
-	listenAndReceive(nbWorkers)
-}
-
-//Start udp servr and listen for Session requests
-func listenAndReceive(maxWorkers int) error {
-	sAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:20")
-	CheckError(err)
-	c, err := net.ListenUDP("udp", sAddr)
-	CheckError(err)
-	//	c.SetReadBuffer(1048576)
-	fmt.Println("NB Server listening on ", c.LocalAddr().String())
-	for i := 0; i < maxWorkers; i++ {
-		go processMsgFromQueue()
-		go receiveCon(c)
-	}
-	return nil
-}
-
-// receiveCon accepts incoming datagrams on c and calls handleMessage() for each message
-func receiveCon(con *net.UDPConn) {
-	defer con.Close()
-
-	for {
-		msg := bufferPool.Get().([]byte)
-		nbytes, err := con.Read(msg[0:])
-		if err != nil {
-			fmt.Printf("Error %s", err)
-			continue
-		}
-		mq.Put(message{msg, nbytes})
-	}
-}
-
-//request handler
-func handleMessage(msg []byte) {
-	msgType, session := GetSessionObj(msg)
-
-	switch msgType {
-
-	case MsgSessCRE:
-		CreateSession(session)
-	case MsgSessMOD:
-		UpdateSession(session)
-	case MsgSessDEL:
-		DeleteSession(session)
-
-	}
-
 }
 
 //CreateSession API

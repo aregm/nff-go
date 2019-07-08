@@ -1,5 +1,4 @@
-//Package simucp ...
-// Copyright 2018 Intel Corporation.
+// Copyright 2018-2019 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 //
@@ -156,11 +155,8 @@ func processCreateModifySession(config SimuConfig) {
 	var count int
 
 	for range ticker.C {
-
 		for i := 0; i < config.maxUESessCount; i++ {
-
 			session := new(nbserver.Session)
-
 			session.UeIP = Ip2int(startUeIP) + uint32(count)
 
 			/*generate teid for each create session */
