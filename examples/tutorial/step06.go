@@ -11,7 +11,7 @@ func main() {
 
 	initCommonState()
 
-	l3Rules, err = packet.GetL3ACLFromORIG("rules1.conf")
+	l3Rules, err = packet.GetL3ACLFromTextTable("rules1.conf")
 	flow.CheckFatal(err)
 
 	firstFlow, err := flow.SetReceiver(0)

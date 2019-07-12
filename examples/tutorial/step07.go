@@ -13,7 +13,7 @@ func main() {
 
 	initCommonState()
 
-	l3Rules, err := packet.GetL3ACLFromORIG("rules1.conf")
+	l3Rules, err := packet.GetL3ACLFromTextTable("rules1.conf")
 	flow.CheckFatal(err)
 	rulesp = unsafe.Pointer(&l3Rules)
 	go updateSeparateRules()
@@ -37,7 +37,7 @@ func mySeparator(cur *packet.Packet, ctx flow.UserContext) bool {
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		locall3Rules, err := packet.GetL3ACLFromORIG("rules1.conf")
+		locall3Rules, err := packet.GetL3ACLFromTextTable("rules1.conf")
 		flow.CheckFatal(err)
 		atomic.StorePointer(&rulesp, unsafe.Pointer(locall3Rules))
 	}
