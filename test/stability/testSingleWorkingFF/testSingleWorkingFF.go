@@ -266,14 +266,14 @@ func setParameters(testScenario uint) (err error) {
 	switch gTestType {
 	case separate, vseparate:
 		if testScenario != generatePart {
-			l3Rules, err = packet.GetL3ACLFromORIG("test-separate-l3rules.conf")
+			l3Rules, err = packet.GetL3ACLFromTextTable("test-separate-l3rules.conf")
 		}
 		// Test expects to receive 33% of packets on 0 port and 66% on 1 port
 		lessPercent = 33
 		shift = 1
 	case split, vsplit:
 		if testScenario != generatePart {
-			l3Rules, err = packet.GetL3ACLFromORIG("test-split.conf")
+			l3Rules, err = packet.GetL3ACLFromTextTable("test-split.conf")
 		}
 		// Test expects to receive 20% of packets on 0 port and 80% on 1 port
 		lessPercent = 20
@@ -290,7 +290,7 @@ func setParameters(testScenario uint) (err error) {
 		shift = 3
 	case dhandle, vdhandle:
 		if testScenario != generatePart {
-			l3Rules, err = packet.GetL3ACLFromORIG("test-handle-l3rules.conf")
+			l3Rules, err = packet.GetL3ACLFromTextTable("test-handle-l3rules.conf")
 		}
 		// Test expects to receive 100% of packets on 0 port and 0% on 1 port (33% total)
 		lessPercent = 100

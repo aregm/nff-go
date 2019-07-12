@@ -244,10 +244,10 @@ func TestGetL2ACLFromJSON(t *testing.T) {
 
 // Function to test L2 rules parser for ORIG format
 // L2 rules generated, written to ORIG format, then parsed
-func TestGetL2ACLFromORIG(t *testing.T) {
+func TestGetL2ACLFromTextTable(t *testing.T) {
 	testTable := generateTestL2Rules(rulesL2Ctxt, true)
 
-	tmpdir := createTmpDir("tmpTestGetL2ACLFromORIGConfigs")
+	tmpdir := createTmpDir("tmpTestGetL2ACLFromTextTableConfigs")
 
 	for _, rule := range testTable {
 		headerORIG := "# Source MAC, Destination MAC, L3 ID, Output port\n"
@@ -259,9 +259,9 @@ func TestGetL2ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot, err := GetL2ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL2ACLFromTextTable(tmpfile.Name())
 		if err != nil {
-			t.Errorf("GetL2ACLFromORIG returned error %v\n\n", err)
+			t.Errorf("GetL2ACLFromTextTable returned error %v\n\n", err)
 			t.FailNow()
 		}
 
@@ -432,11 +432,11 @@ func TestGetL3ACLFromJSON(t *testing.T) {
 
 // Function to test L3 rules parser for ORIG format
 // L3 rules generated, written to ORIG format, then parsed
-func TestGetL3ACLFromORIG(t *testing.T) {
+func TestGetL3ACLFromTextTable(t *testing.T) {
 	// Generate IPv4 rules
 	testTable4 := generateTestL3Rules(rulesL3Ctxt, true, true, false)
 
-	tmpdir := createTmpDir("tmpGetL3ACLFromORIGConfigs")
+	tmpdir := createTmpDir("tmpGetL3ACLFromTextTableConfigs")
 
 	for _, rule := range testTable4 {
 		// Create and parse ORIG file
@@ -449,9 +449,9 @@ func TestGetL3ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot, err := GetL3ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromTextTable(tmpfile.Name())
 		if err != nil {
-			t.Errorf("GetL3ACLFromORIG returned error %s\n\n", err)
+			t.Errorf("GetL3ACLFromTextTable returned error %s\n\n", err)
 			t.FailNow()
 		}
 
@@ -479,9 +479,9 @@ func TestGetL3ACLFromORIG(t *testing.T) {
 			log.Fatal(err)
 		}
 
-		ruleGot, err := GetL3ACLFromORIG(tmpfile.Name())
+		ruleGot, err := GetL3ACLFromTextTable(tmpfile.Name())
 		if err != nil {
-			t.Errorf("GetL3ACLFromORIG returned error %s\n\n", err)
+			t.Errorf("GetL3ACLFromTextTable returned error %s\n\n", err)
 			t.FailNow()
 		}
 

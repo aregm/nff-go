@@ -47,7 +47,7 @@ func main() {
 		l3Rules, err = packet.GetL3ACLFromJSON("forwardingTestL3_ACL.json")
 		flow.CheckFatal(err)
 	case "orig":
-		l3Rules, err = packet.GetL3ACLFromORIG("forwardingTestL3_ACL.orig")
+		l3Rules, err = packet.GetL3ACLFromTextTable("forwardingTestL3_ACL.orig")
 		flow.CheckFatal(err)
 	}
 

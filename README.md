@@ -35,7 +35,7 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get filtering rules from access control file.
-	L3Rules, err := packet.GetL3ACLFromORIG("Firewall.conf")
+	L3Rules, err := packet.GetL3ACLFromTextTable("Firewall.conf")
 	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.

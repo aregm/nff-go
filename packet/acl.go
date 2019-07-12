@@ -14,7 +14,7 @@
 // Three such functions are provided:
 // 		GetL2ACLFromJSON
 // 		GetL3ACLFromJSON
-// 		GetL3ACLFromORIG
+// 		GetL3ACLFromTextTable
 // GetL2RulesFromORIG function for L2 level is not added yet. TODO
 // These functions should be used before any usage of rules, however they also can be
 // used dynamically in parallel which make a possibility of changing rules during execution.
@@ -82,9 +82,9 @@ func GetL2ACLFromJSON(filename string) (*L2Rules, error) {
 	return &rules, rawL2Parse(&rawRules, &rules)
 }
 
-// GetL2ACLFromORIG gets name of fields structed file with combined L2 rules,
+// GetL2ACLFromTextTable gets name of fields structed file with combined L2 rules,
 // returns L2Rules
-func GetL2ACLFromORIG(filename string) (*L2Rules, error) {
+func GetL2ACLFromTextTable(filename string) (*L2Rules, error) {
 	var rawRules rawL2Rules
 	var rules L2Rules
 	// Load Rules
@@ -143,9 +143,9 @@ func readFile(filename string) ([]byte, error) {
 
 //TODO we need to construct raw structure as one after one without storing all them in memory
 
-// GetL3ACLFromORIG gets name of fields structed file with combined L3 and L4 rules,
+// GetL3ACLFromTextTable gets name of fields structed file with combined L3 and L4 rules,
 // returns L3Rules
-func GetL3ACLFromORIG(filename string) (*L3Rules, error) {
+func GetL3ACLFromTextTable(filename string) (*L3Rules, error) {
 	var rawRules rawL3Rules
 	var rules L3Rules
 	// Load Rules
