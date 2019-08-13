@@ -100,7 +100,7 @@ func (packet *Packet) RemoveMPLS() bool {
 	return true
 }
 
-// SetMPLSLabel sets Label (20 first bits of MPLS header to specified value).
+// DecreaseTTL decreases the MPLS header TTL by 1
 func (hdr *MPLSHdr) DecreaseTTL() bool {
 	newTime := SwapBytesUint32(hdr.mpls)&0x000000ff - 1
 	if newTime == 0 {
