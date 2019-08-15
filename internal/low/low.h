@@ -214,7 +214,7 @@ int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbu
 		conf_default.id = pci_dev->id;
 	}
 	conf_default.force_bind = 1; // Flag to bind kernel thread
-	rte_eth_macaddr_get(port, (struct ether_addr *)&conf_default.mac_addr);
+	rte_eth_macaddr_get(port, (struct rte_ether_addr *)&conf_default.mac_addr);
 	rte_eth_dev_get_mtu(port, &conf_default.mtu);
 
 	struct rte_kni_ops ops;
@@ -280,7 +280,7 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		return -1;
 
 	struct rte_eth_conf port_conf_default = {
-		.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN,
+		.rxmode = { .max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 					.mq_mode = ETH_MQ_RX_RSS    },
 		.txmode = { .mq_mode = ETH_MQ_TX_NONE, },
 		.rx_adv_conf.rss_conf.rss_key = NULL,
@@ -424,12 +424,12 @@ struct rte_ip_frag_tbl* create_reassemble_table() {
 
 __attribute__((always_inline))
 static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, struct rte_ip_frag_death_row* death_row, uint64_t cur_tsc) {
-	struct ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct ether_hdr *);
+	struct rte_ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct rte_ether_hdr *);
 
 	// TODO packet_type is not mandatory required for drivers.
 	// Some drivers won't set it. However this is DPDK implementation.
 	if (RTE_ETH_IS_IPV4_HDR(buf->packet_type)) { // if packet is IPv4
-		struct ipv4_hdr *ip_hdr = (struct ipv4_hdr *)(eth_hdr + 1);
+		struct rte_ipv4_hdr *ip_hdr = (struct rte_ipv4_hdr *)(eth_hdr + 1);
 
 		if (rte_ipv4_frag_pkt_is_fragmented(ip_hdr)) { // try to reassemble
 			buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
@@ -440,7 +440,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 		}
 	}
 	if (RTE_ETH_IS_IPV6_HDR(buf->packet_type)) { // if packet is IPv6
-		struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
+		struct rte_ipv6_hdr *ip_hdr = (struct rte_ipv6_hdr *)(eth_hdr + 1);
 		struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
 
 		if (frag_hdr != NULL) {

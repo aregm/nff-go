@@ -84,7 +84,7 @@ func CheckRSSPacketCount(p *Port, queue int16) int64 {
 // GetPortMACAddress gets MAC address of given port.
 func GetPortMACAddress(port uint16) [types.EtherAddrLen]uint8 {
 	var mac [types.EtherAddrLen]uint8
-	var cmac C.struct_ether_addr
+	var cmac C.struct_rte_ether_addr
 
 	C.rte_eth_macaddr_get(C.uint16_t(port), &cmac)
 	for i := range mac {
