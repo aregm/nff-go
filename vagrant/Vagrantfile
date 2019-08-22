@@ -133,6 +133,9 @@ chmod +x ~/scripts.sh
 echo -e ". ~/scripts.sh\n$(cat .bashrc)" > .bashrc
 setuptesthost
 
+echo Installing libbpf
+git clone https://github.com/libbpf/libbpf && make -C libbpf/src all install
+
 echo Downloading and building NFF-GO framework
 go get -v golang.org/x/tools/cmd/stringer
 git clone -b master --recurse-submodules http://github.com/intel-go/nff-go

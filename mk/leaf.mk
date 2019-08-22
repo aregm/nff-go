@@ -10,12 +10,6 @@ include $(PATH_TO_MK)/include.mk
 # Build all
 .PHONY: clean
 
-ifndef NFF_GO_NO_MLX_DRIVERS
-ifeq (,$(findstring mlx,$(GO_BUILD_TAGS)))
-export GO_BUILD_TAGS += mlx
-endif
-endif
-
 ifdef NFF_GO_DEBUG
 # Flags to build Go files without optimizations
 export GO_COMPILE_FLAGS += -gcflags=all='-N -l'

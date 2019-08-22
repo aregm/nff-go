@@ -10,15 +10,23 @@ import (
 )
 
 func main() {
+	// If you use af-xdp mode you need to configure queues:
+	// e.g. ethtool -N my_device flow-type tcp4 dst-port 4242 action 16
+	afXDP := flag.Bool("af-xdp", false, "use af-xdp. need to use ethtool to setup queues")
 	inport := flag.String("in", "", "device for receiver")
+	inQueue := flag.Int("in-queue", 16, "queue for receiver")
 	outport := flag.String("out", "", "device for sender")
 	flag.Parse()
 
 	flow.CheckFatal(flow.SystemInit(nil))
-
-	inputFlow, err := flow.SetReceiverOS(*inport)
-	flow.CheckFatal(err)
-	flow.CheckFatal(flow.SetSenderOS(inputFlow, *outport))
-
+	if *afXDP {
+		inputFlow, err := flow.SetReceiverXDP(*inport, *inQueue)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetSenderXDP(inputFlow, *outport))
+	} else {
+		inputFlow, err := flow.SetReceiverOS(*inport)
+		flow.CheckFatal(err)
+		flow.CheckFatal(flow.SetSenderOS(inputFlow, *outport))
+	}
 	flow.CheckFatal(flow.SystemStart())
 }

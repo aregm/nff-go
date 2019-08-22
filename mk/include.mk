@@ -53,6 +53,19 @@ $(info Checking for AVX support... no)
 endif
 endif
 
+ifndef NFF_GO_NO_MLX_DRIVERS
+ifeq (,$(findstring mlx,$(GO_BUILD_TAGS)))
+export GO_BUILD_TAGS += mlx
+endif
+endif
+
+ifndef NFF_GO_NO_BPF_SUPPORT
+ifeq (,$(findstring bpf,$(GO_BUILD_TAGS)))
+export GO_BUILD_TAGS += bpf
+endif
+CFLAGS += -DNFF_GO_SUPPORT_XDP
+endif
+
 export CGO_CFLAGS = $(CFLAGS)
 
 export CGO_LDFLAGS =				\
