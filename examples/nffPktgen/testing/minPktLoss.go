@@ -46,7 +46,7 @@ func main() {
                 outPort          uint
         )
         flag.Uint64Var(&speed, "speed", 120000000, "speed of fast generator, Pkts/s")
-        flag.Float64Var(&tgtLoss, "target loss", 0.005, "target packet loss %, use 0.001 for 1%")
+        flag.Float64Var(&tgtLoss, "target loss", 0.005, "target packet loss percentage, use 0.001 for 1 percent")
         flag.UintVar(&trafDelay, "traffic delay", 3, "time delay when speed is updated, sec")
         flag.StringVar(&genConfig, "config", "ip4.json", "specifies config for generator")
         flag.StringVar(&cores, "cores", "", "specifies cores")
