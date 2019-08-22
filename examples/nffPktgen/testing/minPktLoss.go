@@ -46,8 +46,8 @@ func main() {
                 outPort          uint
         )
         flag.Uint64Var(&speed, "speed", 120000000, "speed of fast generator, Pkts/s")
-        flag.Float64Var(&tgtLoss, "target loss", 0.005, "target packet loss percentage, use 0.001 for 1 percent")
-        flag.UintVar(&trafDelay, "traffic delay", 3, "time delay when speed is updated, sec")
+        flag.Float64Var(&tgtLoss, "target loss", 0.5, "target packet loss percentage")
+        flag.UintVar(&trafDelay, "traffic delay", 3, "time delay after speed is updated, sec")
         flag.StringVar(&genConfig, "config", "ip4.json", "specifies config for generator")
         flag.StringVar(&cores, "cores", "", "specifies cores")
         flag.UintVar(&outPort, "outPort", 1, "specifies output port")
@@ -179,7 +179,7 @@ out:
 }
 
 func calcPktLoss(pktCountRX uint64, pktCountTX uint64) float64 {
-        return (float64(pktCountTX - pktCountRX) / float64(pktCountTX))
+        return (float64(pktCountTX - pktCountRX) / float64(pktCountTX)) * 100.0
 }
 
 func receiveHandler(pkt *packet.Packet, ctx flow.UserContext) bool {
@@ -193,7 +193,7 @@ func receiveHandler(pkt *packet.Packet, ctx flow.UserContext) bool {
 func printStats(port *IpPort, pktRX uint64, pktTX uint64, pktLoss float64, started time.Time, currSpeed int, updatedSpeed float64) {
         fmt.Printf("\n%v: ", time.Since(started))
         fmt.Printf("Port %d pkts TX: %d / pkts RX: %d\n", port.Index, pktTX, pktRX)
-        fmt.Printf("Pkt loss: %f\n", pktLoss)
+        fmt.Printf("Pkt loss: %f%%\n", pktLoss)
         fmt.Printf("Current Speed: %d%% (%f pkts/s)\n\n", currSpeed, updatedSpeed)
 }
 
@@ -203,7 +203,7 @@ func printTotals(port *IpPort, totalPktRX uint64, totalPktTX uint64, started tim
         totalPktLoss := calcPktLoss(totalPktRX, totalPktTX)
         fmt.Printf("\nTest executed for %v\n", runtime)
         fmt.Printf("Port %d total pkts TX: %d / pkts RX: %d\n", port.Index, totalPktTX, totalPktRX)
-        fmt.Printf("Total pkt loss: %f\n", totalPktLoss)
+        fmt.Printf("Total pkt loss: %f%%\n", totalPktLoss)
         fmt.Printf("Port %d pkts/s: %v\n", port.Index, totalPktRX/runtimeint)
         fmt.Printf("Port %d kB/s: %v\n", port.Index, port.bytesCount/runtimeint/1000)
         fmt.Printf("Max Speed: %d%% (%f pkts/s)\n\n", maxSpeed, maxSpeedPkt)
