@@ -17,11 +17,6 @@ import (
         "github.com/intel-go/nff-go/packet"
 )
 
-// TEST PARAMETERS:
-const TOP_SPEED uint64 = 120000000 /*(pkt/s)*/
-const TGT_LOSS float64 = 0.005 /*(0.5% target packet loss)*/
-const TRAFFIC_DELAY uint = 3 /*(sec)*/
-
 type IpPort struct {
         Index       uint16
         packetCount uint64
@@ -44,17 +39,19 @@ func (hc HandlerContext) Delete() {
 func main() {
         var (
                 speed            uint64
+                tgtLoss          float64
+                trafDelay        uint
                 genConfig, cores string
                 inPort           uint
                 outPort          uint
-                receive          bool
         )
-        flag.Uint64Var(&speed, "speed", TOP_SPEED, "speed of fast generator, Pkts/s")
+        flag.Uint64Var(&speed, "speed", 120000000, "speed of fast generator, Pkts/s")
+        flag.Float64Var(&tgtLoss, "target loss", 0.005, "target packet loss %, use 0.001 for 1%")
+        flag.UintVar(&trafDelay, "traffic delay", 3, "time delay when speed is updated, sec")
         flag.StringVar(&genConfig, "config", "ip4.json", "specifies config for generator")
         flag.StringVar(&cores, "cores", "", "specifies cores")
         flag.UintVar(&outPort, "outPort", 1, "specifies output port")
         flag.UintVar(&inPort, "inPort", 1, "specifices input port")
-        flag.BoolVar(&receive, "receive", true, "Receive packets back and print statistics")
         testTime := flag.Uint("t", 0, "run generator for specified period of time in seconds, use zero to run forever")
         statInterval := flag.Uint("s", 0, "statistics update interval in seconds, use zero to disable it")
         flag.Parse()
@@ -78,15 +75,14 @@ func main() {
         flow.CheckFatal(err)
         outFlow, genChan, _ := flow.SetFastGenerator(generator.Generate, speed, context)
         flow.CheckFatal(flow.SetSender(outFlow, uint16(outPort)))
-        if receive {
-                hc := HandlerContext {
-                        port: &portStats,
-                }
-                inFlow, err := flow.SetReceiver(uint16(inPort))
-                flow.CheckFatal(err)
-                flow.CheckFatal(flow.SetHandlerDrop(inFlow, receiveHandler, hc))
-                flow.CheckFatal(flow.SetStopper(inFlow))
+
+        hc := HandlerContext {
+                port: &portStats,
         }
+        inFlow, err := flow.SetReceiver(uint16(inPort))
+        flow.CheckFatal(err)
+        flow.CheckFatal(flow.SetHandlerDrop(inFlow, receiveHandler, hc))
+        flow.CheckFatal(flow.SetStopper(inFlow))
 
         go func() {
                 flow.CheckFatal(flow.SystemStart())
@@ -100,7 +96,7 @@ func main() {
         if *testTime > 0 {
                 finishChannel = time.NewTicker(time.Duration(*testTime) * time.Second).C
         }
-        if receive && *statInterval > 0 {
+        if *statInterval > 0 {
                 statsChannel = time.NewTicker(time.Duration(*statInterval) * time.Second).C
         }
 
@@ -108,6 +104,7 @@ func main() {
 
         // optimize speed based on packet loss:
         maxSpeed := -1
+        var maxSpeedPkt float64 = -1
         var totalPktRX, totalPktTX uint64 = 0, 0
 
         go func() {
@@ -119,36 +116,36 @@ func main() {
                 // data at line rate:
                 portStats.packetCount = 0
                 gen.Count = 0
-                time.Sleep(time.Duration(TRAFFIC_DELAY) * time.Second)
+                time.Sleep(time.Duration(trafDelay) * time.Second)
                 pktRX := portStats.packetCount
                 pktTX := gen.GetGeneratedNumber()
                 pktLoss := calcPktLoss(pktRX, pktTX)
                 totalPktRX += pktRX
                 totalPktTX += pktTX
-                printStats(&portStats, pktRX, pktTX, pktLoss, started, currSpeed, float64(TOP_SPEED))
+                printStats(&portStats, pktRX, pktTX, pktLoss, started, currSpeed, float64(speed))
 
                 // binary search:
                 for low <= high {
                         mid := (low + high) / 2
                         currSpeed = mid
-                        updatedSpeed := 0.01 * float64(uint64(currSpeed) * TOP_SPEED)
+                        updatedSpeed := 0.01 * float64(uint64(currSpeed) * speed)
 
                         // reset counters:
                         portStats.packetCount = 0
                         gen.Count = 0
 
                         genChan <- uint64(updatedSpeed)
-                        time.Sleep(time.Duration(TRAFFIC_DELAY) * time.Second)
+                        time.Sleep(time.Duration(trafDelay) * time.Second)
 
                         pktRX = portStats.packetCount
                         pktTX = gen.GetGeneratedNumber()
                         pktLoss = calcPktLoss(pktRX, pktTX)
 
-                        tgt := pktLoss <= TGT_LOSS
-                        if(tgt) {
+                        if pktLoss <= tgtLoss {
                                 low = mid + 1 // tgt met so try higher speed
                                 if currSpeed > maxSpeed {
                                         maxSpeed = currSpeed
+                                        maxSpeedPkt = updatedSpeed
                                 }
                         } else {
                                 high = mid - 1 // tgt failed so try lower speed
@@ -156,10 +153,11 @@ func main() {
 
                         totalPktRX += pktRX
                         totalPktTX += pktTX
-                        //fmt.Printf("\nmid: %d\nupdatedSpeed: %d%%(%f pkt/s)\npktCountTX: %d\npktCountRX: %d\npktLoss: %f\nlow: %d\nhigh: %d\n\n", mid, currSpeed, updatedSpeed, pktTX, pktRX, pktLoss, low, high) // debugging purposes
+                        // fmt.Printf("\nmid: %d\nupdatedSpeed: %d%%(%f pkt/s)\npktCountTX: %d\npktCountRX: %d\npktLoss: %f\nlow: %d\nhigh: %d\n\n", mid, currSpeed, updatedSpeed, pktTX, pktRX, pktLoss, low, high) // debugging purposes
+
                         printStats(&portStats, pktRX, pktTX, pktLoss, started, currSpeed, updatedSpeed)
                 }
-                fmt.Printf("-----------------------------------------------------------BINARY SEARCH COMPLETE!!!------------------------------------------------------------\n")
+                fmt.Printf("--------------------BINARY SEARCH COMPLETE!!!--------------------\n")
                 interruptChannel <- os.Interrupt
         }()
 
@@ -174,12 +172,10 @@ out:
                         fmt.Println("Test timeout reached")
                         break out
                 case <-statsChannel:
-                        //printStats(&portStats, totalPktRX, totalPktTX, calcPktLoss(totalPktRX, totalPktTX), started, maxSpeed, /*pkt/s*/)
+                        printStats(&portStats, totalPktRX, totalPktTX, calcPktLoss(totalPktRX, totalPktTX), started, maxSpeed, maxSpeedPkt)
                 }
         }
-        if receive {
-                printTotals(&portStats, totalPktRX, totalPktTX, started, maxSpeed)
-        }
+        printTotals(&portStats, totalPktRX, totalPktTX, started, maxSpeed, maxSpeedPkt)
 }
 
 func calcPktLoss(pktCountRX uint64, pktCountTX uint64) float64 {
@@ -201,7 +197,7 @@ func printStats(port *IpPort, pktRX uint64, pktTX uint64, pktLoss float64, start
         fmt.Printf("Current Speed: %d%% (%f pkts/s)\n\n", currSpeed, updatedSpeed)
 }
 
-func printTotals(port *IpPort, totalPktRX uint64, totalPktTX uint64, started time.Time, maxSpeed int) {
+func printTotals(port *IpPort, totalPktRX uint64, totalPktTX uint64, started time.Time, maxSpeed int, maxSpeedPkt float64) {
         runtime := time.Since(started)
         runtimeint := uint64(runtime) / uint64(time.Second)
         totalPktLoss := calcPktLoss(totalPktRX, totalPktTX)
@@ -210,5 +206,5 @@ func printTotals(port *IpPort, totalPktRX uint64, totalPktTX uint64, started tim
         fmt.Printf("Total pkt loss: %f\n", totalPktLoss)
         fmt.Printf("Port %d pkts/s: %v\n", port.Index, totalPktRX/runtimeint)
         fmt.Printf("Port %d kB/s: %v\n", port.Index, port.bytesCount/runtimeint/1000)
-        fmt.Printf("Max Speed: %d%%\n\n", maxSpeed)
+        fmt.Printf("Max Speed: %d%% (%f pkts/s)\n\n", maxSpeed, maxSpeedPkt)
 }
