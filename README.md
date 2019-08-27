@@ -133,10 +133,11 @@ If you want to build `libbpf` from sources you can do it in two
 different ways.
 * If you are using stock Linux kernel from distribution, [download
   `libbpf` from GitHub](https://github.com/libbpf/libbpf), then
-  execute `cd src; make; sudo make install`.
+  execute `cd src; make; sudo make install`. Add /usr/lib64 to your
+  ldconfig path.
 * If you build Linux kernel from sources, you can build `libbpf` from
   Linux source tree using commands `cd tools/lib/bpf; make; sudo make
-  install install_headers`.
+  install install_headers`. Add /usr/local/lib64 to your ldconfig path.
 
 ## Building NFF-GO
 
