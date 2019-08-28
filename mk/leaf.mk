@@ -57,6 +57,7 @@ deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
 	docker save $(WORKIMAGENAME) > $(TMPNAME)
 	for host in `echo $(NFF_GO_HOSTS) | tr ',' ' '`; do			\
+		echo Uploading $(WORKIMAGENAME) to $$host			\
 		if ! docker -H tcp://$$host load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)
