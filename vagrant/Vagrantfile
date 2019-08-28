@@ -134,7 +134,7 @@ echo -e ". ~/scripts.sh\n$(cat .bashrc)" > .bashrc
 setuptesthost
 
 echo Installing libbpf
-git clone https://github.com/libbpf/libbpf
+git clone -b v0.0.4 https://github.com/libbpf/libbpf
 make -C libbpf/src all
 sudo make -C libbpf/src install
 sudo sh -c "echo /usr/lib64 > /etc/ld.so.conf.d/usrlib64.conf"
