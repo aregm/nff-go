@@ -36,6 +36,7 @@ const generatePauseStep = 0.1
 const process = 1
 const stopRequest = 2
 const wasStopped = 9
+const printPortStatistics = false
 
 // TODO "5" and "39" constants derived empirically. Need to investigate more elegant thresholds.
 const RSSCloneMin = 5
@@ -156,26 +157,26 @@ func (scheduler *scheduler) addFF(name string, ucfn uncloneFlowFunction, Cfn cFl
 }
 
 type scheduler struct {
-	ff                []*flowFunction
-	cores             []core
-	off               bool
-	offRemove         bool
-	anyway            bool
-	stopDedicatedCore bool
-	StopRing          low.Rings
-	usedCores         uint8
-	checkTime         uint
-	debugTime         uint
-	Dropped           uint
-	maxPacketsToClone uint32
-	stopFlag          int32
-	maxRecv           int
-	Timers            []*Timer
-	nAttempts         []uint64
-	pAttempts         []uint64
-	maxInIndex        int32
-	measureRings      low.Rings
-	coreIndex         int
+	ff                 []*flowFunction
+	cores              []core
+	off                bool
+	offRemove          bool
+	unrestrictedClones bool
+	stopDedicatedCore  bool
+	StopRing           low.Rings
+	usedCores          uint8
+	checkTime          uint
+	debugTime          uint
+	Dropped            uint
+	maxPacketsToClone  uint32
+	stopFlag           int32
+	maxRecv            int
+	Timers             []*Timer
+	nAttempts          []uint64
+	pAttempts          []uint64
+	maxInIndex         int32
+	measureRings       low.Rings
+	coreIndex          int
 }
 
 type core struct {
@@ -184,7 +185,7 @@ type core struct {
 }
 
 func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDedicatedCore bool,
-	stopRing low.Rings, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int, anyway bool) *scheduler {
+	stopRing low.Rings, checkTime uint, debugTime uint, maxPacketsToClone uint32, maxRecv int, unrestrictedClones bool) *scheduler {
 	coresNumber := len(cpus)
 	// Init scheduler
 	scheduler := new(scheduler)
@@ -200,7 +201,7 @@ func newScheduler(cpus []int, schedulerOff bool, schedulerOffRemove bool, stopDe
 	scheduler.debugTime = debugTime
 	scheduler.maxPacketsToClone = maxPacketsToClone
 	scheduler.maxRecv = maxRecv
-	scheduler.anyway = anyway
+	scheduler.unrestrictedClones = unrestrictedClones
 	scheduler.pAttempts = make([]uint64, len(scheduler.cores), len(scheduler.cores))
 
 	return scheduler
@@ -405,6 +406,13 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 			common.LogDebug(common.Debug, "---------------")
 			common.LogDebug(common.Debug, "System is using", scheduler.usedCores, "cores now.", uint8(len(scheduler.cores))-scheduler.usedCores, "cores are left available.")
 			low.Statistics(float32(scheduler.debugTime) / 1000)
+			if printPortStatistics {
+				for i := range createdPorts {
+					if createdPorts[i].wasRequested {
+						low.PortStatistics(createdPorts[i].port)
+					}
+				}
+			}
 			for i := range scheduler.ff {
 				scheduler.ff[i].printDebug(schedTime)
 			}
@@ -549,7 +557,7 @@ func (scheduler *scheduler) schedule(schedTime uint) {
 								ffi.removed = false
 								continue
 							}
-							if ffi.inIndex[0] == 1 && scheduler.anyway && ffi.checkInputRingClonable(scheduler.maxPacketsToClone) &&
+							if ffi.inIndex[0] == 1 && scheduler.unrestrictedClones && ffi.checkInputRingClonable(scheduler.maxPacketsToClone) &&
 								ffi.checkOutputRingClonable(scheduler.maxPacketsToClone) &&
 								(ffi.increasedSpeed == 0 || ffi.increasedSpeed > ffi.reportedState.V.Packets) {
 								if scheduler.pAttempts[ffi.cloneNumber+1] == 0 {

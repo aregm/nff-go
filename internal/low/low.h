@@ -6,6 +6,7 @@
 
 // Do not use signals in this C code without much need.
 // They can and probably will crash go runtime in complex errors.
+#include <assert.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
@@ -35,17 +36,21 @@
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
-#define TX_RING_SIZE 512
+#define TX_RING_SIZE 2048
 
 // 2 queues are enough for handling 40GBits. Should be checked for other NICs.
 // TODO This macro should be a function that will dynamically return the needed number of cores.
-#define TX_QUEUE_NUMBER 2
+#define TX_QUEUE_NUMBER 16
+#define TX_QUEUE_CORES 2
+#define TX_ATTEMPTS 3
 
 #define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
 #define MAX_JUMBO_PKT_LEN  9600 // from most DPDK examples. Only for MEMORY_JUMBO.
 
 // #define DEBUG
+// #define PORT_XSTATS_ENABLED
+// #define DEBUG_PACKET_LOSS
 #define COUNTERS_ENABLED
 #define USE_INTERLOCKED_COUNTERS
 #define ANALYZE_PACKETS_SIZES
@@ -138,9 +143,9 @@ bool analyze_packet_sizes = true;
 bool analyze_packet_sizes = false;
 #endif
 
-long receive_received = 0, receive_pushed = 0;
-long send_required = 0, send_sent = 0;
-long stop_freed = 0;
+volatile long long receive_received = 0, receive_pushed = 0;
+volatile long long send_required = 0, send_sent = 0;
+volatile long long stop_freed = 0;
 
 typedef struct {
 	uint64_t PacketsProcessed, PacketsDropped, BytesProcessed;
@@ -245,18 +250,25 @@ int checkRSSPacketCount(struct cPort *port, int16_t queue) {
 	return rte_eth_rx_queue_count(port->PortId, queue);
 }
 
-int check_port_rss(uint16_t port) {
+uint16_t check_max_port_rx_queues(uint16_t port) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 	return dev_info.max_rx_queues;
 }
 
-int check_port_tx(uint16_t port) {
+uint16_t check_max_port_tx_queues(uint16_t port) {
         struct rte_eth_dev_info dev_info;
         memset(&dev_info, 0, sizeof(dev_info));
         rte_eth_dev_info_get(port, &dev_info);
         return dev_info.max_tx_queues;
+}
+
+uint16_t check_current_port_tx_queues(uint16_t port) {
+        struct rte_eth_dev_info dev_info;
+        memset(&dev_info, 0, sizeof(dev_info));
+        rte_eth_dev_info_get(port, &dev_info);
+        return dev_info.nb_tx_queues;
 }
 
 // Initializes a given port using global settings and with the RX buffers
@@ -269,7 +281,7 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 	rte_eth_dev_info_get(port, &dev_info);
 
 	if (tx_rings > dev_info.max_tx_queues) {
-		tx_rings = check_port_tx(port);
+		tx_rings = check_max_port_tx_queues(port);
 	}
 
 	if (willReceive) {
@@ -345,6 +357,22 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		.QueuesNumber = rx_rings
 	};
 
+#ifdef DEBUG
+#ifdef PORT_XSTATS_ENABLED
+    int stats_len = rte_eth_xstats_get(port, NULL, 0);
+    struct rte_eth_xstat_name *xstats_names;
+    assert(stats_len >= 0);
+    xstats_names = calloc(stats_len, sizeof(*xstats_names));
+    assert(xstats_names != NULL);
+    int ret = rte_eth_xstats_get_names(port, xstats_names, stats_len);
+    assert(ret >= 0 && ret <= stats_len);
+    printf("Port %u exposes the following extended stats\n", port);
+    for (int i = 0; i < stats_len; i++) {
+        printf("\t%d: %s\n", i, xstats_names[i].name);
+    }
+    free(xstats_names);
+#endif // PORT_XSTATS_ENABLED
+#endif // DEBUG
 	return 0;
 }
 
@@ -477,8 +505,8 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 			// Free any packets which can't be pushed to the ring. The ring is probably full.
 			handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
-			receive_received += rx_pkts_number;
-			receive_pushed += pushed_pkts_number;
+			__sync_fetch_and_add(&receive_received, rx_pkts_number);
+			__sync_fetch_and_add(&receive_pushed, pushed_pkts_number);
 #endif // DEBUG
 		}
 	}
@@ -529,36 +557,54 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats, int32_t sendThreadIndex, int32_t totalSendTreads) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
-	int16_t queue = 0;
-	bool switchQueue = (check_port_tx(port) > 1) && (anyway || inIndexNumber > 1);
+    int16_t port_tx_queues = check_current_port_tx_queues(port);
+    int16_t tx_qstart = port_tx_queues / totalSendTreads * sendThreadIndex;
+    int16_t tx_qend = port_tx_queues / totalSendTreads * (sendThreadIndex + 1);
+	int16_t tx_queue_counter = tx_qstart;
+	int rx_qstart = inIndexNumber / totalSendTreads * sendThreadIndex;
+	int rx_qend = inIndexNumber / totalSendTreads * (sendThreadIndex + 1);
+	printf("Starting send with %d to %d RX queues and %d to %d TX on core %d\n",
+        rx_qstart, rx_qend, tx_qstart, tx_qend, coreId);
 	while (*flag == process) {
-		for (int q = 0; q < inIndexNumber; q++) {
+		for (int q = rx_qstart; q < rx_qend; q++) {
 			// Get packets for TX from ring
 			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 
 			if (unlikely(pkts_for_tx_number == 0))
 				continue;
 
-			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
-			// inIndexNumber must be "1" or even. This prevents any reordering.
-			// anyway allows reordering explicitly
-			if (switchQueue) {
-				queue = !queue;
-			}
+            tx_pkts_number = 0;
+            int tx_attempts_counter = 0;
+            do {
+                uint16_t iteration_tx_pkts = rte_eth_tx_burst(port, tx_queue_counter, bufs + tx_pkts_number, pkts_for_tx_number - tx_pkts_number);
+                tx_pkts_number += iteration_tx_pkts;
+                tx_attempts_counter++;
+            } while (tx_pkts_number < pkts_for_tx_number && tx_attempts_counter <= TX_ATTEMPTS);
 
             UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
 
+#ifdef DEBUG_PACKET_LOSS
+            if (unlikely(tx_pkts_number < pkts_for_tx_number)) {
+                printf("**** Port %d, queue %d tried to transmit %d, transmitted only %d\n",
+                    port, tx_queue_counter + tx_queue_offset, pkts_for_tx_number, tx_pkts_number);
+            }
+#endif
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
+
+            tx_queue_counter++;
+            if (tx_queue_counter >= tx_qend) {
+                tx_queue_counter = tx_qstart;
+            }
 #ifdef DEBUG
-			send_required += pkts_for_tx_number;
-			send_sent += tx_pkts_number;
+			__sync_fetch_and_add(&send_required, pkts_for_tx_number);
+			__sync_fetch_and_add(&send_sent, tx_pkts_number);
 #endif
 		}
 	}
@@ -587,7 +633,7 @@ void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int co
 				rte_pktmbuf_free(bufs[buf]);
 			}
 #ifdef DEBUG
-			stop_freed += pkts_for_free_number;
+			__sync_fetch_and_add(&stop_freed, pkts_for_free_number);
 #endif
 		}
 	}
@@ -626,12 +672,12 @@ void statistics(float N) {
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
 	if (receive_pushed < receive_received) {
-		fprintf(stderr, "DROP: Receive dropped %ld packets\n", receive_received - receive_pushed);
+		fprintf(stderr, "DROP: Receive dropped %lld packets\n", receive_received - receive_pushed);
 	}
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	if (send_sent < send_required) {
-		fprintf(stderr, "DROP: Send dropped %ld packets\n", send_required - send_sent);
+		fprintf(stderr, "DROP: Send dropped %lld packets\n", send_required - send_sent);
 	}
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more
@@ -642,6 +688,78 @@ void statistics(float N) {
 	send_required = 0;
 	send_sent = 0;
 	stop_freed = 0;
+#endif
+}
+
+#define RX_Q0PACKETS 8
+#define RX_Q_PACKETS_STEP 3
+#define TX_Q0PACKETS 56
+#define TX_Q_PACKETS_STEP 2
+#define RX_Q0BURST 88
+#define RX_Q_BURST_STEP 1
+#define TX_Q0BURST 104
+#define TX_Q_BURST_STEP 1
+
+void portStatistics(uint16_t port_id) {
+#ifdef DEBUG
+	struct rte_eth_dev_info dev_info;
+	rte_eth_dev_info_get(port_id, &dev_info);
+
+    struct rte_eth_stats eth_stats;
+    rte_eth_stats_get(port_id, &eth_stats);
+    rte_eth_stats_reset(port_id);
+
+    if (dev_info.nb_rx_queues > 0 || dev_info.nb_tx_queues > 0) {
+        fprintf(stderr, "Port %u (RX_Q %u/TX_Q %u): IP %lu, OP %lu, IB %lu, OB %lu, IMISS %lu, IERR %lu, OERR %lu, RX_NOMBUF %lu\n",
+            port_id,
+            dev_info.nb_rx_queues, dev_info.nb_tx_queues,
+            eth_stats.ipackets,
+            eth_stats.opackets,
+            eth_stats.ibytes,
+            eth_stats.obytes,
+            eth_stats.imissed,
+            eth_stats.ierrors,
+            eth_stats.oerrors,
+            eth_stats.rx_nombuf);
+
+#ifdef PORT_XSTATS_ENABLED
+        int len = rte_eth_xstats_get(port_id, NULL, 0);
+        assert(len >= 0);
+        struct rte_eth_xstat *xstats = calloc(len, sizeof(*xstats));
+        int ret = rte_eth_xstats_get(port_id, xstats, len);
+        assert(ret >= 0 && ret <= len);
+        rte_eth_xstats_reset(port_id);
+/*
+    fprintf(stderr, "RX_Q_PACKETS: ");
+    for (int i = 0; i < dev_info.nb_rx_queues - 1; i++) {
+        fprintf(stderr, "%d: %lu, ", i, xstats[RX_Q0PACKETS + i * RX_Q_PACKETS_STEP].value);
+    }
+    fprintf(stderr, "%d: %lu\n", dev_info.nb_rx_queues - 1, xstats[RX_Q0PACKETS + (dev_info.nb_rx_queues - 1) * RX_Q_PACKETS_STEP].value);
+
+    fprintf(stderr, "TX_Q_PACKETS: ");
+    for (int i = 0; i < dev_info.nb_tx_queues - 1; i++) {
+        fprintf(stderr, "%d: %lu, ", i, xstats[TX_Q0PACKETS + i * TX_Q_PACKETS_STEP].value);
+    }
+    fprintf(stderr, "%d: %lu\n", dev_info.nb_tx_queues - 1, xstats[TX_Q0PACKETS + (dev_info.nb_tx_queues - 1) * TX_Q_PACKETS_STEP].value);
+*/
+        if (dev_info.nb_rx_queues > 0) {
+            fprintf(stderr, "RX_Q_BURST: ");
+            for (int i = 0; i < dev_info.nb_rx_queues - 1; i++) {
+                fprintf(stderr, "%d: %lu, ", i, xstats[RX_Q0BURST + i * RX_Q_BURST_STEP].value);
+            }
+            fprintf(stderr, "%d: %lu\n", dev_info.nb_rx_queues - 1, xstats[RX_Q0BURST + (dev_info.nb_rx_queues - 1) * RX_Q_BURST_STEP].value);
+        }
+
+        if (dev_info.nb_tx_queues > 0) {
+            fprintf(stderr, "TX_Q_BURST: ");
+            for (int i = 0; i < dev_info.nb_tx_queues - 1; i++) {
+                fprintf(stderr, "%d: %lu, ", i, xstats[TX_Q0BURST + i * TX_Q_BURST_STEP].value);
+            }
+            fprintf(stderr, "%d: %lu\n", dev_info.nb_tx_queues - 1, xstats[TX_Q0BURST + (dev_info.nb_tx_queues - 1) * TX_Q_BURST_STEP].value);
+        }
+        free(xstats);
+#endif // PORT_XSTATS_ENABLED
+    }
 #endif
 }
 

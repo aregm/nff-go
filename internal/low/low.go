@@ -517,12 +517,19 @@ func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int, stats *common.RXTXStats) {
+func Send(port uint16, IN Rings, unrestrictedClones bool, flag *int32, coreID int, stats *common.RXTXStats,
+	sendThreadIndex, totalSendTreads int) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)),
-		C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+	C.nff_go_send(C.uint16_t(port),
+		C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))),
+		C.int32_t(len(IN)),
+		C.bool(unrestrictedClones),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)),
+		C.int32_t(sendThreadIndex),
+		C.int32_t(totalSendTreads))
 }
 
 // Stop - dequeue and free packets.
@@ -590,7 +597,7 @@ func GetPortsNumber() int {
 }
 
 func CheckPortRSS(port uint16) int32 {
-	return int32(C.check_port_rss(C.uint16_t(port)))
+	return int32(C.check_max_port_rx_queues(C.uint16_t(port)))
 }
 
 // CreatePort initializes a new port using global settings and parameters.
@@ -695,6 +702,11 @@ func GetDataLenMbuf(mb *Mbuf) uint {
 // speed of stop ring, recv/send speed and drops.
 func Statistics(N float32) {
 	C.statistics(C.float(N))
+}
+
+// PortStatistics print statistics about NIC port.
+func PortStatistics(port uint16) {
+	C.portStatistics(C.uint16_t(port))
 }
 
 // ReportMempoolsState prints used and free space of mempools.
