@@ -273,7 +273,7 @@ uint16_t check_current_port_tx_queues(uint16_t port) {
 
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex) {
+int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex, int32_t tx_queues) {
 	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
 
 	struct rte_eth_dev_info dev_info;

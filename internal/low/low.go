@@ -601,7 +601,8 @@ func CheckPortRSS(port uint16) int32 {
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum, hwrxpacketstimestamp bool, inIndex int32) error {
+func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum,
+	hwrxpacketstimestamp bool, inIndex int32, tXQueuesNumberPerPort int) error {
 	var mempools **C.struct_rte_mempool
 	if willReceive {
 		m := CreateMempools("receive", inIndex)
@@ -610,7 +611,7 @@ func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum, h
 		mempools = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), mempools,
-		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex)) != 0 {
+		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex), C.int32_t (tXQueuesNumberPerPort)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}

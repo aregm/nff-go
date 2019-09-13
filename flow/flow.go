@@ -577,8 +577,8 @@ type Config struct {
 	// SystemStop after it. It is enabled by default.
 	NoSetSIGINTHandler bool
 	// Number of CPU cores to be occupied by Send routines. It is
-	// necessary to set TXQueueNumber to a reasonably big number which
-	// can be divided by SendCPUCoresPerPort.
+	// necessary to set TXQueuesNumberPerPort to a reasonably big
+	// number which can be divided by SendCPUCoresPerPort.
 	SendCPUCoresPerPort int
 	// Number of transmit queues to use on network card. By default it
 	// is minimum of NIC supported TX queues number and 2. If this
@@ -608,11 +608,14 @@ func SystemInit(args *Config) error {
 	}
 
 	tXQueuesNumberPerPort = args.TXQueuesNumberPerPort
+	if tXQueuesNumberPerPort == 0 {
+		tXQueuesNumberPerPort = 2
+	}
 
 	sendCPUCoresPerPort = args.SendCPUCoresPerPort
 	if sendCPUCoresPerPort == 0 {
 		sendCPUCoresPerPort = 1
-		if tXQueuesNumberPerPort != 0 && tXQueuesNumberPerPort%sendCPUCoresPerPort != 0 {
+		if tXQueuesNumberPerPort%sendCPUCoresPerPort != 0 {
 			return common.WrapWithNFError(nil, "TXQueuesNumberPerPort should be divisible by SendCPUCoresPerPort",
 				common.BadArgument)
 		}
@@ -772,7 +775,7 @@ func SystemInitPortsAndMemory() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex); err != nil {
+				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex, tXQueuesNumberPerPort); err != nil {
 				return err
 			}
 		}
