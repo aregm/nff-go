@@ -600,6 +600,10 @@ func CheckPortRSS(port uint16) int32 {
 	return int32(C.check_max_port_rx_queues(C.uint16_t(port)))
 }
 
+func CheckPortMaxTXQueues(port uint16) int32 {
+	return int32(C.check_max_port_tx_queues(C.uint16_t(port)))
+}
+
 // CreatePort initializes a new port using global settings and parameters.
 func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum,
 	hwrxpacketstimestamp bool, inIndex int32, tXQueuesNumberPerPort int) error {

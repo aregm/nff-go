@@ -40,7 +40,6 @@
 
 // 2 queues are enough for handling 40GBits. Should be checked for other NICs.
 // TODO This macro should be a function that will dynamically return the needed number of cores.
-#define TX_QUEUE_NUMBER 16
 #define TX_QUEUE_CORES 2
 #define TX_ATTEMPTS 3
 
@@ -274,14 +273,15 @@ uint16_t check_current_port_tx_queues(uint16_t port) {
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
 int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex, int32_t tx_queues) {
-	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
+	uint16_t rx_rings, tx_rings = tx_queues;
 
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
 	if (tx_rings > dev_info.max_tx_queues) {
-		tx_rings = check_max_port_tx_queues(port);
+		printf("Warning! Port %d does not support requested number of TX queues %d. Setting number of TX queues to %d\n", port, tx_rings, dev_info.max_tx_queues);
+		tx_rings = dev_info.max_tx_queues;
 	}
 
 	if (willReceive) {
@@ -563,9 +563,9 @@ void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumbe
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
-    int16_t port_tx_queues = check_current_port_tx_queues(port);
-    int16_t tx_qstart = port_tx_queues / totalSendTreads * sendThreadIndex;
-    int16_t tx_qend = port_tx_queues / totalSendTreads * (sendThreadIndex + 1);
+	int16_t port_tx_queues = check_current_port_tx_queues(port);
+	int16_t tx_qstart = port_tx_queues / totalSendTreads * sendThreadIndex;
+	int16_t tx_qend = sendThreadIndex + 1 == totalSendTreads ? port_tx_queues : port_tx_queues / totalSendTreads * (sendThreadIndex + 1);
 	int16_t tx_queue_counter = tx_qstart;
 	int rx_qstart = inIndexNumber / totalSendTreads * sendThreadIndex;
 	int rx_qend = inIndexNumber / totalSendTreads * (sendThreadIndex + 1);
