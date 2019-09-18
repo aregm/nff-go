@@ -118,6 +118,27 @@ Use Go version 1.11.4 or higher. To check the version of Go, do:
 
         go version
         
+### AF_XDP support
+
+AF_XDP support is enabled by default, and it requires you to install
+`libbpf` package. At the time of writing Ubuntu doesn't have this
+library among its packages, so it is necessary to build `libbpf` from
+sources or disable AF_XDP socket support.
+
+To disable it set variable `NFF_GO_NO_BPF_SUPPORT` to some unempty
+value. When NFF_GO is built with it, AF_XDP support is disaled and
+using it results in errors.
+
+If you want to build `libbpf` from sources you can do it in two
+different ways.
+* If you are using stock Linux kernel from distribution, [download
+  `libbpf` from GitHub](https://github.com/libbpf/libbpf), then
+  execute `cd src; make; sudo make install`. Add /usr/lib64 to your
+  ldconfig path.
+* If you build Linux kernel from sources, you can build `libbpf` from
+  Linux source tree using commands `cd tools/lib/bpf; make; sudo make
+  install install_headers`. Add /usr/local/lib64 to your ldconfig path.
+
 ## Building NFF-GO
 
 When Go compiler runs for the first time it downloads all dependent

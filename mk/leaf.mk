@@ -10,12 +10,6 @@ include $(PATH_TO_MK)/include.mk
 # Build all
 .PHONY: clean
 
-ifndef NFF_GO_NO_MLX_DRIVERS
-ifeq (,$(findstring mlx,$(GO_BUILD_TAGS)))
-export GO_BUILD_TAGS += mlx
-endif
-endif
-
 ifdef NFF_GO_DEBUG
 # Flags to build Go files without optimizations
 export GO_COMPILE_FLAGS += -gcflags=all='-N -l'
@@ -63,6 +57,7 @@ deploy: .check-deploy-env images
 	$(eval TMPNAME=tmp-$(IMAGENAME).tar)
 	docker save $(WORKIMAGENAME) > $(TMPNAME)
 	for host in `echo $(NFF_GO_HOSTS) | tr ',' ' '`; do			\
+		echo Uploading $(WORKIMAGENAME) to $$host			\
 		if ! docker -H tcp://$$host load < $(TMPNAME); then break; fi;	\
 	done
 	rm $(TMPNAME)

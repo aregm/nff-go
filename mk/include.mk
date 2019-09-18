@@ -9,9 +9,9 @@ PROJECT_ROOT := $(abspath $(dir $(abspath $(lastword $(MAKEFILE_LIST))))/..)
 # Main DPDK variables
 DPDK_DIR=dpdk
 PKTGEN_DIR=pktgen-dpdk
+export RTE_TARGET=x86_64-native-linuxapp-gcc
 DPDK_INSTALL_DIR=$(RTE_TARGET)-install
 export RTE_SDK=$(PROJECT_ROOT)/dpdk/$(DPDK_DIR)/$(DPDK_INSTALL_DIR)/usr/local/share/dpdk
-export RTE_TARGET=x86_64-native-linuxapp-gcc
 
 # Configure flags for native code. Disable FSGSBASE and F16C to run in
 # VMs and Docker containers.
@@ -51,6 +51,19 @@ CFLAGS += -DRTE_MACHINE_CPUFLAG_AVX
 else
 $(info Checking for AVX support... no)
 endif
+endif
+
+ifndef NFF_GO_NO_MLX_DRIVERS
+ifeq (,$(findstring mlx,$(GO_BUILD_TAGS)))
+export GO_BUILD_TAGS += mlx
+endif
+endif
+
+ifndef NFF_GO_NO_BPF_SUPPORT
+ifeq (,$(findstring bpf,$(GO_BUILD_TAGS)))
+export GO_BUILD_TAGS += bpf
+endif
+CFLAGS += -DNFF_GO_SUPPORT_XDP
 endif
 
 export CGO_CFLAGS = $(CFLAGS)

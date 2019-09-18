@@ -760,6 +760,10 @@ func CheckHWRXPacketsTimestamp(port uint16) bool {
 	return bool(C.check_hwrxpackets_timestamp_capability(C.uint16_t(port)))
 }
 
+func InitDevice(device string) int {
+	return int(C.initDevice(C.CString(device)))
+}
+
 func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
 	m := CreateMempool("receiveOS")
 	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
@@ -770,10 +774,6 @@ func SendOS(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXSta
 	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
 		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
 		(*C.RXTXStats)(unsafe.Pointer(stats)))
-}
-
-func InitDevice(device string) int {
-	return int(C.initDevice(C.CString(device)))
 }
 
 func SetCountersEnabledInApplication(enabled bool) {
@@ -790,4 +790,22 @@ func GetPacketOffloadFlags(mb *Mbuf) uint64 {
 
 func GetPacketTimestamp(mb *Mbuf) uint64 {
 	return uint64(mb.timestamp)
+}
+
+type XDPSocket *C.struct_xsk_socket_info
+
+func InitXDP(device string, queue int) XDPSocket {
+	return C.initXDP(C.CString(device), C.int(queue))
+}
+
+func ReceiveXDP(socket XDPSocket, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
+	m := CreateMempool("receiveXDP")
+	C.receiveXDP(socket, OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
+func SendXDP(socket XDPSocket, IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.sendXDP(socket, C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
+		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)))
 }

@@ -7,4 +7,4 @@ include $(PATH_TO_MK)/include.mk
 
 .PHONY: testing
 testing: check-pktgen
-	go test -v
+	go test -v -tags "${GO_BUILD_TAGS}"
