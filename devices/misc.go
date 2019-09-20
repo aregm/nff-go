@@ -40,12 +40,18 @@ func GetDeviceID(nicName string) (string, error) {
 		return "", err
 	}
 	// raw should be like /sys/devices/pci0002:00/0000:00:08.0/virtio2/net/ens8
+	// or /sys/devices/pci0000:00/0000:00:01.0/0000:03:00.2/net/ens4f2
 	raws := strings.Split(raw, "/")
-	if len(raws) < 5 {
+	if len(raws) < 6 {
 		return "", fmt.Errorf("path not correct")
 	}
-	return raws[4], nil
-
+	if IsPciID.Match([]byte(raws[5])) {
+		return raws[5], nil
+	} else if IsPciID.Match([]byte(raws[4])) {
+		return raws[4], nil
+	} else {
+		return "", fmt.Errorf("can't get device ID from path: %s", raw)
+	}
 }
 
 // IsModuleLoaded checks if the kernel has already loaded the driver or not.

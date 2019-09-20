@@ -192,6 +192,7 @@ func initPortFlows(port *IpPort, myIPs generator.AddrRange, addEncapsulation boo
 	flow.CheckFatal(flow.SetSender(outFlow, uint16(port.Index)))
 	// Input flow
 	inFlow, err := flow.SetReceiver(port.Index)
+	flow.CheckFatal(err)
 	flow.CheckFatal(flow.SetHandlerDrop(inFlow, receiveHandler, hc))
 	flow.CheckFatal(flow.SetStopper(inFlow))
 }

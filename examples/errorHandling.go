@@ -49,11 +49,11 @@ func main() {
 	}
 
 	// Get splitting rules from access control file.
-	l3Rules, err = packet.GetL3ACLFromORIG("wrong.conf")
-	fmt.Printf("error from GetL3ACLFromORIG was: %+v\n", err)
+	l3Rules, err = packet.GetL3ACLFromTextTable("wrong.conf")
+	fmt.Printf("error from GetL3ACLFromTextTable was: %+v\n", err)
 	if common.GetNFErrorCode(err) == common.FileErr {
 		fmt.Printf("changing file name\n")
-		l3Rules, err = packet.GetL3ACLFromORIG("Forwarding.conf")
+		l3Rules, err = packet.GetL3ACLFromTextTable("Forwarding.conf")
 		CheckFatal(err)
 	}
 

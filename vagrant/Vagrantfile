@@ -126,12 +126,18 @@ echo Reassigning "${syscon}" interface to system name
 sudo nmcli c mod "${syscon}" connection.id 'System connection'
 
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.12.5.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.12.9.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
 echo -e ". ~/scripts.sh\n$(cat .bashrc)" > .bashrc
 setuptesthost
+
+echo Installing libbpf
+git clone -b v0.0.4 https://github.com/libbpf/libbpf
+make -C libbpf/src all
+sudo make -C libbpf/src install
+sudo sh -c "echo /usr/lib64 > /etc/ld.so.conf.d/usrlib64.conf"
 
 echo Downloading and building NFF-GO framework
 go get -v golang.org/x/tools/cmd/stringer

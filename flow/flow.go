@@ -32,6 +32,7 @@ package flow
 import (
 	"net"
 	"os"
+	"os/signal"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -48,7 +49,7 @@ var createdPorts []port
 var portPair map[types.IPv4Address](*port)
 var schedState *scheduler
 var vEach [10][vBurstSize]uint8
-var devices map[string]int
+var ioDevices map[string]interface{}
 
 type Timer struct {
 	t        *time.Ticker
@@ -160,7 +161,7 @@ func addReceiver(portId uint16, out low.Rings, inIndexNumber int32) {
 	par.port = low.GetPort(portId)
 	par.out = out
 	par.status = make([]int32, maxRecv, maxRecv)
-	schedState.addFF("receiver", nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber, &par.stats)
+	schedState.addFF("receiverPort"+string(portId), nil, recvRSS, nil, par, nil, receiveRSS, inIndexNumber, &par.stats)
 }
 
 type receiveOSParameters struct {
@@ -174,6 +175,19 @@ func addOSReceiver(socket int, out low.Rings) {
 	par.socket = socket
 	par.out = out
 	schedState.addFF("OS receiver", nil, recvOS, nil, par, nil, sendReceiveKNI, 0, &par.stats)
+}
+
+type receiveXDPParameters struct {
+	out    low.Rings
+	socket low.XDPSocket
+	stats  common.RXTXStats
+}
+
+func addXDPReceiver(socket low.XDPSocket, out low.Rings) {
+	par := new(receiveXDPParameters)
+	par.socket = socket
+	par.out = out
+	schedState.addFF("AF_XDP receiver", nil, recvXDP, nil, par, nil, sendReceiveKNI, 0, &par.stats)
 }
 
 type KNIParameters struct {
@@ -242,18 +256,23 @@ func addFastGenerator(out low.Rings, generateFunction GenerateFunction,
 }
 
 type sendParameters struct {
-	in     low.Rings
-	port   uint16
-	anyway bool
-	stats  common.RXTXStats
+	in                 low.Rings
+	port               uint16
+	unrestrictedClones bool
+	stats              common.RXTXStats
+	sendThreadIndex    int
 }
 
 func addSender(port uint16, in low.Rings, inIndexNumber int32) {
-	par := new(sendParameters)
-	par.port = port
-	par.in = in
-	par.anyway = schedState.anyway
-	schedState.addFF("sender", nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
+	for iii := 0; iii < sendCPUCoresPerPort; iii++ {
+		par := new(sendParameters)
+		par.port = port
+		par.in = in
+		par.unrestrictedClones = schedState.unrestrictedClones
+		par.sendThreadIndex = iii
+		schedState.addFF("senderPort"+string(port)+"Thread"+string(iii),
+			nil, send, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
+	}
 }
 
 type sendOSParameters struct {
@@ -267,6 +286,19 @@ func addSenderOS(socket int, in low.Rings, inIndexNumber int32) {
 	par.socket = socket
 	par.in = in
 	schedState.addFF("sender OS", nil, sendOS, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
+}
+
+type sendXDPParameters struct {
+	in     low.Rings
+	socket low.XDPSocket
+	stats  common.RXTXStats
+}
+
+func addSenderXDP(socket low.XDPSocket, in low.Rings, inIndexNumber int32) {
+	par := new(sendXDPParameters)
+	par.socket = socket
+	par.in = in
+	schedState.addFF("AF_XDP sender", nil, sendXDP, nil, par, nil, sendReceiveKNI, inIndexNumber, &par.stats)
 }
 
 type copyParameters struct {
@@ -439,8 +471,9 @@ const reportMbits = false
 
 var sizeMultiplier uint
 var schedTime uint
-var hwtxchecksum, hwrxpacketstimestamp bool
+var hwtxchecksum, hwrxpacketstimestamp, setSIGINTHandler bool
 var maxRecv int
+var sendCPUCoresPerPort, tXQueuesNumberPerPort int
 
 type port struct {
 	wasRequested bool // has user requested any send/receive operations at this port
@@ -504,7 +537,7 @@ type Config struct {
 	// Limits parallel instances. 1 for one instance, 1000 for RSS count determine instances
 	MaxInIndex int32
 	// Scheduler should clone functions even if it can lead to reordering.
-	// This option should be switch off for all high level reassembling like TCP or HTTP
+	// This option should be switched off for all high level reassembling like TCP or HTTP
 	RestrictedCloning bool
 	// If application uses EncapsulateHead or DecapsulateHead functions L2 pointers
 	// should be reinit every receving or generating a packet. This can be removed if
@@ -538,6 +571,24 @@ type Config struct {
 	// Enables hardware assisted timestamps in packet mbufs. These
 	// timestamps can be accessed with GetPacketTimestamp function.
 	HWRXPacketsTimestamp bool
+	// Disable setting custom handler for SIGINT in
+	// SystemStartScheduler. When handler is enabled
+	// SystemStartScheduler waits for SIGINT notification and calls
+	// SystemStop after it. It is enabled by default.
+	NoSetSIGINTHandler bool
+	// Number of CPU cores to be occupied by Send routines. It is
+	// necessary to set TXQueuesNumberPerPort to a reasonably big
+	// number which can be divided by SendCPUCoresPerPort.
+	SendCPUCoresPerPort int
+	// Number of transmit queues to use on network card. By default it
+	// is minimum of NIC supported TX queues number and 2. If this
+	// value is specified and NIC doesn't support this number of TX
+	// queues, initialization fails.
+	TXQueuesNumberPerPort int
+	// Controls scheduler interval in milliseconds. Default value is
+	// 500. Lower values allow faster reaction to changing traffic but
+	// increase scheduling overhead.
+	SchedulerInterval uint
 }
 
 // SystemInit is initialization of system. This function should be always called before graph construction.
@@ -556,12 +607,26 @@ func SystemInit(args *Config) error {
 		cpus = common.GetDefaultCPUs(CPUCoresNumber)
 	}
 
+	tXQueuesNumberPerPort = args.TXQueuesNumberPerPort
+	if tXQueuesNumberPerPort == 0 {
+		tXQueuesNumberPerPort = 2
+	}
+
+	sendCPUCoresPerPort = args.SendCPUCoresPerPort
+	if sendCPUCoresPerPort == 0 {
+		sendCPUCoresPerPort = 1
+		if tXQueuesNumberPerPort%sendCPUCoresPerPort != 0 {
+			return common.WrapWithNFError(nil, "TXQueuesNumberPerPort should be divisible by SendCPUCoresPerPort",
+				common.BadArgument)
+		}
+	}
+
 	schedulerOff := args.DisableScheduler
 	schedulerOffRemove := args.PersistentClones
 	stopDedicatedCore := args.StopOnDedicatedCore
 	hwtxchecksum = args.HWTXChecksum
 	hwrxpacketstimestamp = args.HWRXPacketsTimestamp
-	anyway := !args.RestrictedCloning
+	unrestrictedClones := !args.RestrictedCloning
 
 	mbufNumber := uint(8191)
 	if args.MbufNumber != 0 {
@@ -578,7 +643,12 @@ func SystemInit(args *Config) error {
 		sizeMultiplier = args.RingSize
 	}
 
-	schedTime = 500
+	if args.SchedulerInterval != 0 {
+		schedTime = args.SchedulerInterval
+	} else {
+		schedTime = 500
+	}
+
 	if args.ScaleTime != 0 {
 		schedTime = args.ScaleTime
 	}
@@ -665,12 +735,12 @@ func SystemInit(args *Config) error {
 		}
 	}
 	portPair = make(map[types.IPv4Address](*port))
-	devices = make(map[string]int)
+	ioDevices = make(map[string]interface{})
 	// Init scheduler
 	common.LogTitle(common.Initialization, "------------***------ Initializing scheduler -----***------------")
 	StopRing := low.CreateRings(burstSize*sizeMultiplier, maxInIndex /* Maximum possible rings */)
 	common.LogDebug(common.Initialization, "Scheduler can use cores:", cpus)
-	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, anyway)
+	schedState = newScheduler(cpus, schedulerOff, schedulerOffRemove, stopDedicatedCore, StopRing, checkTime, debugTime, maxPacketsToClone, maxRecv, unrestrictedClones)
 
 	// Set HW offloading flag in packet package
 	packet.SetHWTXChecksumFlag(hwtxchecksum)
@@ -690,6 +760,8 @@ func SystemInit(args *Config) error {
 			vEach[i][j] = uint8(i)
 		}
 	}
+
+	setSIGINTHandler = !args.NoSetSIGINTHandler
 	return nil
 }
 
@@ -703,7 +775,7 @@ func SystemInitPortsAndMemory() error {
 	for i := range createdPorts {
 		if createdPorts[i].wasRequested {
 			if err := low.CreatePort(createdPorts[i].port, createdPorts[i].willReceive,
-				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex); err != nil {
+				true, hwtxchecksum, hwrxpacketstimestamp, createdPorts[i].InIndex, tXQueuesNumberPerPort); err != nil {
 				return err
 			}
 		}
@@ -723,7 +795,19 @@ func SystemStartScheduler() error {
 		return common.WrapWithNFError(err, "scheduler start failed", common.Fail)
 	}
 	common.LogTitle(common.Initialization, "------------***---------- NFF-GO Started ---------***------------")
-	schedState.schedule(schedTime)
+
+	if setSIGINTHandler {
+		signalChan := make(chan os.Signal, 1)
+		signal.Notify(signalChan, os.Interrupt)
+		go func() {
+			schedState.schedule(schedTime)
+		}()
+		<-signalChan
+		common.LogTitle(common.Debug, "Received an interrupt, stopping everything")
+		SystemStop()
+	} else {
+		schedState.schedule(schedTime)
+	}
 	return nil
 }
 
@@ -819,13 +903,14 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Gets name of device, will return error if can't initialize socket.
 // Creates RAW socket, returns new opened flow with received packets.
 func SetReceiverOS(device string) (*Flow, error) {
-	socketID, ok := devices[device]
+	v, ok := ioDevices[device]
+	socketID := v.(int)
 	if !ok {
 		socketID = low.InitDevice(device)
 		if socketID == -1 {
 			return nil, common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
 		}
-		devices[device] = socketID
+		ioDevices[device] = socketID
 	}
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addOSReceiver(socketID, rings)
@@ -839,15 +924,54 @@ func SetSenderOS(IN *Flow, device string) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	socketID, ok := devices[device]
+	v, ok := ioDevices[device]
+	socketID := v.(int)
 	if !ok {
 		socketID = low.InitDevice(device)
 		if socketID == -1 {
 			return common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
 		}
-		devices[device] = socketID
+		ioDevices[device] = socketID
 	}
 	addSenderOS(socketID, finishFlow(IN), IN.inIndexNumber)
+	return nil
+}
+
+// SetReceiverXDP adds function receive from Linux AF_XDP to flow graph.
+// Gets name of device and queue number, will return error if can't initialize socket.
+// Creates AF_XDP socket, returns new opened flow with received packets.
+func SetReceiverXDP(device string, queue int) (*Flow, error) {
+	_, ok := ioDevices[device]
+	if ok {
+		return nil, common.WrapWithNFError(nil, "Device shouldn't have any sockets before AF_XDP. AF_XDP Send and Receive for one device in forbidden now", common.BadSocket)
+	}
+	socketID := low.InitXDP(device, queue)
+	if socketID == nil {
+		return nil, common.WrapWithNFError(nil, "Can't initialize AF_XDP socket", common.BadSocket)
+	}
+	ioDevices[device] = socketID
+	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
+	addXDPReceiver(socketID, rings)
+	return newFlow(rings, 1), nil
+}
+
+// SetSenderXDP adds function send from flow graph to Linux AF_XDP interface.
+// Gets name of device, will return error if can't initialize socket.
+// Creates RAW socket, sends packets, closes input flow.
+func SetSenderXDP(IN *Flow, device string) error {
+	if err := checkFlow(IN); err != nil {
+		return err
+	}
+	_, ok := ioDevices[device]
+	if ok {
+		return common.WrapWithNFError(nil, "Device shouldn't have any sockets before AF_XDP. AF_XDP Send and Receive for one device in forbidden now", common.BadSocket)
+	}
+	socketID := low.InitXDP(device, 0)
+	if socketID == nil {
+		return common.WrapWithNFError(nil, "Can't initialize AF_XDP socket", common.BadSocket)
+	}
+	ioDevices[device] = socketID
+	addSenderXDP(socketID, finishFlow(IN), IN.inIndexNumber)
 	return nil
 }
 
@@ -1418,6 +1542,11 @@ func recvOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	low.ReceiveOS(srp.socket, srp.out[0], flag, coreID, &srp.stats)
 }
 
+func recvXDP(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*receiveXDPParameters)
+	low.ReceiveXDP(srp.socket, srp.out[0], flag, coreID, &srp.stats)
+}
+
 func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srk := parameters.(*KNIParameters)
 	if srk.linuxCore == true {
@@ -1599,12 +1728,18 @@ func pcopy(parameters interface{}, inIndex []int32, stopper [2]chan int, report 
 
 func send(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendParameters)
-	low.Send(srp.port, srp.in, srp.anyway, flag, coreID, &srp.stats)
+	low.Send(srp.port, srp.in, srp.unrestrictedClones, flag, coreID, &srp.stats,
+		srp.sendThreadIndex, sendCPUCoresPerPort)
 }
 
 func sendOS(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srp := parameters.(*sendOSParameters)
 	low.SendOS(srp.socket, srp.in, flag, coreID, &srp.stats)
+}
+
+func sendXDP(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
+	srp := parameters.(*sendXDPParameters)
+	low.SendXDP(srp.socket, srp.in, flag, coreID, &srp.stats)
 }
 
 func merge(from low.Rings, to low.Rings) {
@@ -1617,6 +1752,10 @@ func merge(from low.Rings, to low.Rings) {
 	for i := range schedState.ff {
 		switch parameters := schedState.ff[i].Parameters.(type) {
 		case *receiveParameters:
+			if parameters.out[0] == from[0] {
+				parameters.out = to
+			}
+		case *receiveOSParameters:
 			if parameters.out[0] == from[0] {
 				parameters.out = to
 			}

@@ -37,7 +37,7 @@ func main() {
 	flow.CheckFatal(flow.SystemInit(&config))
 
 	// Get splitting rules from access control file.
-	l3Rules, err = packet.GetL3ACLFromORIG("forwarding.conf")
+	l3Rules, err = packet.GetL3ACLFromTextTable("forwarding.conf")
 	flow.CheckFatal(err)
 
 	// Receive packets from zero port. Receive queue will be added automatically.

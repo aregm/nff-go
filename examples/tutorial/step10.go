@@ -16,7 +16,7 @@ func main() {
 
 	initCommonState()
 
-	l3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
+	l3Rules, err := packet.GetL3ACLFromTextTable("rules2.conf")
 	flow.CheckFatal(err)
 	rulesp = unsafe.Pointer(&l3Rules)
 	go updateSeparateRules()
@@ -56,7 +56,7 @@ func myHandler(curV []*packet.Packet, mask *[vecSize]bool, ctx flow.UserContext)
 func updateSeparateRules() {
 	for {
 		time.Sleep(time.Second * 5)
-		locall3Rules, err := packet.GetL3ACLFromORIG("rules2.conf")
+		locall3Rules, err := packet.GetL3ACLFromTextTable("rules2.conf")
 		flow.CheckFatal(err)
 		atomic.StorePointer(&rulesp, unsafe.Pointer(locall3Rules))
 	}

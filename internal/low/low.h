@@ -6,6 +6,7 @@
 
 // Do not use signals in this C code without much need.
 // They can and probably will crash go runtime in complex errors.
+#include <assert.h>
 #include <rte_eal.h>
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
@@ -35,17 +36,20 @@
 
 // These constants are get from DPDK and checked for performance
 #define RX_RING_SIZE 128
-#define TX_RING_SIZE 512
+#define TX_RING_SIZE 2048
 
 // 2 queues are enough for handling 40GBits. Should be checked for other NICs.
 // TODO This macro should be a function that will dynamically return the needed number of cores.
-#define TX_QUEUE_NUMBER 2
+#define TX_QUEUE_CORES 2
+#define TX_ATTEMPTS 3
 
 #define APP_RETA_SIZE_MAX (ETH_RSS_RETA_SIZE_512 / RTE_RETA_GROUP_SIZE)
 
 #define MAX_JUMBO_PKT_LEN  9600 // from most DPDK examples. Only for MEMORY_JUMBO.
 
 // #define DEBUG
+// #define PORT_XSTATS_ENABLED
+// #define DEBUG_PACKET_LOSS
 #define COUNTERS_ENABLED
 #define USE_INTERLOCKED_COUNTERS
 #define ANALYZE_PACKETS_SIZES
@@ -138,9 +142,9 @@ bool analyze_packet_sizes = true;
 bool analyze_packet_sizes = false;
 #endif
 
-long receive_received = 0, receive_pushed = 0;
-long send_required = 0, send_sent = 0;
-long stop_freed = 0;
+volatile long long receive_received = 0, receive_pushed = 0;
+volatile long long send_required = 0, send_sent = 0;
+volatile long long stop_freed = 0;
 
 typedef struct {
 	uint64_t PacketsProcessed, PacketsDropped, BytesProcessed;
@@ -191,6 +195,8 @@ void setAffinity(int coreId) {
 	sched_setaffinity(0, sizeof(cpuset), &cpuset);
 }
 
+// ---------- DPDK section ----------
+
 int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbuf_pool) {
 	struct rte_eth_dev_info dev_info;
 	const struct rte_pci_device *pci_dev;
@@ -214,7 +220,7 @@ int create_kni(uint16_t port, uint32_t core, char *name, struct rte_mempool *mbu
 		conf_default.id = pci_dev->id;
 	}
 	conf_default.force_bind = 1; // Flag to bind kernel thread
-	rte_eth_macaddr_get(port, (struct ether_addr *)&conf_default.mac_addr);
+	rte_eth_macaddr_get(port, (struct rte_ether_addr *)&conf_default.mac_addr);
 	rte_eth_dev_get_mtu(port, &conf_default.mtu);
 
 	struct rte_kni_ops ops;
@@ -243,31 +249,39 @@ int checkRSSPacketCount(struct cPort *port, int16_t queue) {
 	return rte_eth_rx_queue_count(port->PortId, queue);
 }
 
-int check_port_rss(uint16_t port) {
+uint16_t check_max_port_rx_queues(uint16_t port) {
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 	return dev_info.max_rx_queues;
 }
 
-int check_port_tx(uint16_t port) {
+uint16_t check_max_port_tx_queues(uint16_t port) {
         struct rte_eth_dev_info dev_info;
         memset(&dev_info, 0, sizeof(dev_info));
         rte_eth_dev_info_get(port, &dev_info);
         return dev_info.max_tx_queues;
 }
 
+uint16_t check_current_port_tx_queues(uint16_t port) {
+        struct rte_eth_dev_info dev_info;
+        memset(&dev_info, 0, sizeof(dev_info));
+        rte_eth_dev_info_get(port, &dev_info);
+        return dev_info.nb_tx_queues;
+}
+
 // Initializes a given port using global settings and with the RX buffers
 // coming from the mbuf_pool passed as a parameter.
-int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex) {
-	uint16_t rx_rings, tx_rings = TX_QUEUE_NUMBER;
+int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, bool promiscuous, bool hwtxchecksum, bool hwrxpacketstimestamp, int32_t inIndex, int32_t tx_queues) {
+	uint16_t rx_rings, tx_rings = tx_queues;
 
 	struct rte_eth_dev_info dev_info;
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port, &dev_info);
 
 	if (tx_rings > dev_info.max_tx_queues) {
-		tx_rings = check_port_tx(port);
+		printf("Warning! Port %d does not support requested number of TX queues %d. Setting number of TX queues to %d\n", port, tx_rings, dev_info.max_tx_queues);
+		tx_rings = dev_info.max_tx_queues;
 	}
 
 	if (willReceive) {
@@ -280,7 +294,7 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		return -1;
 
 	struct rte_eth_conf port_conf_default = {
-		.rxmode = { .max_rx_pkt_len = ETHER_MAX_LEN,
+		.rxmode = { .max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 					.mq_mode = ETH_MQ_RX_RSS    },
 		.txmode = { .mq_mode = ETH_MQ_TX_NONE, },
 		.rx_adv_conf.rss_conf.rss_key = NULL,
@@ -343,6 +357,22 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		.QueuesNumber = rx_rings
 	};
 
+#ifdef DEBUG
+#ifdef PORT_XSTATS_ENABLED
+    int stats_len = rte_eth_xstats_get(port, NULL, 0);
+    struct rte_eth_xstat_name *xstats_names;
+    assert(stats_len >= 0);
+    xstats_names = calloc(stats_len, sizeof(*xstats_names));
+    assert(xstats_names != NULL);
+    int ret = rte_eth_xstats_get_names(port, xstats_names, stats_len);
+    assert(ret >= 0 && ret <= stats_len);
+    printf("Port %u exposes the following extended stats\n", port);
+    for (int i = 0; i < stats_len; i++) {
+        printf("\t%d: %s\n", i, xstats_names[i].name);
+    }
+    free(xstats_names);
+#endif // PORT_XSTATS_ENABLED
+#endif // DEBUG
 	return 0;
 }
 
@@ -424,12 +454,12 @@ struct rte_ip_frag_tbl* create_reassemble_table() {
 
 __attribute__((always_inline))
 static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rte_mbuf *buf, struct rte_ip_frag_death_row* death_row, uint64_t cur_tsc) {
-	struct ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct ether_hdr *);
+	struct rte_ether_hdr *eth_hdr = rte_pktmbuf_mtod(buf, struct rte_ether_hdr *);
 
 	// TODO packet_type is not mandatory required for drivers.
 	// Some drivers won't set it. However this is DPDK implementation.
 	if (RTE_ETH_IS_IPV4_HDR(buf->packet_type)) { // if packet is IPv4
-		struct ipv4_hdr *ip_hdr = (struct ipv4_hdr *)(eth_hdr + 1);
+		struct rte_ipv4_hdr *ip_hdr = (struct rte_ipv4_hdr *)(eth_hdr + 1);
 
 		if (rte_ipv4_frag_pkt_is_fragmented(ip_hdr)) { // try to reassemble
 			buf->l2_len = sizeof(*eth_hdr); // prepare mbuf: setup l2_len/l3_len.
@@ -440,7 +470,7 @@ static inline struct rte_mbuf* reassemble(struct rte_ip_frag_tbl* tbl, struct rt
 		}
 	}
 	if (RTE_ETH_IS_IPV6_HDR(buf->packet_type)) { // if packet is IPv6
-		struct ipv6_hdr *ip_hdr = (struct ipv6_hdr *)(eth_hdr + 1);
+		struct rte_ipv6_hdr *ip_hdr = (struct rte_ipv6_hdr *)(eth_hdr + 1);
 		struct ipv6_extension_fragment *frag_hdr = rte_ipv6_frag_get_ipv6_fragment_header(ip_hdr);
 
 		if (frag_hdr != NULL) {
@@ -475,8 +505,8 @@ void receiveRSS(uint16_t port, volatile int32_t *inIndex, struct rte_ring **out_
 			// Free any packets which can't be pushed to the ring. The ring is probably full.
 			handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
 #ifdef DEBUG
-			receive_received += rx_pkts_number;
-			receive_pushed += pushed_pkts_number;
+			__sync_fetch_and_add(&receive_received, rx_pkts_number);
+			__sync_fetch_and_add(&receive_pushed, pushed_pkts_number);
 #endif // DEBUG
 		}
 	}
@@ -527,36 +557,54 @@ void nff_go_KNI(uint16_t port, volatile int *flag, int coreId,
 	*flag = wasStopped;
 }
 
-void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats) {
+void nff_go_send(uint16_t port, struct rte_ring **in_rings, int32_t inIndexNumber, bool anyway, volatile int *flag, int coreId, RXTXStats *stats, int32_t sendThreadIndex, int32_t totalSendTreads) {
 	setAffinity(coreId);
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
 	uint16_t tx_pkts_number;
-	int16_t queue = 0;
-	bool switchQueue = (check_port_tx(port) > 1) && (anyway || inIndexNumber > 1);
+	int16_t port_tx_queues = check_current_port_tx_queues(port);
+	int16_t tx_qstart = port_tx_queues / totalSendTreads * sendThreadIndex;
+	int16_t tx_qend = sendThreadIndex + 1 == totalSendTreads ? port_tx_queues : port_tx_queues / totalSendTreads * (sendThreadIndex + 1);
+	int16_t tx_queue_counter = tx_qstart;
+	int rx_qstart = inIndexNumber / totalSendTreads * sendThreadIndex;
+	int rx_qend = inIndexNumber / totalSendTreads * (sendThreadIndex + 1);
+	printf("Starting send with %d to %d RX queues and %d to %d TX on core %d\n",
+        rx_qstart, rx_qend, tx_qstart, tx_qend, coreId);
 	while (*flag == process) {
-		for (int q = 0; q < inIndexNumber; q++) {
+		for (int q = rx_qstart; q < rx_qend; q++) {
 			// Get packets for TX from ring
 			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
 
 			if (unlikely(pkts_for_tx_number == 0))
 				continue;
 
-			tx_pkts_number = rte_eth_tx_burst(port, queue, bufs, pkts_for_tx_number);
-			// inIndexNumber must be "1" or even. This prevents any reordering.
-			// anyway allows reordering explicitly
-			if (switchQueue) {
-				queue = !queue;
-			}
+            tx_pkts_number = 0;
+            int tx_attempts_counter = 0;
+            do {
+                uint16_t iteration_tx_pkts = rte_eth_tx_burst(port, tx_queue_counter, bufs + tx_pkts_number, pkts_for_tx_number - tx_pkts_number);
+                tx_pkts_number += iteration_tx_pkts;
+                tx_attempts_counter++;
+            } while (tx_pkts_number < pkts_for_tx_number && tx_attempts_counter <= TX_ATTEMPTS);
 
             UPDATE_COUNTERS(tx_pkts_number, calculateSize(bufs, tx_pkts_number), pkts_for_tx_number - tx_pkts_number);
 
+#ifdef DEBUG_PACKET_LOSS
+            if (unlikely(tx_pkts_number < pkts_for_tx_number)) {
+                printf("**** Port %d, queue %d tried to transmit %d, transmitted only %d\n",
+                    port, tx_queue_counter + tx_queue_offset, pkts_for_tx_number, tx_pkts_number);
+            }
+#endif
 			// Free any unsent packets
 			handleUnpushed(bufs, tx_pkts_number, pkts_for_tx_number);
+
+            tx_queue_counter++;
+            if (tx_queue_counter >= tx_qend) {
+                tx_queue_counter = tx_qstart;
+            }
 #ifdef DEBUG
-			send_required += pkts_for_tx_number;
-			send_sent += tx_pkts_number;
+			__sync_fetch_and_add(&send_required, pkts_for_tx_number);
+			__sync_fetch_and_add(&send_sent, tx_pkts_number);
 #endif
 		}
 	}
@@ -585,7 +633,7 @@ void nff_go_stop(struct rte_ring **in_rings, int len, volatile int *flag, int co
 				rte_pktmbuf_free(bufs[buf]);
 			}
 #ifdef DEBUG
-			stop_freed += pkts_for_free_number;
+			__sync_fetch_and_add(&stop_freed, pkts_for_free_number);
 #endif
 		}
 	}
@@ -624,12 +672,12 @@ void statistics(float N) {
 	fprintf(stderr, "DEBUG: Current speed of all receives: received %.0f Mbits/s, pushed %.0f Mbits/s\n",
 		(receive_received/N) * multiplier, (receive_pushed/N) * multiplier);
 	if (receive_pushed < receive_received) {
-		fprintf(stderr, "DROP: Receive dropped %ld packets\n", receive_received - receive_pushed);
+		fprintf(stderr, "DROP: Receive dropped %lld packets\n", receive_received - receive_pushed);
 	}
 	fprintf(stderr, "DEBUG: Current speed of all sends: required %.0f Mbits/s, sent %.0f Mbits/s\n",
 		(send_required/N) * multiplier, (send_sent/N) * multiplier);
 	if (send_sent < send_required) {
-		fprintf(stderr, "DROP: Send dropped %ld packets\n", send_required - send_sent);
+		fprintf(stderr, "DROP: Send dropped %lld packets\n", send_required - send_sent);
 	}
 	fprintf(stderr, "DEBUG: Current speed of stop ring: freed %.0f Mbits/s\n", (stop_freed/N) * multiplier);
 	// Yes, there can be race conditions here. However in practise they are rare and it is more
@@ -640,6 +688,78 @@ void statistics(float N) {
 	send_required = 0;
 	send_sent = 0;
 	stop_freed = 0;
+#endif
+}
+
+#define RX_Q0PACKETS 8
+#define RX_Q_PACKETS_STEP 3
+#define TX_Q0PACKETS 56
+#define TX_Q_PACKETS_STEP 2
+#define RX_Q0BURST 88
+#define RX_Q_BURST_STEP 1
+#define TX_Q0BURST 104
+#define TX_Q_BURST_STEP 1
+
+void portStatistics(uint16_t port_id) {
+#ifdef DEBUG
+	struct rte_eth_dev_info dev_info;
+	rte_eth_dev_info_get(port_id, &dev_info);
+
+    struct rte_eth_stats eth_stats;
+    rte_eth_stats_get(port_id, &eth_stats);
+    rte_eth_stats_reset(port_id);
+
+    if (dev_info.nb_rx_queues > 0 || dev_info.nb_tx_queues > 0) {
+        fprintf(stderr, "Port %u (RX_Q %u/TX_Q %u): IP %lu, OP %lu, IB %lu, OB %lu, IMISS %lu, IERR %lu, OERR %lu, RX_NOMBUF %lu\n",
+            port_id,
+            dev_info.nb_rx_queues, dev_info.nb_tx_queues,
+            eth_stats.ipackets,
+            eth_stats.opackets,
+            eth_stats.ibytes,
+            eth_stats.obytes,
+            eth_stats.imissed,
+            eth_stats.ierrors,
+            eth_stats.oerrors,
+            eth_stats.rx_nombuf);
+
+#ifdef PORT_XSTATS_ENABLED
+        int len = rte_eth_xstats_get(port_id, NULL, 0);
+        assert(len >= 0);
+        struct rte_eth_xstat *xstats = calloc(len, sizeof(*xstats));
+        int ret = rte_eth_xstats_get(port_id, xstats, len);
+        assert(ret >= 0 && ret <= len);
+        rte_eth_xstats_reset(port_id);
+/*
+    fprintf(stderr, "RX_Q_PACKETS: ");
+    for (int i = 0; i < dev_info.nb_rx_queues - 1; i++) {
+        fprintf(stderr, "%d: %lu, ", i, xstats[RX_Q0PACKETS + i * RX_Q_PACKETS_STEP].value);
+    }
+    fprintf(stderr, "%d: %lu\n", dev_info.nb_rx_queues - 1, xstats[RX_Q0PACKETS + (dev_info.nb_rx_queues - 1) * RX_Q_PACKETS_STEP].value);
+
+    fprintf(stderr, "TX_Q_PACKETS: ");
+    for (int i = 0; i < dev_info.nb_tx_queues - 1; i++) {
+        fprintf(stderr, "%d: %lu, ", i, xstats[TX_Q0PACKETS + i * TX_Q_PACKETS_STEP].value);
+    }
+    fprintf(stderr, "%d: %lu\n", dev_info.nb_tx_queues - 1, xstats[TX_Q0PACKETS + (dev_info.nb_tx_queues - 1) * TX_Q_PACKETS_STEP].value);
+*/
+        if (dev_info.nb_rx_queues > 0) {
+            fprintf(stderr, "RX_Q_BURST: ");
+            for (int i = 0; i < dev_info.nb_rx_queues - 1; i++) {
+                fprintf(stderr, "%d: %lu, ", i, xstats[RX_Q0BURST + i * RX_Q_BURST_STEP].value);
+            }
+            fprintf(stderr, "%d: %lu\n", dev_info.nb_rx_queues - 1, xstats[RX_Q0BURST + (dev_info.nb_rx_queues - 1) * RX_Q_BURST_STEP].value);
+        }
+
+        if (dev_info.nb_tx_queues > 0) {
+            fprintf(stderr, "TX_Q_BURST: ");
+            for (int i = 0; i < dev_info.nb_tx_queues - 1; i++) {
+                fprintf(stderr, "%d: %lu, ", i, xstats[TX_Q0BURST + i * TX_Q_BURST_STEP].value);
+            }
+            fprintf(stderr, "%d: %lu\n", dev_info.nb_tx_queues - 1, xstats[TX_Q0BURST + (dev_info.nb_tx_queues - 1) * TX_Q_BURST_STEP].value);
+        }
+        free(xstats);
+#endif // PORT_XSTATS_ENABLED
+    }
 #endif
 }
 
@@ -828,6 +948,8 @@ bool check_hwrxpackets_timestamp_capability(uint16_t port_id) {
 	return (dev_info.rx_offload_capa & flags) == flags;
 }
 
+// ---------- OS raw socket section ----------
+
 int initDevice(char *name) {
 	int s = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (s < 1) {
@@ -888,6 +1010,10 @@ void receiveOS(int socket, struct rte_ring *out_ring, struct rte_mempool *m, vol
 
         // Free any packets which can't be pushed to the ring. The ring is probably full.
         handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+#ifdef DEBUG
+		receive_received += rx_pkts_number;
+		receive_pushed += pushed_pkts_number;
+#endif // DEBUG
 	}
 	*flag = wasStopped;
 }
@@ -897,7 +1023,6 @@ void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volat
 
 	struct rte_mbuf *bufs[BURST_SIZE];
 	uint16_t buf;
-	uint16_t tx_pkts_number;
 	while (*flag == process) {
 		for (int q = 0; q < inIndexNumber; q++) {
 			// Get packets for TX from ring
@@ -911,8 +1036,254 @@ void sendOS(int socket, struct rte_ring **in_rings, int32_t inIndexNumber, volat
 
 			// Free all packets
 			handleUnpushed(bufs, 0, pkts_for_tx_number);
+#ifdef DEBUG
+            send_required += pkts_for_tx_number;
+            send_sent += pkts_for_tx_number;
+#endif // DEBUG
 		}
 	}
 	free(in_rings);
 	*flag = wasStopped;
 }
+
+// ---------- XDP socket section ----------
+
+#ifdef NFF_GO_SUPPORT_XDP
+
+#include <linux/bpf.h>
+#include <linux/if_link.h>
+#include <linux/if_xdp.h>
+#include "bpf/libbpf.h"
+#include "bpf/xsk.h"
+
+struct xsk_umem_info {
+	struct xsk_ring_prod fq;
+	struct xsk_ring_cons cq;
+	struct xsk_umem *umem;
+	const struct rte_memzone *mz;
+};
+
+struct xsk_socket_info {
+	struct xsk_ring_cons rx;
+	struct xsk_ring_prod tx;
+	struct xsk_umem_info *umem;
+	struct xsk_socket *xsk;
+	__u32 outstanding_tx;
+	__u32 prog_id;
+	int nameindex;
+};
+
+struct xsk_socket_info *initXDP(char *name, int queue) {
+	__u32 idx;
+	__u32 opt_xdp_flags = XDP_FLAGS_UPDATE_IF_NOEXIST; // TODO get from user
+	__u32 opt_xdp_bind_flags = 0; // TODO get from user
+	__u32 NUM_FRAMES = 4 * 1024; // TODO from num_mbufs
+    int opt_xsk_frame_size = XSK_UMEM__DEFAULT_FRAME_SIZE; // TODO from num_mbufs
+    int memory_size = NUM_FRAMES * opt_xsk_frame_size;
+
+	struct xsk_socket_info *xdp_socket = calloc(1, sizeof(*xdp_socket));
+	if (!xdp_socket) {
+		fprintf(stderr, "ERROR: Can't allocate memory for socket structure for AF_XDP: %s\n", name);
+		return NULL;
+	}
+
+	xdp_socket->umem = calloc(1, sizeof(*xdp_socket->umem));
+    if (!xdp_socket->umem) {
+		fprintf(stderr, "ERROR: Can't allocate memory for umem structure for AF_XDP: %s\n", name);
+		return NULL;
+    }
+
+	const struct rte_memzone *mz = rte_memzone_reserve_aligned(name, memory_size,
+        rte_socket_id(), RTE_MEMZONE_IOVA_CONTIG, getpagesize());
+    if (!mz) {
+		fprintf(stderr, "ERROR: Can't reserve memzone for AF_XDP %s\n", name);
+		return NULL;
+    }
+
+	struct xsk_umem_config umem_cfg = {
+		.fill_size = XSK_RING_PROD__DEFAULT_NUM_DESCS,
+		.comp_size = XSK_RING_CONS__DEFAULT_NUM_DESCS,
+		.frame_size = opt_xsk_frame_size,
+		.frame_headroom = XSK_UMEM__DEFAULT_FRAME_HEADROOM,
+	};
+    int ret = xsk_umem__create(&xdp_socket->umem->umem, mz->addr, memory_size,
+        &xdp_socket->umem->fq, &xdp_socket->umem->cq, &umem_cfg);
+	if (ret) {
+		fprintf(stderr, "ERROR: Can't create umem for AF_XDP %s, error code %d\n", name, ret);
+		return NULL;
+	}
+	xdp_socket->umem->mz = mz;
+
+	struct xsk_socket_config xsk_cfg = {
+        .rx_size = XSK_RING_CONS__DEFAULT_NUM_DESCS,
+        .tx_size = XSK_RING_PROD__DEFAULT_NUM_DESCS,
+        .libbpf_flags = 0,
+        .xdp_flags = opt_xdp_flags,
+        .bind_flags = opt_xdp_bind_flags,
+    };
+    ret = xsk_socket__create(&xdp_socket->xsk, name, queue, xdp_socket->umem->umem,
+        &xdp_socket->rx, &xdp_socket->tx, &xsk_cfg);
+	if (ret) {
+		fprintf(stderr, "ERROR: Can't create AF_XDP socket %s, error code %d\n", name, ret);
+		return NULL;
+	}
+	xdp_socket->nameindex = if_nametoindex(name);
+	if (!xdp_socket->nameindex) {
+		fprintf(stderr, "ERROR: interface %s for AF_XDP does not exist\n", name);
+		return NULL;
+	}
+
+    ret = bpf_get_link_xdp_id(xdp_socket->nameindex, &xdp_socket->prog_id, opt_xdp_flags);
+	if (ret) {
+		fprintf(stderr, "ERROR: Can't link BPF for AF_XDP %s, error code %d\n", name, ret);
+		return NULL;
+	}
+    ret = xsk_ring_prod__reserve(&xdp_socket->umem->fq, XSK_RING_PROD__DEFAULT_NUM_DESCS, &idx);
+	if (ret != XSK_RING_PROD__DEFAULT_NUM_DESCS) {
+		fprintf(stderr, "ERROR: reserve prod buffer for AF_XDP %s, error code %d\n", name, ret);
+		return NULL;
+	}
+	for (int i = 0; i < XSK_RING_PROD__DEFAULT_NUM_DESCS * XSK_UMEM__DEFAULT_FRAME_SIZE; i += XSK_UMEM__DEFAULT_FRAME_SIZE) {
+		*xsk_ring_prod__fill_addr(&xdp_socket->umem->fq, idx++) = i;
+	}
+	xsk_ring_prod__submit(&xdp_socket->umem->fq, XSK_RING_PROD__DEFAULT_NUM_DESCS);
+	return xdp_socket;
+}
+
+void removeXDP(struct xsk_socket_info *xsk) {
+	xsk_socket__delete(xsk->xsk);
+	xsk_umem__delete(xsk->umem->umem);
+	__u32 curr_prog_id = 0;
+
+	if (bpf_get_link_xdp_id(xsk->nameindex, &curr_prog_id, XDP_FLAGS_UPDATE_IF_NOEXIST)) {
+		return;
+	}
+	if (xsk->prog_id == curr_prog_id) {
+		bpf_set_link_xdp_fd(xsk->nameindex, -1, XDP_FLAGS_UPDATE_IF_NOEXIST);
+	}
+    free(xsk->umem);
+    free(xsk);
+}
+// TODO checkfatal should remove AF_XDP socket
+// rings are single consumer, producer
+// additional implementation for rx tx at one device
+
+void receiveXDP(struct xsk_socket_info *xsk, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+	struct rte_mbuf *bufs[BURST_SIZE];
+	REASSEMBLY_INIT
+	while (*flag == process) {
+		__u32 idx_rx = 0, idx_fq = 0;
+		// Get packets from AF_XDP
+		uint16_t rx_pkts_number = xsk_ring_cons__peek(&xsk->rx, BURST_SIZE, &idx_rx);
+		if (unlikely(rx_pkts_number == 0)) {
+			continue;
+		}
+		if (allocateMbufs(m, bufs, rx_pkts_number) != 0) {
+			printf("Can't allocate\n");
+		}
+		int ret = xsk_ring_prod__reserve(&xsk->umem->fq, rx_pkts_number, &idx_fq);
+		while (ret != rx_pkts_number) {
+			if (ret < 0) {
+				printf("ERROR reserve\n");
+				//exit_with_error(-ret);
+			}
+			ret = xsk_ring_prod__reserve(&xsk->umem->fq, rx_pkts_number, &idx_fq);
+		}
+		for (int i = 0; i < rx_pkts_number; i++) {
+			const struct xdp_desc *desc = xsk_ring_cons__rx_desc(&xsk->rx, idx_rx++);
+			uint64_t addr = desc->addr;
+			uint32_t len = desc->len;
+			void *pkt = xsk_umem__get_data(xsk->umem->mz->addr, addr);
+			rte_memcpy(rte_pktmbuf_mtod(bufs[i], void *), pkt, len);
+			rte_pktmbuf_pkt_len(bufs[i]) = len;
+			rte_pktmbuf_data_len(bufs[i]) = len;
+			*xsk_ring_prod__fill_addr(&xsk->umem->fq, idx_fq++) = addr;
+		}
+		xsk_ring_prod__submit(&xsk->umem->fq, rx_pkts_number);
+		xsk_ring_cons__release(&xsk->rx, rx_pkts_number);
+		rx_pkts_number = handleReceived(bufs, rx_pkts_number, tbl, pdeath_row);
+		uint16_t pushed_pkts_number = rte_ring_enqueue_burst(out_ring, (void*)bufs, rx_pkts_number, NULL);
+
+		// Free any packets which can't be pushed to the ring. The ring is probably full.
+		handleUnpushed((void*)bufs, pushed_pkts_number, rx_pkts_number);
+#ifdef DEBUG
+		receive_received += rx_pkts_number;
+		receive_pushed += pushed_pkts_number;
+#endif // DEBUG
+	}
+	removeXDP(xsk);
+	*flag = wasStopped;
+}
+
+void sendXDP(struct xsk_socket_info *xsk, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
+	setAffinity(coreId);
+	struct rte_mbuf *bufs[BURST_SIZE];
+	uint16_t buf;
+	uint16_t tx_pkts_number;
+	struct xdp_desc *desc;
+	__u32 idx, frame_nb = 0;
+	int required = 0;
+	while (*flag == process) {
+		for (int q = 0; q < inIndexNumber; q++) {
+			// Get packets for TX from ring
+			uint16_t pkts_for_tx_number = rte_ring_mc_dequeue_burst(in_rings[q], (void*)bufs, BURST_SIZE, NULL);
+			if (pkts_for_tx_number == 0) {
+				continue;
+			}
+			if (xsk_ring_prod__reserve(&xsk->tx, pkts_for_tx_number, &idx) == pkts_for_tx_number) {
+				for (int i = 0; i < pkts_for_tx_number; i++) {
+					desc = xsk_ring_prod__tx_desc(&xsk->tx, idx + i);
+					desc->addr = (frame_nb + i) << XSK_UMEM__DEFAULT_FRAME_SHIFT;
+					desc->len = bufs[i]->pkt_len;
+					void *pkt = xsk_umem__get_data(xsk->umem->mz->addr, desc->addr);
+					rte_memcpy(pkt, rte_pktmbuf_mtod(bufs[i], void *), desc->len);
+				}
+				xsk_ring_prod__submit(&xsk->tx, pkts_for_tx_number);
+				required += pkts_for_tx_number;
+				frame_nb += pkts_for_tx_number;
+				frame_nb %= 4 * 1024; //NUM_FRAMES;
+			}
+			// Free all packets
+			handleUnpushed(bufs, 0, pkts_for_tx_number);
+			if (required > 0) {
+				int ret = sendto(xsk_socket__fd(xsk->xsk), NULL, 0, MSG_DONTWAIT, NULL, 0);
+				if (ret < 0 && errno != ENOBUFS && errno != EAGAIN && errno != EBUSY) {
+					printf("ERROR!!!\n");
+				}
+				int tx_pkts_number = xsk_ring_cons__peek(&xsk->umem->cq, pkts_for_tx_number, &idx);
+				if (tx_pkts_number > 0) {
+					xsk_ring_cons__release(&xsk->umem->cq, tx_pkts_number);
+					required -= tx_pkts_number;
+				}
+#ifdef DEBUG
+				send_required += pkts_for_tx_number;
+				send_sent += tx_pkts_number;
+#endif // DEBUG
+			}
+		}
+	}
+	free(in_rings);
+	removeXDP(xsk);
+	*flag = wasStopped;
+}
+
+#else // NFF_GO_SUPPORT_XDP
+
+struct xsk_socket_info {
+};
+
+struct xsk_socket_info * initXDP(char *name, int queue) {
+    fprintf(stderr, "AF_XDP support is disabled by build configuration\n");
+    return NULL;
+}
+
+void receiveXDP(struct xsk_socket_info *socket, struct rte_ring *out_ring, struct rte_mempool *m, volatile int *flag, int coreId, RXTXStats *stats) {
+    fprintf(stderr, "AF_XDP support is disabled by build configuration\n");
+}
+
+void sendXDP(struct xsk_socket_info *socket, struct rte_ring **in_rings, int32_t inIndexNumber, volatile int *flag, int coreId, RXTXStats *stats) {
+    fprintf(stderr, "AF_XDP support is disabled by build configuration\n");
+}
+
+#endif // NFF_GO_SUPPORT_XDP

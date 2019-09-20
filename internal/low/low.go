@@ -84,7 +84,7 @@ func CheckRSSPacketCount(p *Port, queue int16) int64 {
 // GetPortMACAddress gets MAC address of given port.
 func GetPortMACAddress(port uint16) [types.EtherAddrLen]uint8 {
 	var mac [types.EtherAddrLen]uint8
-	var cmac C.struct_ether_addr
+	var cmac C.struct_rte_ether_addr
 
 	C.rte_eth_macaddr_get(C.uint16_t(port), &cmac)
 	for i := range mac {
@@ -517,12 +517,19 @@ func SrKNI(port uint16, flag *int32, coreID int, recv bool, OUT Rings, send bool
 }
 
 // Send - dequeue packets and send.
-func Send(port uint16, IN Rings, anyway bool, flag *int32, coreID int, stats *common.RXTXStats) {
+func Send(port uint16, IN Rings, unrestrictedClones bool, flag *int32, coreID int, stats *common.RXTXStats,
+	sendThreadIndex, totalSendTreads int) {
 	if C.rte_eth_dev_socket_id(C.uint16_t(port)) != C.int(C.rte_lcore_to_socket_id(C.uint(coreID))) {
 		common.LogWarning(common.Initialization, "Send port", port, "is on remote NUMA node to polling thread - not optimal performance.")
 	}
-	C.nff_go_send(C.uint16_t(port), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))), C.int32_t(len(IN)),
-		C.bool(anyway), (*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+	C.nff_go_send(C.uint16_t(port),
+		C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))), C.int32_t(len(IN))),
+		C.int32_t(len(IN)),
+		C.bool(unrestrictedClones),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)),
+		C.int32_t(sendThreadIndex),
+		C.int32_t(totalSendTreads))
 }
 
 // Stop - dequeue and free packets.
@@ -590,11 +597,16 @@ func GetPortsNumber() int {
 }
 
 func CheckPortRSS(port uint16) int32 {
-	return int32(C.check_port_rss(C.uint16_t(port)))
+	return int32(C.check_max_port_rx_queues(C.uint16_t(port)))
+}
+
+func CheckPortMaxTXQueues(port uint16) int32 {
+	return int32(C.check_max_port_tx_queues(C.uint16_t(port)))
 }
 
 // CreatePort initializes a new port using global settings and parameters.
-func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum, hwrxpacketstimestamp bool, inIndex int32) error {
+func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum,
+	hwrxpacketstimestamp bool, inIndex int32, tXQueuesNumberPerPort int) error {
 	var mempools **C.struct_rte_mempool
 	if willReceive {
 		m := CreateMempools("receive", inIndex)
@@ -603,7 +615,7 @@ func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum, h
 		mempools = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), mempools,
-		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex)) != 0 {
+		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex), C.int32_t (tXQueuesNumberPerPort)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
@@ -697,6 +709,11 @@ func Statistics(N float32) {
 	C.statistics(C.float(N))
 }
 
+// PortStatistics print statistics about NIC port.
+func PortStatistics(port uint16) {
+	C.portStatistics(C.uint16_t(port))
+}
+
 // ReportMempoolsState prints used and free space of mempools.
 func ReportMempoolsState() {
 	for _, m := range usedMempools {
@@ -760,6 +777,10 @@ func CheckHWRXPacketsTimestamp(port uint16) bool {
 	return bool(C.check_hwrxpackets_timestamp_capability(C.uint16_t(port)))
 }
 
+func InitDevice(device string) int {
+	return int(C.initDevice(C.CString(device)))
+}
+
 func ReceiveOS(socket int, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
 	m := CreateMempool("receiveOS")
 	C.receiveOS(C.int(socket), OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
@@ -770,10 +791,6 @@ func SendOS(socket int, IN Rings, flag *int32, coreID int, stats *common.RXTXSta
 	C.sendOS(C.int(socket), C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
 		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
 		(*C.RXTXStats)(unsafe.Pointer(stats)))
-}
-
-func InitDevice(device string) int {
-	return int(C.initDevice(C.CString(device)))
 }
 
 func SetCountersEnabledInApplication(enabled bool) {
@@ -790,4 +807,22 @@ func GetPacketOffloadFlags(mb *Mbuf) uint64 {
 
 func GetPacketTimestamp(mb *Mbuf) uint64 {
 	return uint64(mb.timestamp)
+}
+
+type XDPSocket *C.struct_xsk_socket_info
+
+func InitXDP(device string, queue int) XDPSocket {
+	return C.initXDP(C.CString(device), C.int(queue))
+}
+
+func ReceiveXDP(socket XDPSocket, OUT *Ring, flag *int32, coreID int, stats *common.RXTXStats) {
+	m := CreateMempool("receiveXDP")
+	C.receiveXDP(socket, OUT.DPDK_ring, (*C.struct_rte_mempool)(unsafe.Pointer(m)),
+		(*C.int)(unsafe.Pointer(flag)), C.int(coreID), (*C.RXTXStats)(unsafe.Pointer(stats)))
+}
+
+func SendXDP(socket XDPSocket, IN Rings, flag *int32, coreID int, stats *common.RXTXStats) {
+	C.sendXDP(socket, C.extractDPDKRings((**C.struct_nff_go_ring)(unsafe.Pointer(&(IN[0]))),
+		C.int32_t(len(IN))), C.int32_t(len(IN)), (*C.int)(unsafe.Pointer(flag)), C.int(coreID),
+		(*C.RXTXStats)(unsafe.Pointer(stats)))
 }
