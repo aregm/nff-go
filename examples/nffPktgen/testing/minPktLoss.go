@@ -44,24 +44,16 @@ func main() {
 		genConfig, cores string
 		inPort           uint
 		outPort          uint
-		useReader        bool
-		useWriter        bool
-		inFile           string
-		outFile          string
-		repCount         int
+		traceFile        string
         )
 	flag.Uint64Var(&speed, "speed", 120000000, "speed of fast generator, Pkts/s")
 	flag.Float64Var(&tgtLoss, "target loss", 0.5, "target packet loss percentage")
 	flag.UintVar(&trafDelay, "traffic delay", 3, "time delay after speed is updated, sec")
-	flag.StringVar(&genConfig, "config", "ip4.json", "specifies config for generator")
+	flag.StringVar(&genConfig, "config", "pcapGen.json", "specifies config for generator")
 	flag.StringVar(&cores, "cores", "", "specifies cores")
 	flag.UintVar(&outPort, "outPort", 1, "specifies output port")
 	flag.UintVar(&inPort, "inPort", 1, "specifices input port")
-	flag.BoolVar(&useReader, "useReader", false, "Enable reader from .pcap file")
-	flag.BoolVar(&useWriter, "useWriter", false, "Enable writer to .pcap file")
-	flag.StringVar(&inFile, "inFile", "fileReadWriteIn.pcap", "Input .pcap file")
-	flag.StringVar(&outFile, "outFile", "fileReadWriteOut.pcap", "Output .pcap file")
-	flag.IntVar(&repCount, "repCount", 1, "Number of times for reader to read inFile")
+	flag.StringVar(&traceFile, "traceFile", "dumpInput.pcap", "rx pkt trace .pcap file")
 	testTime := flag.Uint("t", 0, "run generator for specified period of time in seconds, use zero to run forever")
 	statInterval := flag.Uint("s", 0, "statistics update interval in seconds, use zero to disable it")
 	flag.Parse()
@@ -85,28 +77,16 @@ func main() {
 	flow.CheckFatal(err)
 	outFlow, genChan, _ := flow.SetFastGenerator(generator.Generate, speed, context)
 
-	if useWriter {
-		println("Write to file", outFile)
-		flow.CheckFatal(flow.SetSenderFile(outFlow, outFile))
-	} else {
-		println("Send to port", outPort)
-		flow.CheckFatal(flow.SetSender(outFlow, uint16(outPort)))
-	}
+	flow.CheckFatal(flow.SetSender(outFlow, uint16(outPort)))
 
 	hc := HandlerContext {
 		port: &portStats,
 	}
 
-	var inFlow *flow.Flow
-	if useReader {
-		print("Enabled Read from file ", inFile, " and ")
-		inFlow = flow.SetReceiverFile(inFile, int32(repCount))
-	} else {
-		print("Enabled Generate and ")
-		var err error
-		inFlow, err = flow.SetReceiver(uint16(inPort))
-		flow.CheckFatal(err)
-	}
+	inFlow, err := flow.SetReceiver(uint16(inPort))
+	flow.CheckFatal(err)
+	dumpFlow, _ := flow.SetCopier(inputFlow)
+	flow.CheckFatal(flow.SetSenderFile(dumpFlow, traceFile)
 	flow.CheckFatal(flow.SetHandlerDrop(inFlow, receiveHandler, hc))
 	flow.CheckFatal(flow.SetStopper(inFlow))
 

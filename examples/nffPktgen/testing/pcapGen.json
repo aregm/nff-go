@@ -1,0 +1,5 @@
+{
+    "ether": {
+        "pcap-file": "sample-network-sequence.pcap"
+    }
+}
