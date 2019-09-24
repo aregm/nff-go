@@ -86,7 +86,7 @@ func main() {
 	inFlow, err := flow.SetReceiver(uint16(inPort))
 	flow.CheckFatal(err)
 	dumpFlow, _ := flow.SetCopier(inputFlow)
-	flow.CheckFatal(flow.SetSenderFile(dumpFlow, traceFile)
+	flow.CheckFatal(flow.SetSenderFile(dumpFlow, traceFile))
 	flow.CheckFatal(flow.SetHandlerDrop(inFlow, receiveHandler, hc))
 	flow.CheckFatal(flow.SetStopper(inFlow))
 
