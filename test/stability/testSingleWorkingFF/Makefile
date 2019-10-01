@@ -9,7 +9,8 @@ EXECUTABLES = testSingleWorkingFF
 all:
 	cp ../../framework/main/config.json .
 
+.PHONY: testing
 testing: check-pktgen
-	go test
+	go test -v -tags "${GO_BUILD_TAGS}"
 
 include $(PATH_TO_MK)/leaf.mk
