@@ -11,7 +11,7 @@ export CARD2=ens7
 bindports ()
 {
     sudo modprobe uio
-    sudo insmod "$NFF_GO"/dpdk/dpdk/x86_64-native-linuxapp-gcc/kmod/igb_uio.ko
+    sudo insmod "$NFF_GO"/dpdk/dpdk/x86_64-native-linuxapp-gcc-install/lib/modules/$(uname -r)/extra/dpdk/igb_uio.ko
     sudo "$NFF_GO"/dpdk/dpdk/usertools/dpdk-devbind.py --bind=igb_uio $NFF_GO_CARDS
 }
 
