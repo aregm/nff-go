@@ -20,7 +20,7 @@ RUN apt-get -q update && apt-get -q -y install \
     libmnl-dev \
     libibverbs-dev
 
-RUN cd /opt && curl -L -s https://dl.google.com/go/go1.12.9.linux-amd64.tar.gz | tar zx
+RUN cd /opt && curl -L -s https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz | tar zx
 RUN git clone -b v0.0.4 https://github.com/libbpf/libbpf
 RUN make -C libbpf/src all install
 RUN echo "/usr/lib64" > /etc/ld.so.conf.d/usrlib64.conf
