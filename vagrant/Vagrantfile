@@ -126,7 +126,7 @@ echo Reassigning "${syscon}" interface to system name
 sudo nmcli c mod "${syscon}" connection.id 'System connection'
 
 echo Unpacking Go language into /opt
-(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.12.9.linux-amd64.tar.gz | tar zx')
+(cd /opt; sudo sh -c 'curl -L -s https://dl.google.com/go/go1.13.1.linux-amd64.tar.gz | tar zx')
 mkdir go
 chmod +x ~/scripts.sh
 . ~/scripts.sh
