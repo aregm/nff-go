@@ -36,10 +36,13 @@ type flowspec struct {
 //of packets and bytes and their difference since last export.
 type incflowspec struct {
 	flowspec
-	npkts  uint64
-	bytes  uint64
-	dnpkts uint64
-	dplen  uint64
+	npkts    uint64
+	bytes    uint64
+	dnpkts   uint64
+	dplen    uint64
+	tcpFlags uint8
+	icmpType uint8
+	tosByte  uint8
 }
 
 //a completed flow that wraps the above with a boolean
@@ -70,6 +73,8 @@ type flowcomm struct {
 	exspec   exflowspec
 	exported string
 	plen     uint
+	icmpType uint8
+	tosByte  uint8
 }
 
 type flowmap struct {
@@ -98,6 +103,8 @@ func NewFlowMap() *flowmap {
 					tflags := command.tflags
 					time := command.ftime
 					plen := command.plen
+					itype := command.icmpType
+					tos := command.tosByte
 					if fl, ok := fm.fm[fspec.Key()]; ok {
 						if (tflags&types.TCPFlagFin) == types.TCPFlagFin || (tflags&types.TCPFlagRst) == types.TCPFlagRst { //close the flow
 							fl.Close(tflags)
@@ -107,16 +114,19 @@ func NewFlowMap() *flowmap {
 							fl.Update(time, tflags, plen)
 						} else if fspec.proto == "UDP" {
 							fl.Update(time, tflags, plen)
+						} else if fspec.proto == "ICMP" {
+							fl.Update(time, tflags, plen)
 						}
-
 					} else { //add it
 						if tflags&types.TCPFlagSyn == types.TCPFlagSyn {
 							//fmt.Printf("starting new flow with spec %s\n", fspec)
-							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen)
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
 						} else if tflags&types.TCPFlagAck == types.TCPFlagAck {
 							//fmt.Printf("ack for %s disregarded\n")
 						} else if fspec.proto == "UDP" {
-							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen)
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
+						} else if fspec.proto == "ICMP" {
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
 						}
 					}
 
@@ -172,13 +182,15 @@ func (f *flowmap) Size() uint64 {
 	return rep.num
 }
 
-func (f *flowmap) AddOrUpdateFlow(fspec flowspec, time time.Time, tflags types.TCPFlags, plen uint) {
+func (f *flowmap) AddOrUpdateFlow(fspec flowspec, time time.Time, tflags types.TCPFlags, plen uint, icmpType uint8, tosByte uint8) {
 	comm := flowcomm{
-		id:     ADD,
-		spec:   fspec,
-		ftime:  time,
-		tflags: tflags,
-		plen:   plen,
+		id:       ADD,
+		spec:     fspec,
+		ftime:    time,
+		tflags:   tflags,
+		plen:     plen,
+		icmpType: icmpType,
+		tosByte:  tosByte,
 	}
 	f.ich <- comm
 }
@@ -225,7 +237,9 @@ type flowCommand struct {
 type flowctx struct {
 	fspec     flowspec
 	ltime     time.Time
-	flags     types.TCPFlags
+	flags     types.TCPFlags //this will record all the bits set in all the tcp flags of the flow
+	tosByte   uint8          // the tos of the first byte if any
+	icmpType  uint8          // icmp type of the first byte if any
 	npkts     uint64
 	dnpkts    uint64
 	plen      uint64
@@ -254,8 +268,8 @@ func (f flowspec) Key() string {
 }
 
 func (f exflowspec) VerboseString() string {
-	return fmt.Sprintf("[active:%v] flow\tfrom [%s]\tto [%s]\tsport [%d]\tdport[%d]\tstarted[%s]\tended[%s]\tnpkts[%d]\tbytes[%d]\treset?[%v]\tproto[%s]\tdpkts[%d]\tdbytes[%d]",
-		f.active, f.src, f.dst, f.sport, f.dport, f.timeStarted, f.timeEnded, f.npkts, f.bytes, f.reset, f.proto, f.dnpkts, f.dplen)
+	return fmt.Sprintf("[active:%v] flow\tfrom [%s]\tto [%s]\tsport [%d]\tdport[%d]\tstarted[%s]\tended[%s]\tnpkts[%d]\tbytes[%d]\treset?[%v]\tproto[%s]\tTCPFlags[%d]\tICMPtype[%d]\tTOS[%d]\tdpkts[%d]\tdbytes[%d]",
+		f.active, f.src, f.dst, f.sport, f.dport, f.timeStarted, f.timeEnded, f.npkts, f.bytes, f.reset, f.proto, f.tcpFlags, f.icmpType, f.tosByte, f.dnpkts, f.dplen)
 }
 
 func rststring(a bool, active bool) string {
@@ -277,13 +291,13 @@ func actstring(active bool) string {
 }
 
 func (f exflowspec) String() string {
-	return fmt.Sprintf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d",
-		f.timeStarted.UnixNano(), f.proto, actstring(f.active), rststring(f.reset, f.active), f.src, f.dst, f.sport, f.dport, f.npkts, f.bytes, f.dnpkts, f.dplen, f.timeEnded.UnixNano())
+	return fmt.Sprintf("%d\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d",
+		f.timeStarted.UnixNano(), f.proto, actstring(f.active), rststring(f.reset, f.active), f.src, f.dst, f.sport, f.dport, f.npkts, f.bytes, f.tcpFlags, f.icmpType, f.tosByte, f.dnpkts, f.dplen, f.timeEnded.UnixNano())
 }
 
 func (f incflowspec) String() string {
-	return fmt.Sprintf("[inc] %s flow\tfrom [%s]\tto [%s]\tsport [%d]\tdport[%d]\ttstarted[%s]\tnpkts[%d]\tbytes[%d]",
-		f.proto, f.src, f.dst, f.sport, f.dport, f.timeStarted, f.npkts, f.bytes)
+	return fmt.Sprintf("[inc] %s flow\tfrom [%s]\tto [%s]\tsport [%d]\tdport[%d]\ttstarted[%s]\tnpkts[%d]\tbytes[%d]\tTCPFlags[%d]\tICMPType[%d]\tTOS[%d]",
+		f.proto, f.src, f.dst, f.sport, f.dport, f.timeStarted, f.npkts, f.bytes, f.tcpFlags, f.icmpType, f.tosByte)
 }
 
 func (f flowlink) Update(time time.Time, fl types.TCPFlags, plen uint) {
@@ -336,6 +350,9 @@ func Start(f *flowctx) {
 						f.plen,
 						f.dnpkts,
 						f.dplen,
+						uint8(f.flags),
+						f.icmpType,
+						f.tosByte,
 					},
 					true,
 					false, //active?
@@ -355,6 +372,9 @@ func Start(f *flowctx) {
 					f.plen,
 					f.dnpkts,
 					f.dplen,
+					uint8(f.flags),
+					f.icmpType,
+					f.tosByte,
 				},
 				false,
 				true, //active?
@@ -371,7 +391,7 @@ func Start(f *flowctx) {
 			switch comm.id {
 			case FCommUpdate:
 				f.ltime = comm.t
-				f.flags = comm.flags
+				f.flags |= comm.flags //this will record the current flagset on the older ones.
 				f.npkts = f.npkts + 1
 				f.plen = f.plen + uint64(comm.plen)
 				// update the differential counters
@@ -402,6 +422,9 @@ func Start(f *flowctx) {
 						f.plen,
 						f.dnpkts,
 						f.dplen,
+						uint8(f.flags),
+						f.icmpType,
+						f.tosByte,
 					},
 					reseted,
 					false, //active?
@@ -416,7 +439,7 @@ func Start(f *flowctx) {
 	}
 }
 
-func NewFlow(fspec flowspec, pmap *flowmap, plen uint) flowlink {
+func NewFlow(fspec flowspec, pmap *flowmap, plen uint, icmpType uint8, tosByte uint8) flowlink {
 	cchan := make(flowlink)
 	fspec.timeStarted = time.Now()
 	fl := &flowctx{
@@ -428,6 +451,8 @@ func NewFlow(fspec flowspec, pmap *flowmap, plen uint) flowlink {
 		dnpkts:    1,
 		dplen:     uint64(plen),
 		parentmap: pmap,
+		icmpType:  icmpType,
+		tosByte:   tosByte,
 	}
 
 	startf := atomic.LoadUint64(&startedflows)
@@ -535,6 +560,8 @@ func getHanderFunc(fmap *flowmap) func(*packet.Packet, flow.UserContext) bool {
 			flags    types.TCPFlags
 			protostr string
 			pktlen   uint
+			icmpType uint8
+			tosByte  uint8
 		)
 
 		/*PACKET COUNT
@@ -566,9 +593,9 @@ func getHanderFunc(fmap *flowmap) func(*packet.Packet, flow.UserContext) bool {
 			dport = uint32(pktUDP.DstPort)
 			protostr = "UDP"
 		} else if pktICMP != nil {
-			sport = uint32(pktICMP.Type)
 			// fmt.Printf("ignoring icmp packet\n")
-			return true
+			protostr = "ICMP"
+			icmpType = uint8(pktICMP.Type)
 		}
 		//try to catch ufo packets in order not to flood the flowmap.
 		if pktIPv4 == nil && pktIPv6 == nil {
@@ -586,7 +613,7 @@ func getHanderFunc(fmap *flowmap) func(*packet.Packet, flow.UserContext) bool {
 			proto: protostr,
 		}
 		// fmt.Printf("trying for :%v %v\n", fspec, flags)
-		fmap.AddOrUpdateFlow(fspec, time.Now(), flags, pktlen)
+		fmap.AddOrUpdateFlow(fspec, time.Now(), flags, pktlen, icmpType, tosByte)
 		return true
 	}
 }
