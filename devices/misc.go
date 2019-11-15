@@ -49,6 +49,8 @@ func GetDeviceID(nicName string) (string, error) {
 		return raws[5], nil
 	} else if IsPciID.Match([]byte(raws[4])) {
 		return raws[4], nil
+	} else if len(raws) >= 10 && IsPciID.Match([]byte(raws[10])) {
+		return raws[10], nil
 	} else {
 		return "", fmt.Errorf("can't get device ID from path: %s", raw)
 	}
