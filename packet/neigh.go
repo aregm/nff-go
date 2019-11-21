@@ -15,6 +15,7 @@ import (
 
 const (
 	arpRequestsRepeatInterval = 1 * time.Second
+	arpEntryCleanup = 60 * time.Second
 )
 
 type NeighboursLookupTable struct {
@@ -30,15 +31,58 @@ type NeighboursLookupTable struct {
 	checkv6 func(ipv6 types.IPv6Address) bool
 }
 
+type neighboursLookupTableEntry struct {
+	MAC      types.MACAddress
+	LastUsed time.Time
+}
+
 func NewNeighbourTable(index uint16, mac types.MACAddress,
 	checkv4 func(ipv4 types.IPv4Address) bool,
 	checkv6 func(ipv6 types.IPv6Address) bool) *NeighboursLookupTable {
-	return &NeighboursLookupTable{
+
+	return NewTimeoutNeighbourTable(index, mac, checkv4, checkv6, 0)
+}
+
+func NewTimeoutNeighbourTable(index uint16, mac types.MACAddress,
+	checkv4 func(ipv4 types.IPv4Address) bool,
+	checkv6 func(ipv6 types.IPv6Address) bool,
+	cleanupInterval time.Duration) *NeighboursLookupTable {
+
+	nlt := &NeighboursLookupTable{
 		portIndex:    index,
 		interfaceMAC: mac,
 		checkv4:      checkv4,
 		checkv6:      checkv6,
 	}
+
+	if cleanupInterval <= 0 {
+		return nlt
+	}
+
+	go func() {
+		ticker := time.NewTicker(cleanupInterval)
+
+		for {
+			select {
+			case <-ticker.C:
+				nlt.cleanup()
+			}
+		}
+	}()
+
+	return nlt
+}
+
+func (table *NeighboursLookupTable) cleanup() {
+	table.ipv4Table.Range(func(k interface{}, v interface{}) bool {
+		entry := v.(neighboursLookupTableEntry)
+		if time.Since(entry.LastUsed) >= arpEntryCleanup {
+			ipv4 := k.(types.IPv4Address)
+			table.ipv4Table.Delete(ipv4)
+			common.LogDebug(common.Debug, "Removed ARP Entry for", ipv4, ":", entry.MAC)
+		}
+		return true
+	})
 }
 
 // HandleIPv4ARPRequest processes IPv4 ARP request and reply packets
@@ -52,7 +96,12 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 		// Handle ARP reply and record information in lookup table
 		if SwapBytesUint16(arp.Operation) == ARPReply {
 			ipv4 := types.ArrayToIPv4(arp.SPA)
-			table.ipv4Table.Store(ipv4, arp.SHA)
+			entry := neighboursLookupTableEntry {
+				MAC: arp.SHA,
+				LastUsed: time.Now(),
+			}
+			table.ipv4Table.Store(ipv4, entry)
+			common.LogDebug(common.Debug, "Added ARP Entry for", ipv4, ":", entry.MAC)
 		}
 		return nil
 	}
@@ -85,7 +134,10 @@ func (table *NeighboursLookupTable) HandleIPv4ARPPacket(pkt *Packet) error {
 func (table *NeighboursLookupTable) LookupMACForIPv4(ipv4 types.IPv4Address) (types.MACAddress, bool) {
 	v, found := table.ipv4Table.Load(ipv4)
 	if found {
-		return v.(types.MACAddress), true
+		entry := v.(neighboursLookupTableEntry)
+		entry.LastUsed = time.Now()
+		table.ipv4Table.Store(ipv4, entry)
+		return entry.MAC, true
 	}
 	return [types.EtherAddrLen]byte{}, false
 }
