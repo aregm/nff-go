@@ -904,13 +904,15 @@ func SetReceiver(portId uint16) (OUT *Flow, err error) {
 // Creates RAW socket, returns new opened flow with received packets.
 func SetReceiverOS(device string) (*Flow, error) {
 	v, ok := ioDevices[device]
-	socketID := v.(int)
+	var socketID int
 	if !ok {
 		socketID = low.InitDevice(device)
 		if socketID == -1 {
 			return nil, common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
 		}
 		ioDevices[device] = socketID
+	} else {
+		socketID = v.(int)
 	}
 	rings := low.CreateRings(burstSize*sizeMultiplier, 1)
 	addOSReceiver(socketID, rings)
@@ -925,13 +927,15 @@ func SetSenderOS(IN *Flow, device string) error {
 		return err
 	}
 	v, ok := ioDevices[device]
-	socketID := v.(int)
+	var socketID int
 	if !ok {
 		socketID = low.InitDevice(device)
 		if socketID == -1 {
 			return common.WrapWithNFError(nil, "Can't initialize socket", common.BadSocket)
 		}
 		ioDevices[device] = socketID
+	} else {
+		socketID = v.(int)
 	}
 	addSenderOS(socketID, finishFlow(IN), IN.inIndexNumber)
 	return nil
