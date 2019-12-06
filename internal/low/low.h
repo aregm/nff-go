@@ -1,4 +1,4 @@
-// Copyright 2017 Intel Corporation. 
+// Copyright 2017 Intel Corporation.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -857,6 +857,18 @@ struct rte_ring** extractDPDKRings(struct nff_go_ring** r, int32_t inIndexNumber
 		output[i] = r[i]->DPDK_ring;
 	}
 	return output;
+}
+
+struct nff_go_ring *
+nff_go_ring_lookup(const char *name) {
+	struct nff_go_ring* r = malloc(sizeof(struct nff_go_ring));
+
+	r->DPDK_ring = rte_ring_lookup(name);
+	// Ring elements are located immidiately behind rte_ring structure
+	// So ring[1] is pointed to the beginning of this data
+	r->internal_DPDK_ring = &(r->DPDK_ring)[1];
+	r->offset = sizeof(void*);
+	return r;
 }
 
 struct nff_go_ring *
