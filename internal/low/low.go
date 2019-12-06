@@ -274,6 +274,11 @@ const (
 	RteLpmLookupSuccess        = C.RTE_LPM_LOOKUP_SUCCESS
 )
 
+// Lookup ring with given name.
+func LookupRing(name string) *Ring {
+	return (*Ring)(unsafe.Pointer(C.nff_go_ring_lookup(C.CString(name))))
+}
+
 // CreateRing creates ring with given name and count.
 func CreateRing(count uint) *Ring {
 	name := strconv.Itoa(ringName)
@@ -615,7 +620,7 @@ func CreatePort(port uint16, willReceive bool, promiscuous bool, hwtxchecksum,
 		mempools = nil
 	}
 	if C.port_init(C.uint16_t(port), C.bool(willReceive), mempools,
-		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex), C.int32_t (tXQueuesNumberPerPort)) != 0 {
+		C._Bool(promiscuous), C._Bool(hwtxchecksum), C._Bool(hwrxpacketstimestamp), C.int32_t(inIndex), C.int32_t(tXQueuesNumberPerPort)) != 0 {
 		msg := common.LogError(common.Initialization, "Cannot init port ", port, "!")
 		return common.WrapWithNFError(nil, msg, common.FailToInitPort)
 	}
