@@ -2,9 +2,10 @@ package main
 
 import (
 	"bytes"
-	"flag"
+	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -19,6 +20,41 @@ import (
 	"github.com/streadway/amqp"
 )
 
+type FlowrideConfig struct {
+	AMQPURL         string   //url for rabbitmq with vhost user and pas
+	DPDKArgs        []string // args array for DPDK {"-w card", "-w othercard"}
+	CPUList         string   // "0-15"
+	InPort          int      // the input dpdk card port
+	OutPort         int      // the output dpdk card port
+	FlowTimeoutSecs int      // seconds to timeout a flow due to inactivity
+	ExportSecs      int      // seconds to export to the message queue
+	StatusSecs      int      // seconds to print the status line
+	RabbitHeartbeat int      // seconds for heartbeat between cli and srv
+}
+
+func NewFlowrideConfig() *FlowrideConfig {
+	return &FlowrideConfig{
+		AMQPURL:         "REQUIRED",
+		DPDKArgs:        []string{"REQUIRED"},
+		CPUList:         "0-10",
+		InPort:          0,
+		OutPort:         1,
+		FlowTimeoutSecs: 5,
+		ExportSecs:      5,
+		StatusSecs:      5,
+		RabbitHeartbeat: 20,
+	}
+}
+
+func (f *FlowrideConfig) FromFile(a string) error {
+	b, err := ioutil.ReadFile(a)
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(b, f)
+	return nil
+}
+
 //a pure flowspec (no state) that is used also
 //as key to the dictionary of active flows
 //time started is not part of the string that matches
@@ -26,8 +62,8 @@ import (
 type flowspec struct {
 	src         net.IP
 	dst         net.IP
-	sport       uint32
-	dport       uint32
+	sport       uint16
+	dport       uint16
 	proto       string
 	timeStarted time.Time
 }
@@ -66,6 +102,7 @@ type flowcomm struct {
 	id       int
 	spec     flowspec
 	link     flowlink
+	dir      int
 	num      uint64
 	entries  string
 	ftime    time.Time
@@ -85,6 +122,11 @@ type flowmap struct {
 	done chan struct{}
 }
 
+const ( // directions , normal or reverse
+	NORMAL = iota
+	REVERSE
+)
+
 func NewFlowMap() *flowmap {
 	fm := &flowmap{
 		fm:   make(map[string]flowlink),
@@ -94,6 +136,11 @@ func NewFlowMap() *flowmap {
 		done: make(chan struct{}),
 	}
 	go func(fm *flowmap) {
+		var (
+			fl        flowlink
+			ok1, ok2  bool
+			direction int
+		)
 		for {
 			select {
 			case command := <-fm.ich:
@@ -105,28 +152,42 @@ func NewFlowMap() *flowmap {
 					plen := command.plen
 					itype := command.icmpType
 					tos := command.tosByte
-					if fl, ok := fm.fm[fspec.Key()]; ok {
-						if (tflags&types.TCPFlagFin) == types.TCPFlagFin || (tflags&types.TCPFlagRst) == types.TCPFlagRst { //close the flow
-							fl.Close(tflags)
+					direction = NORMAL
+					ok1 = false
+					ok2 = false
+					fl, ok1 = fm.fm[fspec.Key()]
+					if !ok1 {
+						fl, ok2 = fm.fm[fspec.InvKey()]
+						if ok2 {
+							direction = REVERSE
+						}
+					}
+					if ok1 || ok2 { //we found it in one of the two directions
+						if tflags&types.TCPFlagRst == types.TCPFlagRst { //close it straight due to RST
+							fl.Close(tflags, direction)
+						} else if (tflags&types.TCPFlagFin) == types.TCPFlagFin && direction == REVERSE { //close the with proper FIN termination
+							fl.Close(tflags, direction)
+						} else if tflags&types.TCPFlagFin == types.TCPFlagSyn && direction == NORMAL { // we are getting into a FIN termination
+							fl.Update(time, tflags, plen, direction)
 						} else if tflags&types.TCPFlagSyn == types.TCPFlagSyn {
 							//fmt.Printf("disregarding double sin on started flow %s\n", fl)
 						} else if tflags&types.TCPFlagAck == types.TCPFlagAck {
-							fl.Update(time, tflags, plen)
+							fl.Update(time, tflags, plen, direction)
 						} else if fspec.proto == "UDP" {
-							fl.Update(time, tflags, plen)
+							fl.Update(time, tflags, plen, direction)
 						} else if fspec.proto == "ICMP" {
-							fl.Update(time, tflags, plen)
+							fl.Update(time, tflags, plen, direction)
 						}
-					} else { //add it
-						if tflags&types.TCPFlagSyn == types.TCPFlagSyn {
+					} else if !ok1 && !ok2 { //add it , cause it doesn't exist in any direction
+						if fspec.proto == "TCP" && tflags&types.TCPFlagSyn == types.TCPFlagSyn {
 							//fmt.Printf("starting new flow with spec %s\n", fspec)
-							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
-						} else if tflags&types.TCPFlagAck == types.TCPFlagAck {
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos, tflags)
+						} else if fspec.proto == "TCP" && tflags&types.TCPFlagAck == types.TCPFlagAck {
 							//fmt.Printf("ack for %s disregarded\n")
 						} else if fspec.proto == "UDP" {
-							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos, tflags)
 						} else if fspec.proto == "ICMP" {
-							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos)
+							fm.fm[fspec.Key()] = NewFlow(fspec, fm, plen, itype, tos, tflags)
 						}
 					}
 
@@ -135,6 +196,8 @@ func NewFlowMap() *flowmap {
 					if _, ok := fm.fm[fspec.Key()]; ok {
 						//close(fl)
 						delete(fm.fm, fspec.Key())
+					} else if _, ok := fm.fm[fspec.InvKey()]; ok {
+						delete(fm.fm, fspec.InvKey())
 					}
 
 				case LEN:
@@ -244,11 +307,11 @@ type flowctx struct {
 	dnpkts    uint64
 	plen      uint64
 	dplen     uint64
+	finState  bool
 	cchan     chan flowCommand
 	killt     *time.Ticker
 	statust   *time.Ticker
 	parentmap *flowmap
-	//exFlows   *exportedFlows
 }
 
 type flowlink chan flowCommand
@@ -265,6 +328,11 @@ func (f flowspec) String() string {
 func (f flowspec) Key() string {
 	return fmt.Sprintf("%s-%s-%d-%d-%s",
 		f.src, f.dst, f.sport, f.dport, f.proto)
+}
+
+func (f flowspec) InvKey() string {
+	return fmt.Sprintf("%s-%s-%d-%d-%s",
+		f.dst, f.src, f.dport, f.sport, f.proto)
 }
 
 func (f exflowspec) VerboseString() string {
@@ -300,7 +368,7 @@ func (f incflowspec) String() string {
 		f.proto, f.src, f.dst, f.sport, f.dport, f.timeStarted, f.npkts, f.bytes, f.tcpFlags, f.icmpType, f.tosByte)
 }
 
-func (f flowlink) Update(time time.Time, fl types.TCPFlags, plen uint) {
+func (f flowlink) Update(time time.Time, fl types.TCPFlags, plen uint, direction int) {
 	go func() {
 		f <- flowCommand{
 			id:    FCommUpdate,
@@ -311,7 +379,7 @@ func (f flowlink) Update(time time.Time, fl types.TCPFlags, plen uint) {
 	}()
 }
 
-func (f flowlink) Close(fl types.TCPFlags) {
+func (f flowlink) Close(fl types.TCPFlags, direction int) {
 	go func() { //do it async cause i don't want to block
 		f <- flowCommand{
 			id:    FCommDelete,
@@ -323,8 +391,8 @@ func (f flowlink) Close(fl types.TCPFlags) {
 func Start(f *flowctx) {
 	var updatedInTimeRange bool
 	updatedInTimeRange = true
-	f.killt = time.NewTicker(1 * time.Second)
-	f.statust = time.NewTicker(1 * time.Second)
+	f.killt = time.NewTicker(time.Duration(fconfig.ExportSecs) * time.Second)
+	f.statust = time.NewTicker(time.Duration(fconfig.StatusSecs) * time.Second)
 	defer func() { //before we die notify our parent dictionary
 		f.parentmap.DeleteFlow(f.fspec)
 		f.killt.Stop()
@@ -398,13 +466,16 @@ func Start(f *flowctx) {
 				f.dnpkts = f.dnpkts + 1
 				f.dplen = f.dplen + uint64(comm.plen)
 				updatedInTimeRange = true
+				if (f.flags & types.TCPFlagFin) == types.TCPFlagFin { // we are getting into fin
+					f.finState = true
+				}
 			case FCommDelete:
 				reseted := false
 				//fmt.Printf("deleting flow %s due to command\n", f)
 				stopf := atomic.LoadUint64(&stoppedflows)
 				atomic.StoreUint64(&stoppedflows, stopf+1)
 				//stoppedflows = stoppedflows + 1 //XXX: ATOMIC HERE
-				f.flags = comm.flags
+				f.flags |= comm.flags
 				if (f.flags & types.TCPFlagFin) == types.TCPFlagFin {
 					//finflows = finflows + 1
 					finf := atomic.LoadUint64(&finflows)
@@ -439,17 +510,19 @@ func Start(f *flowctx) {
 	}
 }
 
-func NewFlow(fspec flowspec, pmap *flowmap, plen uint, icmpType uint8, tosByte uint8) flowlink {
+func NewFlow(fspec flowspec, pmap *flowmap, plen uint, icmpType uint8, tosByte uint8, tflags types.TCPFlags) flowlink {
 	cchan := make(flowlink)
 	fspec.timeStarted = time.Now()
 	fl := &flowctx{
 		fspec:     fspec,
 		ltime:     fspec.timeStarted,
 		cchan:     cchan,
+		flags:     tflags,
 		npkts:     1,
 		plen:      uint64(plen),
 		dnpkts:    1,
 		dplen:     uint64(plen),
+		finState:  false,
 		parentmap: pmap,
 		icmpType:  icmpType,
 		tosByte:   tosByte,
@@ -483,8 +556,7 @@ const (
 )
 
 var (
-	inPort  int
-	outPort int
+	fconfig *FlowrideConfig
 	// flowTable stores number of packets in flow, it takes
 	// 2 first bits from uint16,
 	// time of last packet is stored in seconds and
@@ -496,7 +568,6 @@ var (
 	// inter-arrival time (less than iatValueNanos)
 	allPackets   = int64(1)
 	lastTime     = time.Now().UnixNano() // time of last handled packet
-	isDdos       uint32
 	expiredflows uint64
 	stoppedflows uint64
 	rstflows     uint64
@@ -521,26 +592,28 @@ func CheckFatal(err error) {
 
 // Main function for constructing packet processing graph.
 func main() {
-	flag.IntVar(&outPort, "outPort", 1, "port to send")
-	flag.IntVar(&inPort, "inPort", 0, "port to receive")
-	flag.Parse()
-
+	if len(os.Args) != 2 {
+		log.Fatalf("usage: ./flowride jsonConfig")
+	}
+	fconfig = NewFlowrideConfig()
+	e := fconfig.FromFile(os.Args[1])
+	if e != nil {
+		log.Fatalf("error parsing config:%s", e)
+	}
 	// Init YANFF system at requested number of cores.
 	config := flow.Config{
-		CPUList: "0-71",
-		//DPDKArgs: []string{"-c 0xfff"},
-		DPDKArgs: []string{"-c 0xffffffffffffffffff", "-w 0000:3b:00.0", "-w 0000:5e:00.1"},
+		CPUList:  fconfig.CPUList,
+		DPDKArgs: fconfig.DPDKArgs,
 		LogType:  common.Debug,
 	}
 
 	CheckFatal(flow.SystemInit(&config))
 	fm := NewFlowMap()
 	//exf := NewExportedFlows()
-	inputFlow, err := flow.SetReceiver(uint16(inPort))
+	inputFlow, err := flow.SetReceiver(uint16(fconfig.InPort))
 	CheckFatal(err)
 	CheckFatal(flow.SetHandlerDrop(inputFlow, getHanderFunc(fm), nil))
-	CheckFatal(flow.SetSender(inputFlow, uint16(outPort)))
-	// Var isDdos is calculated in separate goroutine.
+	CheckFatal(flow.SetSender(inputFlow, uint16(fconfig.OutPort)))
 	go printMap(fm)
 	go publishFlows(fm)
 	// Begin to process packets.
@@ -555,8 +628,8 @@ func getHanderFunc(fmap *flowmap) func(*packet.Packet, flow.UserContext) bool {
 			pktICMP  *packet.ICMPHdr
 			src      net.IP
 			dst      net.IP
-			sport    uint32
-			dport    uint32
+			sport    uint16
+			dport    uint16
 			flags    types.TCPFlags
 			protostr string
 			pktlen   uint
@@ -584,25 +657,17 @@ func getHanderFunc(fmap *flowmap) func(*packet.Packet, flow.UserContext) bool {
 			pktlen = pkt.GetPacketLen()
 		}
 		if pktTCP != nil {
-			sport = uint32(pktTCP.SrcPort)
-			dport = uint32(pktTCP.DstPort)
+			sport = uint16(packet.SwapBytesUint16(pktTCP.SrcPort))
+			dport = uint16(packet.SwapBytesUint16(pktTCP.DstPort))
 			flags = pktTCP.TCPFlags
 			protostr = "TCP"
 		} else if pktUDP != nil {
-			sport = uint32(pktUDP.SrcPort)
-			dport = uint32(pktUDP.DstPort)
+			sport = uint16(packet.SwapBytesUint16(pktUDP.SrcPort))
+			dport = uint16(packet.SwapBytesUint16(pktUDP.DstPort))
 			protostr = "UDP"
 		} else if pktICMP != nil {
-			// fmt.Printf("ignoring icmp packet\n")
 			protostr = "ICMP"
 			icmpType = uint8(pktICMP.Type)
-		}
-		//try to catch ufo packets in order not to flood the flowmap.
-		if pktIPv4 == nil && pktIPv6 == nil {
-			return true
-		}
-		if pktTCP == nil && pktUDP == nil {
-			return true
 		}
 
 		fspec := flowspec{
@@ -643,14 +708,13 @@ func publishFlows(cf *flowmap) {
 	nretries := 0
 	totmsgs := 0
 	rabbitConfig := amqp.Config{
-		Heartbeat: 20 * time.Second,
+		Heartbeat: time.Duration(fconfig.RabbitHeartbeat) * time.Second,
 	}
 retry:
 	if nretries > 5 {
 		log.Fatalf("maximum retry number exceeded. can't publish flows")
 	}
-	// conn, err := amqp.Dial("amqp://flowride:flowride@129.82.138.67:5674/nbranetest")
-	conn, err := amqp.DialConfig("amqp://flowride:flowride@10.10.99.50:5674/nbranetest", rabbitConfig)
+	conn, err := amqp.DialConfig(fconfig.AMQPURL, rabbitConfig)
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 	//we will nonblockingly select on this guy too  on the main loop
@@ -659,9 +723,7 @@ retry:
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 	args := make(amqp.Table)
-	//args["x-max-length"] = int32(100)
 	q, err := ch.QueueDeclare(
-		//"flowride-1", // name
 		"",
 		true,  // durable
 		false, // delete when unused
@@ -670,7 +732,7 @@ retry:
 		args,  // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
-	tick := time.NewTicker(5 * time.Second)
+	tick := time.NewTicker(time.Duration(fconfig.ExportSecs) * time.Second)
 	for {
 		select {
 		case <-tick.C:
@@ -684,7 +746,7 @@ retry:
 				amqp.Publishing{
 					ContentType:  "text/plain",
 					Body:         []byte(alldata),
-					DeliveryMode: amqp.Persistent,
+					DeliveryMode: amqp.Transient,
 				})
 			if err != nil {
 				log.Printf("[error] Failed to publish a message:%s", err)
@@ -706,20 +768,5 @@ retry:
 			time.Sleep(5 * time.Second)
 			goto retry
 		}
-	}
-}
-
-func calculateMetrics() {
-	// every ddosCalculationInterval metrics are
-	// compared to threshold values and isDdos status
-	// is updated
-	for {
-		// no atomics, we can get a bit outdated data, not critical
-		if float64(packetsWithSmallIAT)/float64(allPackets) >= iatThreshold || float64(numOfOnePktFlows)/float64(numOfFlows) >= ppfThreshold {
-			atomic.StoreUint32(&isDdos, 1)
-		} else {
-			atomic.StoreUint32(&isDdos, 0)
-		}
-		time.Sleep(ddosCalculationInterval)
 	}
 }
