@@ -16,7 +16,7 @@ func main() {
 
 	l3Rules, err := packet.GetL3ACLFromTextTable("rules2.conf")
 	flow.CheckFatal(err)
-	rulesp = unsafe.Pointer(&l3Rules)
+	rulesp = unsafe.Pointer(l3Rules)
 	go updateSeparateRules()
 
 	firstFlow, err := flow.SetReceiver(0)
