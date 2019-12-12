@@ -19,12 +19,12 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 	if arp != nil {
 		if packet.SwapBytesUint16(arp.Operation) != packet.ARPRequest ||
 			arp.THA != [types.EtherAddrLen]byte{} {
-			return false
+			return true
 		}
 
 		port := portPair[types.ArrayToIPv4(arp.TPA)]
 		if port == nil {
-			return false
+			return true
 		}
 
 		// Prepare an answer to this request
@@ -69,7 +69,11 @@ func handleARPICMPRequests(current *packet.Packet, context UserContext) bool {
 			(answerPacket.GetICMPNoCheck()).Type = types.ICMPTypeEchoResponse
 			ipv4.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(ipv4))
 			answerPacket.ParseL7(types.ICMPNumber)
-			icmp.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(ipv4, icmp, answerPacket.Data))
+			(answerPacket.GetICMPNoCheck()).Cksum = packet.SwapBytesUint16(
+				packet.CalculateIPv4ICMPChecksum(
+					answerPacket.GetIPv4NoCheck(),
+					answerPacket.GetICMPNoCheck(),
+					answerPacket.Data))
 
 			answerPacket.SendPacket(port.port)
 
