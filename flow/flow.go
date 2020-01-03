@@ -1288,6 +1288,11 @@ func GetPortMACAddress(port uint16) [types.EtherAddrLen]uint8 {
 	return low.GetPortMACAddress(port)
 }
 
+// GetPortsNumber gets total number of available Ethernet devices.
+func GetPortsNumber() int {
+	return low.GetPortsNumber()
+}
+
 // GetPortByName gets the port id from device name. The device name should be
 // specified as below:
 //
