@@ -17,7 +17,7 @@ import (
 var gen generator
 
 type generator struct {
-	count uint64
+	Count uint64
 }
 
 // GetGenerator returns generator struct pointer
@@ -28,7 +28,7 @@ func GetGenerator() *generator {
 
 // GetGeneratedNumber returns a number of packets generated
 func (g *generator) GetGeneratedNumber() uint64 {
-	return atomic.LoadUint64(&(g.count))
+	return atomic.LoadUint64(&(g.Count))
 }
 
 // ReadConfig function reads and parses config file.
@@ -151,6 +151,6 @@ func Generate(pkt *packet.Packet, context flow.UserContext) {
 		}
 	}
 	genP.table[genP.next].generatorFunc(pkt, &genP.table[genP.next].config, genP.rnd)
-	atomic.AddUint64(&(gen.count), 1)
+	atomic.AddUint64(&(gen.Count), 1)
 	genP.table[genP.next].have++
 }
