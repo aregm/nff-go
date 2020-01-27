@@ -290,9 +290,6 @@ int port_init(uint16_t port, bool willReceive, struct rte_mempool **mbuf_pools, 
 		rx_rings = 0;
 	}
 
-	if (port >= rte_eth_dev_count())
-		return -1;
-
 	struct rte_eth_conf port_conf_default = {
 		.rxmode = { .max_rx_pkt_len = RTE_ETHER_MAX_LEN,
 					.mq_mode = ETH_MQ_RX_RSS    },
@@ -940,9 +937,6 @@ bool check_hwtxchecksum_capability(uint16_t port_id) {
 		DEV_TX_OFFLOAD_TCP_CKSUM;
 	struct rte_eth_dev_info dev_info;
 
-	if (port_id >= rte_eth_dev_count())
-		return false;
-
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port_id, &dev_info);
 	return (dev_info.tx_offload_capa & flags) == flags;
@@ -951,9 +945,6 @@ bool check_hwtxchecksum_capability(uint16_t port_id) {
 bool check_hwrxpackets_timestamp_capability(uint16_t port_id) {
 	uint64_t flags = DEV_RX_OFFLOAD_TIMESTAMP;
 	struct rte_eth_dev_info dev_info;
-
-	if (port_id >= rte_eth_dev_count())
-		return false;
 
 	memset(&dev_info, 0, sizeof(dev_info));
 	rte_eth_dev_info_get(port_id, &dev_info);

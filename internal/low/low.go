@@ -596,6 +596,14 @@ func FreeKNI(port uint16) error {
 	return nil
 }
 
+const (
+	RteMaxEthPorts = C.RTE_MAX_ETHPORTS
+)
+
+func GetNextPort(port uint16) uint16 {
+	return uint16(C.rte_eth_find_next_owned_by(C.uint16_t(port), C.RTE_ETH_DEV_NO_OWNER))
+}
+
 // GetPortsNumber gets total number of available Ethernet devices.
 func GetPortsNumber() int {
 	return int(C.rte_eth_dev_count())

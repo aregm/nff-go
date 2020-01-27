@@ -45,7 +45,7 @@ import (
 )
 
 var openFlowsNumber = uint32(0)
-var createdPorts []port
+var createdPorts map[uint16](*port)
 var portPair map[types.IPv4Address](*port)
 var schedState *scheduler
 var vEach [10][vBurstSize]uint8
@@ -725,14 +725,19 @@ func SystemInit(args *Config) error {
 		return err
 	}
 	// Init Ports
-	createdPorts = make([]port, low.GetPortsNumber(), low.GetPortsNumber())
-	for i := range createdPorts {
-		createdPorts[i].port = uint16(i)
+	createdPorts = make(map[uint16](*port))
+	i := low.GetNextPort(0)
+	for i < low.RteMaxEthPorts {
+		createdPorts[i] = &port{}
+		createdPorts[i].port = i
+		common.LogDebug(common.Initialization, "Found Port ID:", i)
+
 		if maxInIndex > low.CheckPortRSS(createdPorts[i].port) {
 			createdPorts[i].InIndex = low.CheckPortRSS(createdPorts[i].port)
 		} else {
 			createdPorts[i].InIndex = maxInIndex
 		}
+		i = low.GetNextPort(i + 1)
 	}
 	portPair = make(map[types.IPv4Address](*port))
 	ioDevices = make(map[string]interface{})
@@ -886,17 +891,18 @@ func SetReceiverFile(filename string, repcount int32) (OUT *Flow) {
 // Receive queue will be added to port automatically.
 // Returns new opened flow with received packets
 func SetReceiver(portId uint16) (OUT *Flow, err error) {
-	if portId >= uint16(len(createdPorts)) {
-		return nil, common.WrapWithNFError(nil, "Requested receive port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
+	port, ok := createdPorts[portId]
+	if !ok {
+		return nil, common.WrapWithNFError(nil, "Requested receive port not found.", common.ReqTooManyPorts)
 	}
-	if createdPorts[portId].willReceive {
+	if port.willReceive {
 		return nil, common.WrapWithNFError(nil, "Requested receive port was already set to receive. Two receives from one port are prohibited.", common.MultipleReceivePort)
 	}
-	createdPorts[portId].wasRequested = true
-	createdPorts[portId].willReceive = true
-	rings := low.CreateRings(burstSize*sizeMultiplier, createdPorts[portId].InIndex)
-	addReceiver(portId, rings, createdPorts[portId].InIndex)
-	return newFlow(rings, createdPorts[portId].InIndex), nil
+	port.wasRequested = true
+	port.willReceive = true
+	rings := low.CreateRings(burstSize*sizeMultiplier, port.InIndex)
+	addReceiver(portId, rings, port.InIndex)
+	return newFlow(rings, port.InIndex), nil
 }
 
 // SetReceiverOS adds function receive from Linux interface to flow graph.
@@ -1045,11 +1051,14 @@ func SetSender(IN *Flow, portId uint16) error {
 	if err := checkFlow(IN); err != nil {
 		return err
 	}
-	if portId >= uint16(len(createdPorts)) {
-		return common.WrapWithNFError(nil, "Requested send port exceeds number of ports which can be used by DPDK (bind to DPDK).", common.ReqTooManyPorts)
+
+	port, ok := createdPorts[portId]
+	if !ok {
+		return common.WrapWithNFError(nil, "Requested send port not found.", common.ReqTooManyPorts)
 	}
-	createdPorts[portId].wasRequested = true
-	if createdPorts[portId].sendRings == nil {
+
+	port.wasRequested = true
+	if port.sendRings == nil {
 		// To allow consequent sends to one port, we need to create a send ring
 		// for the first, and then all the consequent sends should be merged
 		// with already created send ring.
@@ -1062,13 +1071,13 @@ func SetSender(IN *Flow, portId uint16) error {
 				max = createdPorts[i].InIndex
 			}
 		}
-		createdPorts[portId].sendRings = low.CreateRings(burstSize*sizeMultiplier, max)
-		addSender(portId, createdPorts[portId].sendRings, IN.inIndexNumber)
+		port.sendRings = low.CreateRings(burstSize*sizeMultiplier, max)
+		addSender(portId, port.sendRings, IN.inIndexNumber)
 	}
 	// For a typical 40 GB card, like Intel 710 series, one core should be able
 	// to handle all the TX without problems. So we merged all income flows to created
 	// ring which will be send.
-	mergeOneFlow(IN, createdPorts[portId].sendRings)
+	mergeOneFlow(IN, port.sendRings)
 	return nil
 }
 
@@ -1312,7 +1321,7 @@ func GetNameByPort(port uint16) (string, error) {
 func SetIPForPort(port uint16, ip types.IPv4Address) error {
 	for i := range createdPorts {
 		if createdPorts[i].port == port && createdPorts[i].wasRequested {
-			portPair[ip] = &createdPorts[i]
+			portPair[ip] = createdPorts[i]
 			return nil
 		}
 	}
@@ -1554,7 +1563,7 @@ func recvXDP(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 func processKNI(parameters interface{}, inIndex []int32, flag *int32, coreID int) {
 	srk := parameters.(*KNIParameters)
 	if srk.linuxCore == true {
-		coreID = schedState.cores[createdPorts[srk.port.PortId].KNICoreIndex].id
+		coreID = schedState.cores[createdPorts[uint16(srk.port.PortId)].KNICoreIndex].id
 	}
 	low.SrKNI(uint16(srk.port.PortId), flag, coreID, srk.recv, srk.out, srk.send, srk.in, &srk.stats)
 }
