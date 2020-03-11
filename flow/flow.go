@@ -1926,7 +1926,7 @@ func read(parameters interface{}, inIndex []int32, stopper [2]chan int) {
 			stopper[1] <- 1
 			return
 		default:
-			if count >= repcount {
+			if count >= repcount && repcount >= 0 {
 				break
 			}
 			tempPacket, err := packet.NewPacket()
