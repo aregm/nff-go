@@ -7,6 +7,7 @@ package generator
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"unsafe"
 
 	"github.com/intel-go/nff-go/packet"
@@ -227,6 +228,77 @@ func generateICMPIPv4(pkt *packet.Packet, config *PacketConfig, rnd *rand.Rand) 
 	pktIP := (*packet.IPv4Hdr)(pkt.L3)
 	pktIP.HdrChecksum = packet.SwapBytesUint16(packet.CalculateIPv4Checksum(pktIP))
 	pktICMP.Cksum = packet.SwapBytesUint16(packet.CalculateIPv4ICMPChecksum(pktIP, pktICMP, pkt.Data))
+}
+
+func generatePcap(pkt *packet.Packet, config *PacketConfig, _ *rand.Rand) {
+	if pkt == nil {
+		panic("Failed to create new packet")
+	}
+	pcapConfig := &config.Pcap
+	if pcapConfig.FileReader == nil {
+		f, err := os.Open(pcapConfig.Path)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to open pcap file %s", pcapConfig.Path))
+		}
+		pcapConfig.FileReader = f
+		var glHdr packet.PcapGlobHdr
+		if err := packet.ReadPcapGlobalHdr(f, &glHdr); err != nil {
+			f.Close()
+			panic(fmt.Sprintf("Failed to read pcap file header, returned %v", err))
+		}
+	}
+	isEOF, err := pkt.ReadPcapOnePacket(pcapConfig.FileReader)
+	if err != nil {
+		panic("Failed to read one packet from pcap")
+	}
+	if isEOF {
+		if _, err := pcapConfig.FileReader.Seek(packet.PcapGlobHdrSize, 0); err != nil {
+			panic("Failed to parse pcap file header")
+		}
+		if _, err := pkt.ReadPcapOnePacket(pcapConfig.FileReader); err != nil {
+			panic("Failed to read one packet from pcap")
+		}
+	}
+}
+
+func generatePcapInMemory(pkt *packet.Packet, config *PacketConfig, _ *rand.Rand) {
+	if pkt == nil {
+		panic("Failed to create new packet")
+	}
+	pcapConfig := &config.Pcap
+	if !pcapConfig.ReachedEOF {
+		if pcapConfig.FileReader == nil {
+			f, err := os.Open(pcapConfig.Path)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to open pcap file %s", pcapConfig.Path))
+			}
+			pcapConfig.FileReader = f
+			var glHdr packet.PcapGlobHdr
+			if err := packet.ReadPcapGlobalHdr(f, &glHdr); err != nil {
+				f.Close()
+				panic(fmt.Sprintf("Failed to read pcap file header, returned %v", err))
+			}
+		}
+		isEOF, err := pkt.ReadPcapOnePacket(pcapConfig.FileReader)
+		if err != nil {
+			panic("Failed to read one packet from pcap")
+		}
+		if isEOF {
+			pcapConfig.FileReader.Close()
+			pcapConfig.ReachedEOF = true
+		} else {
+			data := pkt.GetRawPacketBytes()
+			pcapConfig.Packets = append(pcapConfig.Packets, data)
+		}
+	}
+	if pcapConfig.ReachedEOF {
+		bytes := pcapConfig.Packets[pcapConfig.NextPacket]
+		pcapConfig.NextPacket = (pcapConfig.NextPacket + 1) % len(pcapConfig.Packets)
+		ok := packet.GeneratePacketFromByte(pkt, bytes)
+		if !ok {
+			panic("Failed to generate packet from byte")
+		}
+	}
 }
 
 func FillTCPHdr(pkt *packet.Packet, l4 *TCPConfig, rnd *rand.Rand) {
