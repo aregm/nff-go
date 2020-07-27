@@ -103,5 +103,19 @@
                         }
                     },
             "quantity": 6
+        },
+        "mix4": {
+            "pcap": {
+                "path": "./test.pcap",
+                "inmemory": false
+            },
+            "quantity": 1
+        },
+        "mix5": {
+            "pcap": {
+                "path": "./test.pcap",
+                "inmemory": true
+            },
+            "quantity": 1
         }
 }

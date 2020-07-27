@@ -1,0 +1,6 @@
+{
+    "pcap": {
+        "path": "./test.pcap",
+        "inmemory": false
+    }
+}
