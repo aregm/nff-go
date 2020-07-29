@@ -1,6 +1,7 @@
-FROM ubuntu:disco
+FROM ubuntu:focal
 
 ARG MAKEFLAGS=-j2
+ARG DEBIAN_FRONTEND=noninteractive
 
 ENV GOROOT /opt/go
 ENV PATH ${GOROOT}/bin:${GOPATH}/bin:${PATH}
@@ -8,12 +9,13 @@ ENV NFF_GO /nff-go
 
 RUN apt-get -q update && apt-get -q -y install \
     make \
+    build-essential \
     git \
     curl \
     wget \
     libpcap-dev \
     libelf-dev \
-    hugepages  \
+    libhugetlbfs-bin \
     libnuma-dev \
     libhyperscan-dev \
     liblua5.3-dev \
