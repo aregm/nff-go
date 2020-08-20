@@ -84,6 +84,12 @@ func getGenerator(configuration PacketConfig) (func(*packet.Packet, *PacketConfi
 		default:
 			return nil, fmt.Errorf("unknown packet l3 configuration")
 		}
+	case PCAP:
+		pcap := configuration.Pcap
+		if pcap.InMemory {
+			return generatePcapInMemory, nil
+		}
+		return generatePcap, nil
 	default:
 		return nil, fmt.Errorf("unknown packet l2 configuration")
 	}

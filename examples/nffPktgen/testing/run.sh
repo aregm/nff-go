@@ -16,3 +16,4 @@
 ./sendGetBack -number 100 -outConfig "'arpVlan.pcap':'arpVlan.json'"
 ./sendGetBack -number 100 -outConfig "'config.pcap': 'config.json'"
 ./sendGetBack -number 100 -outConfig "'mix.pcap': 'mix.json'"
+./sendGetBack -number 100 -outConfig "'pcap.pcap': 'pcap.json'"

@@ -18,6 +18,7 @@ import (
 )
 
 var mixPattern = regexp.MustCompile(`^mix[0-9]*$`)
+var pcapPattern = regexp.MustCompile(`^.*\.pcap$`)
 
 type AddrRange struct {
 	Min     uint64
@@ -57,12 +58,14 @@ const (
 	RANDDATA
 	RAWDATA
 	NONE
+	PCAP
 )
 
 // PacketConfig configures packet
 type PacketConfig struct {
 	DType DataType
 	Ether EtherConfig
+	Pcap  PcapConfig
 }
 
 // MixConfig contains PacketConfigs with quantity.
@@ -73,6 +76,16 @@ type MixConfig struct {
 
 func (mc *MixConfig) String() string {
 	return fmt.Sprintf("config: %v; quantity: %v\n", mc.Config, mc.Quantity)
+}
+
+// PcapCOnfig configures pcap file
+type PcapConfig struct {
+	Path       string
+	FileReader *os.File
+	InMemory   bool
+	ReachedEOF bool
+	Packets    [][]byte
+	NextPacket int
 }
 
 // EtherConfig configures ether header.
@@ -201,6 +214,14 @@ func ParseConfig(in map[string]interface{}) (config GeneratorConfig, err error) 
 			}
 			pktConfig := PacketConfig{Ether: ethHdr, DType: ETHERHDR}
 			return append(config, MixConfig{Config: pktConfig, Quantity: 1}), nil
+		case key == "pcap":
+			pcapConfig := v.(map[string]interface{})
+			pcap, err := parsePcap(pcapConfig)
+			if err != nil {
+				return nil, fmt.Errorf("parsePcap returned: %v", err)
+			}
+			pktConfig := PacketConfig{Pcap: pcap, DType: PCAP}
+			return append(config, MixConfig{Config: pktConfig, Quantity: 1}), nil
 		case mixPattern.MatchString(key):
 			return ParseGeneratorConfig(in)
 		default:
@@ -230,6 +251,13 @@ func ParseGeneratorConfig(in map[string]interface{}) (config GeneratorConfig, er
 						return nil, fmt.Errorf("parseEtherHdr returned: %v", err)
 					}
 					pktConfig = PacketConfig{Ether: ethHdr, DType: ETHERHDR}
+				case "pcap":
+					pcapConfig := vv.(map[string]interface{})
+					pcap, err := parsePcap(pcapConfig)
+					if err != nil {
+						return nil, fmt.Errorf("parsePcap returned: %v", err)
+					}
+					pktConfig = PacketConfig{Pcap: pcap, DType: PCAP}
 				case "quantity", "q":
 					q = uint32(vv.(float64))
 				default:
@@ -844,4 +872,28 @@ func parsePortRange(in map[string]interface{}) (AddrRange, error) {
 		portRng.Inc = 1
 	}
 	return portRng, nil
+}
+
+func parsePcap(in map[string]interface{}) (PcapConfig, error) {
+	pcap := PcapConfig{}
+	for k, v := range in {
+		switch strings.ToLower(k) {
+		case "path":
+			path, ok := v.(string)
+			if !ok {
+				return PcapConfig{}, fmt.Errorf("parsePcapConfig for path returned: not a string")
+			}
+			if !pcapPattern.MatchString(path) {
+				return PcapConfig{}, fmt.Errorf("parsePcapConfig for path returned: invalid pcap file")
+			}
+			pcap.Path = path
+		case "inmemory":
+			inmemory, ok := v.(bool)
+			if !ok {
+				return PcapConfig{}, fmt.Errorf("parsePcapConfig for inmemory returned: not a bool")
+			}
+			pcap.InMemory = inmemory
+		}
+	}
+	return pcap, nil
 }
