@@ -210,6 +210,6 @@ recommend checking the bugs with 'help-wanted' or 'easyfix' in our list of open 
 can be solved without an extensive knowledge of NFF-Go. We would love to help
 you start contributing.
 
-You can reach the NFF-Go development team via our [mailing list](mailto:areg.melik-adamyan@intel.com).
+You can reach the NFF-Go development team via our [mailing list](mailto:edwin.verplanke@intel.com).
 
     
